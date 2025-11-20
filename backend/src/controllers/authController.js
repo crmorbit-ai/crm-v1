@@ -200,12 +200,48 @@ const registerTenant = async (req, res) => {
     }
 
     // ============================================
-    // CREATE ADMIN USER
+    // CREATE TENANT ADMIN ROLE WITH FULL PERMISSIONS
     // ============================================
     const Role = require('../models/Role');
-    const superAdminRole = await Role.findOne({ slug: 'super-admin', roleType: 'system' });
-    const adminRoles = superAdminRole ? [superAdminRole._id] : [];
 
+    // Create tenant-specific admin role with full CRM permissions
+    const tenantAdminRole = await Role.create({
+      name: 'Tenant Admin',
+      slug: 'tenant-admin',
+      description: 'Full access to all tenant features and settings',
+      tenant: tenant._id,
+      roleType: 'custom',
+      permissions: [
+        // User & Role Management
+        { feature: 'user_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'role_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'group_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+
+        // CRM Features
+        { feature: 'lead_management', actions: ['create', 'read', 'update', 'delete', 'convert', 'import', 'export', 'manage'] },
+        { feature: 'account_management', actions: ['create', 'read', 'update', 'delete', 'export', 'manage'] },
+        { feature: 'contact_management', actions: ['create', 'read', 'update', 'delete', 'export', 'manage'] },
+        { feature: 'opportunity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'activity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'task_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'meeting_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'call_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'note_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'report_management', actions: ['read', 'create', 'export', 'manage'] },
+
+        // Advanced Features
+        { feature: 'advanced_analytics', actions: ['read', 'manage'] },
+        { feature: 'api_access', actions: ['read', 'manage'] }
+      ],
+      level: 100,
+      isActive: true
+    });
+
+    console.log(`✓ Created tenant admin role for ${organizationName}`);
+
+    // ============================================
+    // CREATE ADMIN USER
+    // ============================================
     const adminUser = await User.create({
       email: adminEmail,
       password: adminPassword,
@@ -213,7 +249,7 @@ const registerTenant = async (req, res) => {
       lastName: adminLastName,
       userType: 'TENANT_ADMIN',
       tenant: tenant._id,
-      roles: adminRoles,
+      roles: [tenantAdminRole._id],
       isActive: true
     });
 
