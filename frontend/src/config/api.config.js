@@ -1,5 +1,7 @@
 // Centralized API Configuration
-export const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+// Remove trailing slash to prevent double slashes in URLs
+const baseUrl = process.env.REACT_APP_API_URL || '';
+export const API_BASE_URL = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
 export const API_URL = `${API_BASE_URL}/api`;
 
 // Helper function to get headers with auth token
