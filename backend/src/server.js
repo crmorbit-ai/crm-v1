@@ -102,11 +102,9 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log('═══════════════════════════════════════');
+ 
   console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`✅ CORS enabled for http://localhost:3000`);
-  console.log(`✅ Reseller system enabled`);
-  console.log('═══════════════════════════════════════');
+
 });
 
 module.exports = app;

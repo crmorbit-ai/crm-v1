@@ -218,6 +218,13 @@ const tenantSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isSuspended: {
+    type: Boolean,
+    default: false
+  },
+  suspensionReason: {
+    type: String
+  },
   
   // Branding
   logo: String,

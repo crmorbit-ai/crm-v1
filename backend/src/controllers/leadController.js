@@ -423,6 +423,7 @@ const deleteLead = async (req, res) => {
   }
 };
 
+
 /**
  * @desc    Convert lead to account/contact/opportunity
  * @route   POST /api/leads/:id/convert
@@ -460,8 +461,25 @@ const convertLead = async (req, res) => {
     let contact = null;
     let opportunity = null;
 
+    // Industry mapping for enum compatibility
+    const industryMap = {
+      'IT': 'IT',
+      'Information Technology': 'Technology',
+      'Tech': 'Technology',
+      'Software': 'Technology',
+      'Telecom': 'Telecommunications',
+      'Food': 'Food & Beverage',
+      'Medical': 'Healthcare',
+      'Non-Profit': 'Not For Profit'
+    };
+
     // Create Account
     if (createAccount && accountData) {
+      // Map industry if provided
+      if (accountData.industry && industryMap[accountData.industry]) {
+        accountData.industry = industryMap[accountData.industry];
+      }
+
       account = await Account.create({
         ...accountData,
         owner: req.user._id,
@@ -487,8 +505,16 @@ const convertLead = async (req, res) => {
 
     // Create Opportunity
     if (createOpportunity && opportunityData) {
+      // ============================================
+      // 🔧 FIX: Add default closeDate if not provided
+      // ============================================
+      const defaultCloseDate = new Date();
+      defaultCloseDate.setDate(defaultCloseDate.getDate() + 30); // 30 days from now
+
       opportunity = await Opportunity.create({
         ...opportunityData,
+        // 🔧 FIX: Ensure closeDate is always set
+        closeDate: opportunityData.closeDate || defaultCloseDate,
         account: account ? account._id : (opportunityData.account || null),
         contact: contact ? contact._id : null,
         lead: lead._id,
@@ -523,7 +549,6 @@ const convertLead = async (req, res) => {
     errorResponse(res, 500, 'Server error');
   }
 };
-
 /**
  * @desc    Bulk import leads from CSV
  * @route   POST /api/leads/bulk-import

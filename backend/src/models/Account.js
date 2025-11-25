@@ -52,6 +52,7 @@ const accountSchema = new mongoose.Schema({
       'Healthcare',
       'Hospitality',
       'Insurance',
+      'IT',
       'Machinery',
       'Manufacturing',
       'Media',

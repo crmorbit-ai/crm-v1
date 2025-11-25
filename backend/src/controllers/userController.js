@@ -1,7 +1,11 @@
 const User = require('../models/User');
+const Tenant = require('../models/Tenant');
+const Subscription = require('../models/Subscription');
+const SubscriptionPlan = require('../models/SubscriptionPlan');
 const { successResponse, errorResponse } = require('../utils/response');
 const { canManageUser } = require('../utils/permissions');
 const { logActivity } = require('../middleware/activityLogger');
+const { sendUserInvitationEmail } = require('../utils/emailService');
 
 /**
  * @desc    Get all users (filtered by tenant for tenant admins)
@@ -136,6 +140,70 @@ const createUser = async (req, res) => {
       return errorResponse(res, 400, 'Tenant is required for tenant users');
     }
 
+    // ✅ CHECK SUBSCRIPTION LIMITS FOR TENANT USERS
+    if (userType.startsWith('TENANT_')) {
+      const tenantId = tenant || req.user.tenant;
+
+      // Get tenant with subscription details
+      const tenantData = await Tenant.findById(tenantId).populate('subscription.plan');
+
+      if (!tenantData) {
+        return errorResponse(res, 404, 'Organization not found');
+      }
+
+      // Check if subscription exists and is active
+      if (!tenantData.subscription || !['active', 'trial'].includes(tenantData.subscription.status)) {
+        return errorResponse(res, 403, 'No active subscription found for this organization. Please contact support.');
+      }
+
+      // Get subscription plan limits
+      let plan = tenantData.subscription.plan;
+
+      // If plan is not populated, fetch it
+      if (!plan || !plan.limits) {
+        plan = await SubscriptionPlan.findById(tenantData.subscription.plan);
+      }
+
+      // If still no plan found, try by planName
+      if (!plan) {
+        plan = await SubscriptionPlan.findOne({
+          name: tenantData.subscription.planName
+        });
+      }
+
+      if (!plan) {
+        return errorResponse(res, 500, 'Subscription plan not found. Please contact support.');
+      }
+
+      console.log('📊 Plan Info:', {
+        planName: plan.name || plan.displayName,
+        userLimit: plan.limits.users,
+        currentUsers: tenantData.usage.users || 0
+      });
+
+      // Count current active users for this tenant
+      const currentUserCount = await User.countDocuments({
+        tenant: tenantId,
+        isActive: true
+      });
+
+      // Check if limit is reached
+      const userLimit = plan.limits.users;
+      if (userLimit !== -1 && currentUserCount >= userLimit) {
+        return errorResponse(
+          res,
+          403,
+          `❌ User limit reached! Your ${plan.displayName || plan.name} plan allows maximum ${userLimit} users. You currently have ${currentUserCount} active users. Please upgrade your plan to add more users.`
+        );
+      }
+
+      console.log(`✅ User limit check passed: ${currentUserCount}/${userLimit === -1 ? 'Unlimited' : userLimit} users`);
+
+      // Update tenant usage count
+      tenantData.usage.users = currentUserCount + 1;
+      await tenantData.save();
+    }
+
     // Create user data
     const userData = {
       email,
@@ -154,6 +222,29 @@ const createUser = async (req, res) => {
     // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
+
+    // ✅ SEND INVITATION EMAIL TO NEW USER
+    if (userType.startsWith('TENANT_')) {
+      try {
+        const tenantData = await Tenant.findById(tenant || req.user.tenant);
+        const roleNames = roles && roles.length > 0
+          ? await require('../models/Role').find({ _id: { $in: roles } }).select('name')
+          : [];
+
+        await sendUserInvitationEmail({
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          organizationName: tenantData.organizationName,
+          invitedBy: `${req.user.firstName} ${req.user.lastName}`,
+          roles: roleNames.map(r => r.name).join(', ') || 'Team Member',
+          temporaryPassword: password // In production, generate a secure random password
+        });
+      } catch (emailError) {
+        console.error('Failed to send invitation email:', emailError);
+        // Don't fail user creation if email fails
+      }
+    }
 
     // Log activity
     await logActivity(req, 'user.created', 'User', user._id, {
@@ -238,6 +329,16 @@ const deleteUser = async (req, res) => {
     // Prevent deleting yourself
     if (user._id.toString() === req.user._id.toString()) {
       return errorResponse(res, 400, 'You cannot delete yourself');
+    }
+
+    // Update tenant usage count if tenant user
+    if (user.tenant && user.userType.startsWith('TENANT_')) {
+      const tenantData = await Tenant.findById(user.tenant);
+      if (tenantData && tenantData.usage.users > 0) {
+        tenantData.usage.users = tenantData.usage.users - 1;
+        await tenantData.save();
+        console.log(`✅ Updated tenant usage: ${tenantData.usage.users} users`);
+      }
     }
 
     await user.deleteOne();

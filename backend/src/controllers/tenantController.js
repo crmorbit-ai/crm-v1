@@ -159,6 +159,14 @@ const suspendTenant = async (req, res) => {
 
     tenant.isSuspended = true;
     tenant.suspensionReason = reason || 'No reason provided';
+    tenant.isActive = false;
+
+    // Update subscription status
+    if (!tenant.subscription) {
+      tenant.subscription = {};
+    }
+    tenant.subscription.status = 'suspended';
+
     await tenant.save();
 
     // Log activity
@@ -189,6 +197,13 @@ const activateTenant = async (req, res) => {
     tenant.isSuspended = false;
     tenant.isActive = true;
     tenant.suspensionReason = null;
+
+    // Update subscription status to active
+    if (!tenant.subscription) {
+      tenant.subscription = {};
+    }
+    tenant.subscription.status = 'active';
+
     await tenant.save();
 
     // Log activity
@@ -248,15 +263,19 @@ const deleteTenant = async (req, res) => {
 const getTenantStats = async (req, res) => {
   try {
     const totalTenants = await Tenant.countDocuments();
-    const activeTenants = await Tenant.countDocuments({ isActive: true, isSuspended: false });
+    const activeTenants = await Tenant.countDocuments({
+      isActive: true,
+      isSuspended: false,
+      'subscription.status': 'active'
+    });
     const suspendedTenants = await Tenant.countDocuments({ isSuspended: true });
-    const trialTenants = await Subscription.countDocuments({ status: 'trial' });
+    const trialTenants = await Tenant.countDocuments({ 'subscription.status': 'trial' });
 
     // Tenants by plan
     const tenantsByPlan = await Tenant.aggregate([
       {
         $group: {
-          _id: '$planType',
+          _id: '$subscription.planName',
           count: { $sum: 1 }
         }
       }
@@ -266,16 +285,26 @@ const getTenantStats = async (req, res) => {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const recentTenants = await Tenant.countDocuments({ createdAt: { $gte: thirtyDaysAgo } });
 
+    // Format tenants by plan with lowercase keys to match frontend
+    const planStats = tenantsByPlan.reduce((acc, item) => {
+      if (item._id) {
+        acc[item._id.toLowerCase()] = item.count;
+      }
+      return acc;
+    }, {
+      free: 0,
+      basic: 0,
+      professional: 0,
+      enterprise: 0
+    });
+
     successResponse(res, 200, 'Tenant statistics retrieved successfully', {
       totalTenants,
       activeTenants,
       suspendedTenants,
       trialTenants,
       recentTenants,
-      tenantsByPlan: tenantsByPlan.reduce((acc, item) => {
-        acc[item._id] = item.count;
-        return acc;
-      }, {})
+      tenantsByPlan: planStats
     });
   } catch (error) {
     console.error('Get tenant stats error:', error);

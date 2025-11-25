@@ -38,7 +38,7 @@ const Sidebar = () => {
   return (
     <div className="crm-sidebar">
       <div className="sidebar-logo">
-        <h2>🚀 CRM Platform</h2>
+        <h2>🚀  UFS CRM </h2>
       </div>
 
       <nav className="sidebar-nav">

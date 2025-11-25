@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
+import { subscriptionService } from '../services/subscriptionService';
 import Modal from '../components/common/Modal';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import '../styles/crm.css';
@@ -13,6 +14,8 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [subscriptionInfo, setSubscriptionInfo] = useState(null);
+  const [loadingSubscription, setLoadingSubscription] = useState(false);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -75,6 +78,25 @@ const Users = () => {
     }
   };
 
+  const loadSubscriptionInfo = async () => {
+    try {
+      setLoadingSubscription(true);
+      const response = await subscriptionService.getCurrentSubscription();
+      // Response structure: { success, message, data: { subscription, usage, ... } }
+      console.log('🔍 Full API Response:', response);
+      console.log('📊 Subscription Data:', response.data);
+      console.log('📝 Plan Name:', response.data?.subscription?.planName);
+      console.log('💡 Plan Object:', response.data?.subscription?.plan);
+      console.log('👥 Current Users:', response.data?.usage?.users);
+      setSubscriptionInfo(response.data); // Use response.data instead of response
+    } catch (err) {
+      console.error('Failed to load subscription info:', err);
+      setSubscriptionInfo(null);
+    } finally {
+      setLoadingSubscription(false);
+    }
+  };
+
   const handleCreateUser = async (e) => {
     e.preventDefault();
     try {
@@ -87,9 +109,11 @@ const Users = () => {
       setShowCreateModal(false);
       resetForm();
       loadUsers();
+      loadSubscriptionInfo(); // Reload subscription to update usage count
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.message || 'Failed to create user');
+      // Keep modal open on error so user can see the error message
     }
   };
 
@@ -173,10 +197,18 @@ const Users = () => {
   };
 
   const handleChange = (e) => {
+    setError(''); // Clear errors when user types
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
     });
+  };
+
+  const openCreateModal = () => {
+    setShowCreateModal(true);
+    setError('');
+    setSuccess('');
+    loadSubscriptionInfo(); // Load subscription info when opening modal
   };
 
   const getUserTypeLabel = (type) => {
@@ -191,7 +223,7 @@ const Users = () => {
     <DashboardLayout
       title="User Management"
       actionButton={canCreateUser ? (
-        <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateModal(true)}>
+        <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>
           + New User
         </button>
       ) : null}
@@ -317,10 +349,120 @@ const Users = () => {
           setShowCreateModal(false);
           resetForm();
           setError('');
+          setSuccess('');
         }}
         title="Create New User"
       >
         <form onSubmit={handleCreateUser}>
+          {/* Subscription Info Banner */}
+          {loadingSubscription ? (
+            <div style={{
+              padding: '15px',
+              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              textAlign: 'center'
+            }}>
+              <div className="spinner" style={{ width: '20px', height: '20px', margin: '0 auto' }}></div>
+              <p style={{ marginTop: '8px', fontSize: '13px', color: '#666' }}>Loading subscription info...</p>
+            </div>
+          ) : subscriptionInfo ? (
+            <div style={{
+              padding: '15px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              borderRadius: '8px',
+              marginBottom: '20px',
+              color: 'white'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>Current Plan</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                    {subscriptionInfo.subscription?.planName
+                      ? `${subscriptionInfo.subscription.planName} Plan`
+                      : subscriptionInfo.subscription?.plan?.displayName
+                      || subscriptionInfo.subscription?.plan?.name
+                      || 'Free Plan'}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>Users</div>
+                  <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
+                    {subscriptionInfo.usage?.users || 0} / {
+                      (() => {
+                        const limit = subscriptionInfo.subscription?.plan?.limits?.users;
+                        if (limit === -1) return '∞';
+                        if (limit) return limit;
+                        // Fallback based on plan name
+                        const planName = subscriptionInfo.subscription?.planName?.toLowerCase();
+                        if (planName === 'basic') return 10;
+                        if (planName === 'professional') return 25;
+                        if (planName === 'enterprise') return '∞';
+                        return 5; // Free plan default
+                      })()
+                    }
+                  </div>
+                </div>
+              </div>
+              {(() => {
+                const limit = subscriptionInfo.subscription?.plan?.limits?.users;
+                const userLimit = limit !== undefined ? limit :
+                  (() => {
+                    const planName = subscriptionInfo.subscription?.planName?.toLowerCase();
+                    if (planName === 'basic') return 10;
+                    if (planName === 'professional') return 25;
+                    if (planName === 'enterprise') return -1;
+                    return 5;
+                  })();
+                const currentUsers = subscriptionInfo.usage?.users || 0;
+
+                return userLimit !== -1 ? (
+                  <div style={{
+                    marginTop: '10px',
+                    fontSize: '12px',
+                    opacity: 0.9,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}>
+                    <span>💡</span>
+                    <span>
+                      {userLimit - currentUsers} users remaining
+                    </span>
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          ) : null}
+
+          {/* Error/Success Messages inside Modal */}
+          {error && (
+            <div style={{
+              padding: '12px 15px',
+              background: '#fee',
+              border: '1px solid #fcc',
+              borderRadius: '6px',
+              marginBottom: '15px',
+              color: '#c33',
+              fontSize: '14px'
+            }}>
+              ❌ {error}
+            </div>
+          )}
+          {success && (
+            <div style={{
+              padding: '12px 15px',
+              background: '#efe',
+              border: '1px solid #cfc',
+              borderRadius: '6px',
+              marginBottom: '15px',
+              color: '#3c3',
+              fontSize: '14px'
+            }}>
+              ✅ {success}
+            </div>
+          )}
+
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">First Name *</label>

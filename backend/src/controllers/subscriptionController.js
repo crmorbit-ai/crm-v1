@@ -27,30 +27,45 @@ const getAllPlans = async (req, res) => {
 const getCurrentSubscription = async (req, res) => {
   try {
     const tenantId = req.user.tenant._id || req.user.tenant;
-    
+
     const tenant = await Tenant.findById(tenantId)
       .populate('subscription.plan')
       .select('organizationName subscription usage');
-    
+
     if (!tenant) {
       return errorResponse(res, 404, 'Tenant not found');
     }
-    
+
+    console.log('🔍 Tenant Subscription Debug:');
+    console.log('   Organization:', tenant.organizationName);
+    console.log('   Plan Name (direct):', tenant.subscription?.planName);
+    console.log('   Plan ID:', tenant.subscription?.plan?._id);
+    console.log('   Plan Populated:', tenant.subscription?.plan ? 'Yes' : 'No');
+    console.log('   Plan Display Name:', tenant.subscription?.plan?.displayName);
+    console.log('   Plan Limits:', tenant.subscription?.plan?.limits);
+    console.log('   📊 ALL USAGE DATA:', {
+      users: tenant.usage?.users || 0,
+      leads: tenant.usage?.leads || 0,
+      contacts: tenant.usage?.contacts || 0,
+      deals: tenant.usage?.deals || 0,
+      storage: tenant.usage?.storage || 0
+    });
+
     // Calculate trial days remaining
     const trialDaysRemaining = tenant.getTrialDaysRemaining ? tenant.getTrialDaysRemaining() : 0;
-    
+
     // Check if trial expired
     const isTrialExpired = tenant.isTrialExpired ? tenant.isTrialExpired() : false;
-    
+
     // Check if subscription active
     const hasActiveSubscription = tenant.hasActiveSubscription ? tenant.hasActiveSubscription() : true;
-    
+
     // Get payment history
     const payments = await Payment.find({ tenant: tenantId })
       .sort({ createdAt: -1 })
       .limit(10)
       .select('amount planName status paidAt invoiceNumber createdAt');
-    
+
     const subscriptionData = {
       organization: tenant.organizationName,
       subscription: tenant.subscription,
@@ -63,7 +78,7 @@ const getCurrentSubscription = async (req, res) => {
       },
       payments: payments
     };
-    
+
     successResponse(res, 200, 'Subscription details retrieved', subscriptionData);
   } catch (error) {
     console.error('Get current subscription error:', error);

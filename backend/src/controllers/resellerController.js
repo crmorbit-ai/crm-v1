@@ -125,9 +125,11 @@ const getResellerDashboard = async (req, res) => {
       return errorResponse(res, 404, 'Reseller not found');
     }
 
-    // Get all tenants linked to this reseller
+    // ============================================
+    // 🔧 FIX: Query Tenant collection directly
+    // ============================================
     const tenants = await Tenant.find({ reseller: resellerId })
-      .select('organizationName slug contactEmail subscriptionStatus monthlySubscriptionAmount isActive createdAt')
+      .select('organizationName slug contactEmail subscription subscriptionStatus monthlySubscriptionAmount isActive createdAt')
       .sort({ createdAt: -1 });
 
     // Calculate stats
@@ -136,7 +138,7 @@ const getResellerDashboard = async (req, res) => {
     
     // Calculate monthly commission
     const totalMonthlyRevenue = tenants.reduce((sum, tenant) => {
-      return sum + (tenant.monthlySubscriptionAmount || 0);
+      return sum + (tenant.monthlySubscriptionAmount || tenant.subscription?.amount || 0);
     }, 0);
     
     const totalMonthlyCommission = (totalMonthlyRevenue * reseller.commissionRate) / 100;
@@ -147,24 +149,26 @@ const getResellerDashboard = async (req, res) => {
         email: reseller.email,
         companyName: reseller.companyName,
         commissionRate: reseller.commissionRate,
-        status: reseller.status
+        status: reseller.status,
+        referralLink: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/register?ref=${reseller._id}`
       },
       stats: {
         totalTenants: totalTenants,
         activeTenants: activeTenants,
         totalMonthlyRevenue: totalMonthlyRevenue,
         totalMonthlyCommission: totalMonthlyCommission,
-        totalEarnedCommission: reseller.totalCommission
+        totalEarnedCommission: reseller.totalCommission || 0
       },
       tenants: tenants.map(tenant => ({
         _id: tenant._id,
         name: tenant.organizationName,
         slug: tenant.slug,
         email: tenant.contactEmail,
-        status: tenant.subscriptionStatus,
+        status: tenant.subscription?.status || tenant.subscriptionStatus || 'trial',
+        planName: tenant.subscription?.planName || 'Free',
         isActive: tenant.isActive,
-        monthlyAmount: tenant.monthlySubscriptionAmount || 0,
-        commission: ((tenant.monthlySubscriptionAmount || 0) * reseller.commissionRate) / 100,
+        monthlyAmount: tenant.monthlySubscriptionAmount || tenant.subscription?.amount || 0,
+        commission: ((tenant.monthlySubscriptionAmount || tenant.subscription?.amount || 0) * reseller.commissionRate) / 100,
         joinedDate: tenant.createdAt
       }))
     });
@@ -188,28 +192,37 @@ const getAllResellers = async (req, res) => {
 
     const resellers = await Reseller.find(query)
       .select('-password')
-      .populate('onboardedTenants', 'organizationName isActive monthlySubscriptionAmount')
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 });
 
     const total = await Reseller.countDocuments(query);
 
-    const resellersWithStats = resellers.map(r => {
-      const activeTenants = r.onboardedTenants.filter(t => t.isActive);
-      const totalMonthlyRevenue = activeTenants.reduce((sum, t) => sum + (t.monthlySubscriptionAmount || 0), 0);
+    // ============================================
+    // 🔧 FIX: Get tenants for each reseller from Tenant collection
+    // ============================================
+    const resellersWithStats = await Promise.all(resellers.map(async (r) => {
+      // Query tenants directly from Tenant collection
+      const tenants = await Tenant.find({ reseller: r._id })
+        .select('organizationName isActive monthlySubscriptionAmount subscription');
+      
+      const activeTenants = tenants.filter(t => t.isActive);
+      const totalMonthlyRevenue = activeTenants.reduce((sum, t) => {
+        return sum + (t.monthlySubscriptionAmount || t.subscription?.amount || 0);
+      }, 0);
       const monthlyCommission = (totalMonthlyRevenue * r.commissionRate) / 100;
 
       return {
         ...r.toObject(),
+        tenantsCount: tenants.length,
         stats: {
-          totalTenants: r.onboardedTenants.length,
+          totalTenants: tenants.length,
           activeTenants: activeTenants.length,
           monthlyCommission,
-          totalCommission: r.totalCommission
+          totalCommission: r.totalCommission || 0
         }
       };
-    });
+    }));
 
     successResponse(res, 200, 'Resellers retrieved', {
       resellers: resellersWithStats,
@@ -234,38 +247,43 @@ const getAllResellers = async (req, res) => {
  */
 const getResellerById = async (req, res) => {
   try {
-    const reseller = await Reseller.findById(req.params.id)
-      .select('-password')
-      .populate({
-        path: 'onboardedTenants',
-        select: 'organizationName contactEmail planType isActive monthlySubscriptionAmount createdAt'
-      });
+    const reseller = await Reseller.findById(req.params.id).select('-password');
 
     if (!reseller) {
       return errorResponse(res, 404, 'Reseller not found');
     }
 
-    const activeTenants = reseller.onboardedTenants.filter(t => t.isActive);
-    const totalMonthlyRevenue = activeTenants.reduce((sum, t) => sum + (t.monthlySubscriptionAmount || 0), 0);
+    // ============================================
+    // 🔧 FIX: Query Tenant collection directly instead of using populate
+    // ============================================
+    const tenants = await Tenant.find({ reseller: req.params.id })
+      .select('organizationName contactEmail subscription subscriptionStatus planType isActive monthlySubscriptionAmount createdAt')
+      .sort({ createdAt: -1 });
+
+    const activeTenants = tenants.filter(t => t.isActive);
+    const totalMonthlyRevenue = activeTenants.reduce((sum, t) => {
+      return sum + (t.monthlySubscriptionAmount || t.subscription?.amount || 0);
+    }, 0);
     const monthlyCommission = (totalMonthlyRevenue * reseller.commissionRate) / 100;
 
     successResponse(res, 200, 'Reseller details retrieved', {
       reseller: reseller.toObject(),
       stats: {
-        totalTenants: reseller.onboardedTenants.length,
+        totalTenants: tenants.length,
         activeTenants: activeTenants.length,
         totalMonthlyRevenue,
         monthlyCommission,
-        totalCommission: reseller.totalCommission
+        totalCommission: reseller.totalCommission || 0
       },
-      tenants: reseller.onboardedTenants.map(t => ({
+      tenants: tenants.map(t => ({
         id: t._id,
         organizationName: t.organizationName,
         contactEmail: t.contactEmail,
-        planType: t.planType,
+        planType: t.subscription?.planName || t.planType || 'Free',
+        status: t.subscription?.status || t.subscriptionStatus || 'trial',
         isActive: t.isActive,
-        monthlySubscription: t.monthlySubscriptionAmount,
-        monthlyCommission: (t.monthlySubscriptionAmount * reseller.commissionRate) / 100,
+        monthlySubscription: t.monthlySubscriptionAmount || t.subscription?.amount || 0,
+        monthlyCommission: ((t.monthlySubscriptionAmount || t.subscription?.amount || 0) * reseller.commissionRate) / 100,
         onboardedDate: t.createdAt
       }))
     });
@@ -342,6 +360,62 @@ const updateResellerCommission = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get reseller's tenants/companies (SAAS Admin)
+ * @route   GET /api/resellers/:id/tenants
+ * @access  Private (SAAS Admin)
+ */
+const getResellerTenants = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 20 } = req.query;
+
+    const reseller = await Reseller.findById(id).select('firstName lastName email commissionRate');
+    
+    if (!reseller) {
+      return errorResponse(res, 404, 'Reseller not found');
+    }
+
+    const tenants = await Tenant.find({ reseller: id })
+      .select('organizationName slug contactEmail subscription subscriptionStatus isActive createdAt monthlySubscriptionAmount')
+      .limit(limit * 1)
+      .skip((page - 1) * limit)
+      .sort({ createdAt: -1 });
+
+    const total = await Tenant.countDocuments({ reseller: id });
+
+    successResponse(res, 200, 'Reseller tenants retrieved', {
+      reseller: {
+        _id: reseller._id,
+        name: `${reseller.firstName} ${reseller.lastName}`,
+        email: reseller.email,
+        commissionRate: reseller.commissionRate
+      },
+      tenants: tenants.map(t => ({
+        _id: t._id,
+        organizationName: t.organizationName,
+        slug: t.slug,
+        contactEmail: t.contactEmail,
+        planName: t.subscription?.planName || 'Free',
+        status: t.subscription?.status || t.subscriptionStatus || 'trial',
+        isActive: t.isActive,
+        monthlyAmount: t.monthlySubscriptionAmount || t.subscription?.amount || 0,
+        createdAt: t.createdAt
+      })),
+      pagination: {
+        total,
+        page: parseInt(page),
+        limit: parseInt(limit),
+        pages: Math.ceil(total / limit)
+      }
+    });
+
+  } catch (error) {
+    console.error('Get reseller tenants error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   registerReseller,
   resellerLogin,
@@ -349,5 +423,6 @@ module.exports = {
   getAllResellers,
   getResellerById,
   updateResellerStatus,
-  updateResellerCommission
+  updateResellerCommission,
+  getResellerTenants // NEW
 };

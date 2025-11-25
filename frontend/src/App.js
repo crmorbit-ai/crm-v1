@@ -39,21 +39,21 @@ import Tenants from './pages/Tenants';
 
 import Billings from './pages/Billings';
 
-// ============================================
+
 // 💰 SUBSCRIPTION PAGES - NEW
-// ============================================
+
 import Subscription from './pages/Subscription';
 import SaasSubscriptions from './pages/SaasSubscriptions';
-// ============================================
 
-// ============================================
-// 🚀 RESELLER PAGES
-// ============================================
+
+
+// RESELLER PAGES
+
 import ResellerRegister from './pages/ResellerRegister';
 import ResellerLogin from './pages/ResellerLogin';
 import ResellerDashboard from './pages/ResellerDashboard';
 import ResellerManagement from './pages/ResellerManagement';
-// ============================================
+
 
 import AccountDetail from './pages/AccountDetail';
 import ContactDetail from './pages/ContactDetail';
@@ -115,18 +115,17 @@ function AppRoutes() {
         </PublicRoute>
       } />
 
-      {/* ============================================ */}
+      
       {/* 🚀 RESELLER PUBLIC ROUTES */}
-      {/* ============================================ */}
+     
       <Route path="/reseller/register" element={<ResellerRegister />} />
       <Route path="/reseller/login" element={<ResellerLogin />} />
-      {/* ============================================ */}
+      
 
-      {/* ============================================ */}
       {/* 🚀 RESELLER PROTECTED ROUTES */}
-      {/* ============================================ */}
+      
       <Route path="/reseller/dashboard" element={<ResellerDashboard />} />
-      {/* ============================================ */}
+      
 
       {/* Protected routes */}
       <Route path="/dashboard" element={
@@ -135,15 +134,15 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* ============================================ */}
+     
       {/* 💰 SUBSCRIPTION ROUTE - NEW */}
-      {/* ============================================ */}
+ 
       <Route path="/subscription" element={
         <ProtectedRoute>
           <Subscription />
         </ProtectedRoute>
       } />
-      {/* ============================================ */}
+    
 
       {/* CRM Routes */}
       <Route path="/leads" element={
@@ -209,25 +208,25 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* ============================================ */}
+     
       {/* 💰 SAAS SUBSCRIPTIONS - NEW */}
-      {/* ============================================ */}
+     
       <Route path="/saas/subscriptions" element={
         <ProtectedRoute requireSaas>
           <SaasSubscriptions />
         </ProtectedRoute>
       } />
-      {/* ============================================ */}
+      
 
-      {/* ============================================ */}
+     
       {/* 🚀 RESELLER MANAGEMENT (SAAS ADMIN) */}
-      {/* ============================================ */}
+     
       <Route path="/saas/resellers" element={
         <ProtectedRoute requireSaas>
           <ResellerManagement />
         </ProtectedRoute>
       } />
-      {/* ============================================ */}
+     
 
       <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
       <Route path="/contacts/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />

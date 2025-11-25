@@ -114,15 +114,66 @@ const SaasSubscriptions = () => {
   };
 
   return (
-    <div className="dashboard">
+    <div className="dashboard" style={{
+      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0f9ff 100%)',
+      minHeight: '100vh'
+    }}>
       {/* Header */}
-      <header className="dashboard-header">
-        <div className="container">
+      <header className="dashboard-header" style={{
+        background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #1a2a35 50%, #95b5ef 75%, #2a5298 100%)',
+        backgroundSize: '400% 400%',
+        animation: 'gradientShift 15s ease infinite',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
+        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
+        padding: '24px 0'
+      }}>
+        <div className="container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
           <div className="flex-between">
-            <h1>Subscription Management</h1>
-            <div className="flex gap-10">
-              <span>Welcome, {user?.firstName} {user?.lastName}</span>
-              <button onClick={logout} className="btn btn-outline">
+            <h1 style={{
+              background: 'linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              fontSize: '32px',
+              fontWeight: '800',
+              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)',
+              margin: 0
+            }}>💳 Subscription Management</h1>
+            <div className="flex gap-10" style={{ alignItems: 'center' }}>
+              <span style={{
+                color: '#ffffff',
+                fontWeight: 700,
+                fontSize: '15px',
+                textShadow: '1px 1px 2px rgba(0, 0, 0, 0.3)',
+                background: 'rgba(255, 255, 255, 0.15)',
+                padding: '8px 16px',
+                borderRadius: '20px',
+                backdropFilter: 'blur(10px)'
+              }}>
+                👋 Welcome, {user?.firstName} {user?.lastName}
+              </span>
+              <button onClick={logout} style={{
+                background: 'rgba(255, 255, 255, 0.2)',
+                border: '2px solid rgba(255, 255, 255, 0.4)',
+                color: '#ffffff',
+                padding: '10px 24px',
+                borderRadius: '10px',
+                fontWeight: '700',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                backdropFilter: 'blur(10px)',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
+              }}
+              onMouseEnter={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
+              }}
+              onMouseLeave={(e) => {
+                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+              }}>
                 Logout
               </button>
             </div>
@@ -131,18 +182,108 @@ const SaasSubscriptions = () => {
       </header>
 
       {/* Navigation */}
-      <nav className="dashboard-nav">
-        <div className="container">
-          <Link to="/saas/dashboard" className="nav-item">Dashboard</Link>
-          <Link to="/saas/tenants" className="nav-item">Tenants</Link>
-          <Link to="/saas/subscriptions" className="nav-item active">Subscriptions</Link>
-          <Link to="/saas/billings" className="nav-item">Billings</Link>
-          <Link to="/saas/resellers" className="nav-item">🤝 Resellers</Link>
+      <nav className="dashboard-nav" style={{
+        background: 'rgba(255, 255, 255, 0.9)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
+        borderBottom: '1px solid rgba(93, 185, 222, 0.2)',
+        padding: '0'
+      }}>
+        <div className="container" style={{
+          display: 'flex',
+          gap: '8px',
+          padding: '8px 20px',
+          maxWidth: '1400px',
+          margin: '0 auto'
+        }}>
+          <Link to="/saas/dashboard" style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '14px',
+            background: 'rgba(93, 185, 222, 0.1)',
+            color: '#2a5298',
+            textDecoration: 'none',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>Dashboard</Link>
+          <Link to="/saas/tenants" style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '14px',
+            background: 'rgba(93, 185, 222, 0.1)',
+            color: '#2a5298',
+            textDecoration: 'none',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>Tenants</Link>
+          <Link to="/saas/subscriptions" style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            fontWeight: '700',
+            fontSize: '14px',
+            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+            color: '#ffffff',
+            textDecoration: 'none',
+            transition: 'all 0.3s ease',
+            boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
+          }}>Subscriptions</Link>
+          <Link to="/saas/billings" style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '14px',
+            background: 'rgba(93, 185, 222, 0.1)',
+            color: '#2a5298',
+            textDecoration: 'none',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>Billings</Link>
+          <Link to="/saas/resellers" style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '14px',
+            background: 'rgba(93, 185, 222, 0.1)',
+            color: '#2a5298',
+            textDecoration: 'none',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>🤝 Resellers</Link>
         </div>
       </nav>
 
-      <main className="dashboard-content">
-        <div className="container">
+      <main className="dashboard-content" style={{ padding: '32px 0' }}>
+        <div className="container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
           
           {/* Revenue Stats */}
           <div className="stats-grid" style={{ marginBottom: '32px' }}>
@@ -461,6 +602,13 @@ const SaasSubscriptions = () => {
         </div>
       )}
 
+      <style>{`
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
     </div>
   );
 };

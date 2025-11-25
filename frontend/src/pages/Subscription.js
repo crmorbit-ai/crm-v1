@@ -12,124 +12,146 @@ const Subscription = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [hoveredPlanId, setHoveredPlanId] = useState(null); // FIX: Moved outside map
+  const [hoveredStatCard, setHoveredStatCard] = useState(null);
 
-  // iOS Glass Inline Styles
+  // Premium Advanced Styles
   const glassStyles = {
     container: {
       minHeight: '100vh',
-      // background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: '#ffffff',
       padding: '40px 20px',
-      borderRadius: '20px'
+      position: 'relative'
     },
     glassCard: {
-      background: 'rgba(130, 145, 134, 0.1)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
+      background: 'linear-gradient(145deg, var(--crm-gray-300) 0%, rgb(248, 249, 250) 100%)',
       borderRadius: '24px',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      boxShadow: '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
-      padding: '32px',
-      marginBottom: '32px',
-      color: 'Black'
+      border: '1px solid #e0e7ff',
+      boxShadow: '0 20px 60px rgba(93, 185, 222, 0.15), 0 8px 24px rgba(42, 82, 152, 0.08)',
+      padding: '40px',
+      marginBottom: '40px',
+      color: '#1a1a1a',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    cardDecoration: {
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      height: '4px',
+      background: 'linear-gradient(90deg, #5db9de 0%, #2a5298 100%)',
+      borderRadius: '24px 24px 0 0'
     },
     planCard: {
-      background: 'rgba(255, 255, 255, 0.95)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      borderRadius: '20px',
-      border: '2px solid rgba(255, 255, 255, 0.5)',
-      padding: '32px',
+      background: 'linear-gradient(145deg, #ffffff 0%, #f8fafc 100%)',
+      borderRadius: '24px',
+      border: '2px solid #e0e7ff',
+      padding: '36px',
       position: 'relative',
-      transition: 'all 0.3s ease',
-      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.1)'
+      transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+      boxShadow: '0 10px 40px rgba(93, 185, 222, 0.12), 0 4px 16px rgba(42, 82, 152, 0.08)',
+      overflow: 'hidden'
     },
     planCardHover: {
-      transform: 'translateY(-10px) scale(1.02)',
-      boxShadow: '0 20px 60px rgba(102, 126, 234, 0.4)',
-      borderColor: 'rgba(102, 126, 234, 0.5)'
+      transform: 'translateY(-12px)',
+      boxShadow: '0 25px 70px rgba(93, 185, 222, 0.25), 0 12px 40px rgba(42, 82, 152, 0.15)',
+      borderColor: '#5db9de',
+      background: 'linear-gradient(145deg, #ffffff 0%, #f0f9ff 100%)'
     },
     statCard: {
-      background: 'rgba(255, 255, 255, 0.2)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      borderRadius: '16px',
-      border: '1px solid rgba(255, 255, 255, 0.3)',
-      padding: '20px',
+      background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+      borderRadius: '20px',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+      padding: '28px',
       textAlign: 'center',
-      color: 'Black'
+      color: '#ffffff',
+      boxShadow: '0 12px 40px rgba(93, 185, 222, 0.3), 0 4px 16px rgba(42, 82, 152, 0.2)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      cursor: 'default',
+      position: 'relative',
+      overflow: 'hidden'
+    },
+    statCardHover: {
+      transform: 'translateY(-6px) scale(1.02)',
+      boxShadow: '0 20px 60px rgba(93, 185, 222, 0.4), 0 8px 24px rgba(42, 82, 152, 0.3)',
+      background: 'linear-gradient(135deg, #47b9e1 0%, #2a5298 100%)'
     },
     buttonPrimary: {
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'Black',
+      background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+      color: '#ffffff',
       border: 'none',
-      padding: '14px 32px',
-      borderRadius: '12px',
-      fontWeight: '600',
+      padding: '16px 36px',
+      borderRadius: '14px',
+      fontWeight: '700',
       fontSize: '16px',
       cursor: 'pointer',
-      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-      transition: 'all 0.3s ease',
-      width: '100%'
+      boxShadow: '0 6px 24px rgba(93, 185, 222, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+      width: '100%',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
     },
     alertWarning: {
-      background: 'rgba(251, 191, 36, 0.2)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      borderRadius: '16px',
-      border: '2px solid rgba(251, 191, 36, 0.4)',
-      padding: '20px',
-      color: 'Black',
-      marginBottom: '24px'
+      background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+      borderRadius: '20px',
+      border: '2px solid #fbbf24',
+      padding: '24px',
+      color: '#92400e',
+      marginBottom: '28px',
+      boxShadow: '0 8px 32px rgba(251, 191, 36, 0.2)'
     },
     toggle: {
-      background: 'rgba(255, 255, 255, 0.2)',
-      backdropFilter: 'blur(10px)',
-      WebkitBackdropFilter: 'blur(10px)',
-      borderRadius: '12px',
-      padding: '4px',
+      background: '#f3f4f6',
+      borderRadius: '16px',
+      padding: '6px',
       display: 'inline-flex',
-      gap: '4px',
-      border: '1px solid rgba(255, 255, 255, 0.3)'
+      gap: '6px',
+      border: '1px solid #e5e7eb',
+      boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)'
     },
     toggleButton: {
-      padding: '10px 28px',
-      borderRadius: '8px',
+      padding: '12px 32px',
+      borderRadius: '12px',
       border: 'none',
       background: 'transparent',
-      color: 'Black',
-      fontWeight: '600',
+      color: '#6b7280',
+      fontWeight: '700',
       cursor: 'pointer',
-      transition: 'all 0.3s ease'
+      transition: 'all 0.3s ease',
+      fontSize: '15px'
     },
     toggleButtonActive: {
-      background: 'white',
-      color: '#667eea',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)'
+      background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+      color: '#ffffff',
+      boxShadow: '0 6px 20px rgba(93, 185, 222, 0.4)'
     },
     popularBadge: {
       position: 'absolute',
-      top: '-12px',
+      top: '-14px',
       left: '50%',
       transform: 'translateX(-50%)',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: 'Black',
-      padding: '8px 20px',
-      borderRadius: '20px',
-      fontSize: '12px',
-      fontWeight: '700',
-      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
+      background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+      color: '#1a2a35',
+      padding: '10px 24px',
+      borderRadius: '24px',
+      fontSize: '11px',
+      fontWeight: '800',
+      boxShadow: '0 6px 20px rgba(251, 191, 36, 0.5)',
+      letterSpacing: '1px',
+      textTransform: 'uppercase'
     },
     currentBadge: {
       position: 'absolute',
-      top: '16px',
-      right: '16px',
-      background: 'rgba(16, 185, 129, 0.9)',
-      backdropFilter: 'blur(5px)',
-      color: 'Black',
-      padding: '6px 14px',
-      borderRadius: '12px',
+      top: '20px',
+      right: '20px',
+      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+      backdropFilter: 'blur(8px)',
+      color: '#ffffff',
+      padding: '8px 18px',
+      borderRadius: '14px',
       fontSize: '12px',
-      fontWeight: '600'
+      fontWeight: '700',
+      boxShadow: '0 4px 16px rgba(16, 185, 129, 0.4)'
     }
   };
 
@@ -144,7 +166,15 @@ const Subscription = () => {
         subscriptionService.getCurrentSubscription(),
         subscriptionService.getAllPlans()
       ]);
-      
+
+      console.log('📊 Subscription Page - Full Data:', subscriptionData.data);
+      console.log('📊 Usage Object:', subscriptionData.data?.usage);
+      console.log('👥 Users:', subscriptionData.data?.usage?.users);
+      console.log('📞 Leads:', subscriptionData.data?.usage?.leads);
+      console.log('📇 Contacts:', subscriptionData.data?.usage?.contacts);
+      console.log('💼 Deals:', subscriptionData.data?.usage?.deals);
+      console.log('💾 Storage:', subscriptionData.data?.usage?.storage);
+
       setCurrentSubscription(subscriptionData.data);
       setPlans(plansData.data);
     } catch (error) {
@@ -203,9 +233,18 @@ const Subscription = () => {
     return (
       <DashboardLayout title="Subscription & Billing">
         <div style={glassStyles.container}>
-          <div style={{...glassStyles.glassCard, textAlign: 'center', padding: '60px'}}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
-            <p style={{color: 'white', fontSize: '18px'}}>Loading subscription details...</p>
+          <div style={{...glassStyles.glassCard, textAlign: 'center', padding: '80px'}}>
+            <div style={{
+              fontSize: '64px',
+              marginBottom: '24px',
+              animation: 'pulse 2s ease-in-out infinite'
+            }}>⏳</div>
+            <p style={{
+              color: '#6b7280',
+              fontSize: '20px',
+              fontWeight: '600',
+              letterSpacing: '0.5px'
+            }}>Loading subscription details...</p>
           </div>
         </div>
       </DashboardLayout>
@@ -221,40 +260,124 @@ const Subscription = () => {
         
         {/* Current Subscription Card */}
         <div style={glassStyles.glassCard}>
-          <h2 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '24px', color: 'Blue' }}>
+          <div style={glassStyles.cardDecoration}></div>
+          <h2 style={{
+            fontSize: '32px',
+            fontWeight: '800',
+            marginBottom: '32px',
+            color: '#1a1a1a',
+            letterSpacing: '0.5px',
+            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
             💳 Current Subscription
           </h2>
           
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
             
             {/* Plan Info */}
-            <div style={glassStyles.statCard}>
-              <div style={{ fontSize: '14px', marginBottom: '8px', opacity: 0.8 }}>Current Plan</div>
-              <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px' }}>
+            <div
+              style={{
+                ...glassStyles.statCard,
+                ...(hoveredStatCard === 'plan' ? glassStyles.statCardHover : {})
+              }}
+              onMouseEnter={() => setHoveredStatCard('plan')}
+              onMouseLeave={() => setHoveredStatCard(null)}
+            >
+              <div style={{
+                fontSize: '13px',
+                marginBottom: '12px',
+                opacity: 0.9,
+                color: '#ffffff',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>Current Plan</div>
+              <div style={{
+                fontSize: '36px',
+                fontWeight: '900',
+                marginBottom: '12px',
+                color: '#ffffff',
+                textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+              }}>
                 {sub?.planName || 'Free'}
               </div>
               {getStatusBadge(sub?.status || 'trial')}
             </div>
 
             {/* Billing Info */}
-            <div style={glassStyles.statCard}>
-              <div style={{ fontSize: '14px', marginBottom: '8px', opacity: 0.8 }}>Monthly Cost</div>
-              <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px' }}>
+            <div
+              style={{
+                ...glassStyles.statCard,
+                ...(hoveredStatCard === 'billing' ? glassStyles.statCardHover : {})
+              }}
+              onMouseEnter={() => setHoveredStatCard('billing')}
+              onMouseLeave={() => setHoveredStatCard(null)}
+            >
+              <div style={{
+                fontSize: '13px',
+                marginBottom: '12px',
+                opacity: 0.9,
+                color: '#ffffff',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: '1px'
+              }}>Monthly Cost</div>
+              <div style={{
+                fontSize: '36px',
+                fontWeight: '900',
+                marginBottom: '12px',
+                color: '#ffffff',
+                textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+              }}>
                 ₹{sub?.amount?.toLocaleString() || 0}
               </div>
-              <div style={{ fontSize: '14px', opacity: 0.8 }}>
+              <div style={{
+                fontSize: '14px',
+                opacity: 0.9,
+                color: '#ffffff',
+                fontWeight: '500'
+              }}>
                 {sub?.billingCycle === 'yearly' ? 'Billed Yearly' : 'Billed Monthly'}
               </div>
             </div>
 
             {/* Trial Info */}
             {status?.isTrialActive && !status?.isTrialExpired && (
-              <div style={glassStyles.statCard}>
-                <div style={{ fontSize: '14px', marginBottom: '8px', opacity: 0.8 }}>Trial Period</div>
-                <div style={{ fontSize: '32px', fontWeight: '800', marginBottom: '8px' }}>
+              <div
+                style={{
+                  ...glassStyles.statCard,
+                  ...(hoveredStatCard === 'trial' ? glassStyles.statCardHover : {})
+                }}
+                onMouseEnter={() => setHoveredStatCard('trial')}
+                onMouseLeave={() => setHoveredStatCard(null)}
+              >
+                <div style={{
+                  fontSize: '13px',
+                  marginBottom: '12px',
+                  opacity: 0.9,
+                  color: '#ffffff',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}>Trial Period</div>
+                <div style={{
+                  fontSize: '36px',
+                  fontWeight: '900',
+                  marginBottom: '12px',
+                  color: '#ffffff',
+                  textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                }}>
                   {status.trialDaysRemaining}
                 </div>
-                <div style={{ fontSize: '14px', opacity: 0.8 }}>days remaining</div>
+                <div style={{
+                  fontSize: '14px',
+                  opacity: 0.9,
+                  color: '#ffffff',
+                  fontWeight: '500'
+                }}>days remaining</div>
               </div>
             )}
           </div>
@@ -274,33 +397,119 @@ const Subscription = () => {
           {/* Usage Stats */}
           {currentSubscription?.usage && (
             <div>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '16px', color: 'Black' }}>
+              <h3 style={{
+                fontSize: '22px',
+                fontWeight: '700',
+                marginBottom: '20px',
+                color: '#1a1a1a',
+                letterSpacing: '0.5px'
+              }}>
                 📊 Current Usage
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-                <div style={glassStyles.statCard}>
-                  <div style={{ fontSize: '28px', fontWeight: '700' }}>
+                <div
+                  style={{
+                    ...glassStyles.statCard,
+                    ...(hoveredStatCard === 'users' ? glassStyles.statCardHover : {})
+                  }}
+                  onMouseEnter={() => setHoveredStatCard('users')}
+                  onMouseLeave={() => setHoveredStatCard(null)}
+                >
+                  <div style={{
+                    fontSize: '32px',
+                    fontWeight: '800',
+                    color: '#ffffff',
+                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  }}>
                     {currentSubscription.usage.users || 0}
                   </div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>Users</div>
+                  <div style={{
+                    fontSize: '13px',
+                    opacity: 0.9,
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    marginTop: '8px'
+                  }}>Users</div>
                 </div>
-                <div style={glassStyles.statCard}>
-                  <div style={{ fontSize: '28px', fontWeight: '700' }}>
+                <div
+                  style={{
+                    ...glassStyles.statCard,
+                    ...(hoveredStatCard === 'leads' ? glassStyles.statCardHover : {})
+                  }}
+                  onMouseEnter={() => setHoveredStatCard('leads')}
+                  onMouseLeave={() => setHoveredStatCard(null)}
+                >
+                  <div style={{
+                    fontSize: '32px',
+                    fontWeight: '800',
+                    color: '#ffffff',
+                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  }}>
                     {currentSubscription.usage.leads || 0}
                   </div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>Leads</div>
+                  <div style={{
+                    fontSize: '13px',
+                    opacity: 0.9,
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    marginTop: '8px'
+                  }}>Leads</div>
                 </div>
-                <div style={glassStyles.statCard}>
-                  <div style={{ fontSize: '28px', fontWeight: '700' }}>
+                <div
+                  style={{
+                    ...glassStyles.statCard,
+                    ...(hoveredStatCard === 'contacts' ? glassStyles.statCardHover : {})
+                  }}
+                  onMouseEnter={() => setHoveredStatCard('contacts')}
+                  onMouseLeave={() => setHoveredStatCard(null)}
+                >
+                  <div style={{
+                    fontSize: '32px',
+                    fontWeight: '800',
+                    color: '#ffffff',
+                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  }}>
                     {currentSubscription.usage.contacts || 0}
                   </div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>Contacts</div>
+                  <div style={{
+                    fontSize: '13px',
+                    opacity: 0.9,
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    marginTop: '8px'
+                  }}>Contacts</div>
                 </div>
-                <div style={glassStyles.statCard}>
-                  <div style={{ fontSize: '28px', fontWeight: '700' }}>
+                <div
+                  style={{
+                    ...glassStyles.statCard,
+                    ...(hoveredStatCard === 'storage' ? glassStyles.statCardHover : {})
+                  }}
+                  onMouseEnter={() => setHoveredStatCard('storage')}
+                  onMouseLeave={() => setHoveredStatCard(null)}
+                >
+                  <div style={{
+                    fontSize: '32px',
+                    fontWeight: '800',
+                    color: '#ffffff',
+                    textShadow: '0 2px 8px rgba(0, 0, 0, 0.3)'
+                  }}>
                     {Math.round(currentSubscription.usage.storage / 1024) || 0}GB
                   </div>
-                  <div style={{ fontSize: '14px', opacity: 0.8 }}>Storage</div>
+                  <div style={{
+                    fontSize: '13px',
+                    opacity: 0.9,
+                    color: '#ffffff',
+                    fontWeight: '600',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px',
+                    marginTop: '8px'
+                  }}>Storage</div>
                 </div>
               </div>
             </div>
@@ -323,17 +532,37 @@ const Subscription = () => {
               onClick={() => setBillingCycle('yearly')}
               style={{
                 ...glassStyles.toggleButton,
-                ...(billingCycle === 'yearly' ? glassStyles.toggleButtonActive : {})
+                ...(billingCycle === 'yearly' ? glassStyles.toggleButtonActive : {}),
+                position: 'relative'
               }}
             >
-              Yearly <span style={{ color: billingCycle === 'yearly' ? '#10B981' : 'rgba(255,255,255,0.7)', fontSize: '12px' }}>(Save 20%)</span>
+              Yearly{' '}
+              <span style={{
+                color: billingCycle === 'yearly' ? '#10b981' : '#fbbf24',
+                fontSize: '12px',
+                fontWeight: '800',
+                marginLeft: '4px'
+              }}>
+                (Save 20%)
+              </span>
             </button>
           </div>
         </div>
 
         {/* Available Plans */}
         <div style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '28px', fontWeight: '700', marginBottom: '32px', textAlign: 'center', color: 'Blue' }}>
+          <h2 style={{
+            fontSize: '36px',
+            fontWeight: '900',
+            marginBottom: '48px',
+            textAlign: 'center',
+            color: '#1a1a1a',
+            letterSpacing: '1px',
+            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>
             ✨ Available Plans
           </h2>
           
@@ -370,38 +599,60 @@ const Subscription = () => {
                     </div>
                   )}
 
-                  <div style={{ marginBottom: '24px' }}>
-                    <h3 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '8px', color: '#1F2937' }}>
+                  <div style={{ marginBottom: '28px' }}>
+                    <h3 style={{
+                      fontSize: '28px',
+                      fontWeight: '800',
+                      marginBottom: '12px',
+                      color: '#1a1a1a',
+                      letterSpacing: '0.5px'
+                    }}>
                       {plan.displayName}
                     </h3>
-                    <p style={{ color: '#6B7280', fontSize: '14px' }}>
+                    <p style={{
+                      color: '#6b7280',
+                      fontSize: '15px',
+                      lineHeight: '1.6',
+                      fontWeight: '500'
+                    }}>
                       {plan.description}
                     </p>
                   </div>
 
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                  <div style={{ marginBottom: '28px' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
                       <span style={{
-                        fontSize: '48px',
-                        fontWeight: '800',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        fontSize: '52px',
+                        fontWeight: '900',
+                        background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
                         WebkitBackgroundClip: 'text',
                         WebkitTextFillColor: 'transparent',
                         backgroundClip: 'text'
                       }}>
                         ₹{price.toLocaleString()}
                       </span>
-                      <span style={{ color: '#6B7280' }}>
+                      <span style={{
+                        color: '#9ca3af',
+                        fontSize: '18px',
+                        fontWeight: '600'
+                      }}>
                         /{billingCycle === 'monthly' ? 'mo' : 'yr'}
                       </span>
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '24px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: '600', marginBottom: '12px', color: '#9CA3AF' }}>
-                      FEATURES:
+                  <div style={{ marginBottom: '28px' }}>
+                    <div style={{
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      marginBottom: '16px',
+                      color: '#9ca3af',
+                      letterSpacing: '1.5px',
+                      textTransform: 'uppercase'
+                    }}>
+                      FEATURES INCLUDED:
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                       {[
                         `${plan.limits.users === -1 ? 'Unlimited' : plan.limits.users} Users`,
                         `${plan.limits.leads === -1 ? 'Unlimited' : plan.limits.leads} Leads`,
@@ -410,20 +661,25 @@ const Subscription = () => {
                         plan.features.advancedReports && 'Advanced Reports',
                         `${plan.support} Support`
                       ].filter(Boolean).map((feature, i) => (
-                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{
-                            width: '20px',
-                            height: '20px',
-                            background: 'linear-gradient(135deg, #10B981, #059669)',
+                            width: '24px',
+                            height: '24px',
+                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                             borderRadius: '50%',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            fontSize: '12px',
-                            color: 'Black',
-                            fontWeight: 'bold'
+                            fontSize: '13px',
+                            color: '#ffffff',
+                            fontWeight: '900',
+                            boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)'
                           }}>✓</div>
-                          <span style={{ fontSize: '14px', color: '#4B5563' }}>{feature}</span>
+                          <span style={{
+                            fontSize: '15px',
+                            color: '#4b5563',
+                            fontWeight: '500'
+                          }}>{feature}</span>
                         </div>
                       ))}
                     </div>
@@ -434,12 +690,26 @@ const Subscription = () => {
                     disabled={isCurrentPlan || upgrading}
                     style={{
                       ...glassStyles.buttonPrimary,
-                      background: isCurrentPlan 
-                        ? 'rgba(229, 231, 235, 0.8)' 
-                        : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      color: isCurrentPlan ? '#6B7280' : 'white',
+                      background: isCurrentPlan
+                        ? '#e5e7eb'
+                        : 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+                      color: isCurrentPlan ? '#9ca3af' : '#ffffff',
                       cursor: isCurrentPlan ? 'not-allowed' : 'pointer',
-                      opacity: upgrading ? 0.7 : 1
+                      opacity: upgrading ? 0.7 : 1,
+                      border: isCurrentPlan ? '2px solid #d1d5db' : 'none',
+                      boxShadow: isCurrentPlan ? 'none' : '0 6px 24px rgba(93, 185, 222, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)'
+                    }}
+                    onMouseEnter={(e) => {
+                      if (!isCurrentPlan && !upgrading) {
+                        e.target.style.transform = 'translateY(-2px)';
+                        e.target.style.boxShadow = '0 8px 32px rgba(93, 185, 222, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4)';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isCurrentPlan && !upgrading) {
+                        e.target.style.transform = 'translateY(0)';
+                        e.target.style.boxShadow = '0 6px 24px rgba(93, 185, 222, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3)';
+                      }
                     }}
                   >
                     {upgrading ? '⏳ Processing...' : isCurrentPlan ? '✓ Current Plan' : price === 0 ? 'Select Free Plan' : '🚀 Upgrade Now'}
@@ -452,44 +722,122 @@ const Subscription = () => {
 
         {/* Payment History */}
         {currentSubscription?.payments && currentSubscription.payments.length > 0 && (
-          <div style={{...glassStyles.glassCard, padding: '32px'}}>
-            <h2 style={{ fontSize: '24px', fontWeight: '700', marginBottom: '24px', color: 'Blue' }}>
+          <div style={{...glassStyles.glassCard, padding: '40px'}}>
+            <div style={glassStyles.cardDecoration}></div>
+            <h2 style={{
+              fontSize: '28px',
+              fontWeight: '800',
+              marginBottom: '32px',
+              color: '#1a1a1a',
+              letterSpacing: '0.5px',
+              background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text'
+            }}>
               📄 Payment History
             </h2>
-            
+
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ borderBottom: '2px solid rgba(255, 255, 255, 0.2)' }}>
-                    <th style={{ padding: '12px', textAlign: 'left', color: 'Black', fontWeight: '600' }}>Invoice</th>
-                    <th style={{ padding: '12px', textAlign: 'left', color: 'Black', fontWeight: '600' }}>Date</th>
-                    <th style={{ padding: '12px', textAlign: 'left', color: 'Black', fontWeight: '600' }}>Plan</th>
-                    <th style={{ padding: '12px', textAlign: 'left', color: 'Black', fontWeight: '600' }}>Amount</th>
-                    <th style={{ padding: '12px', textAlign: 'left', color: 'Black', fontWeight: '600' }}>Status</th>
+                  <tr style={{ borderBottom: '2px solid #e5e7eb' }}>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
+                      color: '#6b7280',
+                      fontWeight: '700',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>Invoice</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
+                      color: '#6b7280',
+                      fontWeight: '700',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>Date</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
+                      color: '#6b7280',
+                      fontWeight: '700',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>Plan</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
+                      color: '#6b7280',
+                      fontWeight: '700',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>Amount</th>
+                    <th style={{
+                      padding: '16px 12px',
+                      textAlign: 'left',
+                      color: '#6b7280',
+                      fontWeight: '700',
+                      fontSize: '13px',
+                      textTransform: 'uppercase',
+                      letterSpacing: '1px'
+                    }}>Status</th>
                   </tr>
                 </thead>
                 <tbody>
                   {currentSubscription.payments.map((payment) => (
-                    <tr key={payment._id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                      <td style={{ padding: '12px', color: 'Black' }}>{payment.invoiceNumber || '-'}</td>
-                      <td style={{ padding: '12px', color: 'Black' }}>
+                    <tr key={payment._id} style={{
+                      borderBottom: '1px solid #f3f4f6',
+                      transition: 'all 0.3s ease'
+                    }}>
+                      <td style={{
+                        padding: '16px 12px',
+                        color: '#4b5563',
+                        fontSize: '15px',
+                        fontWeight: '500'
+                      }}>{payment.invoiceNumber || '-'}</td>
+                      <td style={{
+                        padding: '16px 12px',
+                        color: '#4b5563',
+                        fontSize: '15px',
+                        fontWeight: '500'
+                      }}>
                         {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : '-'}
                       </td>
-                      <td style={{ padding: '12px', color: 'Black' }}>{payment.planName}</td>
-                      <td style={{ padding: '12px', color: 'Black', fontWeight: '700' }}>
+                      <td style={{
+                        padding: '16px 12px',
+                        color: '#4b5563',
+                        fontSize: '15px',
+                        fontWeight: '500'
+                      }}>{payment.planName}</td>
+                      <td style={{
+                        padding: '16px 12px',
+                        color: '#1a1a1a',
+                        fontWeight: '800',
+                        fontSize: '16px'
+                      }}>
                         ₹{payment.amount.toLocaleString()}
                       </td>
-                      <td style={{ padding: '12px' }}>
+                      <td style={{ padding: '16px 12px' }}>
                         <span style={{
-                          padding: '6px 12px',
-                          background: payment.status === 'completed' 
-                            ? 'rgba(209, 250, 229, 0.9)' 
-                            : 'rgba(254, 226, 226, 0.9)',
-                          color: payment.status === 'completed' ? '#065F46' : '#991B1B',
-                          borderRadius: '8px',
+                          padding: '8px 16px',
+                          background: payment.status === 'completed'
+                            ? 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'
+                            : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
+                          border: payment.status === 'completed'
+                            ? '1px solid #10b981'
+                            : '1px solid #ef4444',
+                          color: payment.status === 'completed' ? '#065f46' : '#991b1b',
+                          borderRadius: '10px',
                           fontSize: '12px',
-                          fontWeight: '600',
-                          textTransform: 'capitalize'
+                          fontWeight: '700',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px'
                         }}>
                           {payment.status}
                         </span>

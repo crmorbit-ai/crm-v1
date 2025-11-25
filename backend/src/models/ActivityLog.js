@@ -28,13 +28,23 @@ const activityLogSchema = new mongoose.Schema({
       'permission.granted', 'permission.revoked',
       'feature.enabled', 'feature.disabled',
       'settings.updated',
+      'lead.created', 'lead.updated', 'lead.deleted', 'lead.converted',
+      'leads.bulk_import', 'leads.bulk_upload',
+      'account.created', 'account.updated', 'account.deleted',
+      'contact.created', 'contact.updated', 'contact.deleted',
+      'opportunity.created', 'opportunity.updated', 'opportunity.deleted',
+      'task.created', 'task.updated', 'task.deleted',
+      'meeting.created', 'meeting.updated', 'meeting.deleted',
+      'call.created', 'call.updated', 'call.deleted',
+      'note.created', 'note.updated', 'note.deleted',
       'other'
     ]
   },
   // Target resource
   resourceType: {
     type: String,
-    enum: ['User', 'Role', 'Group', 'Tenant', 'Subscription', 'Billing', 'Feature', 'Settings']
+    enum: ['User', 'Role', 'Group', 'Tenant', 'Subscription', 'Billing', 'Feature', 'Settings',
+           'Lead', 'Account', 'Contact', 'Opportunity', 'Task', 'Meeting', 'Call', 'Note']
   },
   resourceId: {
     type: mongoose.Schema.Types.ObjectId
