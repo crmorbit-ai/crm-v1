@@ -104,7 +104,7 @@ const LeadDetail = () => {
       }
     } catch (err) {
       console.error('Load lead error:', err);
-      setError(err.response?.data?.message || 'Failed to load lead');
+      setError(err.message || 'Failed to load lead');
     } finally {
       setLoading(false);
     }
@@ -183,7 +183,7 @@ const LeadDetail = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create task');
+      setError(err.message || 'Failed to create task');
     }
   };
 
@@ -264,7 +264,7 @@ const LeadDetail = () => {
       loadNotes();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create note');
+      setError(err.message || 'Failed to create note');
     }
   };
 
@@ -296,7 +296,7 @@ const LeadDetail = () => {
       loadLead();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to update lead');
+      setError(err.message || 'Failed to update lead');
     }
   };
 
@@ -309,7 +309,7 @@ const LeadDetail = () => {
         navigate('/leads');
       }, 1500);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to delete lead');
+      setError(err.message || 'Failed to delete lead');
     }
   };
 
@@ -384,7 +384,7 @@ const LeadDetail = () => {
       }
     } catch (err) {
       console.error('Convert lead error:', err);
-      setError(err.response?.data?.message || 'Failed to convert lead');
+      setError(err.message || 'Failed to convert lead');
     }
   };
 
@@ -1147,66 +1147,166 @@ const LeadDetail = () => {
       </Modal>
 
       {/* Edit Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        title="Edit Lead"
-        size="large"
-      >
-        <form onSubmit={handleUpdateLead}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-            <div className="crm-form-group">
-              <label>First Name *</label>
-              <input
-                type="text"
-                name="firstName"
-                className="crm-form-input"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="crm-form-group">
-              <label>Last Name *</label>
-              <input
-                type="text"
-                name="lastName"
-                className="crm-form-input"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="crm-form-group">
-              <label>Email *</label>
-              <input
-                type="email"
-                name="email"
-                className="crm-form-input"
-                value={formData.email}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="crm-form-group">
-              <label>Phone</label>
-              <input
-                type="tel"
-                name="phone"
-                className="crm-form-input"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowEditModal(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="crm-btn crm-btn-primary">Update Lead</button>
-          </div>
-        </form>
-      </Modal>
+     {/* Edit Modal */}
+<Modal
+  isOpen={showEditModal}
+  onClose={() => setShowEditModal(false)}
+  title="Edit Lead"
+  size="large"
+>
+  <form onSubmit={handleUpdateLead}>
+    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+      <div className="crm-form-group">
+        <label>First Name *</label>
+        <input
+          type="text"
+          name="firstName"
+          className="crm-form-input"
+          value={formData.firstName || ''}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="crm-form-group">
+        <label>Last Name *</label>
+        <input
+          type="text"
+          name="lastName"
+          className="crm-form-input"
+          value={formData.lastName || ''}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="crm-form-group">
+        <label>Email *</label>
+        <input
+          type="email"
+          name="email"
+          className="crm-form-input"
+          value={formData.email || ''}
+          onChange={handleChange}
+          required
+        />
+      </div>
+      <div className="crm-form-group">
+        <label>Phone</label>
+        <input
+          type="tel"
+          name="phone"
+          className="crm-form-input"
+          value={formData.phone || ''}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="crm-form-group">
+        <label>Company</label>
+        <input
+          type="text"
+          name="company"
+          className="crm-form-input"
+          value={formData.company || ''}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="crm-form-group">
+        <label>Job Title</label>
+        <input
+          type="text"
+          name="jobTitle"
+          className="crm-form-input"
+          value={formData.jobTitle || ''}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="crm-form-group">
+        <label>Lead Status</label>
+        <select
+          name="leadStatus"
+          className="crm-form-select"
+          value={formData.leadStatus || 'New'}
+          onChange={handleChange}
+        >
+          <option value="New">New</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Qualified">Qualified</option>
+          <option value="Unqualified">Unqualified</option>
+          <option value="Lost">Lost</option>
+        </select>
+      </div>
+      <div className="crm-form-group">
+        <label>Lead Source</label>
+        <select
+          name="leadSource"
+          className="crm-form-select"
+          value={formData.leadSource || 'Website'}
+          onChange={handleChange}
+        >
+          <option value="Website">Website</option>
+          <option value="Referral">Referral</option>
+          <option value="Social Media">Social Media</option>
+          <option value="Email Campaign">Email Campaign</option>
+          <option value="Advertisement">Advertisement</option>
+          <option value="Trade Show">Trade Show</option>
+          <option value="Cold Call">Cold Call</option>
+          <option value="Partner">Partner</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div className="crm-form-group">
+        <label>Rating</label>
+        <select
+          name="rating"
+          className="crm-form-select"
+          value={formData.rating || 'Warm'}
+          onChange={handleChange}
+        >
+          <option value="Hot">Hot</option>
+          <option value="Warm">Warm</option>
+          <option value="Cold">Cold</option>
+        </select>
+      </div>
+      <div className="crm-form-group">
+        <label>Industry</label>
+        <input
+          type="text"
+          name="industry"
+          className="crm-form-input"
+          value={formData.industry || ''}
+          onChange={handleChange}
+        />
+      </div>
+      <div className="crm-form-group">
+        <label>Website</label>
+        <input
+          type="url"
+          name="website"
+          className="crm-form-input"
+          value={formData.website || ''}
+          onChange={handleChange}
+        />
+      </div>
+    </div>
+    
+    <div className="crm-form-group" style={{ marginTop: '20px' }}>
+      <label>Description</label>
+      <textarea
+        name="description"
+        className="crm-form-textarea"
+        rows="3"
+        value={formData.description || ''}
+        onChange={handleChange}
+      />
+    </div>
+
+    <div className="modal-footer">
+      <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowEditModal(false)}>
+        Cancel
+      </button>
+      <button type="submit" className="crm-btn crm-btn-primary">Update Lead</button>
+    </div>
+  </form>
+</Modal>
 
       {/* Delete Modal */}
       <Modal

@@ -144,7 +144,7 @@ const MeetingDetail = () => {
                 <div>
                   <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{meeting.title}</h1>
                   <p style={{ color: '#666', fontSize: '14px', margin: '4px 0' }}>
-                    Meeting for {meeting.relatedTo}
+                    {meeting.relatedTo ? `Meeting for ${meeting.relatedTo}` : 'Independent Meeting'}
                   </p>
                 </div>
               </div>
@@ -306,8 +306,49 @@ const MeetingDetail = () => {
               <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Participants</h3>
               <button className="crm-btn crm-btn-sm crm-btn-primary">+ Add</button>
             </div>
-            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-              No participant found
+            <div style={{ padding: '20px' }}>
+              {meeting.participants && meeting.participants.length > 0 ? (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {meeting.participants.map((email, index) => (
+                    <div key={index} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '12px',
+                      background: '#F9FAFB',
+                      borderRadius: '8px',
+                      border: '1px solid #E5E7EB'
+                    }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        background: '#3B82F6',
+                        color: 'white',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontWeight: '600',
+                        fontSize: '14px'
+                      }}>
+                        {email.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                          {email}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#6B7280' }}>
+                          Participant
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#666' }}>
+                  No participants found
+                </div>
+              )}
             </div>
           </div>
 
@@ -349,18 +390,20 @@ const MeetingDetail = () => {
 
         {/* Right Sidebar */}
         <div>
-          {/* Related To */}
-          <div className="crm-card" style={{ marginBottom: '20px' }}>
-            <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB' }}>
-              <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>Related To</h3>
-            </div>
-            <div style={{ padding: '16px' }}>
-              <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>{meeting.relatedTo}</div>
-              <div style={{ fontSize: '14px', fontWeight: '500', color: '#3B82F6', cursor: 'pointer' }}>
-                View Details →
+          {/* Related To - Only show if meeting is linked to an entity */}
+          {meeting.relatedTo && (
+            <div className="crm-card" style={{ marginBottom: '20px' }}>
+              <div style={{ padding: '16px', borderBottom: '1px solid #E5E7EB' }}>
+                <h3 style={{ fontSize: '14px', fontWeight: '600', margin: 0 }}>Related To</h3>
+              </div>
+              <div style={{ padding: '16px' }}>
+                <div style={{ fontSize: '13px', color: '#666', marginBottom: '4px' }}>{meeting.relatedTo}</div>
+                <div style={{ fontSize: '14px', fontWeight: '500', color: '#3B82F6', cursor: 'pointer' }}>
+                  View Details →
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Other Information */}
           <div className="crm-card">

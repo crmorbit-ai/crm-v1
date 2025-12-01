@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { leadService } from '../services/leadService';
+import { verificationService, debounce } from '../services/verificationService';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
 import TooltipButton from '../components/common/TooltipButton';
 import '../styles/crm.css';
 import BulkUploadForm from '../components/BulkUploadForm';
-
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -16,6 +16,19 @@ const Leads = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // ✅ VERIFICATION STATES
+  const [emailVerification, setEmailVerification] = useState({
+    status: 'pending', // pending, verifying, valid, invalid
+    message: '',
+    isValid: null
+  });
+
+  const [phoneVerification, setPhoneVerification] = useState({
+    status: 'pending',
+    message: '',
+    isValid: null
+  });
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -37,9 +50,8 @@ const Leads = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
 
-  // Form data - Complete Zoho fields
+  // Form data
   const [formData, setFormData] = useState({
-    // Lead Information
     firstName: '',
     lastName: '',
     email: '',
@@ -59,7 +71,6 @@ const Leads = () => {
     skypeId: '',
     secondaryEmail: '',
     twitter: '',
-    // Address Information
     street: '',
     city: '',
     state: '',
@@ -68,7 +79,6 @@ const Leads = () => {
     flatHouseNo: '',
     latitude: '',
     longitude: '',
-    // Description
     description: ''
   });
 
@@ -104,6 +114,91 @@ const Leads = () => {
       setLoading(false);
     }
   };
+
+  // ✅ EMAIL VERIFICATION FUNCTION
+  const verifyEmail = async (email) => {
+    if (!email || email.length < 5) {
+      setEmailVerification({ status: 'pending', message: '', isValid: null });
+      return;
+    }
+
+    setEmailVerification({ status: 'verifying', message: 'Verifying...', isValid: null });
+
+    try {
+      const result = await verificationService.verifyEmail(email);
+      
+      if (result.success && result.data) {
+        const { isValid, status, message } = result.data;
+        
+        setEmailVerification({
+          status: isValid ? 'valid' : status === 'unknown' ? 'unknown' : 'invalid',
+          message: message || '',
+          isValid: isValid
+        });
+      } else {
+        setEmailVerification({
+          status: 'unknown',
+          message: 'Unable to verify',
+          isValid: null
+        });
+      }
+    } catch (err) {
+      console.error('Email verification error:', err);
+      setEmailVerification({
+        status: 'unknown',
+        message: 'Verification failed',
+        isValid: null
+      });
+    }
+  };
+
+  // ✅ PHONE VERIFICATION FUNCTION
+  const verifyPhone = async (phone) => {
+    if (!phone || phone.length < 10) {
+      setPhoneVerification({ status: 'pending', message: '', isValid: null });
+      return;
+    }
+
+    setPhoneVerification({ status: 'verifying', message: 'Verifying...', isValid: null });
+
+    try {
+      const result = await verificationService.verifyPhone(phone);
+      
+      if (result.success && result.data) {
+        const { isValid, status, message } = result.data;
+        
+        setPhoneVerification({
+          status: isValid ? 'valid' : status === 'unknown' ? 'unknown' : 'invalid',
+          message: message || '',
+          isValid: isValid
+        });
+      } else {
+        setPhoneVerification({
+          status: 'unknown',
+          message: 'Unable to verify',
+          isValid: null
+        });
+      }
+    } catch (err) {
+      console.error('Phone verification error:', err);
+      setPhoneVerification({
+        status: 'unknown',
+        message: 'Verification failed',
+        isValid: null
+      });
+    }
+  };
+
+  // ✅ DEBOUNCED VERIFICATION
+  const debouncedEmailVerify = useCallback(
+    debounce((email) => verifyEmail(email), 2000),
+    []
+  );
+
+  const debouncedPhoneVerify = useCallback(
+    debounce((phone) => verifyPhone(phone), 2000),
+    []
+  );
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
@@ -156,14 +251,28 @@ const Leads = () => {
       longitude: '',
       description: ''
     });
+    setEmailVerification({ status: 'pending', message: '', isValid: null });
+    setPhoneVerification({ status: 'pending', message: '', isValid: null });
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    const newValue = type === 'checkbox' ? checked : value;
+    
     setFormData(prev => ({ 
       ...prev, 
-      [name]: type === 'checkbox' ? checked : value 
+      [name]: newValue
     }));
+
+    // ✅ TRIGGER VERIFICATION ON EMAIL CHANGE
+    if (name === 'email') {
+      debouncedEmailVerify(newValue);
+    }
+
+    // ✅ TRIGGER VERIFICATION ON PHONE CHANGE
+    if (name === 'phone') {
+      debouncedPhoneVerify(newValue);
+    }
   };
 
   const handleFilterChange = (e) => {
@@ -203,6 +312,45 @@ const Leads = () => {
       + New Lead
     </TooltipButton>
   );
+
+  // ✅ VERIFICATION ICON COMPONENT
+  const VerificationIcon = ({ status, message }) => {
+    if (status === 'pending') return null;
+    
+    if (status === 'verifying') {
+      return (
+        <span style={{ marginLeft: '8px', color: '#3B82F6', fontSize: '12px' }}>
+          🔄 Verifying...
+        </span>
+      );
+    }
+    
+    if (status === 'valid') {
+      return (
+        <span style={{ marginLeft: '8px', color: '#10B981', fontSize: '16px' }} title={message}>
+          ✅
+        </span>
+      );
+    }
+    
+    if (status === 'invalid') {
+      return (
+        <span style={{ marginLeft: '8px', color: '#EF4444', fontSize: '16px' }} title={message}>
+          ❌
+        </span>
+      );
+    }
+    
+    if (status === 'unknown') {
+      return (
+        <span style={{ marginLeft: '8px', color: '#F59E0B', fontSize: '16px' }} title={message}>
+          ⚠️
+        </span>
+      );
+    }
+    
+    return null;
+  };
 
   return (
     <DashboardLayout title="Leads" actionButton={actionButton}>
@@ -326,8 +474,18 @@ const Leads = () => {
                         )}
                       </td>
                       <td>{lead.company || '-'}</td>
-                      <td>{lead.email}</td>
-                      <td>{lead.phone || '-'}</td>
+                      <td>
+                        {lead.email}
+                        {lead.emailVerified && (
+                          <span style={{ marginLeft: '4px', color: '#10B981' }} title="Verified">✅</span>
+                        )}
+                      </td>
+                      <td>
+                        {lead.phone || '-'}
+                        {lead.phoneVerified && (
+                          <span style={{ marginLeft: '4px', color: '#10B981' }} title="Verified">✅</span>
+                        )}
+                      </td>
                       <td>
                         <span className={`status-badge ${(lead.leadStatus || 'new').toLowerCase()}`}>
                           {lead.leadStatus || 'New'}
@@ -384,7 +542,7 @@ const Leads = () => {
         )}
       </div>
 
-   
+      {/* Create Lead Modal */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => {
@@ -501,28 +659,54 @@ const Leads = () => {
                 />
               </div>
 
-              {/* Email */}
+              {/* ✅ EMAIL WITH VERIFICATION */}
               <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Email</label>
-              <div>
+              <div style={{ position: 'relative' }}>
                 <input
                   type="email"
                   name="email"
                   className="crm-form-input"
                   value={formData.email}
                   onChange={handleChange}
+                  style={{ paddingRight: '40px' }}
                 />
+                <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                  <VerificationIcon status={emailVerification.status} message={emailVerification.message} />
+                </div>
+                {emailVerification.message && emailVerification.status !== 'pending' && (
+                  <div style={{ 
+                    fontSize: '11px', 
+                    marginTop: '4px',
+                    color: emailVerification.status === 'valid' ? '#10B981' : emailVerification.status === 'invalid' ? '#EF4444' : '#F59E0B'
+                  }}>
+                    {emailVerification.message}
+                  </div>
+                )}
               </div>
 
-              {/* Phone */}
+              {/* ✅ PHONE WITH VERIFICATION */}
               <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Phone</label>
-              <div>
+              <div style={{ position: 'relative' }}>
                 <input
                   type="tel"
                   name="phone"
                   className="crm-form-input"
                   value={formData.phone}
                   onChange={handleChange}
+                  style={{ paddingRight: '40px' }}
                 />
+                <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+                  <VerificationIcon status={phoneVerification.status} message={phoneVerification.message} />
+                </div>
+                {phoneVerification.message && phoneVerification.status !== 'pending' && (
+                  <div style={{ 
+                    fontSize: '11px', 
+                    marginTop: '4px',
+                    color: phoneVerification.status === 'valid' ? '#10B981' : phoneVerification.status === 'invalid' ? '#EF4444' : '#F59E0B'
+                  }}>
+                    {phoneVerification.message}
+                  </div>
+                )}
               </div>
 
               {/* Fax */}
@@ -658,7 +842,6 @@ const Leads = () => {
                   value={formData.annualRevenue}
                   onChange={handleChange}
                 />
-                <span style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', color: '#9CA3AF', fontSize: '18px', cursor: 'help' }}>ⓘ</span>
               </div>
 
               {/* Rating */}
@@ -779,25 +962,13 @@ const Leads = () => {
               </div>
 
               {/* Flat/House No */}
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Flat/House No/<br/>Building/Apartment<br/>Name</label>
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Flat/House No</label>
               <div>
                 <input
                   type="text"
                   name="flatHouseNo"
                   className="crm-form-input"
                   value={formData.flatHouseNo}
-                  onChange={handleChange}
-                />
-              </div>
-
-              {/* Street Address */}
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Street Address</label>
-              <div>
-                <input
-                  type="text"
-                  name="street"
-                  className="crm-form-input"
-                  value={formData.street}
                   onChange={handleChange}
                 />
               </div>
@@ -951,19 +1122,20 @@ const Leads = () => {
         </form>
       </Modal>
 
-     {showBulkUploadModal && (
-  <Modal 
-    isOpen={showBulkUploadModal} 
-    onClose={() => setShowBulkUploadModal(false)} 
-    title="Bulk Upload Leads"
-    size="large"
-  >
-    <BulkUploadForm 
-      onClose={() => setShowBulkUploadModal(false)} 
-      onSuccess={loadLeads} 
-    />
-  </Modal>
-)}
+      {/* Bulk Upload Modal */}
+      {showBulkUploadModal && (
+        <Modal 
+          isOpen={showBulkUploadModal} 
+          onClose={() => setShowBulkUploadModal(false)} 
+          title="Bulk Upload Leads"
+          size="large"
+        >
+          <BulkUploadForm 
+            onClose={() => setShowBulkUploadModal(false)} 
+            onSuccess={loadLeads} 
+          />
+        </Modal>
+      )}
     </DashboardLayout>
   );
 };

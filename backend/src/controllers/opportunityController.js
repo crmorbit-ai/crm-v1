@@ -125,16 +125,36 @@ const getOpportunityStats = async (req, res) => {
   try {
     const query = { isActive: true };
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') query.tenant = req.user.tenant;
-    const [totalOpportunities, totalValue, wonDeals, lostDeals, byStage, byType] = await Promise.all([
+
+    // Calculate closing this month
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const [totalOpportunities, totalValue, wonDeals, lostDeals, byStage, byType, closingThisMonth, weightedPipeline] = await Promise.all([
       Opportunity.countDocuments(query),
       Opportunity.aggregate([{ $match: query }, { $group: { _id: null, total: { $sum: '$amount' } } }]),
       Opportunity.countDocuments({ ...query, stage: 'Closed Won' }),
       Opportunity.countDocuments({ ...query, stage: 'Closed Lost' }),
       Opportunity.aggregate([{ $match: query }, { $group: { _id: '$stage', count: { $sum: 1 }, totalAmount: { $sum: '$amount' } } }, { $sort: { count: -1 } }]),
-      Opportunity.aggregate([{ $match: query }, { $group: { _id: '$type', count: { $sum: 1 } } }])
+      Opportunity.aggregate([{ $match: query }, { $group: { _id: '$type', count: { $sum: 1 } } }]),
+      Opportunity.countDocuments({ ...query, closeDate: { $gte: startOfMonth, $lte: endOfMonth } }),
+      Opportunity.aggregate([
+        { $match: query },
+        { $project: { weightedAmount: { $multiply: ['$amount', { $divide: ['$probability', 100] }] } } },
+        { $group: { _id: null, total: { $sum: '$weightedAmount' } } }
+      ])
     ]);
+
     successResponse(res, 200, 'Opportunity statistics retrieved successfully', {
-      total: totalOpportunities, totalValue: totalValue[0]?.total || 0, won: wonDeals, lost: lostDeals, byStage, byType
+      total: totalOpportunities,
+      totalValue: totalValue[0]?.total || 0,
+      wonCount: wonDeals,
+      lostCount: lostDeals,
+      byStage,
+      byType,
+      closingThisMonth,
+      weightedValue: weightedPipeline[0]?.total || 0
     });
   } catch (error) {
     console.error('Get opportunity stats error:', error);

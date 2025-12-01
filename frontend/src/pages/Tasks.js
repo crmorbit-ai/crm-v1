@@ -212,6 +212,33 @@ const Tasks = () => {
                           {task.subject}
                         </h4>
 
+                        {task.relatedTo && task.relatedToId && (
+                          <div style={{
+                            fontSize: '11px',
+                            color: '#3B82F6',
+                            marginBottom: '6px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#EFF6FF',
+                            padding: '4px 8px',
+                            borderRadius: '4px'
+                          }}>
+                            <span style={{ fontWeight: '600' }}>{task.relatedTo}:</span>
+                            <span style={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              {task.relatedToId.companyName ||
+                               `${task.relatedToId.firstName || ''} ${task.relatedToId.lastName || ''}`.trim() ||
+                               task.relatedToId.name ||
+                               task.relatedToId.title ||
+                               'N/A'}
+                            </span>
+                          </div>
+                        )}
+
                         {task.description && (
                           <p style={{
                             fontSize: '11px',

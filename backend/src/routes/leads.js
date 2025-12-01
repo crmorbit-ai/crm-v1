@@ -14,6 +14,10 @@ const {
   downloadSampleTemplate,
   getLeadStats
 } = require('../controllers/leadController');
+const {
+  verifyEmailAddress,
+  verifyPhoneNumber
+} = require('../controllers/verificationController');
 const { protect } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 
@@ -47,6 +51,17 @@ const upload = multer({
 
 // All routes require authentication
 router.use(protect);
+
+// ✅ VERIFICATION ROUTES (NEW)
+router.post('/verify-email', 
+  requirePermission('lead_management', 'create'), 
+  verifyEmailAddress
+);
+
+router.post('/verify-phone', 
+  requirePermission('lead_management', 'create'), 
+  verifyPhoneNumber
+);
 
 // Bulk upload routes (BEFORE /:id routes)
 router.post('/bulk-upload', 

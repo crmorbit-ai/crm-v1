@@ -4,12 +4,14 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/database');
+const { connectDataCenterDB } = require('./config/database'); // 🚀 NEW
 
 // Initialize express app
 const app = express();
 
-// Connect to database
+// Connect to databases
 connectDB();
+connectDataCenterDB(); // 🚀 NEW - Data Center DB
 
 const corsOptions = {
   origin: function (origin, callback) {
@@ -29,8 +31,6 @@ const corsOptions = {
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400
 };
-
-
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
@@ -66,9 +66,14 @@ app.use('/api/billings', require('./routes/billings'));
 app.use('/api/activity-logs', require('./routes/activityLogs'));
 
 // ============================================
-// 🚀 RESELLER ROUTES - NEW
+// 🚀 RESELLER ROUTES
 // ============================================
 app.use('/api/resellers', require('./routes/resellers'));
+
+// ============================================
+// 🚀 DATA CENTER ROUTES - NEW
+// ============================================
+app.use('/api/data-center', require('./routes/dataCenter'));
 // ============================================
 
 // CRM Routes
@@ -80,9 +85,6 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/calls', require('./routes/callRoutes'));
-
-
-
 
 // 404 handler
 app.use((req, res) => {
@@ -105,9 +107,7 @@ app.use((err, req, res, next) => {
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
- 
   console.log(`✅ Server running on http://localhost:${PORT}`);
-
 });
 
 module.exports = app;

@@ -5,6 +5,7 @@ const Contact = require('../models/Contact');
 const Opportunity = require('../models/Opportunity');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
+const { trackChanges, getRecordName } = require('../utils/changeTracker');
 
 /**
  * @desc    Get all leads
@@ -177,10 +178,11 @@ const getLeadStats = async (req, res) => {
       .select('firstName lastName email company leadStatus createdAt');
 
     successResponse(res, 200, 'Lead statistics retrieved successfully', {
-      totalLeads,
-      newLeadsThisMonth,
+      total: totalLeads,
+      newThisMonth: newLeadsThisMonth,
       convertedLeads,
       conversionRate,
+      byStatusDetailed: leadsByStatus,
       leadsByStatus: leadsByStatus.reduce((acc, item) => {
         acc[item._id || 'Unknown'] = item.count;
         return acc;
@@ -343,11 +345,6 @@ const updateLead = async (req, res) => {
       return errorResponse(res, 404, 'Lead not found');
     }
 
-    // Check if already converted
-    if (lead.isConverted) {
-      return errorResponse(res, 400, 'Cannot update a converted lead');
-    }
-
     // Check access
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       if (lead.tenant.toString() !== req.user.tenant.toString()) {
@@ -355,28 +352,49 @@ const updateLead = async (req, res) => {
       }
     }
 
-    // Update fields
+    // Fields to track
     const allowedFields = [
       'firstName', 'lastName', 'email', 'phone', 'mobilePhone', 'fax',
       'company', 'jobTitle', 'website', 'leadSource', 'leadStatus',
       'industry', 'numberOfEmployees', 'annualRevenue', 'rating',
       'emailOptOut', 'doNotCall', 'skypeId', 'secondaryEmail', 'twitter',
       'linkedIn', 'street', 'city', 'state', 'country', 'zipCode',
-      'flatHouseNo', 'latitude', 'longitude', 'description', 'owner', 'tags'
+      'flatHouseNo', 'latitude', 'longitude', 'description', 'tags'
     ];
 
+    // Track changes BEFORE updating
+    const changes = trackChanges(lead, req.body, allowedFields);
+
+    // Update fields
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         lead[field] = req.body[field];
       }
     });
 
+    // Handle owner separately
+    if (req.body.owner && req.body.owner !== lead.owner.toString()) {
+      changes.owner = {
+        old: lead.owner.toString(),
+        new: req.body.owner
+      };
+      lead.owner = req.body.owner;
+    }
+
     lead.lastModifiedBy = req.user._id;
     await lead.save();
-
     await lead.populate('owner', 'firstName lastName email');
 
-    await logActivity(req, 'lead.updated', 'Lead', lead._id);
+    // Log activity with changes
+    if (Object.keys(changes).length > 0) {
+      await logActivity(req, 'lead.updated', 'Lead', lead._id, {
+        targetUser: `${lead.firstName || ''} ${lead.lastName || ''} (${lead.email || 'No Email'})`.trim(),
+        changedBy: `${req.user.firstName} ${req.user.lastName} - ${req.user.userType || 'User'} (${req.user.email})`,
+        recordName: getRecordName(lead, 'Lead'),
+        changes: changes,
+        fieldsChanged: Object.keys(changes)
+      });
+    }
 
     successResponse(res, 200, 'Lead updated successfully', lead);
   } catch (error) {

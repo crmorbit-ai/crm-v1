@@ -5,6 +5,7 @@ const Opportunity = require('../models/Opportunity');
 const Task = require('../models/Task');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
+const { trackChanges, getRecordName } = require('../utils/changeTracker');
 
 const getContacts = async (req, res) => {
   try {
@@ -104,33 +105,59 @@ const updateContact = async (req, res) => {
   try {
     const contact = await Contact.findById(req.params.id);
     if (!contact) return errorResponse(res, 404, 'Contact not found');
+    
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
-      if (contact.tenant.toString() !== req.user.tenant.toString()) return errorResponse(res, 403, 'Access denied');
+      if (contact.tenant.toString() !== req.user.tenant.toString()) {
+        return errorResponse(res, 403, 'Access denied');
+      }
     }
-    const { firstName, lastName, email, phone, mobile, title, department, reportsTo, isPrimary, doNotCall, emailOptOut,
-      mailingStreet, mailingCity, mailingState, mailingCountry, mailingZipCode, description } = req.body;
-    if (firstName) contact.firstName = firstName;
-    if (lastName) contact.lastName = lastName;
-    if (email) contact.email = email;
-    if (phone !== undefined) contact.phone = phone;
-    if (mobile !== undefined) contact.mobile = mobile;
-    if (title !== undefined) contact.title = title;
-    if (department !== undefined) contact.department = department;
-    if (reportsTo !== undefined) contact.reportsTo = reportsTo;
-    if (isPrimary !== undefined) contact.isPrimary = isPrimary;
-    if (doNotCall !== undefined) contact.doNotCall = doNotCall;
-    if (emailOptOut !== undefined) contact.emailOptOut = emailOptOut;
-    if (description !== undefined) contact.description = description;
-    if (mailingStreet !== undefined) contact.mailingAddress.street = mailingStreet;
-    if (mailingCity !== undefined) contact.mailingAddress.city = mailingCity;
-    if (mailingState !== undefined) contact.mailingAddress.state = mailingState;
-    if (mailingCountry !== undefined) contact.mailingAddress.country = mailingCountry;
-    if (mailingZipCode !== undefined) contact.mailingAddress.zipCode = mailingZipCode;
+
+    const fields = [
+      'firstName', 'lastName', 'email', 'phone', 'mobile', 'title', 
+      'department', 'description', 'isPrimary', 'doNotCall', 'emailOptOut'
+    ];
+    
+    // Track changes BEFORE updating
+    const changes = trackChanges(contact, req.body, fields);
+
+    // Update basic fields
+    if (req.body.firstName) contact.firstName = req.body.firstName;
+    if (req.body.lastName) contact.lastName = req.body.lastName;
+    if (req.body.email) contact.email = req.body.email;
+    if (req.body.phone !== undefined) contact.phone = req.body.phone;
+    if (req.body.mobile !== undefined) contact.mobile = req.body.mobile;
+    if (req.body.title !== undefined) contact.title = req.body.title;
+    if (req.body.department !== undefined) contact.department = req.body.department;
+    if (req.body.reportsTo !== undefined) contact.reportsTo = req.body.reportsTo;
+    if (req.body.isPrimary !== undefined) contact.isPrimary = req.body.isPrimary;
+    if (req.body.doNotCall !== undefined) contact.doNotCall = req.body.doNotCall;
+    if (req.body.emailOptOut !== undefined) contact.emailOptOut = req.body.emailOptOut;
+    if (req.body.description !== undefined) contact.description = req.body.description;
+    
+    // Address fields
+    if (req.body.mailingStreet !== undefined) contact.mailingAddress.street = req.body.mailingStreet;
+    if (req.body.mailingCity !== undefined) contact.mailingAddress.city = req.body.mailingCity;
+    if (req.body.mailingState !== undefined) contact.mailingAddress.state = req.body.mailingState;
+    if (req.body.mailingCountry !== undefined) contact.mailingAddress.country = req.body.mailingCountry;
+    if (req.body.mailingZipCode !== undefined) contact.mailingAddress.zipCode = req.body.mailingZipCode;
+
     contact.lastModifiedBy = req.user._id;
     await contact.save();
+    
     await contact.populate('account', 'accountName accountNumber');
     await contact.populate('owner', 'firstName lastName email');
-    await logActivity(req, 'contact.updated', 'Contact', contact._id, { firstName: contact.firstName, lastName: contact.lastName });
+
+    // Log with changes
+    if (Object.keys(changes).length > 0) {
+      await logActivity(req, 'contact.updated', 'Contact', contact._id, {
+        targetUser: `${contact.firstName || ''} ${contact.lastName || ''} (${contact.email || 'No Email'})`.trim(),
+        changedBy: `${req.user.firstName} ${req.user.lastName} - ${req.user.userType || 'User'} (${req.user.email})`,
+        recordName: getRecordName(contact, 'Contact'),
+        changes: changes,
+        fieldsChanged: Object.keys(changes)
+      });
+    }
+
     successResponse(res, 200, 'Contact updated successfully', contact);
   } catch (error) {
     console.error('Update contact error:', error);

@@ -18,9 +18,46 @@ const leadSchema = new mongoose.Schema({
     lowercase: true
   },
   
+  // ✅ EMAIL VERIFICATION FIELDS
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationStatus: {
+    type: String,
+    enum: ['pending', 'valid', 'invalid', 'risky', 'unknown'],
+    default: 'pending'
+  },
+  emailVerificationDetails: {
+    quality_score: Number,
+    is_disposable: Boolean,
+    is_valid_format: Boolean,
+    smtp_valid: Boolean,
+    deliverability: String,
+    verifiedAt: Date
+  },
+  
   phone: {
     type: String,
     trim: true
+  },
+  
+  // ✅ PHONE VERIFICATION FIELDS
+  phoneVerified: {
+    type: Boolean,
+    default: false
+  },
+  phoneVerificationStatus: {
+    type: String,
+    enum: ['pending', 'valid', 'invalid', 'unknown'],
+    default: 'pending'
+  },
+  phoneVerificationDetails: {
+    type: String, // mobile/landline/voip
+    carrier: String,
+    location: String,
+    format: String,
+    verifiedAt: Date
   },
   
   mobilePhone: {
@@ -253,6 +290,8 @@ leadSchema.index({ leadStatus: 1 });
 leadSchema.index({ leadSource: 1 });
 leadSchema.index({ isConverted: 1 });
 leadSchema.index({ email: 1, tenant: 1 });
+leadSchema.index({ emailVerified: 1 });
+leadSchema.index({ phoneVerified: 1 });
 leadSchema.index({ firstName: 'text', lastName: 'text', company: 'text', email: 'text' });
 
 // Virtual for full name

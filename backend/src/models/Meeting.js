@@ -47,16 +47,16 @@ const meetingSchema = new mongoose.Schema({
     trim: true
   }],
 
-  // Related To
+  // Related To (Optional - for entity-linked meetings)
   relatedTo: {
     type: String,
     enum: ['Lead', 'Account', 'Contact', 'Opportunity', 'Deal'],
-    required: true
+    required: false
   },
 
   relatedToId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: true,
+    required: false,
     refPath: 'relatedTo'
   },
 

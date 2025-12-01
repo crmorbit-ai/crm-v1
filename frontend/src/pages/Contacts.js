@@ -294,23 +294,49 @@ const Contacts = () => {
       </Modal>
 
       <Modal isOpen={showEditModal} onClose={()=>{setShowEditModal(false);setSelectedContact(null);resetForm();}} title="Edit Contact" size="large">
-        <form onSubmit={handleUpdateContact}>
-          <div className="form-row">
-            <div className="form-group">
-              <label>First Name *</label>
-              <input type="text" name="firstName" className="crm-form-input" value={formData.firstName} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Last Name *</label>
-              <input type="text" name="lastName" className="crm-form-input" value={formData.lastName} onChange={handleChange} required />
-            </div>
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-outline" onClick={()=>setShowEditModal(false)}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Update Contact</button>
-          </div>
-        </form>
-      </Modal>
+  <form onSubmit={handleUpdateContact}>
+    <div className="form-row">
+      <div className="form-group">
+        <label>First Name *</label>
+        <input type="text" name="firstName" className="crm-form-input" value={formData.firstName || ''} onChange={handleChange} required />
+      </div>
+      <div className="form-group">
+        <label>Last Name *</label>
+        <input type="text" name="lastName" className="crm-form-input" value={formData.lastName || ''} onChange={handleChange} required />
+      </div>
+    </div>
+    <div className="form-row">
+      <div className="form-group">
+        <label>Email *</label>
+        <input type="email" name="email" className="crm-form-input" value={formData.email || ''} onChange={handleChange} required />
+      </div>
+      <div className="form-group">
+        <label>Phone</label>
+        <input type="tel" name="phone" className="crm-form-input" value={formData.phone || ''} onChange={handleChange} />
+      </div>
+    </div>
+    <div className="form-row">
+      
+      
+    </div>
+    <div className="form-row">
+      <div className="form-group">
+        <label>Department</label>
+        <input type="text" name="department" className="crm-form-input" value={formData.department || ''} onChange={handleChange} />
+      </div>
+     
+      
+    </div>
+    <div className="form-group">
+      <label>Description</label>
+      <textarea name="description" className="crm-form-textarea" rows="3" value={formData.description || ''} onChange={handleChange} />
+    </div>
+    <div className="modal-footer">
+      <button type="button" className="crm-btn crm-btn-outline" onClick={()=>setShowEditModal(false)}>Cancel</button>
+      <button type="submit" className="crm-btn crm-btn-primary">Update Contact</button>
+    </div>
+  </form>
+</Modal>
 
       <Modal isOpen={showDeleteModal} onClose={()=>{setShowDeleteModal(false);setSelectedContact(null);}} title="Delete Contact" size="small">
         <div>

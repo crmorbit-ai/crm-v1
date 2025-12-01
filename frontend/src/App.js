@@ -39,11 +39,18 @@ import Tenants from './pages/Tenants';
 
 import Billings from './pages/Billings';
 
+import ActivityLogs from './pages/ActivityLogs';
+
 
 // 💰 SUBSCRIPTION PAGES - NEW
 
 import Subscription from './pages/Subscription';
 import SaasSubscriptions from './pages/SaasSubscriptions';
+
+
+
+import DataCenter from './pages/DataCenter';
+import DataCenterDetail from './pages/DataCenterDetail';
 
 
 
@@ -142,6 +149,30 @@ function AppRoutes() {
           <Subscription />
         </ProtectedRoute>
       } />
+
+      <Route path="/activity-logs" element={
+  <ProtectedRoute>
+    <ActivityLogs />
+  </ProtectedRoute>
+} />
+
+
+
+
+      {/* 🚀 DATA CENTER ROUTES - NEW */}
+<Route path="/data-center" element={
+  <ProtectedRoute>
+    <DataCenter />
+  </ProtectedRoute>
+} />
+<Route path="/data-center/:id" element={
+  <ProtectedRoute>
+    <DataCenterDetail />
+  </ProtectedRoute>
+} />
+
+
+
     
 
       {/* CRM Routes */}

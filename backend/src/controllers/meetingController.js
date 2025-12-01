@@ -52,14 +52,20 @@ const getMeeting = async (req, res) => {
 
 const createMeeting = async (req, res) => {
   try {
-    const { 
-      title, location, from, to, relatedTo, relatedToId, contactName, 
+    const {
+      title, location, from, to, relatedTo, relatedToId, contactName,
       description, agenda, meetingType, participants,
       sendInvitation // NEW: Flag to send email invitation
     } = req.body;
-    
-    if (!title || !from || !to || !relatedTo || !relatedToId) {
-      return errorResponse(res, 400, 'Please provide title, from, to, relatedTo, and relatedToId');
+
+    // Basic validation - only title, from, and to are required
+    if (!title || !from || !to) {
+      return errorResponse(res, 400, 'Please provide title, from, and to');
+    }
+
+    // If relatedTo is provided, relatedToId must also be provided
+    if ((relatedTo && !relatedToId) || (!relatedTo && relatedToId)) {
+      return errorResponse(res, 400, 'Both relatedTo and relatedToId must be provided together, or both left empty');
     }
     
     let tenant;
@@ -69,7 +75,7 @@ const createMeeting = async (req, res) => {
     } else tenant = req.user.tenant;
     
     // ✅ AUTO-GENERATE JITSI MEETING LINK
-    const meetingId = `crm-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const meetingId = `crm-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
     const meetingLink = `https://meet.jit.si/${meetingId}`;
     
     const meeting = await Meeting.create({
@@ -85,75 +91,71 @@ const createMeeting = async (req, res) => {
     
     await meeting.populate('owner', 'firstName lastName email');
     await meeting.populate('host', 'firstName lastName email');
-    
+
     // ============================================
-    // 📧 SEND EMAIL INVITATIONS
+    // 📧 SEND EMAIL INVITATIONS (ASYNC - NO WAIT)
     // ============================================
-    let emailResult = null;
-    
-    if (sendInvitation !== false) { // Send by default unless explicitly disabled
-      try {
-        // Collect all attendee emails
-        const attendeeEmails = [];
-        
-        // 1. Add participants array emails
-        if (participants && participants.length > 0) {
-          participants.forEach(email => {
-            if (email && email.includes('@')) {
-              attendeeEmails.push(email);
+    if (sendInvitation !== false) {
+      // Send emails in background without blocking the response
+      (async () => {
+        try {
+          // Collect all attendee emails
+          const attendeeEmails = [];
+
+          // 1. Add participants array emails
+          if (participants && participants.length > 0) {
+            participants.forEach(email => {
+              if (email && email.includes('@')) {
+                attendeeEmails.push(email);
+              }
+            });
+          }
+
+          // 2. Get email from related entity (Lead/Contact)
+          if (relatedTo === 'Lead' && relatedToId) {
+            const lead = await Lead.findById(relatedToId).select('email firstName lastName');
+            if (lead && lead.email) {
+              attendeeEmails.push(lead.email);
             }
-          });
-        }
-        
-        // 2. Get email from related entity (Lead/Contact)
-        if (relatedTo === 'Lead' && relatedToId) {
-          const lead = await Lead.findById(relatedToId).select('email firstName lastName');
-          if (lead && lead.email) {
-            attendeeEmails.push(lead.email);
+          } else if (relatedTo === 'Contact' && relatedToId) {
+            const contact = await Contact.findById(relatedToId).select('email firstName lastName');
+            if (contact && contact.email) {
+              attendeeEmails.push(contact.email);
+            }
           }
-        } else if (relatedTo === 'Contact' && relatedToId) {
-          const contact = await Contact.findById(relatedToId).select('email firstName lastName');
-          if (contact && contact.email) {
-            attendeeEmails.push(contact.email);
+
+          // 3. Get email from contactName if provided
+          if (contactName) {
+            const contact = await Contact.findById(contactName).select('email');
+            if (contact && contact.email && !attendeeEmails.includes(contact.email)) {
+              attendeeEmails.push(contact.email);
+            }
           }
-        }
-        
-        // 3. Get email from contactName if provided
-        if (contactName) {
-          const contact = await Contact.findById(contactName).select('email');
-          if (contact && contact.email && !attendeeEmails.includes(contact.email)) {
-            attendeeEmails.push(contact.email);
+
+          // Remove duplicates
+          const uniqueEmails = [...new Set(attendeeEmails)];
+
+          // Send invitations if we have emails
+          if (uniqueEmails.length > 0) {
+            const organizerName = `${req.user.firstName} ${req.user.lastName}`;
+            await sendMeetingInvitation(meeting, uniqueEmails, organizerName);
+            console.log('✅ Meeting invitations sent to:', uniqueEmails);
+          } else {
+            console.log('⚠️ No attendee emails found for meeting invitation');
           }
+        } catch (emailError) {
+          console.error('⚠️ Failed to send meeting invitation:', emailError.message);
         }
-        
-        // Remove duplicates
-        const uniqueEmails = [...new Set(attendeeEmails)];
-        
-        // Send invitations if we have emails
-        if (uniqueEmails.length > 0) {
-          const organizerName = `${req.user.firstName} ${req.user.lastName}`;
-          
-          emailResult = await sendMeetingInvitation(meeting, uniqueEmails, organizerName);
-          console.log('✅ Meeting invitations sent to:', uniqueEmails);
-        } else {
-          console.log('⚠️ No attendee emails found for meeting invitation');
-        }
-        
-      } catch (emailError) {
-        console.error('⚠️ Failed to send meeting invitation:', emailError.message);
-        // Don't fail the meeting creation, just log the error
-        emailResult = { success: false, error: emailError.message };
-      }
+      })(); // Immediately invoked async function - fire and forget
     }
-    
-    await logActivity(req, 'meeting.created', 'Meeting', meeting._id, { 
-      title: meeting.title,
-      emailsSent: emailResult?.success ? emailResult.sentTo?.length : 0
+
+    await logActivity(req, 'meeting.created', 'Meeting', meeting._id, {
+      title: meeting.title
     });
-    
-    successResponse(res, 201, 'Meeting created successfully', {
-      meeting,
-      emailInvitation: emailResult
+
+    // Send response immediately without waiting for emails
+    successResponse(res, 201, 'Meeting created successfully! Email invitations are being sent.', {
+      meeting
     });
     
   } catch (error) {

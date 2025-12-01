@@ -5,6 +5,7 @@ const Opportunity = require('../models/Opportunity');
 const Task = require('../models/Task');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
+const { trackChanges, getRecordName } = require('../utils/changeTracker');
 
 const getAccounts = async (req, res) => {
   try {
@@ -112,16 +113,54 @@ const updateAccount = async (req, res) => {
   try {
     const account = await Account.findById(req.params.id);
     if (!account) return errorResponse(res, 404, 'Account not found');
+    
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
-      if (account.tenant.toString() !== req.user.tenant.toString()) return errorResponse(res, 403, 'Access denied');
+      if (account.tenant.toString() !== req.user.tenant.toString()) {
+        return errorResponse(res, 403, 'Access denied');
+      }
     }
-    const allowedFields = ['accountName', 'accountType', 'industry', 'website', 'phone', 'fax', 'email', 'annualRevenue',
-      'numberOfEmployees', 'billingAddress', 'shippingAddress', 'parentAccount', 'rating', 'ownership', 'tickerSymbol', 'SICCode', 'description', 'owner', 'tags'];
-    allowedFields.forEach(field => { if (req.body[field] !== undefined) account[field] = req.body[field]; });
+
+    const allowedFields = [
+      'accountName', 'accountType', 'industry', 'website', 'phone', 'fax', 
+      'email', 'annualRevenue', 'numberOfEmployees', 'billingAddress', 
+      'shippingAddress', 'parentAccount', 'rating', 'ownership', 
+      'tickerSymbol', 'SICCode', 'description', 'tags'
+    ];
+
+    // Track changes
+    const changes = trackChanges(account, req.body, allowedFields);
+
+    // Update fields
+    allowedFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        account[field] = req.body[field];
+      }
+    });
+
+    // Handle owner separately
+    if (req.body.owner && req.body.owner !== account.owner.toString()) {
+      changes.owner = {
+        old: account.owner.toString(),
+        new: req.body.owner
+      };
+      account.owner = req.body.owner;
+    }
+
     account.lastModifiedBy = req.user._id;
     await account.save();
     await account.populate('owner', 'firstName lastName email');
-    await logActivity(req, 'account.updated', 'Account', account._id);
+
+    // Log with changes
+    if (Object.keys(changes).length > 0) {
+      await logActivity(req, 'account.updated', 'Account', account._id, {
+        targetUser: `${account.accountName || 'Unknown Account'} (${account.email || 'No Email'})`,
+        changedBy: `${req.user.firstName} ${req.user.lastName} - ${req.user.userType || 'User'} (${req.user.email})`,
+        recordName: getRecordName(account, 'Account'),
+        changes: changes,
+        fieldsChanged: Object.keys(changes)
+      });
+    }
+
     successResponse(res, 200, 'Account updated successfully', account);
   } catch (error) {
     console.error('Update account error:', error);

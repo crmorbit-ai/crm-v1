@@ -42,7 +42,7 @@ const Sidebar = () => {
       </div>
 
       <nav className="sidebar-nav">
-        {/* Dashboard */}
+        {/* Dashboard & Admin Section */}
         <div className="nav-section">
           <Link
             to="/dashboard"
@@ -52,17 +52,28 @@ const Sidebar = () => {
             Dashboard
           </Link>
           
-          {/* ⭐ NEW - Subscription Link */}
           <Link
             to="/subscription"
             className={`nav-item ${isActive('/subscription') ? 'active' : ''}`}
-            style={{
-              background: isActive('/subscription') ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : undefined,
-              color: isActive('/subscription') ? 'white' : undefined
-            }}
           >
             <span className="nav-item-icon">💳</span>
             Subscription & Billing
+          </Link>
+
+          <Link
+            to="/data-center"
+            className={`nav-item ${isActive('/data-center') ? 'active' : ''}`}
+          >
+            <span className="nav-item-icon">👥</span>
+            Customer
+          </Link>
+
+          <Link
+            to="/activity-logs"
+            className={`nav-item ${isActive('/activity-logs') ? 'active' : ''}`}
+          >
+            <span className="nav-item-icon">📋</span>
+            Audit Logs
           </Link>
         </div>
 

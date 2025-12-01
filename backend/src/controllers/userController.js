@@ -6,6 +6,7 @@ const { successResponse, errorResponse } = require('../utils/response');
 const { canManageUser } = require('../utils/permissions');
 const { logActivity } = require('../middleware/activityLogger');
 const { sendUserInvitationEmail } = require('../utils/emailService');
+const { trackChanges } = require('../utils/changeTracker');
 
 /**
  * @desc    Get all users (filtered by tenant for tenant admins)
@@ -285,6 +286,9 @@ const updateUser = async (req, res) => {
       allowedFields.push('userType');
     }
 
+    // Track changes BEFORE updating
+    const changes = trackChanges(user, req.body, allowedFields);
+
     // Update fields
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -298,8 +302,12 @@ const updateUser = async (req, res) => {
     const userResponse = user.toObject();
     delete userResponse.password;
 
-    // Log activity
-    await logActivity(req, 'user.updated', 'User', user._id);
+    // Log activity with changes
+    await logActivity(req, 'user.updated', 'User', user._id, {
+      changes,
+      targetUser: `${user.firstName} ${user.lastName} - ${user.userType || 'User'} (${user.email})`,
+      changedBy: `${req.user.firstName} ${req.user.lastName} - ${req.user.userType || 'User'} (${req.user.email})`
+    });
 
     successResponse(res, 200, 'User updated successfully', userResponse);
   } catch (error) {
@@ -364,7 +372,7 @@ const assignRoles = async (req, res) => {
   try {
     const { roles } = req.body;
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id).populate('roles', 'name slug');
 
     if (!user) {
       return errorResponse(res, 404, 'User not found');
@@ -375,12 +383,60 @@ const assignRoles = async (req, res) => {
       return errorResponse(res, 403, 'You cannot manage this user');
     }
 
+    // Get old role names (with defensive check)
+    const oldRoleNames = user.roles && user.roles.length > 0
+      ? user.roles.map(role => role.name || role._id.toString())
+      : [];
+    const oldRoleIds = user.roles && user.roles.length > 0
+      ? user.roles.map(role => role._id.toString())
+      : [];
+
+    console.log('🔍 Old Roles:', oldRoleNames);
+
+    // Get new role IDs
+    const newRoleIds = roles || [];
+
+    // Fetch new role details to get names
+    const Role = require('../models/Role');
+    const newRoleObjects = await Role.find({ _id: { $in: newRoleIds } }).select('name');
+    const newRoleNames = newRoleObjects.map(role => role.name);
+
+    console.log('🔍 New Roles:', newRoleNames);
+
+    // Find added and removed
+    const addedRoleIds = newRoleIds.filter(r => !oldRoleIds.includes(r.toString()));
+    const removedRoleIds = oldRoleIds.filter(r => !newRoleIds.includes(r));
+
+    const addedRoleObjects = await Role.find({ _id: { $in: addedRoleIds } }).select('name');
+    const addedRoleNames = addedRoleObjects.map(r => r.name);
+
+    const removedRoleObjects = await Role.find({ _id: { $in: removedRoleIds } }).select('name');
+    const removedRoleNames = removedRoleObjects.map(r => r.name);
+
+    console.log('🔍 Added Roles:', addedRoleNames);
+    console.log('🔍 Removed Roles:', removedRoleNames);
+
+    // Create changes object with role names
+    const changes = {
+      roles: {
+        old: oldRoleNames.length > 0 ? oldRoleNames.join(', ') : 'None',
+        new: newRoleNames.length > 0 ? newRoleNames.join(', ') : 'None',
+        added: addedRoleNames.length > 0 ? addedRoleNames.join(', ') : 'None',
+        removed: removedRoleNames.length > 0 ? removedRoleNames.join(', ') : 'None'
+      }
+    };
+
+    console.log('📝 Final Changes Object:', JSON.stringify(changes, null, 2));
+
     user.roles = roles;
     await user.save();
 
-    // Log activity
+    // Log activity with detailed changes
     await logActivity(req, 'permission.granted', 'User', user._id, {
-      roles
+      changes,
+      targetUser: `${user.firstName} ${user.lastName} - ${user.userType || 'User'} (${user.email})`,
+      changedBy: `${req.user.firstName} ${req.user.lastName} - ${req.user.userType || 'User'} (${req.user.email})`,
+      actionType: 'roles_updated'
     });
 
     successResponse(res, 200, 'Roles assigned successfully', user);
@@ -399,7 +455,7 @@ const assignGroups = async (req, res) => {
   try {
     const { groups } = req.body;
 
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.params.id).populate('groups', 'name slug');
 
     if (!user) {
       return errorResponse(res, 404, 'User not found');
@@ -410,13 +466,60 @@ const assignGroups = async (req, res) => {
       return errorResponse(res, 403, 'You cannot manage this user');
     }
 
+    // Get old group names (with defensive check)
+    const oldGroupNames = user.groups && user.groups.length > 0
+      ? user.groups.map(group => group.name || group._id.toString())
+      : [];
+    const oldGroupIds = user.groups && user.groups.length > 0
+      ? user.groups.map(group => group._id.toString())
+      : [];
+
+    console.log('🔍 Old Groups:', oldGroupNames);
+
+    // Get new group IDs
+    const newGroupIds = groups || [];
+
+    // Fetch new group details to get names
+    const Group = require('../models/Group');
+    const newGroupObjects = await Group.find({ _id: { $in: newGroupIds } }).select('name');
+    const newGroupNames = newGroupObjects.map(group => group.name);
+
+    console.log('🔍 New Groups:', newGroupNames);
+
+    // Find added and removed
+    const addedGroupIds = newGroupIds.filter(g => !oldGroupIds.includes(g.toString()));
+    const removedGroupIds = oldGroupIds.filter(g => !newGroupIds.includes(g));
+
+    const addedGroupObjects = await Group.find({ _id: { $in: addedGroupIds } }).select('name');
+    const addedGroupNames = addedGroupObjects.map(g => g.name);
+
+    const removedGroupObjects = await Group.find({ _id: { $in: removedGroupIds } }).select('name');
+    const removedGroupNames = removedGroupObjects.map(g => g.name);
+
+    console.log('🔍 Added Groups:', addedGroupNames);
+    console.log('🔍 Removed Groups:', removedGroupNames);
+
+    // Create changes object with group names
+    const changes = {
+      groups: {
+        old: oldGroupNames.length > 0 ? oldGroupNames.join(', ') : 'None',
+        new: newGroupNames.length > 0 ? newGroupNames.join(', ') : 'None',
+        added: addedGroupNames.length > 0 ? addedGroupNames.join(', ') : 'None',
+        removed: removedGroupNames.length > 0 ? removedGroupNames.join(', ') : 'None'
+      }
+    };
+
+    console.log('📝 Final Changes Object:', JSON.stringify(changes, null, 2));
+
     user.groups = groups;
     await user.save();
 
-    // Log activity
+    // Log activity with detailed changes
     await logActivity(req, 'user.updated', 'User', user._id, {
-      action: 'groups_assigned',
-      groups
+      changes,
+      targetUser: `${user.firstName} ${user.lastName} - ${user.userType || 'User'} (${user.email})`,
+      changedBy: `${req.user.firstName} ${req.user.lastName} - ${req.user.userType || 'User'} (${req.user.email})`,
+      actionType: 'groups_assigned'
     });
 
     successResponse(res, 200, 'Groups assigned successfully', user);
