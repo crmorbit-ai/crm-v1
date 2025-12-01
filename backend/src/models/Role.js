@@ -36,7 +36,7 @@ const roleSchema = new mongoose.Schema({
     },
     actions: [{
       type: String,
-      enum: ['create', 'read', 'update', 'delete', 'manage', 'convert', 'import', 'export'],
+      enum: ['create', 'read', 'update', 'delete', 'manage', 'convert', 'import', 'export', 'move_to_leads'],
       required: true
     }]
   }],

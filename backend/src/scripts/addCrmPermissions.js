@@ -27,6 +27,10 @@ const CRM_PERMISSIONS = [
   {
     feature: 'report_management',
     actions: ['read', 'create', 'export', 'manage']
+  },
+  {
+    feature: 'data_center',
+    actions: ['create', 'read', 'update', 'delete', 'export', 'move_to_leads', 'manage']
   }
 ];
 
@@ -102,6 +106,10 @@ async function addCrmPermissions() {
         {
           feature: 'report_management',
           actions: ['read', 'export']
+        },
+        {
+          feature: 'data_center',
+          actions: ['create', 'read', 'update', 'export', 'move_to_leads']
         }
       ];
 

@@ -48,6 +48,12 @@ const AVAILABLE_FEATURES = {
   report_management: {
     actions: ['read', 'create', 'export', 'manage'],
     description: 'View and create reports, export data'
+  },
+
+  // Data Center (Customer Database)
+  data_center: {
+    actions: ['create', 'read', 'update', 'delete', 'export', 'move_to_leads', 'manage'],
+    description: 'Manage customer database, import/export data, move to leads'
   }
 };
 

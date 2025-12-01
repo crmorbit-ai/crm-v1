@@ -26,6 +26,7 @@ const TENANT_ADMIN_PERMISSIONS = [
   { feature: 'call_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
   { feature: 'note_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
   { feature: 'report_management', actions: ['read', 'create', 'export', 'manage'] },
+  { feature: 'data_center', actions: ['create', 'read', 'update', 'delete', 'export', 'move_to_leads', 'manage'] },
 
   // Advanced Features
   { feature: 'advanced_analytics', actions: ['read', 'manage'] },
