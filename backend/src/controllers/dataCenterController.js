@@ -204,6 +204,47 @@ const getCandidate = async (req, res) => {
 };
 
 /**
+ * @desc    Create a new candidate
+ * @route   POST /api/data-center
+ * @access  Private
+ */
+const createCandidate = async (req, res) => {
+  try {
+    const DataCenterCandidate = getDataCenterModel();
+
+    // Check if candidate with email already exists
+    const existingCandidate = await DataCenterCandidate.findOne({
+      email: req.body.email
+    });
+
+    if (existingCandidate) {
+      return errorResponse(res, 'Candidate with this email already exists', 400);
+    }
+
+    // Create candidate
+    const candidate = await DataCenterCandidate.create({
+      ...req.body,
+      importedBy: req.user._id,
+      importedAt: new Date(),
+      isActive: true
+    });
+
+    // Log activity
+    await logActivity(req.user._id, req.user.tenant, 'datacenter.create_candidate', {
+      candidateId: candidate._id,
+      candidateName: `${candidate.firstName} ${candidate.lastName}`,
+      email: candidate.email
+    });
+
+    return successResponse(res, candidate, 'Candidate created successfully', 201);
+
+  } catch (error) {
+    console.error('Error creating candidate:', error);
+    return errorResponse(res, error.message || 'Error creating candidate', 500);
+  }
+};
+
+/**
  * @desc    Get Data Center statistics
  * @route   GET /api/data-center/stats
  * @access  Private
@@ -579,13 +620,23 @@ const uploadCandidatesFile = async (req, res) => {
       }
 
       try {
+        // Get column mapping from request (if provided)
+        let columnMapping = {};
+        if (req.body.columnMapping) {
+          try {
+            columnMapping = JSON.parse(req.body.columnMapping);
+          } catch (e) {
+            console.error('Failed to parse columnMapping:', e);
+          }
+        }
+
         // Read file buffer
         const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
-        
+
         // Get first sheet
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
-        
+
         // Convert to JSON
         const rawData = xlsx.utils.sheet_to_json(worksheet);
 
@@ -593,53 +644,78 @@ const uploadCandidatesFile = async (req, res) => {
           return errorResponse(res, 'File is empty or invalid format', 400);
         }
 
+        // Helper function to get mapped value
+        const getMappedValue = (row, csvColumn, fieldName) => {
+          // If column mapping exists, use it
+          if (Object.keys(columnMapping).length > 0) {
+            // Find the CSV column that maps to this field
+            const mappedCsvColumn = Object.keys(columnMapping).find(
+              csvCol => columnMapping[csvCol] === fieldName
+            );
+            return mappedCsvColumn ? row[mappedCsvColumn] : undefined;
+          }
+          // Otherwise, try common column names (fallback)
+          return row[csvColumn] || row[fieldName];
+        };
+
         // Map CSV/Excel columns to model fields
-        const candidates = rawData.map(row => ({
-          firstName: row['First Name'] || row['firstName'] || '',
-          lastName: row['Last Name'] || row['lastName'] || '',
-          email: row['Email'] || row['email'] || '',
-          phone: row['Phone'] || row['phone'] || '',
-          alternatePhone: row['Alternate Phone'] || row['alternatePhone'],
-          
-          currentCompany: row['Current Company'] || row['currentCompany'],
-          currentDesignation: row['Designation'] || row['currentDesignation'],
-          totalExperience: parseFloat(row['Experience'] || row['totalExperience'] || 0),
-          relevantExperience: parseFloat(row['Relevant Experience'] || row['relevantExperience'] || 0),
-          
-          // Skills - handle comma-separated string
-          skills: row['Skills'] || row['skills'] 
-            ? (typeof (row['Skills'] || row['skills']) === 'string' 
-                ? (row['Skills'] || row['skills']).split(',').map(s => s.trim())
-                : (row['Skills'] || row['skills']))
-            : [],
-          
-          currentLocation: row['Location'] || row['currentLocation'] || '',
-          preferredLocations: row['Preferred Locations'] || row['preferredLocations']
-            ? (typeof (row['Preferred Locations'] || row['preferredLocations']) === 'string'
-                ? (row['Preferred Locations'] || row['preferredLocations']).split(',').map(s => s.trim())
-                : (row['Preferred Locations'] || row['preferredLocations']))
-            : [],
-          
-          currentCTC: parseFloat(row['Current CTC'] || row['currentCTC'] || 0),
-          expectedCTC: parseFloat(row['Expected CTC'] || row['expectedCTC'] || 0),
-          noticePeriod: parseInt(row['Notice Period'] || row['noticePeriod'] || 0),
-          availability: row['Availability'] || row['availability'] || 'Immediate',
-          
-          education: row['Education'] || row['education'],
-          highestQualification: row['Qualification'] || row['highestQualification'],
-          
-          linkedInUrl: row['LinkedIn'] || row['linkedInUrl'],
-          resumeUrl: row['Resume URL'] || row['resumeUrl'],
-          
-          sourceWebsite: row['Source'] || row['sourceWebsite'] || 'Manual Upload',
-          lastActiveOn: row['Last Active'] ? new Date(row['Last Active']) : new Date(),
-          
-          jobType: row['Job Type'] || row['jobType'] || 'Full-time',
-          workMode: row['Work Mode'] || row['workMode'] || 'Hybrid',
-          
-          status: 'Available',
-          isActive: true
-        }));
+        const candidates = rawData.map(row => {
+          const candidate = {
+            firstName: getMappedValue(row, 'First Name', 'firstName') || '',
+            lastName: getMappedValue(row, 'Last Name', 'lastName') || '',
+            email: getMappedValue(row, 'Email', 'email') || '',
+            phone: getMappedValue(row, 'Phone', 'phone') || '',
+            alternatePhone: getMappedValue(row, 'Alternate Phone', 'alternatePhone'),
+
+            currentCompany: getMappedValue(row, 'Current Company', 'currentCompany'),
+            currentDesignation: getMappedValue(row, 'Designation', 'currentDesignation'),
+            totalExperience: parseFloat(getMappedValue(row, 'Experience', 'totalExperience') || 0),
+            relevantExperience: parseFloat(getMappedValue(row, 'Relevant Experience', 'relevantExperience') || 0),
+
+            currentLocation: getMappedValue(row, 'Location', 'currentLocation') || '',
+            availability: getMappedValue(row, 'Availability', 'availability') || 'Immediate',
+
+            currentCTC: parseFloat(getMappedValue(row, 'Current CTC', 'currentCTC') || 0),
+            expectedCTC: parseFloat(getMappedValue(row, 'Expected CTC', 'expectedCTC') || 0),
+            noticePeriod: parseInt(getMappedValue(row, 'Notice Period', 'noticePeriod') || 0),
+
+            education: getMappedValue(row, 'Education', 'education'),
+            highestQualification: getMappedValue(row, 'Qualification', 'highestQualification'),
+
+            linkedInUrl: getMappedValue(row, 'LinkedIn', 'linkedInUrl'),
+            resumeUrl: getMappedValue(row, 'Resume URL', 'resumeUrl'),
+
+            sourceWebsite: getMappedValue(row, 'Source', 'sourceWebsite') || 'Manual Upload',
+            jobType: getMappedValue(row, 'Job Type', 'jobType') || 'Full-time',
+            workMode: getMappedValue(row, 'Work Mode', 'workMode') || 'Hybrid',
+
+            status: 'Available',
+            isActive: true,
+            lastActiveOn: new Date()
+          };
+
+          // Handle skills (comma-separated)
+          const skillsValue = getMappedValue(row, 'Skills', 'skills');
+          if (skillsValue) {
+            candidate.skills = typeof skillsValue === 'string'
+              ? skillsValue.split(',').map(s => s.trim())
+              : skillsValue;
+          } else {
+            candidate.skills = [];
+          }
+
+          // Handle preferred locations (comma-separated)
+          const locationsValue = getMappedValue(row, 'Preferred Locations', 'preferredLocations');
+          if (locationsValue) {
+            candidate.preferredLocations = typeof locationsValue === 'string'
+              ? locationsValue.split(',').map(s => s.trim())
+              : locationsValue;
+          } else {
+            candidate.preferredLocations = [];
+          }
+
+          return candidate;
+        });
 
         // Filter out candidates without email (required field)
         const validCandidates = candidates.filter(c => c.email && c.firstName);
@@ -678,6 +754,7 @@ const uploadCandidatesFile = async (req, res) => {
 module.exports = {
   getCandidates,
   getCandidate,
+  createCandidate,
   getStats,
   moveToLeads,
   bulkImportCandidates,

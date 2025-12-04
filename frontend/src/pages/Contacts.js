@@ -15,8 +15,9 @@ const Contacts = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [viewMode, setViewMode] = useState('table');
 
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [filters, setFilters] = useState({ search: '', account: '', title: '' });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -27,6 +28,13 @@ const Contacts = () => {
     firstName: '', lastName: '', email: '', phone: '', mobile: '', account: '', title: '', department: '',
     isPrimary: false, doNotCall: false, emailOptOut: false, mailingStreet: '', mailingCity: '', mailingState: '',
     mailingCountry: '', mailingZipCode: '', description: ''
+  });
+
+  const [stats, setStats] = useState({
+    total: 0,
+    primary: 0,
+    withAccount: 0,
+    recent: 0
   });
 
   useEffect(() => {
@@ -42,10 +50,21 @@ const Contacts = () => {
         page: pagination.page, limit: pagination.limit, ...filters
       });
       if (response.success && response.data) {
-        setContacts(response.data.contacts || []);
+        const contactsData = response.data.contacts || [];
+        setContacts(contactsData);
         setPagination(prev => ({
           ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0
         }));
+
+        // Calculate stats
+        const primary = contactsData.filter(c => c.isPrimary).length;
+        const withAccount = contactsData.filter(c => c.account).length;
+        setStats({
+          total: response.data.pagination?.total || 0,
+          primary,
+          withAccount,
+          recent: contactsData.length
+        });
       }
     } catch (err) {
       console.error('Load contacts error:', err);
@@ -157,97 +176,301 @@ const Contacts = () => {
   const canUpdateContact = hasPermission('contact_management', 'update');
   const canDeleteContact = hasPermission('contact_management', 'delete');
 
-  const actionButton = canCreateContact ? (
-    <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Contact</button>
-  ) : null;
+  const actionButton = (
+    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+      <div style={{ display: 'flex', gap: '8px', background: 'white', borderRadius: '8px', padding: '4px', border: '2px solid #e5e7eb' }}>
+        <button
+          className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+          onClick={() => setViewMode('table')}
+          style={{ padding: '6px 12px' }}
+        >
+          ☰ Table
+        </button>
+        <button
+          className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+          onClick={() => setViewMode('grid')}
+          style={{ padding: '6px 12px' }}
+        >
+          ⊞ Grid
+        </button>
+      </div>
+      {canCreateContact && (
+        <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Contact</button>
+      )}
+    </div>
+  );
 
   return (
     <DashboardLayout title="Contacts" actionButton={actionButton}>
-      {success && <div style={{padding:'16px',background:'#DCFCE7',color:'#166534',borderRadius:'8px',marginBottom:'20px'}}>{success}</div>}
-      {error && <div style={{padding:'16px',background:'#FEE2E2',color:'#991B1B',borderRadius:'8px',marginBottom:'20px'}}>{error}</div>}
+      {success && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>✓ {success}</div>}
+      {error && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>⚠ {error}</div>}
 
-      <div className="crm-card" style={{marginBottom:'20px'}}>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:'16px'}}>
-          <input type="text" name="search" placeholder="Search contacts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
-          <select name="account" className="crm-form-select" value={filters.account} onChange={handleFilterChange}>
-            <option value="">All Accounts</option>
-            {accounts.map(account => <option key={account._id} value={account._id}>{account.accountName}</option>)}
-          </select>
-          <input type="text" name="title" placeholder="Filter by title..." className="crm-form-input" value={filters.title} onChange={handleFilterChange} />
+      {/* Statistics Cards */}
+      <div className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-label">Total Contacts</div>
+          <div className="stat-value">{stats.total}</div>
+          <div className="stat-change">All contacts</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">Primary Contacts</div>
+          <div className="stat-value">{stats.primary}</div>
+          <div className="stat-change positive">Key contacts</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">With Account</div>
+          <div className="stat-value">{stats.withAccount}</div>
+          <div className="stat-change">Linked to accounts</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">This Page</div>
+          <div className="stat-value">{stats.recent}</div>
+          <div className="stat-change">Current page</div>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <div className="crm-card" style={{ marginBottom: '24px' }}>
+        <div style={{ padding: '20px' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>
+            🔍 Search & Filter
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+            <input type="text" name="search" placeholder="Search contacts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
+            <select name="account" className="crm-form-select" value={filters.account} onChange={handleFilterChange}>
+              <option value="">All Accounts</option>
+              {accounts.map(account => <option key={account._id} value={account._id}>{account.accountName}</option>)}
+            </select>
+            <input type="text" name="title" placeholder="Filter by title..." className="crm-form-input" value={filters.title} onChange={handleFilterChange} />
+          </div>
         </div>
       </div>
 
       <div className="crm-card">
         <div className="crm-card-header">
-          <h2 className="crm-card-title">All Contacts ({pagination.total})</h2>
+          <h2 className="crm-card-title">{viewMode === 'grid' ? 'Contact Cards' : 'Contact List'} ({pagination.total})</h2>
         </div>
 
         {loading ? (
-          <div style={{padding:'40px',textAlign:'center'}}>Loading...</div>
+          <div style={{ padding: '60px', textAlign: 'center' }}>
+            <div className="spinner" style={{ margin: '0 auto' }}></div>
+            <p style={{ marginTop: '16px', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>Loading contacts...</p>
+          </div>
         ) : contacts.length === 0 ? (
-          <div style={{padding:'40px',textAlign:'center',color:'#666'}}>No contacts found</div>
+          <div style={{ padding: '60px', textAlign: 'center' }}>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>👥</div>
+            <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No contacts found</p>
+            <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first contact to get started!</p>
+            {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ Create First Contact</button>}
+          </div>
         ) : (
           <>
-            <div style={{overflowX:'auto'}}>
-              <table className="crm-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Account</th>
-                    <th>Title</th>
-                    <th>Email</th>
-                    <th>Phone</th>
-                    <th>Primary</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contacts.map((contact) => (
-                    <tr key={contact._id} onClick={()=>navigate(`/contacts/${contact._id}`)} style={{cursor:'pointer'}}>
-                      <td>
-                        <div style={{fontWeight:'600',color:'#3B82F6'}}>{contact.firstName} {contact.lastName}</div>
-                        {contact.department && <div style={{fontSize:'12px',color:'#666'}}>{contact.department}</div>}
-                      </td>
-                      <td>
-                        {contact.account ? (
-                          <div>
-                            <div style={{fontWeight:'500'}}>{contact.account.accountName}</div>
-                            <div style={{fontSize:'11px',color:'#666'}}>{contact.account.accountNumber}</div>
-                          </div>
-                        ) : '-'}
-                      </td>
-                      <td>{contact.title || '-'}</td>
-                      <td>{contact.email}</td>
-                      <td>{contact.phone || contact.mobile || '-'}</td>
-                      <td>{contact.isPrimary && <span className="status-badge hot">Primary</span>}</td>
-                      <td onClick={(e)=>e.stopPropagation()}>
-                        <div style={{display:'flex',gap:'8px'}}>
-                          {canUpdateContact && (
-                            <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e)=>openEditModal(e, contact)}>Edit</button>
-                          )}
-                          {canDeleteContact && (
-                            <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e)=>openDeleteModal(e, contact)}>Delete</button>
-                          )}
+            {viewMode === 'grid' ? (
+              <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
+                {contacts.map((contact) => (
+                  <div
+                    key={contact._id}
+                    onClick={() => navigate(`/contacts/${contact._id}`)}
+                    style={{
+                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      cursor: 'pointer',
+                      border: '2px solid #e5e7eb',
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'translateY(-8px)';
+                      e.currentTarget.style.boxShadow = '0 12px 32px rgba(74, 144, 226, 0.2)';
+                      e.currentTarget.style.borderColor = '#4A90E2';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.05)';
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                    }}
+                  >
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #4A90E2 0%, #2c5364 100%)' }}></div>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
+                      <div style={{
+                        width: '56px',
+                        height: '56px',
+                        borderRadius: '12px',
+                        background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '24px',
+                        fontWeight: '800',
+                        color: 'white',
+                        boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
+                      }}>
+                        {contact.firstName?.[0]}{contact.lastName?.[0]}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
+                          {contact.firstName} {contact.lastName}
+                        </h3>
+                        <p style={{ margin: '0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
+                          {contact.title || 'No title'}
+                        </p>
+                      </div>
+                    </div>
+                    {contact.isPrimary && (
+                      <div style={{ marginBottom: '12px' }}>
+                        <span className="status-badge hot">⭐ Primary Contact</span>
+                      </div>
+                    )}
+                    <div style={{ marginBottom: '16px', color: '#64748b', fontSize: '14px' }}>
+                      <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span>📧</span>
+                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.email}</span>
+                      </div>
+                      {(contact.phone || contact.mobile) && (
+                        <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>📞</span>
+                          <span>{contact.phone || contact.mobile}</span>
                         </div>
-                      </td>
+                      )}
+                      {contact.account && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>🏢</span>
+                          <span>{contact.account.accountName}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', borderTop: '2px solid #f1f5f9' }} onClick={(e) => e.stopPropagation()}>
+                      {canUpdateContact && (
+                        <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditModal(e, contact)} style={{ flex: 1 }}>✏️ Edit</button>
+                      )}
+                      {canDeleteContact && (
+                        <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteModal(e, contact)} style={{ flex: 1 }}>🗑️ Delete</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto', padding: '0' }}>
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
+                  <thead>
+                    <tr style={{ background: 'transparent' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact Info</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Title</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {contacts.map((contact) => (
+                      <tr
+                        key={contact._id}
+                        onClick={(e) => { if (e.target.tagName !== 'BUTTON') navigate(`/contacts/${contact._id}`); }}
+                        style={{
+                          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease',
+                          borderRadius: '12px',
+                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
+                          border: '2px solid #e5e7eb'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
+                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 144, 226, 0.15)';
+                          e.currentTarget.style.borderColor = '#4A90E2';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'translateY(0)';
+                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
+                          e.currentTarget.style.borderColor = '#e5e7eb';
+                        }}
+                      >
+                        <td style={{ padding: '16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            <div style={{
+                              width: '48px',
+                              height: '48px',
+                              borderRadius: '12px',
+                              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '18px',
+                              fontWeight: '800',
+                              color: 'white',
+                              boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
+                            }}>
+                              {contact.firstName?.[0]}{contact.lastName?.[0]}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '4px' }}>
+                                {contact.firstName} {contact.lastName}
+                                {contact.isPrimary && <span style={{ marginLeft: '8px' }}>⭐</span>}
+                              </div>
+                              {contact.department && (
+                                <div style={{ fontSize: '13px', color: '#64748b' }}>{contact.department}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          {contact.account ? (
+                            <div>
+                              <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{contact.account.accountName}</div>
+                              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{contact.account.accountNumber}</div>
+                            </div>
+                          ) : '-'}
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569' }}>
+                              <span>📧</span>
+                              <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.email}</span>
+                            </div>
+                            {(contact.phone || contact.mobile) && (
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', fontWeight: '600' }}>
+                                <span>📞</span>
+                                <span>{contact.phone || contact.mobile}</span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          <div style={{ fontWeight: '600', color: '#475569', fontSize: '14px' }}>
+                            {contact.title || '-'}
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px' }} onClick={(e) => e.stopPropagation()}>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            {canUpdateContact && (
+                              <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditModal(e, contact)}>Edit</button>
+                            )}
+                            {canDeleteContact && (
+                              <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteModal(e, contact)}>Delete</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             {pagination.pages > 1 && (
-              <div className="pagination">
-                <button className="crm-btn crm-btn-outline" onClick={()=>setPagination(prev=>({...prev,page:prev.page-1}))} disabled={pagination.page===1}>Previous</button>
-                <span className="pagination-info">Page {pagination.page} of {pagination.pages}</span>
-                <button className="crm-btn crm-btn-outline" onClick={()=>setPagination(prev=>({...prev,page:prev.page+1}))} disabled={pagination.page===pagination.pages}>Next</button>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderTop: '2px solid #f1f5f9' }}>
+                <button className="crm-btn crm-btn-secondary" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>← Previous</button>
+                <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>Page {pagination.page} of {pagination.pages}</span>
+                <button className="crm-btn crm-btn-secondary" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>Next →</button>
               </div>
             )}
           </>
         )}
       </div>
 
-      <Modal isOpen={showCreateModal} onClose={()=>{setShowCreateModal(false);resetForm();setError('');}} title="Create New Contact" size="large">
+      <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); resetForm(); setError(''); }} title="Create New Contact" size="large">
         <form onSubmit={handleCreateContact}>
           <div className="form-row">
             <div className="form-group">
@@ -263,7 +486,7 @@ const Contacts = () => {
             <label>Account *</label>
             <select name="account" className="crm-form-select" value={formData.account} onChange={handleChange} required>
               <option value="">Select Account</option>
-              {accounts.map(account=><option key={account._id} value={account._id}>{account.accountName}</option>)}
+              {accounts.map(account => <option key={account._id} value={account._id}>{account.accountName}</option>)}
             </select>
           </div>
           <div className="form-row">
@@ -287,63 +510,57 @@ const Contacts = () => {
             </div>
           </div>
           <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-outline" onClick={()=>setShowCreateModal(false)}>Cancel</button>
+            <button type="button" className="crm-btn crm-btn-outline" onClick={() => setShowCreateModal(false)}>Cancel</button>
             <button type="submit" className="crm-btn crm-btn-primary">Create Contact</button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={showEditModal} onClose={()=>{setShowEditModal(false);setSelectedContact(null);resetForm();}} title="Edit Contact" size="large">
-  <form onSubmit={handleUpdateContact}>
-    <div className="form-row">
-      <div className="form-group">
-        <label>First Name *</label>
-        <input type="text" name="firstName" className="crm-form-input" value={formData.firstName || ''} onChange={handleChange} required />
-      </div>
-      <div className="form-group">
-        <label>Last Name *</label>
-        <input type="text" name="lastName" className="crm-form-input" value={formData.lastName || ''} onChange={handleChange} required />
-      </div>
-    </div>
-    <div className="form-row">
-      <div className="form-group">
-        <label>Email *</label>
-        <input type="email" name="email" className="crm-form-input" value={formData.email || ''} onChange={handleChange} required />
-      </div>
-      <div className="form-group">
-        <label>Phone</label>
-        <input type="tel" name="phone" className="crm-form-input" value={formData.phone || ''} onChange={handleChange} />
-      </div>
-    </div>
-    <div className="form-row">
-      
-      
-    </div>
-    <div className="form-row">
-      <div className="form-group">
-        <label>Department</label>
-        <input type="text" name="department" className="crm-form-input" value={formData.department || ''} onChange={handleChange} />
-      </div>
-     
-      
-    </div>
-    <div className="form-group">
-      <label>Description</label>
-      <textarea name="description" className="crm-form-textarea" rows="3" value={formData.description || ''} onChange={handleChange} />
-    </div>
-    <div className="modal-footer">
-      <button type="button" className="crm-btn crm-btn-outline" onClick={()=>setShowEditModal(false)}>Cancel</button>
-      <button type="submit" className="crm-btn crm-btn-primary">Update Contact</button>
-    </div>
-  </form>
-</Modal>
+      <Modal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setSelectedContact(null); resetForm(); }} title="Edit Contact" size="large">
+        <form onSubmit={handleUpdateContact}>
+          <div className="form-row">
+            <div className="form-group">
+              <label>First Name *</label>
+              <input type="text" name="firstName" className="crm-form-input" value={formData.firstName || ''} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label>Last Name *</label>
+              <input type="text" name="lastName" className="crm-form-input" value={formData.lastName || ''} onChange={handleChange} required />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Email *</label>
+              <input type="email" name="email" className="crm-form-input" value={formData.email || ''} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label>Phone</label>
+              <input type="tel" name="phone" className="crm-form-input" value={formData.phone || ''} onChange={handleChange} />
+            </div>
+          </div>
+          <div className="form-row">
+            <div className="form-group">
+              <label>Department</label>
+              <input type="text" name="department" className="crm-form-input" value={formData.department || ''} onChange={handleChange} />
+            </div>
+          </div>
+          <div className="form-group">
+            <label>Description</label>
+            <textarea name="description" className="crm-form-textarea" rows="3" value={formData.description || ''} onChange={handleChange} />
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="crm-btn crm-btn-outline" onClick={() => setShowEditModal(false)}>Cancel</button>
+            <button type="submit" className="crm-btn crm-btn-primary">Update Contact</button>
+          </div>
+        </form>
+      </Modal>
 
-      <Modal isOpen={showDeleteModal} onClose={()=>{setShowDeleteModal(false);setSelectedContact(null);}} title="Delete Contact" size="small">
+      <Modal isOpen={showDeleteModal} onClose={() => { setShowDeleteModal(false); setSelectedContact(null); }} title="Delete Contact" size="small">
         <div>
           <p>Delete this contact?</p>
-          <p style={{fontWeight:'600',marginTop:'10px'}}>{selectedContact?.firstName} {selectedContact?.lastName}</p>
+          <p style={{ fontWeight: '600', marginTop: '10px' }}>{selectedContact?.firstName} {selectedContact?.lastName}</p>
           <div className="modal-footer">
-            <button className="crm-btn crm-btn-outline" onClick={()=>setShowDeleteModal(false)}>Cancel</button>
+            <button className="crm-btn crm-btn-outline" onClick={() => setShowDeleteModal(false)}>Cancel</button>
             <button className="crm-btn crm-btn-danger" onClick={handleDeleteContact}>Delete</button>
           </div>
         </div>

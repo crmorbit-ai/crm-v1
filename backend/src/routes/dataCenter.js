@@ -3,6 +3,7 @@ const router = express.Router();
 const {
   getCandidates,
   getCandidate,
+  createCandidate,
   getStats,
   moveToLeads,
   bulkImportCandidates,
@@ -51,10 +52,14 @@ router.post('/export',
 
 // CRUD routes
 router.route('/')
-  .get(requirePermission('data_center', 'read'), getCandidates);
+  .get(requirePermission('data_center', 'read'), getCandidates)
+  .post(requirePermission('data_center', 'create'), createCandidate);
 
 // Dynamic /:id routes (LAST)
 router.route('/:id')
   .get(requirePermission('data_center', 'read'), getCandidate);
 
 module.exports = router;
+
+
+

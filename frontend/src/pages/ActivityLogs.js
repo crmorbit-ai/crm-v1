@@ -178,54 +178,54 @@ const ActivityLogs = () => {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', marginBottom: '24px' }}>
           <div style={{
             padding: '24px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: 'linear-gradient(135deg, rgb(168, 237, 234) 0%, rgb(254, 214, 227) 100%)',
             borderRadius: '16px',
-            boxShadow: '0 8px 20px rgba(102, 126, 234, 0.25)',
-            color: '#fff',
+            boxShadow: '0 8px 20px rgba(168, 237, 234, 0.4)',
+            color: '#1a202c',
             transition: 'transform 0.3s ease'
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-            <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '8px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>📊 Total Activities</div>
+            <div style={{ fontSize: '12px', opacity: 0.85, marginBottom: '8px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>📊 Total Activities</div>
             <div style={{ fontSize: '36px', fontWeight: '800', lineHeight: '1' }}>{stats.total?.toLocaleString()}</div>
           </div>
           <div style={{
             padding: '24px',
-            background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+            background: 'linear-gradient(135deg, rgb(168, 237, 234) 0%, rgb(254, 214, 227) 100%)',
             borderRadius: '16px',
-            boxShadow: '0 8px 20px rgba(245, 87, 108, 0.25)',
-            color: '#fff',
+            boxShadow: '0 8px 20px rgba(168, 237, 234, 0.4)',
+            color: '#1a202c',
             transition: 'transform 0.3s ease'
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-            <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '8px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>🔥 Today</div>
+            <div style={{ fontSize: '12px', opacity: 0.85, marginBottom: '8px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>🔥 Today</div>
             <div style={{ fontSize: '36px', fontWeight: '800', lineHeight: '1' }}>{stats.todayCount?.toLocaleString()}</div>
           </div>
           <div style={{
             padding: '24px',
-            background: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+            background: 'linear-gradient(135deg, rgb(168, 237, 234) 0%, rgb(254, 214, 227) 100%)',
             borderRadius: '16px',
-            boxShadow: '0 8px 20px rgba(252, 182, 159, 0.25)',
-            color: '#92400e',
+            boxShadow: '0 8px 20px rgba(168, 237, 234, 0.4)',
+            color: '#1a202c',
             transition: 'transform 0.3s ease'
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-            <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '8px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>📅 This Week</div>
+            <div style={{ fontSize: '12px', opacity: 0.85, marginBottom: '8px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>📅 This Week</div>
             <div style={{ fontSize: '36px', fontWeight: '800', lineHeight: '1' }}>{stats.weekCount?.toLocaleString()}</div>
           </div>
           <div style={{
             padding: '24px',
-            background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+            background: 'linear-gradient(135deg, rgb(168, 237, 234) 0%, rgb(254, 214, 227) 100%)',
             borderRadius: '16px',
-            boxShadow: '0 8px 20px rgba(168, 237, 234, 0.25)',
-            color: '#065f46',
+            boxShadow: '0 8px 20px rgba(168, 237, 234, 0.4)',
+            color: '#1a202c',
             transition: 'transform 0.3s ease'
           }}
           onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-4px)'}
           onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}>
-            <div style={{ fontSize: '12px', opacity: 0.9, marginBottom: '8px', fontWeight: '600', letterSpacing: '0.5px', textTransform: 'uppercase' }}>📈 This Month</div>
+            <div style={{ fontSize: '12px', opacity: 0.85, marginBottom: '8px', fontWeight: '700', letterSpacing: '0.5px', textTransform: 'uppercase' }}>📈 This Month</div>
             <div style={{ fontSize: '36px', fontWeight: '800', lineHeight: '1' }}>{stats.monthCount?.toLocaleString()}</div>
           </div>
         </div>
