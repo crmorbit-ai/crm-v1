@@ -5,7 +5,7 @@ import '../../styles/crm.css';
 
 const Sidebar = () => {
   const location = useLocation();
-  const { hasPermission } = useAuth();
+  const { hasPermission, isSaasOwner } = useAuth();
 
   const isActive = (path) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
@@ -66,6 +66,14 @@ const Sidebar = () => {
           >
             <span className="nav-item-icon">👥</span>
             Customer
+          </Link>
+
+          <Link
+            to="/products"
+            className={`nav-item ${isActive('/products') ? 'active' : ''}`}
+          >
+            <span className="nav-item-icon">📦</span>
+            Product
           </Link>
 
           <Link
@@ -160,6 +168,28 @@ const Sidebar = () => {
             label="Groups"
             permission="group_management"
           />
+        </div>
+
+        {/* Support Section */}
+        <div className="nav-section">
+          <div className="nav-section-title">Support</div>
+          {isSaasOwner() ? (
+            <Link
+              to="/support-admin"
+              className={`nav-item ${isActive('/support-admin') ? 'active' : ''}`}
+            >
+              <span className="nav-item-icon">🎫</span>
+              Support Dashboard
+            </Link>
+          ) : (
+            <Link
+              to="/support"
+              className={`nav-item ${isActive('/support') ? 'active' : ''}`}
+            >
+              <span className="nav-item-icon">🎫</span>
+              My Tickets
+            </Link>
+          )}
         </div>
       </nav>
 

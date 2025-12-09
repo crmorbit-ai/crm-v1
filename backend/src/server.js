@@ -74,6 +74,9 @@ app.use('/api/resellers', require('./routes/resellers'));
 // 🚀 DATA CENTER ROUTES - NEW
 // ============================================
 app.use('/api/data-center', require('./routes/dataCenter'));
+app.use('/api/products', require('./routes/products'));
+app.use('/api/user-settings', require('./routes/userSettings'));
+app.use('/api/support-tickets', require('./routes/supportTickets'));
 // ============================================
 
 // CRM Routes

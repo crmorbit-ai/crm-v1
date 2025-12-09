@@ -204,6 +204,24 @@ const SaasDashboard = () => {
             e.target.style.background = 'rgba(93, 185, 222, 0.1)';
             e.target.style.transform = 'translateY(0)';
           }}>🤝 Resellers</Link>
+          <Link to="/support-admin" style={{
+            padding: '8px 20px',
+            borderRadius: '8px',
+            fontWeight: '600',
+            fontSize: '14px',
+            background: 'rgba(93, 185, 222, 0.1)',
+            color: '#2a5298',
+            textDecoration: 'none',
+            transition: 'all 0.3s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
+            e.target.style.transform = 'translateY(-2px)';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
+            e.target.style.transform = 'translateY(0)';
+          }}>🎫 Support Tickets</Link>
         </div>
       </nav>
 

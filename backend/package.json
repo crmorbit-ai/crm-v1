@@ -30,6 +30,8 @@
     "morgan": "^1.10.0",
     "multer": "^2.0.2",
     "nodemailer": "^7.0.10",
+    "razorpay": "^2.9.6",
+    "twilio": "^5.10.7",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {

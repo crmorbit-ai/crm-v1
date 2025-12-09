@@ -49,10 +49,18 @@ const connectDataCenterDB = async () => {
 
     // ✅ REGISTER DATA CENTER MODELS ON THIS CONNECTION
     const DataCenterCandidate = require('../models/DataCenterCandidate');
+    const Product = require('../models/Product');
+    const UserProduct = require('../models/UserProduct');
 
-    // Re-register the model on this connection
+    // Re-register the models on this connection
     if (!dataCenterConnection.models.DataCenterCandidate) {
       dataCenterConnection.model('DataCenterCandidate', DataCenterCandidate.schema);
+    }
+    if (!dataCenterConnection.models.Product) {
+      dataCenterConnection.model('Product', Product.schema);
+    }
+    if (!dataCenterConnection.models.UserProduct) {
+      dataCenterConnection.model('UserProduct', UserProduct.schema);
     }
 
     console.log(`✅ Data Center DB Connected: ${dataCenterConnection.host}`);

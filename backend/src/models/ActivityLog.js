@@ -37,6 +37,7 @@ const activityLogSchema = new mongoose.Schema({
       'meeting.created', 'meeting.updated', 'meeting.deleted',
       'call.created', 'call.updated', 'call.deleted',
       'note.created', 'note.updated', 'note.deleted',
+      'support.ticket_created', 'support.message_added', 'support.status_updated',
       'other'
     ]
   },
@@ -44,7 +45,7 @@ const activityLogSchema = new mongoose.Schema({
   resourceType: {
     type: String,
     enum: ['User', 'Role', 'Group', 'Tenant', 'Subscription', 'Billing', 'Feature', 'Settings',
-           'Lead', 'Account', 'Contact', 'Opportunity', 'Task', 'Meeting', 'Call', 'Note']
+           'Lead', 'Account', 'Contact', 'Opportunity', 'Task', 'Meeting', 'Call', 'Note', 'SupportTicket']
   },
   resourceId: {
     type: mongoose.Schema.Types.ObjectId

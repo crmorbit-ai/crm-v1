@@ -268,15 +268,23 @@ const dataCenterCandidateSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  
+
   importedAt: {
     type: Date,
     default: Date.now
   },
-  
+
   dataSource: {
     type: String,
     trim: true
+  },
+
+  // 🔒 Tenant Isolation (NEW)
+  tenant: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true
   }
 }, {
   timestamps: true

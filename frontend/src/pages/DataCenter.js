@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import dataCenterService from '../services/dataCenterService';
+import productService from '../services/productService';
+import BulkCommunication from '../components/BulkCommunication';
 import '../styles/crm.css';
 
 const DataCenter = () => {
@@ -17,6 +19,16 @@ const DataCenter = () => {
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
+
+  // Bulk Communication states
+  const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
+  const [showBulkWhatsAppModal, setShowBulkWhatsAppModal] = useState(false);
+  const [showBulkSMSModal, setShowBulkSMSModal] = useState(false);
+  const [myProducts, setMyProducts] = useState([]);
+  const [bulkEmailData, setBulkEmailData] = useState({ subject: '', message: '' });
+  const [bulkWhatsAppData, setBulkWhatsAppData] = useState({ message: '' });
+  const [bulkSMSData, setBulkSMSData] = useState({ message: '' });
+  const [sendingBulk, setSendingBulk] = useState(false);
 
   // Pagination
   const [pagination, setPagination] = useState({
@@ -114,7 +126,18 @@ const DataCenter = () => {
 
   useEffect(() => {
     loadCandidates();
+    loadMyProducts();
   }, [pagination.page, pagination.limit]);
+
+  // Load user's products
+  const loadMyProducts = async () => {
+    try {
+      const response = await productService.getMyProducts();
+      setMyProducts(response.data || []);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
+  };
 
   // Handle filter change
   const handleFilterChange = (e) => {
@@ -322,93 +345,8 @@ const DataCenter = () => {
     return colors[availability] || 'secondary';
   };
 
-  const actionButtons = (
-  <div style={{
-    display: 'flex',
-    gap: '10px',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end'
-  }}>
-    <button
-      className="crm-btn crm-btn-primary crm-btn-sm"
-      onClick={() => setShowCreateModal(true)}
-    >
-      ➕ Add Candidate
-    </button>
-
-    <button
-      className="crm-btn crm-btn-secondary crm-btn-sm"
-      onClick={() => setShowFilters(!showFilters)}
-    >
-      🔍 {showFilters ? 'Hide' : 'Show'} Filters
-    </button>
-
-    <input
-      type="file"
-      ref={fileInputRef}
-      style={{ display: 'none' }}
-      accept=".csv,.xlsx,.xls"
-      onChange={handleFileUpload}
-    />
-    <button
-      className="crm-btn crm-btn-secondary crm-btn-sm"
-      onClick={() => fileInputRef.current?.click()}
-      disabled={uploading}
-    >
-      {uploading ? '⏳ Uploading...' : '📤 Upload CSV/Excel'}
-    </button>
-
-    <button
-      className="crm-btn crm-btn-secondary crm-btn-sm"
-      onClick={handleExport}
-    >
-      📥 Export {selectedCandidates.length > 0 ? `(${selectedCandidates.length})` : '(All)'}
-    </button>
-
-    {/* View Mode Toggle */}
-    <div style={{ 
-      display: 'flex', 
-      gap: '6px', 
-      background: 'white', 
-      borderRadius: '8px', 
-      padding: '4px', 
-      border: '1px solid #e5e7eb' 
-    }}>
-      <button
-        className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-        onClick={() => setViewMode('table')}
-        style={{ padding: '6px 12px', minWidth: 'auto' }}
-      >
-        ☰
-      </button>
-      <button
-        className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-        onClick={() => setViewMode('grid')}
-        style={{ padding: '6px 12px', minWidth: 'auto' }}
-      >
-        ⊞
-      </button>
-    </div>
-
-    {/* Move to Leads Button */}
-    {selectedCandidates.length > 0 && (
-      <button
-        className="crm-btn crm-btn-primary crm-btn-sm"
-        onClick={() => setShowMoveModal(true)}
-        style={{ 
-          background: '#10b981',
-          borderColor: '#10b981'
-        }}
-      >
-        ➡️ Move to Leads ({selectedCandidates.length})
-      </button>
-    )}
-  </div>
-);
-
   return (
-    <DashboardLayout title="Customer Database" actionButton={actionButtons}>
+    <DashboardLayout title="Customer Database">
       {/* Statistics Cards */}
       <div className="stats-grid">
         <div className="stat-card">
@@ -433,31 +371,133 @@ const DataCenter = () => {
         </div>
       </div>
 
-      {/* Selection Info Bar */}
-      {selectedCandidates.length > 0 && (
+      {/* Action Buttons Section */}
+      <div style={{
+        background: 'white',
+        padding: '16px 20px',
+        borderRadius: '12px',
+        marginBottom: '20px',
+        border: '2px solid #e5e7eb',
+        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
+      }}>
         <div style={{
-          background: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
-          padding: '16px 20px',
-          borderRadius: '12px',
-          marginBottom: '20px',
-          border: '2px solid #93C5FD',
           display: 'flex',
-          justifyContent: 'space-between',
+          gap: '12px',
           alignItems: 'center',
-          boxShadow: '0 4px 15px rgba(59, 130, 246, 0.2)'
+          flexWrap: 'wrap',
+          justifyContent: 'space-between'
         }}>
-          <div style={{ fontWeight: '700', color: '#1e40af', fontSize: '15px' }}>
-            ✓ {selectedCandidates.length} candidate{selectedCandidates.length > 1 ? 's' : ''} selected
+          {/* Left Side - Main Actions */}
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              className="crm-btn crm-btn-primary crm-btn-sm"
+              onClick={() => setShowCreateModal(true)}
+            >
+              ➕ Add Candidate
+            </button>
+
+            <button
+              className="crm-btn crm-btn-secondary crm-btn-sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              🔍 {showFilters ? 'Hide' : 'Show'} Filters
+            </button>
+
+            <input
+              type="file"
+              ref={fileInputRef}
+              style={{ display: 'none' }}
+              accept=".csv,.xlsx,.xls"
+              onChange={handleFileUpload}
+            />
+            <button
+              className="crm-btn crm-btn-secondary crm-btn-sm"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={uploading}
+            >
+              {uploading ? '⏳ Uploading...' : '📤 Upload CSV/Excel'}
+            </button>
+
+            <button
+              className="crm-btn crm-btn-secondary crm-btn-sm"
+              onClick={handleExport}
+            >
+              📥 Export {selectedCandidates.length > 0 ? `(${selectedCandidates.length})` : '(All)'}
+            </button>
+
+            {/* View Mode Toggle */}
+            <div style={{
+              display: 'flex',
+              gap: '6px',
+              background: '#f8fafc',
+              borderRadius: '8px',
+              padding: '4px',
+              border: '1px solid #e5e7eb'
+            }}>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+                onClick={() => setViewMode('table')}
+                style={{ padding: '6px 12px', minWidth: 'auto' }}
+              >
+                ☰
+              </button>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+                onClick={() => setViewMode('grid')}
+                style={{ padding: '6px 12px', minWidth: 'auto' }}
+              >
+                ⊞
+              </button>
+            </div>
           </div>
-          <button
-            className="crm-btn crm-btn-sm crm-btn-secondary"
-            onClick={() => setSelectedCandidates([])}
-            style={{ padding: '6px 12px' }}
-          >
-            ✕ Clear Selection
-          </button>
+
+          {/* Right Side - Bulk Actions (shown when candidates selected) */}
+          {selectedCandidates.length > 0 && (
+            <div style={{
+              display: 'flex',
+              gap: '10px',
+              alignItems: 'center',
+              padding: '8px 16px',
+              background: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
+              borderRadius: '8px',
+              border: '2px solid #93C5FD'
+            }}>
+              <span style={{ fontWeight: '700', color: '#1e40af', fontSize: '14px' }}>
+                {selectedCandidates.length} Selected:
+              </span>
+
+              {/* Bulk Communication Buttons */}
+              <BulkCommunication
+                selectedCandidates={selectedCandidates}
+                candidates={candidates}
+                myProducts={myProducts}
+                loadMyProducts={loadMyProducts}
+                onSuccess={() => setSelectedCandidates([])}
+              />
+
+              {/* Move to Leads Button */}
+              <button
+                className="crm-btn crm-btn-primary crm-btn-sm"
+                onClick={() => setShowMoveModal(true)}
+                style={{
+                  background: '#10b981',
+                  borderColor: '#10b981'
+                }}
+              >
+                ➡️ Move to Leads
+              </button>
+
+              <button
+                className="crm-btn crm-btn-sm crm-btn-secondary"
+                onClick={() => setSelectedCandidates([])}
+                style={{ padding: '6px 12px' }}
+              >
+                ✕ Clear
+              </button>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Filters Panel */}
       {showFilters && (

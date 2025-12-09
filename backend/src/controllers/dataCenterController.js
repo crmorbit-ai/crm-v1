@@ -59,7 +59,11 @@ const getCandidates = async (req, res) => {
       workMode
     } = req.query;
 
-    let query = { isActive: true };
+    // 🔒 Tenant Isolation: Only show candidates belonging to user's tenant
+    let query = {
+      isActive: true,
+      tenant: req.user.tenant
+    };
 
     // Search by name, email, skills
     if (search) {
@@ -189,7 +193,12 @@ const getCandidates = async (req, res) => {
 const getCandidate = async (req, res) => {
   try {
     const DataCenterCandidate = getDataCenterModel();
-    const candidate = await DataCenterCandidate.findById(req.params.id);
+
+    // 🔒 Tenant Isolation: Only allow access to own tenant's candidates
+    const candidate = await DataCenterCandidate.findOne({
+      _id: req.params.id,
+      tenant: req.user.tenant
+    });
 
     if (!candidate) {
       return errorResponse(res, 'Candidate not found', 404);
@@ -212,21 +221,23 @@ const createCandidate = async (req, res) => {
   try {
     const DataCenterCandidate = getDataCenterModel();
 
-    // Check if candidate with email already exists
+    // 🔒 Tenant Isolation: Check if candidate with email already exists in this tenant
     const existingCandidate = await DataCenterCandidate.findOne({
-      email: req.body.email
+      email: req.body.email,
+      tenant: req.user.tenant
     });
 
     if (existingCandidate) {
-      return errorResponse(res, 'Candidate with this email already exists', 400);
+      return errorResponse(res, 'Candidate with this email already exists in your database', 400);
     }
 
-    // Create candidate
+    // Create candidate with tenant
     const candidate = await DataCenterCandidate.create({
       ...req.body,
       importedBy: req.user._id,
       importedAt: new Date(),
-      isActive: true
+      isActive: true,
+      tenant: req.user.tenant // 🔒 Add tenant
     });
 
     // Log activity
@@ -253,26 +264,35 @@ const getStats = async (req, res) => {
   try {
     const DataCenterCandidate = getDataCenterModel();
 
-    const totalCandidates = await DataCenterCandidate.countDocuments({ isActive: true });
-    const availableCandidates = await DataCenterCandidate.countDocuments({ 
-      isActive: true, 
-      status: 'Available' 
+    // 🔒 Tenant Isolation: Add tenant filter to all queries
+    const tenantFilter = { tenant: req.user.tenant };
+
+    const totalCandidates = await DataCenterCandidate.countDocuments({
+      isActive: true,
+      ...tenantFilter
     });
-    const movedToLeads = await DataCenterCandidate.countDocuments({ 
-      isActive: true, 
-      status: 'Moved to Leads' 
+    const availableCandidates = await DataCenterCandidate.countDocuments({
+      isActive: true,
+      status: 'Available',
+      ...tenantFilter
+    });
+    const movedToLeads = await DataCenterCandidate.countDocuments({
+      isActive: true,
+      status: 'Moved to Leads',
+      ...tenantFilter
     });
 
     // Last 24 hours active
     const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const activeInLast24Hours = await DataCenterCandidate.countDocuments({
       isActive: true,
-      lastActiveOn: { $gte: yesterday }
+      lastActiveOn: { $gte: yesterday },
+      ...tenantFilter
     });
 
     // Group by experience ranges
     const byExperience = await DataCenterCandidate.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, ...tenantFilter } },
       {
         $group: {
           _id: {
@@ -294,7 +314,7 @@ const getStats = async (req, res) => {
 
     // Group by location (top 10)
     const byLocation = await DataCenterCandidate.aggregate([
-      { $match: { isActive: true, currentLocation: { $exists: true, $ne: '' } } },
+      { $match: { isActive: true, currentLocation: { $exists: true, $ne: '' }, ...tenantFilter } },
       { $group: { _id: '$currentLocation', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 10 }
@@ -302,13 +322,13 @@ const getStats = async (req, res) => {
 
     // Group by availability
     const byAvailability = await DataCenterCandidate.aggregate([
-      { $match: { isActive: true, availability: { $exists: true } } },
+      { $match: { isActive: true, availability: { $exists: true }, ...tenantFilter } },
       { $group: { _id: '$availability', count: { $sum: 1 } } }
     ]);
 
     // Top skills
     const topSkills = await DataCenterCandidate.aggregate([
-      { $match: { isActive: true } },
+      { $match: { isActive: true, ...tenantFilter } },
       { $unwind: '$skills' },
       { $group: { _id: '$skills', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
@@ -370,7 +390,11 @@ const moveToLeads = async (req, res) => {
 
     for (const candidateId of candidateIds) {
       try {
-        const candidate = await DataCenterCandidate.findById(candidateId);
+        // 🔒 Tenant Isolation: Only allow moving own tenant's candidates
+        const candidate = await DataCenterCandidate.findOne({
+          _id: candidateId,
+          tenant: req.user.tenant
+        });
 
         if (!candidate) {
           results.failed.push({ candidateId, reason: 'Candidate not found' });
@@ -490,9 +514,10 @@ const bulkImportCandidates = async (req, res, isInternal = false) => {
 
     for (const candidateData of candidates) {
       try {
-        // Check for duplicate email
-        const existingCandidate = await DataCenterCandidate.findOne({ 
-          email: candidateData.email 
+        // 🔒 Tenant Isolation: Check for duplicate email within tenant only
+        const existingCandidate = await DataCenterCandidate.findOne({
+          email: candidateData.email,
+          tenant: req.user?.tenant
         });
 
         if (existingCandidate) {
@@ -503,11 +528,12 @@ const bulkImportCandidates = async (req, res, isInternal = false) => {
           continue;
         }
 
-        // Create candidate
+        // Create candidate with tenant
         const candidate = await DataCenterCandidate.create({
           ...candidateData,
           importedBy: req.user?._id,
-          importedAt: new Date()
+          importedAt: new Date(),
+          tenant: req.user?.tenant // 🔒 Add tenant
         });
 
         results.success.push({
@@ -549,8 +575,12 @@ const exportCandidates = async (req, res) => {
     const DataCenterCandidate = getDataCenterModel();
     const { candidateIds } = req.body;
 
-    let query = { isActive: true };
-    
+    // 🔒 Tenant Isolation: Only export own tenant's candidates
+    let query = {
+      isActive: true,
+      tenant: req.user.tenant
+    };
+
     if (candidateIds && Array.isArray(candidateIds) && candidateIds.length > 0) {
       query._id = { $in: candidateIds };
     }
@@ -751,6 +781,112 @@ const uploadCandidatesFile = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Send bulk emails to candidates
+ * @route   POST /api/data-center/bulk-email
+ * @access  Private
+ */
+const sendBulkEmail = async (req, res) => {
+  try {
+    const emailService = require('../services/emailService');
+    const { candidates, subject, message } = req.body;
+
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
+      return errorResponse(res, 'Please provide candidates', 400);
+    }
+
+    if (!subject || !message) {
+      return errorResponse(res, 'Please provide subject and message', 400);
+    }
+
+    // Use email service for bulk sending (with user ID and tenant ID)
+    const results = await emailService.sendBulkEmails(req.user._id, candidates, subject, message, req.user.tenant);
+
+    // Log activity
+    await logActivity(req.user._id, req.user.tenant, 'datacenter.bulk_email', {
+      totalCandidates: candidates.length,
+      sent: results.sent,
+      failed: results.failed,
+    });
+
+    return successResponse(res, results, `Bulk email completed: ${results.sent} sent, ${results.failed} failed`);
+  } catch (error) {
+    console.error('Error sending bulk email:', error);
+    return errorResponse(res, 'Error sending bulk emails', 500);
+  }
+};
+
+/**
+ * @desc    Send bulk WhatsApp messages to candidates
+ * @route   POST /api/data-center/bulk-whatsapp
+ * @access  Private
+ */
+const sendBulkWhatsApp = async (req, res) => {
+  try {
+    const whatsappService = require('../services/whatsappService');
+    const { candidates, message } = req.body;
+
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
+      return errorResponse(res, 'Please provide candidates', 400);
+    }
+
+    if (!message) {
+      return errorResponse(res, 'Please provide message', 400);
+    }
+
+    // Use WhatsApp service for bulk sending
+    const results = await whatsappService.sendBulkMessages(candidates, message);
+
+    // Log activity
+    await logActivity(req.user._id, req.user.tenant, 'datacenter.bulk_whatsapp', {
+      totalCandidates: candidates.length,
+      sent: results.sent,
+      failed: results.failed,
+      mode: results.mode,
+    });
+
+    return successResponse(res, results, `Bulk WhatsApp completed (${results.mode}): ${results.sent} sent, ${results.failed} failed`);
+  } catch (error) {
+    console.error('Error sending bulk WhatsApp:', error);
+    return errorResponse(res, 'Error sending bulk WhatsApp', 500);
+  }
+};
+
+/**
+ * @desc    Send bulk SMS to candidates
+ * @route   POST /api/data-center/bulk-sms
+ * @access  Private
+ */
+const sendBulkSMS = async (req, res) => {
+  try {
+    const smsService = require('../services/smsService');
+    const { candidates, message } = req.body;
+
+    if (!candidates || !Array.isArray(candidates) || candidates.length === 0) {
+      return errorResponse(res, 'Please provide candidates', 400);
+    }
+
+    if (!message) {
+      return errorResponse(res, 'Please provide message', 400);
+    }
+
+    // Use SMS service for bulk sending
+    const results = await smsService.sendBulkSMS(candidates, message);
+
+    // Log activity
+    await logActivity(req.user._id, req.user.tenant, 'datacenter.bulk_sms', {
+      totalCandidates: candidates.length,
+      sent: results.sent,
+      failed: results.failed,
+    });
+
+    return successResponse(res, results, `Bulk SMS completed: ${results.sent} sent, ${results.failed} failed`);
+  } catch (error) {
+    console.error('Error sending bulk SMS:', error);
+    return errorResponse(res, 'Error sending bulk SMS', 500);
+  }
+};
+
 module.exports = {
   getCandidates,
   getCandidate,
@@ -759,5 +895,8 @@ module.exports = {
   moveToLeads,
   bulkImportCandidates,
   exportCandidates,
-  uploadCandidatesFile
+  uploadCandidatesFile,
+  sendBulkEmail,
+  sendBulkWhatsApp,
+  sendBulkSMS,
 };

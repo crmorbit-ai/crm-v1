@@ -51,6 +51,9 @@ import SaasSubscriptions from './pages/SaasSubscriptions';
 
 import DataCenter from './pages/DataCenter';
 import DataCenterDetail from './pages/DataCenterDetail';
+import ProductMarketplace from './pages/ProductMarketplace';
+import Support from './pages/Support';
+import SupportAdmin from './pages/SupportAdmin';
 
 
 
@@ -171,9 +174,24 @@ function AppRoutes() {
   </ProtectedRoute>
 } />
 
+{/* 📦 PRODUCT MARKETPLACE ROUTE */}
+<Route path="/products" element={
+  <ProtectedRoute>
+    <ProductMarketplace />
+  </ProtectedRoute>
+} />
 
-
-    
+{/* 🎫 SUPPORT TICKET ROUTES */}
+<Route path="/support" element={
+  <ProtectedRoute>
+    <Support />
+  </ProtectedRoute>
+} />
+<Route path="/support-admin" element={
+  <ProtectedRoute requireSaas>
+    <SupportAdmin />
+  </ProtectedRoute>
+} />
 
       {/* CRM Routes */}
       <Route path="/leads" element={
