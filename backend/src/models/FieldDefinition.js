@@ -276,16 +276,22 @@ fieldDefinitionSchema.statics.validateCustomFields = async function(tenantId, en
   const errors = {};
   const validatedData = {};
 
-  for (const fieldDef of fieldDefinitions) {
-    const value = customFields[fieldDef.fieldName];
+  // Only validate custom fields that were actually submitted
+  for (const fieldName in customFields) {
+    const fieldDef = fieldDefinitions.find(f => f.fieldName === fieldName);
+
+    if (!fieldDef) {
+      // Field doesn't exist in definitions, skip it
+      continue;
+    }
+
+    const value = customFields[fieldName];
     const validation = fieldDef.validateValue(value);
 
     if (!validation.valid) {
-      errors[fieldDef.fieldName] = validation.errors;
+      errors[fieldName] = validation.errors;
     } else if (value !== undefined && value !== null && value !== '') {
-      validatedData[fieldDef.fieldName] = value;
-    } else if (fieldDef.defaultValue !== null) {
-      validatedData[fieldDef.fieldName] = fieldDef.defaultValue;
+      validatedData[fieldName] = value;
     }
   }
 

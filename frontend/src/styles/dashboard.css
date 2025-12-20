@@ -58,13 +58,13 @@
 }
 
 .nav-item {
-  padding: 10px 18px;
+  padding: 7px 18px;
   text-decoration: none;
   color: #e0e1e2 !important;
   border-bottom: 3px solid transparent;
   transition: all 0.2s ease;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 12px;
 }
 
 .nav-item:hover {
