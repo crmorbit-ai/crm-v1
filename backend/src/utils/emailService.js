@@ -67,6 +67,31 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
 
     const info = await transporter.sendMail(mailOptions);
     console.log('✅ OTP email sent:', info.messageId);
+
+    // Track sent email
+    try {
+      const User = require('../models/User');
+      const emailTrackingService = require('../services/emailTrackingService');
+      const user = await User.findOne({ email });
+
+      if (user) {
+        await emailTrackingService.trackSentEmail({
+          messageId: info.messageId,
+          from: mailOptions.from,
+          to: email,
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+          emailType: 'otp',
+          userId: user._id,
+          tenantId: user.tenant,
+          smtpMode: 'free'
+        });
+      }
+    } catch (trackError) {
+      console.error('Email tracking failed:', trackError);
+      // Don't fail the email send if tracking fails
+    }
+
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ OTP email error:', error.message);

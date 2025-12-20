@@ -1,21 +1,57 @@
 require('dotenv').config();
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const connectDB = require('./config/database');
-const { connectDataCenterDB } = require('./config/database'); // 🚀 NEW
+const { connectDataCenterDB } = require('./config/database');
 
 // Initialize express app
 const app = express();
+const server = http.createServer(app);
 
-// Connect to databases
-connectDB();
-connectDataCenterDB(); // 🚀 NEW - Data Center DB
+// Initialize Socket.io with CORS
+const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001';
+const allowedOrigins = allowedOriginsEnv.split(',').map(o => o.trim());
+
+const io = new Server(server, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true
+  }
+});
+
+// Socket.io connection handling
+io.on('connection', (socket) => {
+  console.log('🔌 Client connected:', socket.id);
+
+  // Join tenant room for isolated communication
+  socket.on('join-tenant', (tenantId) => {
+    socket.join(`tenant-${tenantId}`);
+    console.log(`✅ Socket ${socket.id} joined tenant room: tenant-${tenantId}`);
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔌 Client disconnected:', socket.id);
+  });
+});
+
+// Make io available globally for other services
+global.io = io;
+
+// IMAP IDLE service for real-time email notifications
+const imapIdleService = require('./services/imapIdleService');
+const emailService = require('./services/emailService');
+
+// Start email sync cron job (backup - now less frequent since we have IDLE)
+const emailSyncJob = require('./jobs/emailSyncJob');
+emailSyncJob.start();
 
 const corsOptions = {
   origin: function (origin, callback) {
-    // Get allowed origins from environment variable or use defaults
     const allowedOriginsEnv = process.env.ALLOWED_ORIGINS || 'http://localhost:3000,http://localhost:3001';
     const allowedOrigins = allowedOriginsEnv.split(',').map(o => o.trim());
 
@@ -35,12 +71,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
 
-// Helmet with CORS-friendly settings
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Other middleware
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -71,12 +105,24 @@ app.use('/api/activity-logs', require('./routes/activityLogs'));
 app.use('/api/resellers', require('./routes/resellers'));
 
 // ============================================
-// 🚀 DATA CENTER ROUTES - NEW
+// 🚀 DATA CENTER ROUTES
 // ============================================
 app.use('/api/data-center', require('./routes/dataCenter'));
 app.use('/api/products', require('./routes/products'));
 app.use('/api/user-settings', require('./routes/userSettings'));
 app.use('/api/support-tickets', require('./routes/supportTickets'));
+
+// ============================================
+// 📦 PRODUCT MANAGEMENT ROUTES (CRM Products)
+// ============================================
+app.use('/api/product-categories', require('./routes/productCategoryRoutes')); // ✅ NEW
+app.use('/api/product-items', require('./routes/productItems'));
+// ============================================
+
+// ============================================
+// 🎨 FIELD CUSTOMIZATION ROUTES (Dynamic Fields)
+// ============================================
+app.use('/api/field-definitions', require('./routes/fieldDefinitions'));
 // ============================================
 
 // CRM Routes
@@ -88,6 +134,7 @@ app.use('/api/tasks', require('./routes/taskRoutes'));
 app.use('/api/notes', require('./routes/noteRoutes'));
 app.use('/api/meetings', require('./routes/meetingRoutes'));
 app.use('/api/calls', require('./routes/callRoutes'));
+app.use('/api/emails', require('./routes/emails'));
 
 // 404 handler
 app.use((req, res) => {
@@ -100,17 +147,71 @@ app.use((req, res) => {
 // Error handler
 app.use((err, req, res, next) => {
   console.error('❌ Error:', err);
-  res.status(err.statusCode || 500).json({
+  const response = {
     success: false,
-    message: err.message || 'Internal server error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
+    message: err.message || 'Internal server error'
+  };
+
+  // Add stack trace in development mode
+  if (process.env.NODE_ENV === 'development') {
+    response.stack = err.stack;
+  }
+
+  res.status(err.statusCode || 500).json(response);
 });
 
 // Start server
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-});
+
+const startServer = async () => {
+  try {
+    // Connect to databases first
+    await connectDB();
+    await connectDataCenterDB();
+
+    // Start server
+    server.listen(PORT, async () => {
+      console.log(`✅ Server running on http://localhost:${PORT}`);
+      console.log(`✅ Socket.io server ready`);
+
+      // Start IMAP IDLE service for real-time email notifications
+      try {
+        await imapIdleService.startAllIdleConnections();
+      } catch (error) {
+        console.error('❌ Failed to start IMAP IDLE service:', error.message);
+      }
+    });
+  } catch (error) {
+    console.error('❌ Failed to start server:', error.message);
+    process.exit(1);
+  }
+};
+
+// Start the server
+startServer();
+
+// Graceful shutdown
+const gracefulShutdown = async (signal) => {
+  console.log(`\n${signal} received. Starting graceful shutdown...`);
+
+  // Stop accepting new connections
+  server.close(() => {
+    console.log('✅ HTTP server closed');
+  });
+
+  // Stop IMAP IDLE connections
+  try {
+    await imapIdleService.stopAllIdleConnections();
+  } catch (error) {
+    console.error('❌ Error stopping IMAP IDLE:', error.message);
+  }
+
+  // Exit process
+  process.exit(0);
+};
+
+// Listen for shutdown signals
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 
 module.exports = app;

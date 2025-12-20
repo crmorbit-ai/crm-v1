@@ -3,6 +3,7 @@ const Lead = require('../models/Lead');
 const Account = require('../models/Account');
 const Contact = require('../models/Contact');
 const Opportunity = require('../models/Opportunity');
+const FieldDefinition = require('../models/FieldDefinition');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
@@ -21,12 +22,12 @@ const getLeads = async (req, res) => {
       leadStatus,
       leadSource,
       rating,
-      owner
+      owner,
+      product
     } = req.query;
 
-    let query = { 
+    let query = {
       isActive: true,
-    
     };
 
     // Tenant filtering
@@ -49,6 +50,7 @@ const getLeads = async (req, res) => {
     if (leadSource) query.leadSource = leadSource;
     if (rating) query.rating = rating;
     if (owner) query.owner = owner;
+    if (product) query.product = product;
 
     console.log('Lead query:', query);
 
@@ -58,6 +60,7 @@ const getLeads = async (req, res) => {
     const leads = await Lead.find(query)
       .populate('owner', 'firstName lastName email')
       .populate('tenant', 'organizationName')
+      .populate('product', 'name articleNumber')
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
@@ -90,6 +93,7 @@ const getLead = async (req, res) => {
     const lead = await Lead.findById(req.params.id)
       .populate('owner', 'firstName lastName email')
       .populate('tenant', 'organizationName')
+      .populate('product', 'name articleNumber category price')
       .populate('convertedAccount', 'accountName accountType')
       .populate('convertedContact', 'firstName lastName email')
       .populate('convertedOpportunity', 'opportunityName amount stage');
@@ -241,13 +245,18 @@ const createLead = async (req, res) => {
       flatHouseNo,
       latitude,
       longitude,
-      description
+      description,
+      product,
+      productDetails,
+      customFields
     } = req.body;
 
-    console.log('Create lead request body:', req.body);
+    console.log('=== CREATE LEAD START ===');
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    // Basic validation - at least one identifying field required
+    // Basic validation
     if (!firstName && !lastName && !email && !company) {
+      console.log('❌ Validation failed: No identifying field');
       return errorResponse(res, 400, 'Please provide at least one of: First Name, Last Name, Email, or Company');
     }
 
@@ -256,28 +265,111 @@ const createLead = async (req, res) => {
     if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
       tenant = req.body.tenant;
       if (!tenant) {
+        console.log('❌ Tenant missing for SAAS user');
         return errorResponse(res, 400, 'Tenant is required');
       }
     } else {
       tenant = req.user.tenant;
     }
 
-    // Check for duplicate email in same tenant (if email provided)
+    console.log('✅ Tenant:', tenant);
+    console.log('User:', req.user._id, req.user.userType);
+
+    // Check for duplicate email
     if (email) {
-      const existingLead = await Lead.findOne({ 
-        email, 
-        tenant, 
+      console.log('Checking duplicate email...');
+      const existingLead = await Lead.findOne({
+        email,
+        tenant,
         isActive: true,
         isConverted: false
       });
-      
+
       if (existingLead) {
+        console.log('❌ Duplicate email found:', existingLead._id);
         return errorResponse(res, 400, 'Lead with this email already exists');
       }
+      console.log('✅ No duplicate email');
     }
 
+    // Validate product if provided
+    if (product) {
+      console.log('=== PRODUCT VALIDATION START ===');
+      console.log('Product ID:', product);
+      console.log('Product ID type:', typeof product);
+      console.log('Product ID length:', product.length);
+
+      const mongoose = require('mongoose');
+      
+      // Check ObjectId validity
+      if (!mongoose.Types.ObjectId.isValid(product)) {
+        console.log('❌ Invalid ObjectId format');
+        return errorResponse(res, 400, 'Invalid product ID format');
+      }
+      console.log('✅ Valid ObjectId format');
+
+      const ProductItem = require('../models/ProductItem');
+      
+      console.log('Searching for product with tenant:', tenant);
+      const productExists = await ProductItem.findOne({
+        _id: product,
+        isActive: true
+      });
+
+      console.log('Product search result:', productExists);
+
+      if (!productExists) {
+        console.log('❌ Product not found or inactive');
+        return errorResponse(res, 400, 'Product not found or is not active');
+      }
+
+      // Check if product belongs to tenant
+      if (productExists.tenant.toString() !== tenant.toString()) {
+        console.log('❌ Product tenant mismatch');
+        console.log('Product tenant:', productExists.tenant.toString());
+        console.log('User tenant:', tenant.toString());
+        return errorResponse(res, 400, 'Product does not belong to your organization');
+      }
+
+      console.log('✅ Product validation passed');
+    }
+
+    // Prepare product details
+    let productDetailsToSave = undefined;
+    if (product && productDetails) {
+      console.log('=== PREPARING PRODUCT DETAILS ===');
+      productDetailsToSave = {
+        quantity: productDetails.quantity || 1,
+        requirements: productDetails.requirements || '',
+        estimatedBudget: productDetails.estimatedBudget ? Number(productDetails.estimatedBudget) : undefined,
+        priority: productDetails.priority || '',
+        notes: productDetails.notes || '',
+        linkedDate: new Date()
+      };
+      console.log('Product details:', productDetailsToSave);
+    }
+
+    // Validate and prepare custom fields
+    let validatedCustomFields = {};
+    if (customFields && Object.keys(customFields).length > 0) {
+      console.log('=== VALIDATING CUSTOM FIELDS ===');
+      console.log('Custom fields received:', customFields);
+
+      const validation = await FieldDefinition.validateCustomFields(tenant, 'Lead', customFields);
+
+      if (!validation.valid) {
+        console.log('❌ Custom fields validation failed:', validation.errors);
+        return errorResponse(res, 400, 'Custom field validation failed', validation.errors);
+      }
+
+      validatedCustomFields = validation.validatedData;
+      console.log('✅ Custom fields validated:', validatedCustomFields);
+    }
+
+    console.log('=== CREATING LEAD ===');
+
     // Create lead
-    const lead = await Lead.create({
+    const leadData = {
       firstName: firstName || '',
       lastName: lastName || '',
       email: email || '',
@@ -308,26 +400,57 @@ const createLead = async (req, res) => {
       latitude,
       longitude,
       description,
+      product: product || undefined,
+      productDetails: productDetailsToSave,
+      customFields: validatedCustomFields,
       owner: req.body.owner || req.user._id,
       tenant,
       createdBy: req.user._id,
       lastModifiedBy: req.user._id
-    });
+    };
 
+    console.log('Lead data to create:', JSON.stringify(leadData, null, 2));
+
+    const lead = await Lead.create(leadData);
+
+    console.log('✅ Lead created successfully:', lead._id);
+
+    // Populate fields
     await lead.populate('owner', 'firstName lastName email');
+    if (product) {
+      await lead.populate('product', 'name articleNumber category price');
+    }
 
+    // Log activity
     await logActivity(req, 'lead.created', 'Lead', lead._id, {
       firstName: lead.firstName,
       lastName: lead.lastName,
       email: lead.email,
-      company: lead.company
+      company: lead.company,
+      product: product ? 'Product linked' : 'No product'
     });
 
-    console.log('Lead created successfully:', lead._id);
+    console.log('=== CREATE LEAD SUCCESS ===');
 
     successResponse(res, 201, 'Lead created successfully', lead);
+
   } catch (error) {
-    console.error('Create lead error:', error);
+    console.error('=== CREATE LEAD ERROR ===');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    if (error.name === 'ValidationError') {
+      console.error('Validation errors:', error.errors);
+      const messages = Object.values(error.errors).map(err => err.message);
+      return errorResponse(res, 400, `Validation failed: ${messages.join(', ')}`);
+    }
+    
+    if (error.name === 'CastError') {
+      console.error('Cast error:', error);
+      return errorResponse(res, 400, `Invalid ${error.path}: ${error.value}`);
+    }
+
     errorResponse(res, 500, error.message || 'Server error');
   }
 };
@@ -352,6 +475,36 @@ const updateLead = async (req, res) => {
       }
     }
 
+    // Validate product if provided
+    if (req.body.product) {
+      const ProductItem = require('../models/ProductItem');
+      const productExists = await ProductItem.findOne({
+        _id: req.body.product,
+        tenant: lead.tenant,
+        isActive: true
+      });
+
+      if (!productExists) {
+        return errorResponse(res, 400, 'Invalid product or product does not belong to your tenant');
+      }
+    }
+
+    // Validate and prepare custom fields if provided
+    let validatedCustomFields = null;
+    if (req.body.customFields !== undefined) {
+      if (req.body.customFields && Object.keys(req.body.customFields).length > 0) {
+        const validation = await FieldDefinition.validateCustomFields(lead.tenant, 'Lead', req.body.customFields);
+
+        if (!validation.valid) {
+          return errorResponse(res, 400, 'Custom field validation failed', validation.errors);
+        }
+
+        validatedCustomFields = validation.validatedData;
+      } else {
+        validatedCustomFields = {}; // Clear custom fields if empty object sent
+      }
+    }
+
     // Fields to track
     const allowedFields = [
       'firstName', 'lastName', 'email', 'phone', 'mobilePhone', 'fax',
@@ -359,7 +512,7 @@ const updateLead = async (req, res) => {
       'industry', 'numberOfEmployees', 'annualRevenue', 'rating',
       'emailOptOut', 'doNotCall', 'skypeId', 'secondaryEmail', 'twitter',
       'linkedIn', 'street', 'city', 'state', 'country', 'zipCode',
-      'flatHouseNo', 'latitude', 'longitude', 'description', 'tags'
+      'flatHouseNo', 'latitude', 'longitude', 'description', 'tags', 'product'
     ];
 
     // Track changes BEFORE updating
@@ -372,6 +525,30 @@ const updateLead = async (req, res) => {
       }
     });
 
+    // Handle product details update
+    if (req.body.productDetails) {
+      if (lead.product) {
+        // Update existing product details
+        lead.productDetails = {
+          quantity: req.body.productDetails.quantity || lead.productDetails?.quantity || 1,
+          requirements: req.body.productDetails.requirements || lead.productDetails?.requirements || '',
+          estimatedBudget: req.body.productDetails.estimatedBudget || lead.productDetails?.estimatedBudget || undefined,
+          priority: req.body.productDetails.priority || lead.productDetails?.priority || '',
+          notes: req.body.productDetails.notes || lead.productDetails?.notes || '',
+          linkedDate: lead.productDetails?.linkedDate || new Date()
+        };
+      }
+    } else if (req.body.product && !lead.product) {
+      // New product added, initialize product details
+      lead.productDetails = {
+        quantity: 1,
+        linkedDate: new Date()
+      };
+    } else if (!req.body.product && req.body.product === null) {
+      // Product removed
+      lead.productDetails = undefined;
+    }
+
     // Handle owner separately
     if (req.body.owner && req.body.owner !== lead.owner.toString()) {
       changes.owner = {
@@ -381,9 +558,17 @@ const updateLead = async (req, res) => {
       lead.owner = req.body.owner;
     }
 
+    // Update custom fields if validated
+    if (validatedCustomFields !== null) {
+      lead.customFields = validatedCustomFields;
+    }
+
     lead.lastModifiedBy = req.user._id;
     await lead.save();
     await lead.populate('owner', 'firstName lastName email');
+    if (lead.product) {
+      await lead.populate('product', 'name articleNumber category price');
+    }
 
     // Log activity with changes
     if (Object.keys(changes).length > 0) {
@@ -523,15 +708,11 @@ const convertLead = async (req, res) => {
 
     // Create Opportunity
     if (createOpportunity && opportunityData) {
-      // ============================================
-      // 🔧 FIX: Add default closeDate if not provided
-      // ============================================
       const defaultCloseDate = new Date();
       defaultCloseDate.setDate(defaultCloseDate.getDate() + 30); // 30 days from now
 
       opportunity = await Opportunity.create({
         ...opportunityData,
-        // 🔧 FIX: Ensure closeDate is always set
         closeDate: opportunityData.closeDate || defaultCloseDate,
         account: account ? account._id : (opportunityData.account || null),
         contact: contact ? contact._id : null,
@@ -567,6 +748,7 @@ const convertLead = async (req, res) => {
     errorResponse(res, 500, 'Server error');
   }
 };
+
 /**
  * @desc    Bulk import leads from CSV
  * @route   POST /api/leads/bulk-import
@@ -668,40 +850,87 @@ const bulkUploadLeads = async (req, res) => {
       tenant = req.user.tenant;
     }
 
+    // 🆕 Load field definitions for mapping custom fields
+    const fieldDefinitions = await FieldDefinition.find({
+      tenant,
+      entityType: 'Lead',
+      isActive: true
+    });
+
+    console.log(`📤 Processing bulk upload with ${fieldDefinitions.length} field definitions`);
+
     const createdLeads = [];
 
     // Process each lead
     for (let i = 0; i < leadsData.length; i++) {
       const row = leadsData[i];
-      
+
       try {
-        // Map columns (flexible column naming)
+        // 🆕 Build leadData dynamically from field definitions
         const leadData = {
-          firstName: row['First Name'] || row['firstName'] || row['first_name'] || '',
-          lastName: row['Last Name'] || row['lastName'] || row['last_name'] || '',
-          email: row['Email'] || row['email'] || '',
-          phone: row['Phone'] || row['phone'] || '',
-          mobilePhone: row['Mobile'] || row['mobilePhone'] || row['mobile_phone'] || '',
-          company: row['Company'] || row['company'] || '',
-          jobTitle: row['Job Title'] || row['jobTitle'] || row['job_title'] || '',
-          leadSource: row['Lead Source'] || row['leadSource'] || row['lead_source'] || 'Website',
-          leadStatus: row['Lead Status'] || row['leadStatus'] || row['lead_status'] || 'New',
-          rating: row['Rating'] || row['rating'] || 'Warm',
-          industry: row['Industry'] || row['industry'] || '',
-          website: row['Website'] || row['website'] || '',
-          street: row['Street'] || row['street'] || '',
-          city: row['City'] || row['city'] || '',
-          state: row['State'] || row['state'] || '',
-          country: row['Country'] || row['country'] || '',
-          zipCode: row['Zip Code'] || row['zipCode'] || row['zip_code'] || '',
-          description: row['Description'] || row['description'] || '',
-          numberOfEmployees: row['No. of Employees'] || row['numberOfEmployees'] || '',
-          annualRevenue: row['Annual Revenue'] || row['annualRevenue'] || '',
           tenant,
           owner: req.user._id,
           createdBy: req.user._id,
           lastModifiedBy: req.user._id
         };
+
+        const customFields = {};
+
+        // Process each field definition
+        fieldDefinitions.forEach(field => {
+          // Try to get value from CSV using field label or fieldName
+          const value = row[field.label] || row[field.fieldName] || row[field.fieldName.replace(/([A-Z])/g, ' $1').trim()];
+
+          if (value !== undefined && value !== null && value !== '') {
+            // Convert value based on field type
+            let processedValue = value;
+
+            switch (field.fieldType) {
+              case 'number':
+              case 'currency':
+              case 'percentage':
+                processedValue = parseFloat(value) || 0;
+                break;
+
+              case 'checkbox':
+                processedValue = value === 'Yes' || value === 'yes' || value === 'true' || value === '1' || value === true;
+                break;
+
+              case 'multi_select':
+                if (typeof value === 'string') {
+                  processedValue = value.split(',').map(v => v.trim());
+                }
+                break;
+
+              case 'date':
+              case 'datetime':
+                processedValue = new Date(value);
+                break;
+
+              default:
+                processedValue = String(value).trim();
+            }
+
+            // Store in appropriate location
+            if (field.isStandardField) {
+              leadData[field.fieldName] = processedValue;
+            } else {
+              customFields[field.fieldName] = processedValue;
+            }
+          } else if (field.defaultValue !== null && field.defaultValue !== undefined) {
+            // Use default value if no value provided
+            if (field.isStandardField) {
+              leadData[field.fieldName] = field.defaultValue;
+            } else {
+              customFields[field.fieldName] = field.defaultValue;
+            }
+          }
+        });
+
+        // Add customFields to leadData if any exist
+        if (Object.keys(customFields).length > 0) {
+          leadData.customFields = customFields;
+        }
 
         // Validate - at least one identifying field required
         if (!leadData.firstName && !leadData.lastName && !leadData.email && !leadData.company) {
@@ -774,60 +1003,133 @@ const bulkUploadLeads = async (req, res) => {
 };
 
 /**
- * @desc    Download sample template for bulk upload
+ * @desc    Download sample template for bulk upload (Dynamic - includes custom fields)
  * @route   GET /api/leads/download-template
  * @access  Private
  */
 const downloadSampleTemplate = async (req, res) => {
   const xlsx = require('xlsx');
-  
+
   try {
-    const sampleData = [
-      {
-        'First Name': 'John',
-        'Last Name': 'Doe',
-        'Email': 'john.doe@example.com',
-        'Phone': '+91-9876543210',
-        'Mobile': '+91-9876543210',
-        'Company': 'Tech Corp Pvt Ltd',
-        'Job Title': 'Chief Executive Officer',
-        'Lead Source': 'Website',
-        'Lead Status': 'New',
-        'Rating': 'Hot',
-        'Industry': 'Technology',
-        'Website': 'https://techcorp.com',
-        'Street': '123 Main Street, Sector 5',
-        'City': 'Mumbai',
-        'State': 'Maharashtra',
-        'Country': 'India',
-        'Zip Code': '400001',
-        'No. of Employees': '100',
-        'Annual Revenue': '10000000',
-        'Description': 'Potential enterprise client interested in CRM solutions'
-      },
-      {
-        'First Name': 'Jane',
-        'Last Name': 'Smith',
-        'Email': 'jane.smith@example.com',
-        'Phone': '+91-9876543211',
-        'Mobile': '+91-9876543211',
-        'Company': 'Business Solutions Ltd',
-        'Job Title': 'Sales Director',
-        'Lead Source': 'Referral',
-        'Lead Status': 'Contacted',
-        'Rating': 'Warm',
-        'Industry': 'Consulting',
-        'Website': 'https://businesssolutions.com',
-        'Street': '456 Park Avenue',
-        'City': 'Delhi',
-        'State': 'Delhi',
-        'Country': 'India',
-        'Zip Code': '110001',
-        'No. of Employees': '50',
-        'Annual Revenue': '5000000',
-        'Description': 'Looking for marketing automation tools'
+    // Determine tenant
+    let tenant;
+    if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
+      tenant = req.query.tenant || req.user.tenant;
+    } else {
+      tenant = req.user.tenant;
+    }
+
+    // 🆕 Get active field definitions for Lead entity
+    const fieldDefinitions = await FieldDefinition.find({
+      tenant,
+      entityType: 'Lead',
+      isActive: true,
+      showInCreate: true
+    }).sort({ displayOrder: 1 });
+
+    console.log(`📥 Generating CSV template with ${fieldDefinitions.length} fields`);
+
+    // 🆕 Build sample data dynamically based on field definitions
+    const sampleRow1 = {};
+    const sampleRow2 = {};
+
+    fieldDefinitions.forEach(field => {
+      const label = field.label;
+
+      // Generate example values based on field type
+      let example1, example2;
+
+      switch (field.fieldType) {
+        case 'text':
+          example1 = field.fieldName === 'firstName' ? 'John' :
+                     field.fieldName === 'lastName' ? 'Doe' :
+                     field.fieldName === 'company' ? 'Tech Corp Pvt Ltd' :
+                     field.fieldName === 'jobTitle' ? 'CEO' :
+                     `Example ${field.label}`;
+          example2 = field.fieldName === 'firstName' ? 'Jane' :
+                     field.fieldName === 'lastName' ? 'Smith' :
+                     field.fieldName === 'company' ? 'Business Solutions Ltd' :
+                     field.fieldName === 'jobTitle' ? 'Sales Director' :
+                     `Sample ${field.label}`;
+          break;
+
+        case 'email':
+          example1 = 'john.doe@example.com';
+          example2 = 'jane.smith@example.com';
+          break;
+
+        case 'phone':
+          example1 = '+91-9876543210';
+          example2 = '+91-9876543211';
+          break;
+
+        case 'url':
+          example1 = field.fieldName === 'website' ? 'https://techcorp.com' : 'https://example.com';
+          example2 = field.fieldName === 'website' ? 'https://businesssolutions.com' : 'https://example2.com';
+          break;
+
+        case 'number':
+          example1 = field.fieldName === 'numberOfEmployees' ? '100' : '10';
+          example2 = field.fieldName === 'numberOfEmployees' ? '50' : '20';
+          break;
+
+        case 'currency':
+          example1 = field.fieldName === 'annualRevenue' ? '10000000' : '50000';
+          example2 = field.fieldName === 'annualRevenue' ? '5000000' : '25000';
+          break;
+
+        case 'percentage':
+          example1 = '75';
+          example2 = '50';
+          break;
+
+        case 'date':
+        case 'datetime':
+          example1 = '2025-01-15';
+          example2 = '2025-02-20';
+          break;
+
+        case 'checkbox':
+          example1 = 'Yes';
+          example2 = 'No';
+          break;
+
+        case 'dropdown':
+        case 'radio':
+          if (field.options && field.options.length > 0) {
+            example1 = field.options[0].value;
+            example2 = field.options.length > 1 ? field.options[1].value : field.options[0].value;
+          } else {
+            example1 = field.defaultValue || '';
+            example2 = field.defaultValue || '';
+          }
+          break;
+
+        case 'multi_select':
+          if (field.options && field.options.length > 0) {
+            example1 = field.options[0].value;
+            example2 = field.options.slice(0, 2).map(opt => opt.value).join(', ');
+          } else {
+            example1 = '';
+            example2 = '';
+          }
+          break;
+
+        case 'textarea':
+          example1 = field.fieldName === 'description' ? 'Potential enterprise client interested in CRM solutions' : `Detailed ${field.label}`;
+          example2 = field.fieldName === 'description' ? 'Looking for marketing automation tools' : `Sample ${field.label}`;
+          break;
+
+        default:
+          example1 = field.defaultValue || '';
+          example2 = field.defaultValue || '';
       }
-    ];
+
+      sampleRow1[label] = example1;
+      sampleRow2[label] = example2;
+    });
+
+    const sampleData = [sampleRow1, sampleRow2];
 
     const worksheet = xlsx.utils.json_to_sheet(sampleData);
     const workbook = xlsx.utils.book_new();

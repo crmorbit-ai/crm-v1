@@ -27,6 +27,10 @@ api.interceptors.request.use(
 // Response interceptor to handle errors
 api.interceptors.response.use(
   (response) => {
+    // Don't unwrap blob responses - return full response for file downloads
+    if (response.config.responseType === 'blob') {
+      return response;
+    }
     return response.data;
   },
   (error) => {

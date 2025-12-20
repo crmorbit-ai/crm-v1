@@ -138,8 +138,7 @@ const purchaseProduct = async (req, res) => {
     );
 
     // Log activity
-    await logActivity(req.user._id, tenantId, 'product.purchase', {
-      productId: product._id,
+    await logActivity(req, 'product.purchase', 'Product', product._id, {
       productName: product.displayName,
       credits: selectedPackage.credits,
       price: selectedPackage.price,
@@ -198,8 +197,7 @@ const useProductCredits = async (req, res) => {
     await userProduct.useCredits(count, isBulk || false);
 
     // Log activity
-    await logActivity(req.user._id, tenantId, 'product.use_credits', {
-      productId: userProduct.product._id,
+    await logActivity(req, 'product.use_credits', 'Product', userProduct.product._id, {
       productName: userProduct.product.displayName,
       creditsUsed: count,
       remainingCredits: userProduct.remainingCredits,

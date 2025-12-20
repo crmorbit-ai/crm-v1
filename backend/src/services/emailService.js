@@ -218,6 +218,23 @@ class EmailService {
 
       const info = await transporter.sendMail(mailOptions);
 
+      // Track sent email
+      const emailTrackingService = require('./emailTrackingService');
+      await emailTrackingService.trackSentEmail({
+        messageId: info.messageId,
+        from: mailOptions.from,
+        to: mailOptions.to,
+        cc: mailOptions.cc,
+        bcc: mailOptions.bcc,
+        subject: mailOptions.subject,
+        text: mailOptions.text,
+        html: mailOptions.html,
+        emailType: 'manual',
+        userId,
+        tenantId,
+        smtpMode: mode
+      });
+
       console.log(`✅ Email sent [${mode}]: ${info.messageId}`);
       return {
         success: true,
@@ -285,7 +302,24 @@ class EmailService {
           };
         }
 
-        await transporter.sendMail(mailOptions);
+        const info = await transporter.sendMail(mailOptions);
+
+        // Track sent email
+        const emailTrackingService = require('./emailTrackingService');
+        await emailTrackingService.trackSentEmail({
+          messageId: info.messageId,
+          from: mailOptions.from,
+          to: recipient.email,
+          subject,
+          text: personalizedMessage,
+          html: mailOptions.html,
+          emailType: 'bulk',
+          relatedTo: recipient.relatedTo,
+          userId,
+          tenantId,
+          smtpMode: mode
+        });
+
         results.sent++;
       } catch (error) {
         results.failed++;

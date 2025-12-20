@@ -27,7 +27,7 @@ export const activityLogService = {
     });
 
     // Create download link
-    const url = window.URL.createObjectURL(new Blob([response]));
+    const url = window.URL.createObjectURL(response.data);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `activity_logs_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -52,7 +52,7 @@ export const activityLogService = {
       responseType: 'blob'
     });
 
-    const url = window.URL.createObjectURL(new Blob([response]));
+    const url = window.URL.createObjectURL(response.data);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `audit_report_${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -77,7 +77,7 @@ export const activityLogService = {
       responseType: 'blob'
     });
 
-    const url = window.URL.createObjectURL(new Blob([response]));
+    const url = window.URL.createObjectURL(response.data);
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', `login_report_${new Date().toISOString().split('T')[0]}.xlsx`);

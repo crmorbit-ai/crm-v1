@@ -2,10 +2,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { leadService } from '../services/leadService';
+import { productItemService } from '../services/productItemService';
+import { productCategoryService } from '../services/productCategoryService';
 import { verificationService, debounce } from '../services/verificationService';
+import fieldDefinitionService from '../services/fieldDefinitionService';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
 import TooltipButton from '../components/common/TooltipButton';
+import DynamicField from '../components/DynamicField';
 import '../styles/crm.css';
 import BulkUploadForm from '../components/BulkUploadForm';
 
@@ -13,6 +17,8 @@ const Leads = () => {
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
   const [leads, setLeads] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -53,41 +59,176 @@ const Leads = () => {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
 
+  // All field definitions (standard + custom)
+  const [fieldDefinitions, setFieldDefinitions] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  // Legacy formData for backward compatibility (product, productDetails)
   const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    mobilePhone: '',
-    fax: '',
-    company: '',
-    jobTitle: '',
-    website: '',
-    leadSource: '',
-    leadStatus: '',
-    industry: '',
-    numberOfEmployees: '',
-    annualRevenue: '',
-    rating: '',
-    emailOptOut: false,
-    skypeId: '',
-    secondaryEmail: '',
-    twitter: '',
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
-    flatHouseNo: '',
-    latitude: '',
-    longitude: '',
-    description: ''
+    product: '',
+    productDetails: {
+      quantity: 1,
+      requirements: '',
+      estimatedBudget: '',
+      priority: '',
+      notes: ''
+    }
+  });
+
+  const [productFormData, setProductFormData] = useState({
+    name: '',
+    articleNumber: '',
+    category: '',
+    price: '',
+    stock: '',
+    description: '',
+    imageUrl: ''
   });
 
   useEffect(() => {
     loadLeads();
+    loadProducts();
+    loadCategories();
+    loadCustomFields();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page, filters]);
+
+  const loadProducts = async () => {
+    try {
+      const response = await productItemService.getAllProducts({ isActive: 'true' }, 1, 1000);
+      if (response && response.success === true && response.data) {
+        setProducts(response.data.products || []);
+      }
+    } catch (err) {
+      console.error('Load products error:', err);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const response = await productCategoryService.getAllCategories({ isActive: 'true' }, 1, 100);
+      if (response && response.success === true && response.data) {
+        setCategories(response.data.categories || []);
+      }
+    } catch (err) {
+      console.error('Load categories error:', err);
+    }
+  };
+
+  const loadCustomFields = async () => {
+    try {
+      console.log('🔍 Loading ALL field definitions for Lead...');
+      const response = await fieldDefinitionService.getFieldDefinitions('Lead', false);
+      console.log('📦 Field definitions response:', response);
+
+      // Response is already unwrapped by axios interceptor
+      if (response && Array.isArray(response)) {
+        console.log('✅ Total fields received:', response.length);
+        // Filter for active fields that should show in create form
+        const createFields = response
+          .filter(field => field.isActive && field.showInCreate)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+
+        console.log('✅ Active fields for create form:', createFields.length);
+        console.log('📋 Fields by section:', groupFieldsBySection(createFields));
+        setFieldDefinitions(createFields);
+      }
+    } catch (err) {
+      console.error('❌ Load field definitions error:', err);
+    }
+  };
+
+  // Group fields by section
+  const groupFieldsBySection = (fields) => {
+    const grouped = {};
+    fields.forEach(field => {
+      const section = field.section || 'Additional Information';
+      if (!grouped[section]) {
+        grouped[section] = [];
+      }
+      grouped[section].push(field);
+    });
+    return grouped;
+  };
+
+  // Handle dynamic field value change
+  const handleFieldChange = (fieldName, value) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: null
+    }));
+
+    // Trigger verification for email and phone fields
+    if (fieldName === 'email') {
+      debouncedEmailVerify(value);
+    } else if (fieldName === 'phone') {
+      debouncedPhoneVerify(value);
+    }
+  };
+
+  // Render dynamic field with special handling for email/phone
+  const renderDynamicField = (field) => {
+    const isEmail = field.fieldName === 'email';
+    const isPhone = field.fieldName === 'phone';
+
+    if (isEmail) {
+      return (
+        <div style={{ position: 'relative' }}>
+          <DynamicField
+            fieldDefinition={field}
+            value={fieldValues[field.fieldName] || ''}
+            onChange={handleFieldChange}
+            error={fieldErrors[field.fieldName]}
+          />
+          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+            <VerificationIcon status={emailVerification.status} message={emailVerification.message} />
+          </div>
+          {emailVerification.message && emailVerification.status !== 'pending' && (
+            <div style={{ fontSize: '11px', marginTop: '4px', color: emailVerification.status === 'valid' ? '#10B981' : emailVerification.status === 'invalid' ? '#EF4444' : '#F59E0B' }}>
+              {emailVerification.message}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    if (isPhone) {
+      return (
+        <div style={{ position: 'relative' }}>
+          <DynamicField
+            fieldDefinition={field}
+            value={fieldValues[field.fieldName] || ''}
+            onChange={handleFieldChange}
+            error={fieldErrors[field.fieldName]}
+          />
+          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
+            <VerificationIcon status={phoneVerification.status} message={phoneVerification.message} />
+          </div>
+          {phoneVerification.message && phoneVerification.status !== 'pending' && (
+            <div style={{ fontSize: '11px', marginTop: '4px', color: phoneVerification.status === 'valid' ? '#10B981' : phoneVerification.status === 'invalid' ? '#EF4444' : '#F59E0B' }}>
+              {phoneVerification.message}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <DynamicField
+        fieldDefinition={field}
+        value={fieldValues[field.fieldName] || ''}
+        onChange={handleFieldChange}
+        error={fieldErrors[field.fieldName]}
+      />
+    );
+  };
 
   const loadLeads = async () => {
     try {
@@ -108,7 +249,6 @@ const Leads = () => {
           pages: response.data.pagination?.pages || 0
         }));
 
-        // Calculate stats
         const newLeads = leadsData.filter(l => l.leadStatus === 'New').length;
         const qualified = leadsData.filter(l => l.leadStatus === 'Qualified').length;
         const contacted = leadsData.filter(l => l.leadStatus === 'Contacted').length;
@@ -216,20 +356,82 @@ const Leads = () => {
     e.preventDefault();
     try {
       setError('');
-      await leadService.createLead(formData);
+
+      // Separate standard fields from custom fields
+      const standardFields = {};
+      const customFields = {};
+
+      fieldDefinitions.forEach(field => {
+        const value = fieldValues[field.fieldName];
+        if (value !== undefined && value !== null && value !== '') {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+          } else {
+            customFields[field.fieldName] = value;
+          }
+        }
+      });
+
+      // Combine standard fields with product data and custom fields
+      const leadData = {
+        ...standardFields,  // Standard fields at top level
+        product: formData.product,  // Product selection
+        productDetails: formData.productDetails,  // Product details
+        customFields: Object.keys(customFields).length > 0 ? customFields : undefined  // Custom fields in nested object
+      };
+
+      console.log('📤 Submitting lead data:', leadData);
+      console.log('  📋 Standard fields:', Object.keys(standardFields));
+      console.log('  🎨 Custom fields:', Object.keys(customFields));
+
+      await leadService.createLead(leadData);
       setSuccess('Lead created successfully!');
       setShowCreateModal(false);
       resetForm();
       loadLeads();
+      loadProducts();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      console.error('❌ Create lead error:', err);
       setError(err.response?.data?.message || 'Failed to create lead');
+    }
+  };
+
+  const handleCreateProductFromLead = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      
+      const response = await productItemService.createProduct(productFormData);
+      
+      if (response && response.success && response.data) {
+        setSuccess('Product created successfully!');
+        
+        setFormData(prev => ({
+          ...prev,
+          product: response.data._id
+        }));
+        
+        setShowAddProductModal(false);
+        resetProductForm();
+        
+        await loadProducts();
+        
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create product');
     }
   };
 
   const openCreateModal = () => {
     resetForm();
     setShowCreateModal(true);
+  };
+
+  const openAddProductModal = () => {
+    resetProductForm();
+    setShowAddProductModal(true);
   };
 
   const resetForm = () => {
@@ -261,14 +463,49 @@ const Leads = () => {
       flatHouseNo: '',
       latitude: '',
       longitude: '',
-      description: ''
+      description: '',
+      product: '',
+      productDetails: {
+        quantity: 1,
+        requirements: '',
+        estimatedBudget: '',
+        priority: '',
+        notes: ''
+      }
     });
     setEmailVerification({ status: 'pending', message: '', isValid: null });
     setPhoneVerification({ status: 'pending', message: '', isValid: null });
+    setFieldValues({});
+    setFieldErrors({});
+  };
+
+  const resetProductForm = () => {
+    setProductFormData({
+      name: '',
+      articleNumber: '',
+      category: '',
+      price: '',
+      stock: '',
+      description: '',
+      imageUrl: ''
+    });
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+
+    if (name.startsWith('productDetails.')) {
+      const fieldName = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        productDetails: {
+          ...prev.productDetails,
+          [fieldName]: value
+        }
+      }));
+      return;
+    }
+
     const newValue = type === 'checkbox' ? checked : value;
 
     setFormData(prev => ({
@@ -285,6 +522,14 @@ const Leads = () => {
     }
   };
 
+  const handleProductFormChange = (e) => {
+    const { name, value } = e.target;
+    setProductFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
@@ -295,22 +540,9 @@ const Leads = () => {
     navigate(`/leads/${leadId}`);
   };
 
-  const handleClearAddress = () => {
-    setFormData(prev => ({
-      ...prev,
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      flatHouseNo: '',
-      latitude: '',
-      longitude: ''
-    }));
-  };
-
   const canCreateLead = hasPermission('lead_management', 'create');
   const canImportLeads = hasPermission('lead_management', 'import');
+  const canManageProducts = hasPermission('product_management', 'create');
 
   const getRatingIcon = (rating) => {
     const icons = {
@@ -393,7 +625,6 @@ const Leads = () => {
       {success && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>✓ {success}</div>}
       {error && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>⚠ {error}</div>}
 
-      {/* Statistics Cards */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-label">Total Leads</div>
@@ -417,7 +648,6 @@ const Leads = () => {
         </div>
       </div>
 
-      {/* Filters */}
       <div className="crm-card" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '20px' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>🔍 Search & Filter</h3>
@@ -479,7 +709,6 @@ const Leads = () => {
         </div>
       </div>
 
-      {/* Leads Display */}
       <div className="crm-card">
         <div className="crm-card-header">
           <h2 className="crm-card-title">{viewMode === 'grid' ? 'Lead Cards' : 'Lead List'} ({pagination.total})</h2>
@@ -594,6 +823,8 @@ const Leads = () => {
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Company</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Article Number</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rating</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Source</th>
@@ -672,6 +903,39 @@ const Leads = () => {
                           </div>
                         </td>
                         <td style={{ padding: '16px' }}>
+                          {lead.product ? (
+                            <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '13px' }}>
+                              {lead.product.articleNumber}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#94A3B8' }}>-</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '16px' }}>
+                          {lead.product ? (
+                            <div
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/products-management?productId=${lead.product._id}`);
+                              }}
+                              style={{
+                                color: '#2563eb',
+                                fontWeight: '600',
+                                fontSize: '13px',
+                                cursor: 'pointer',
+                                textDecoration: 'underline',
+                                transition: 'color 0.2s ease'
+                              }}
+                              onMouseEnter={(e) => e.target.style.color = '#1d4ed8'}
+                              onMouseLeave={(e) => e.target.style.color = '#2563eb'}
+                            >
+                              {lead.product.name}
+                            </div>
+                          ) : (
+                            <span style={{ color: '#94A3B8' }}>-</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '16px' }}>
                           <span className={`status-badge ${(lead.leadStatus || 'new').toLowerCase()}`}>
                             {lead.leadStatus || 'New'}
                           </span>
@@ -695,7 +959,6 @@ const Leads = () => {
               </div>
             )}
 
-            {/* Pagination */}
             {pagination.pages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderTop: '2px solid #f1f5f9' }}>
                 <button
@@ -721,7 +984,6 @@ const Leads = () => {
         )}
       </div>
 
-      {/* Create Lead Modal - Keep existing modal code */}
       <Modal
         isOpen={showCreateModal}
         onClose={() => {
@@ -747,125 +1009,381 @@ const Leads = () => {
             </div>
           </div>
 
+          {/* Dynamic Form Sections - Rendered from Field Definitions */}
+          {(() => {
+            const groupedFields = groupFieldsBySection(fieldDefinitions);
+            const sectionOrder = ['Basic Information', 'Lead Classification', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information'];
+
+            return sectionOrder.map(sectionName => {
+              const sectionFields = groupedFields[sectionName];
+              if (!sectionFields || sectionFields.length === 0) return null;
+
+              return (
+                <div key={sectionName} style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {sectionName}
+                  </h4>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+                    {/* Show Lead Owner only in Basic Information section */}
+                    {sectionName === 'Basic Information' && (
+                      <div style={{ gridColumn: 'span 2' }}>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Lead Owner</label>
+                        <select className="crm-form-input" disabled style={{ background: '#F9FAFB' }}>
+                          <option>{user?.firstName} {user?.lastName}</option>
+                        </select>
+                      </div>
+                    )}
+
+                    {sectionFields.map((field) => {
+                      const isFullWidth = field.fieldType === 'textarea' || field.fieldType === 'text' && field.fieldName === 'description';
+
+                      return (
+                        <div key={field._id} style={isFullWidth ? { gridColumn: 'span 2' } : {}}>
+                          {renderDynamicField(field)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            });
+          })()}
+
+          {/* Product Selection - Special Section */}
           <div style={{ marginBottom: '24px' }}>
             <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Lead Information
+              Product Information
             </h4>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '12px 16px', alignItems: 'center' }}>
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Lead Owner</label>
-              <div>
-                <select className="crm-form-input" disabled style={{ background: '#F9FAFB' }}>
-                  <option>{user?.firstName} {user?.lastName}</option>
-                </select>
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Company</label>
-              <div>
-                <input type="text" name="company" className="crm-form-input" value={formData.company} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>First Name</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '12px 16px', alignItems: 'center' }}>
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Product (Optional)</label>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <select className="crm-form-select" style={{ width: '90px' }}>
-                  <option>-None-</option>
-                  <option>Mr.</option>
-                  <option>Mrs.</option>
-                  <option>Ms.</option>
-                  <option>Dr.</option>
+                <select
+                  name="product"
+                  className="crm-form-select"
+                  value={formData.product}
+                  onChange={handleChange}
+                  style={{ flex: 1 }}
+                >
+                  <option value="">-None-</option>
+                  {products.map(product => (
+                    <option key={product._id} value={product._id}>
+                      {product.articleNumber} - {product.name}
+                    </option>
+                  ))}
                 </select>
-                <input type="text" name="firstName" className="crm-form-input" style={{ flex: 1 }} value={formData.firstName} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Last Name</label>
-              <div>
-                <input type="text" name="lastName" className="crm-form-input" value={formData.lastName} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Title</label>
-              <div>
-                <input type="text" name="jobTitle" className="crm-form-input" value={formData.jobTitle} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Email</label>
-              <div style={{ position: 'relative' }}>
-                <input type="email" name="email" className="crm-form-input" value={formData.email} onChange={handleChange} style={{ paddingRight: '40px' }} />
-                <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-                  <VerificationIcon status={emailVerification.status} message={emailVerification.message} />
-                </div>
-                {emailVerification.message && emailVerification.status !== 'pending' && (
-                  <div style={{ fontSize: '11px', marginTop: '4px', color: emailVerification.status === 'valid' ? '#10B981' : emailVerification.status === 'invalid' ? '#EF4444' : '#F59E0B' }}>
-                    {emailVerification.message}
-                  </div>
+                {canManageProducts && (
+                  <button
+                    type="button"
+                    className="crm-btn crm-btn-primary"
+                    onClick={openAddProductModal}
+                    style={{ whiteSpace: 'nowrap' }}
+                  >
+                    + Add Product
+                  </button>
                 )}
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Phone</label>
-              <div style={{ position: 'relative' }}>
-                <input type="tel" name="phone" className="crm-form-input" value={formData.phone} onChange={handleChange} style={{ paddingRight: '40px' }} />
-                <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-                  <VerificationIcon status={phoneVerification.status} message={phoneVerification.message} />
-                </div>
-                {phoneVerification.message && phoneVerification.status !== 'pending' && (
-                  <div style={{ fontSize: '11px', marginTop: '4px', color: phoneVerification.status === 'valid' ? '#10B981' : phoneVerification.status === 'invalid' ? '#EF4444' : '#F59E0B' }}>
-                    {phoneVerification.message}
-                  </div>
-                )}
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Mobile</label>
-              <div>
-                <input type="tel" name="mobilePhone" className="crm-form-input" value={formData.mobilePhone} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Website</label>
-              <div>
-                <input type="url" name="website" className="crm-form-input" value={formData.website} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Lead Source</label>
-              <div>
-                <select name="leadSource" className="crm-form-select" value={formData.leadSource} onChange={handleChange}>
-                  <option value="">-None-</option>
-                  <option value="Advertisement">Advertisement</option>
-                  <option value="Cold Call">Cold Call</option>
-                  <option value="Employee Referral">Employee Referral</option>
-                  <option value="External Referral">External Referral</option>
-                  <option value="Partner">Partner</option>
-                  <option value="Website">Website</option>
-                </select>
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Lead Status</label>
-              <div>
-                <select name="leadStatus" className="crm-form-select" value={formData.leadStatus} onChange={handleChange}>
-                  <option value="">-None-</option>
-                  <option value="New">New</option>
-                  <option value="Contacted">Contacted</option>
-                  <option value="Qualified">Qualified</option>
-                  <option value="Unqualified">Unqualified</option>
-                  <option value="Lost">Lost</option>
-                </select>
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Rating</label>
-              <div>
-                <select name="rating" className="crm-form-select" value={formData.rating} onChange={handleChange}>
-                  <option value="">-None-</option>
-                  <option value="Hot">Hot</option>
-                  <option value="Warm">Warm</option>
-                  <option value="Cold">Cold</option>
-                </select>
               </div>
             </div>
           </div>
 
+          {formData.product && (
+            <div style={{ gridColumn: 'span 4', marginTop: '16px', padding: '16px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #BFDBFE', marginBottom: '24px' }}>
+              <h5 style={{ fontSize: '13px', fontWeight: '700', color: '#1E40AF', marginBottom: '12px' }}>
+                📋 Product Requirements
+              </h5>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '12px 16px', alignItems: 'center' }}>
+                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Quantity</label>
+                <div>
+                  <input 
+                    type="number" 
+                    name="productDetails.quantity" 
+                    className="crm-form-input" 
+                    value={formData.productDetails.quantity} 
+                    onChange={handleChange}
+                    min="1"
+                    placeholder="1"
+                  />
+                </div>
+
+                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Priority</label>
+                <div>
+                  <select 
+                    name="productDetails.priority" 
+                    className="crm-form-select" 
+                    value={formData.productDetails.priority} 
+                    onChange={handleChange}
+                  >
+                    <option value="">-None-</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
+
+                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Estimated Budget</label>
+                <div style={{ gridColumn: 'span 3' }}>
+                  <input 
+                    type="number" 
+                    name="productDetails.estimatedBudget" 
+                    className="crm-form-input" 
+                    value={formData.productDetails.estimatedBudget} 
+                    onChange={handleChange}
+                    min="0"
+                    step="0.01"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right', alignSelf: 'start', paddingTop: '8px' }}>Requirements</label>
+                <div style={{ gridColumn: 'span 3' }}>
+                  <textarea 
+                    name="productDetails.requirements" 
+                    className="crm-form-textarea" 
+                    rows="2"
+                    value={formData.productDetails.requirements} 
+                    onChange={handleChange}
+                    placeholder="e.g., Need custom reporting module, 24/7 support required"
+                  />
+                </div>
+
+                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right', alignSelf: 'start', paddingTop: '8px' }}>Notes</label>
+                <div style={{ gridColumn: 'span 3' }}>
+                  <textarea 
+                    name="productDetails.notes" 
+                    className="crm-form-textarea" 
+                    rows="2"
+                    value={formData.productDetails.notes} 
+                    onChange={handleChange}
+                    placeholder="Additional notes or special requests"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginBottom: '24px' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Address Information
+            </h4>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '12px 16px', alignItems: 'start' }}>
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Flat/House No/<br/>Building/Apartment<br/>Name</label>
+              <div>
+                <input type="text" name="flatHouseNo" className="crm-form-input" value={formData.flatHouseNo} onChange={handleChange} />
+              </div>
+
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Street Address</label>
+              <div>
+                <input type="text" name="street" className="crm-form-input" value={formData.street} onChange={handleChange} />
+              </div>
+
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>City</label>
+              <div>
+                <input type="text" name="city" className="crm-form-input" value={formData.city} onChange={handleChange} />
+              </div>
+
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>State/Province</label>
+              <div>
+                <select name="state" className="crm-form-select" value={formData.state} onChange={handleChange}>
+                  <option value="">-None-</option>
+                  <option value="Delhi">Delhi</option>
+                  <option value="Maharashtra">Maharashtra</option>
+                  <option value="Karnataka">Karnataka</option>
+                  <option value="Tamil Nadu">Tamil Nadu</option>
+                  <option value="Gujarat">Gujarat</option>
+                </select>
+              </div>
+
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Country/Region</label>
+              <div>
+                <select name="country" className="crm-form-select" value={formData.country} onChange={handleChange}>
+                  <option value="">-None-</option>
+                  <option value="India">India</option>
+                  <option value="United States">United States</option>
+                  <option value="United Kingdom">United Kingdom</option>
+                  <option value="Canada">Canada</option>
+                  <option value="Australia">Australia</option>
+                  <option value="Germany">Germany</option>
+                  <option value="France">France</option>
+                </select>
+              </div>
+
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Zip/Postal Code</label>
+              <div>
+                <input type="text" name="zipCode" className="crm-form-input" value={formData.zipCode} onChange={handleChange} />
+              </div>
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '24px' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Description Information
+            </h4>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '12px 16px', alignItems: 'start' }}>
+              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right', paddingTop: '8px' }}>Description</label>
+              <div>
+                <textarea name="description" className="crm-form-textarea" rows="4" value={formData.description} onChange={handleChange} style={{ resize: 'vertical' }} />
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Buttons */}
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB', marginTop: '20px' }}>
             <button type="button" className="crm-btn crm-btn-secondary" onClick={() => { setShowCreateModal(false); resetForm(); setError(''); }}>
               Cancel
             </button>
             <button type="submit" className="crm-btn crm-btn-primary">
               Save
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={showAddProductModal}
+        onClose={() => {
+          setShowAddProductModal(false);
+          resetProductForm();
+          setError('');
+        }}
+        title="Add New Product"
+        size="medium"
+      >
+        <form onSubmit={handleCreateProductFromLead}>
+          <div style={{ marginBottom: '16px', padding: '12px', background: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+            <p style={{ fontSize: '13px', color: '#1E40AF', margin: 0 }}>
+              💡 <strong></strong> Create a new product 
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Product Name *
+            </label>
+            <input
+              type="text"
+              name="name"
+              className="crm-form-input"
+              value={productFormData.name}
+              onChange={handleProductFormChange}
+              required
+              placeholder="e.g., CRM Software License"
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Article Number  *
+            </label>
+            <input
+              type="text"
+              name="articleNumber"
+              className="crm-form-input"
+              value={productFormData.articleNumber}
+              onChange={handleProductFormChange}
+              required
+              placeholder="e.g., CRM-001"
+            />
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Category *
+            </label>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <select
+                name="category"
+                className="crm-form-select"
+                value={productFormData.category}
+                onChange={handleProductFormChange}
+                required
+                style={{ flex: 1 }}
+              >
+                <option value="">Select Category</option>
+                {categories.map(cat => (
+                  <option key={cat._id} value={cat.name}>{cat.name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="crm-btn crm-btn-secondary"
+                onClick={() => {
+                  window.open('/product-categories', '_blank');
+                }}
+                title="Manage Categories"
+              >
+                ⚙️
+              </button>
+            </div>
+            <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
+              Don't see your category? Click ⚙️ to manage categories in a new tab
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Price *
+              </label>
+              <input
+                type="number"
+                name="price"
+                className="crm-form-input"
+                value={productFormData.price}
+                onChange={handleProductFormChange}
+                required
+                min="0"
+                step="0.01"
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Stock (Optional)
+              </label>
+              <input
+                type="number"
+                name="stock"
+                className="crm-form-input"
+                value={productFormData.stock}
+                onChange={handleProductFormChange}
+                min="0"
+                placeholder="0"
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+              Description (Optional)
+            </label>
+            <textarea
+              name="description"
+              className="crm-form-input"
+              value={productFormData.description}
+              onChange={handleProductFormChange}
+              rows="3"
+              placeholder="Product description..."
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
+            <button
+              type="button"
+              className="crm-btn crm-btn-secondary"
+              onClick={() => {
+                setShowAddProductModal(false);
+                resetProductForm();
+                setError('');
+              }}
+            >
+              Cancel
+            </button>
+            <button type="submit" className="crm-btn crm-btn-primary">
+              Create & Select Product
             </button>
           </div>
         </form>

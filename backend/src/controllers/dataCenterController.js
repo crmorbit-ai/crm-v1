@@ -241,8 +241,7 @@ const createCandidate = async (req, res) => {
     });
 
     // Log activity
-    await logActivity(req.user._id, req.user.tenant, 'datacenter.create_candidate', {
-      candidateId: candidate._id,
+    await logActivity(req, 'datacenter.create_candidate', 'Candidate', candidate._id, {
       candidateName: `${candidate.firstName} ${candidate.lastName}`,
       email: candidate.email
     });
@@ -460,8 +459,7 @@ Source: ${candidate.sourceWebsite || 'N/A'}
         await candidate.save();
 
         // Log activity
-        await logActivity(req.user._id, targetTenant, 'datacenter.move_to_leads', {
-          candidateId: candidate._id,
+        await logActivity(req, 'datacenter.move_to_leads', 'Candidate', candidate._id, {
           leadId: newLead._id,
           candidateName: `${candidate.firstName} ${candidate.lastName}`
         });
@@ -803,7 +801,7 @@ const sendBulkEmail = async (req, res) => {
     const results = await emailService.sendBulkEmails(req.user._id, candidates, subject, message, req.user.tenant);
 
     // Log activity
-    await logActivity(req.user._id, req.user.tenant, 'datacenter.bulk_email', {
+    await logActivity(req, 'datacenter.bulk_email', 'DataCenter', null, {
       totalCandidates: candidates.length,
       sent: results.sent,
       failed: results.failed,
@@ -838,7 +836,7 @@ const sendBulkWhatsApp = async (req, res) => {
     const results = await whatsappService.sendBulkMessages(candidates, message);
 
     // Log activity
-    await logActivity(req.user._id, req.user.tenant, 'datacenter.bulk_whatsapp', {
+    await logActivity(req, 'datacenter.bulk_whatsapp', 'DataCenter', null, {
       totalCandidates: candidates.length,
       sent: results.sent,
       failed: results.failed,
@@ -874,7 +872,7 @@ const sendBulkSMS = async (req, res) => {
     const results = await smsService.sendBulkSMS(candidates, message);
 
     // Log activity
-    await logActivity(req.user._id, req.user.tenant, 'datacenter.bulk_sms', {
+    await logActivity(req, 'datacenter.bulk_sms', 'DataCenter', null, {
       totalCandidates: candidates.length,
       sent: results.sent,
       failed: results.failed,
@@ -884,6 +882,176 @@ const sendBulkSMS = async (req, res) => {
   } catch (error) {
     console.error('Error sending bulk SMS:', error);
     return errorResponse(res, 'Error sending bulk SMS', 500);
+  }
+};
+
+/**
+ * @desc    Download sample template for bulk upload (Dynamic - includes custom fields)
+ * @route   GET /api/data-center/download-template
+ * @access  Private
+ */
+const downloadSampleTemplate = async (req, res) => {
+  const xlsx = require('xlsx');
+  const FieldDefinition = require('../models/FieldDefinition');
+
+  try {
+    // Determine tenant
+    let tenant;
+    if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
+      tenant = req.query.tenant || req.user.tenant;
+    } else {
+      tenant = req.user.tenant;
+    }
+
+    // Get active field definitions for Candidate entity
+    const fieldDefinitions = await FieldDefinition.find({
+      tenant,
+      entityType: 'Candidate',
+      isActive: true,
+      showInCreate: true
+    }).sort({ displayOrder: 1 });
+
+    console.log(`📥 Generating Candidate CSV template with ${fieldDefinitions.length} fields`);
+
+    // Build sample data dynamically based on field definitions
+    const sampleRow1 = {};
+    const sampleRow2 = {};
+
+    fieldDefinitions.forEach(field => {
+      const label = field.label;
+      let example1, example2;
+
+      switch (field.fieldType) {
+        case 'text':
+          example1 = field.fieldName === 'firstName' ? 'Rahul' :
+                     field.fieldName === 'lastName' ? 'Sharma' :
+                     field.fieldName === 'currentCompany' ? 'Infosys' :
+                     field.fieldName === 'currentDesignation' ? 'Software Engineer' :
+                     field.fieldName === 'currentLocation' ? 'Bangalore' :
+                     field.fieldName === 'education' ? 'B.Tech in Computer Science' :
+                     `Example ${field.label}`;
+          example2 = field.fieldName === 'firstName' ? 'Priya' :
+                     field.fieldName === 'lastName' ? 'Patel' :
+                     field.fieldName === 'currentCompany' ? 'TCS' :
+                     field.fieldName === 'currentDesignation' ? 'Senior Developer' :
+                     field.fieldName === 'currentLocation' ? 'Mumbai' :
+                     field.fieldName === 'education' ? 'MCA' :
+                     `Sample ${field.label}`;
+          break;
+
+        case 'email':
+          example1 = 'rahul.sharma@example.com';
+          example2 = 'priya.patel@example.com';
+          break;
+
+        case 'phone':
+          example1 = '+91-9876543210';
+          example2 = '+91-9876543211';
+          break;
+
+        case 'url':
+          example1 = field.fieldName === 'linkedInUrl' ? 'https://linkedin.com/in/rahulsharma' :
+                     field.fieldName === 'githubUrl' ? 'https://github.com/rahulsharma' :
+                     field.fieldName === 'resumeUrl' ? 'https://drive.google.com/file/d/xyz' :
+                     'https://example.com';
+          example2 = field.fieldName === 'linkedInUrl' ? 'https://linkedin.com/in/priyapatel' :
+                     field.fieldName === 'githubUrl' ? 'https://github.com/priyapatel' :
+                     field.fieldName === 'resumeUrl' ? 'https://drive.google.com/file/d/abc' :
+                     'https://example2.com';
+          break;
+
+        case 'number':
+          example1 = field.fieldName === 'totalExperience' ? '5' :
+                     field.fieldName === 'relevantExperience' ? '4' :
+                     field.fieldName === 'noticePeriod' ? '30' :
+                     '10';
+          example2 = field.fieldName === 'totalExperience' ? '7' :
+                     field.fieldName === 'relevantExperience' ? '6' :
+                     field.fieldName === 'noticePeriod' ? '60' :
+                     '20';
+          break;
+
+        case 'currency':
+          example1 = field.fieldName === 'currentCTC' ? '800000' :
+                     field.fieldName === 'expectedCTC' ? '1200000' :
+                     '50000';
+          example2 = field.fieldName === 'currentCTC' ? '1000000' :
+                     field.fieldName === 'expectedCTC' ? '1500000' :
+                     '75000';
+          break;
+
+        case 'percentage':
+          example1 = '75';
+          example2 = '85';
+          break;
+
+        case 'date':
+        case 'datetime':
+          example1 = '2025-01-15';
+          example2 = '2025-02-20';
+          break;
+
+        case 'checkbox':
+          example1 = field.fieldName === 'willingToRelocate' ? 'Yes' : 'No';
+          example2 = field.fieldName === 'willingToRelocate' ? 'No' : 'Yes';
+          break;
+
+        case 'dropdown':
+        case 'radio':
+          if (field.options && field.options.length > 0) {
+            example1 = field.options[0].value;
+            example2 = field.options.length > 1 ? field.options[1].value : field.options[0].value;
+          } else {
+            example1 = field.defaultValue || '';
+            example2 = field.defaultValue || '';
+          }
+          break;
+
+        case 'multi_select':
+          if (field.options && field.options.length > 0) {
+            example1 = field.options[0].value;
+            example2 = field.options.slice(0, 2).map(opt => opt.value).join(', ');
+          } else {
+            example1 = '';
+            example2 = '';
+          }
+          break;
+
+        case 'textarea':
+          example1 = field.fieldName === 'skills' ? 'Java, Python, React, Node.js' :
+                     field.fieldName === 'summary' ? '5 years experience in full-stack development' :
+                     field.fieldName === 'notes' ? 'Strong communication skills' :
+                     `Detailed ${field.label}`;
+          example2 = field.fieldName === 'skills' ? 'JavaScript, Angular, MongoDB, AWS' :
+                     field.fieldName === 'summary' ? '7 years experience in backend development' :
+                     field.fieldName === 'notes' ? 'Team player with leadership skills' :
+                     `Sample ${field.label}`;
+          break;
+
+        default:
+          example1 = field.defaultValue || '';
+          example2 = field.defaultValue || '';
+      }
+
+      sampleRow1[label] = example1;
+      sampleRow2[label] = example2;
+    });
+
+    const sampleData = [sampleRow1, sampleRow2];
+
+    const worksheet = xlsx.utils.json_to_sheet(sampleData);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Candidates Sample');
+
+    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Disposition', 'attachment; filename=candidates_import_template.xlsx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Error generating template:', error);
+    return errorResponse(res, 500, 'Error generating template');
   }
 };
 
@@ -899,4 +1067,5 @@ module.exports = {
   sendBulkEmail,
   sendBulkWhatsApp,
   sendBulkSMS,
+  downloadSampleTemplate,
 };

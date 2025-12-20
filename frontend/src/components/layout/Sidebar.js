@@ -73,7 +73,7 @@ const Sidebar = () => {
             className={`nav-item ${isActive('/products') ? 'active' : ''}`}
           >
             <span className="nav-item-icon">📦</span>
-            Product
+            Product Marketplace
           </Link>
 
           <Link
@@ -112,6 +112,12 @@ const Sidebar = () => {
             label="Opportunities"
             permission="opportunity_management"
           />
+          <NavItem
+            to="/products-management"
+            icon="📦"
+            label="Products"
+            permission="product_management"
+          />
         </div>
 
         {/* Activities Section */}
@@ -139,11 +145,11 @@ const Sidebar = () => {
             Calls
           </Link>
           <Link
-            to="/activities/emails"
-            className={`nav-item ${isActive('/activities/emails') ? 'active' : ''}`}
+            to="/emails"
+            className={`nav-item ${isActive('/emails') ? 'active' : ''}`}
           >
-            <span className="nav-item-icon">✉</span>
-            Emails
+            <span className="nav-item-icon">📧</span>
+            Email Inbox
           </Link>
         </div>
 
@@ -170,8 +176,19 @@ const Sidebar = () => {
           />
         </div>
 
-        {/* Support Section */}
+        {/* Admin/Customization Section */}
         <div className="nav-section">
+          <div className="nav-section-title">Customization</div>
+          <NavItem
+            to="/admin/field-builder"
+            icon="🎨"
+            label="Field Builder"
+            permission="field_management"
+          />
+        </div>
+
+        {/* Support Section */}
+        {/* <div className="nav-section">
           <div className="nav-section-title">Support</div>
           {isSaasOwner() ? (
             <Link
@@ -190,7 +207,7 @@ const Sidebar = () => {
               My Tickets
             </Link>
           )}
-        </div>
+        </div> */}
       </nav>
 
       <div className="sidebar-footer">

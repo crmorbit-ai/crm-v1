@@ -293,7 +293,7 @@ tenantSchema.methods.getTrialDaysRemaining = function() {
 // ============================================
 // INDEXES
 // ============================================
-tenantSchema.index({ slug: 1 });
+// slug index removed - already created by unique: true
 tenantSchema.index({ isActive: 1 });
 tenantSchema.index({ 'subscription.status': 1 });
 tenantSchema.index({ 'subscription.endDate': 1 });

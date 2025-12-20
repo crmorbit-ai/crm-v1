@@ -204,7 +204,13 @@ const contactSchema = new mongoose.Schema({
   tags: [{
     type: String,
     trim: true
-  }]
+  }],
+
+  // Custom Fields (Dynamic fields defined by Product Team)
+  customFields: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  }
 }, {
   timestamps: true
 });

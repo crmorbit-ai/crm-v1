@@ -129,7 +129,7 @@ paymentSchema.pre('save', async function(next) {
 // Indexes
 paymentSchema.index({ tenant: 1, createdAt: -1 });
 paymentSchema.index({ status: 1 });
-paymentSchema.index({ invoiceNumber: 1 });
+// invoiceNumber index removed - already created by unique: true
 paymentSchema.index({ gatewayTransactionId: 1 });
 
 module.exports = mongoose.model('Payment', paymentSchema);

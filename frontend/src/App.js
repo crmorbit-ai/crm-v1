@@ -16,6 +16,7 @@ import SaasDashboard from './pages/SaasDashboard';
 import Tasks from './pages/Tasks';
 import Meetings from './pages/Meetings';
 import Calls from './pages/Calls';
+import EmailInbox from './pages/EmailInbox';
 
 // CRM pages
 import Leads from './pages/Leads';
@@ -52,8 +53,13 @@ import SaasSubscriptions from './pages/SaasSubscriptions';
 import DataCenter from './pages/DataCenter';
 import DataCenterDetail from './pages/DataCenterDetail';
 import ProductMarketplace from './pages/ProductMarketplace';
+import Products from './pages/Products';
 import Support from './pages/Support';
 import SupportAdmin from './pages/SupportAdmin';
+import ProductCategories from './pages/ProductCategories';
+
+// Field Customization (Product Team)
+import FieldBuilder from './pages/FieldBuilder';
 
 
 
@@ -181,6 +187,27 @@ function AppRoutes() {
   </ProtectedRoute>
 } />
 
+
+
+
+<Route path="/product-categories" element={
+  <ProtectedRoute>
+    <ProductCategories />
+  </ProtectedRoute>
+} />
+
+
+
+
+
+
+{/* 📦 PRODUCT MANAGEMENT ROUTE (CRM Products) */}
+<Route path="/products-management" element={
+  <ProtectedRoute>
+    <Products />
+  </ProtectedRoute>
+} />
+
 {/* 🎫 SUPPORT TICKET ROUTES */}
 <Route path="/support" element={
   <ProtectedRoute>
@@ -245,6 +272,13 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      {/* Admin/Product Team routes */}
+      <Route path="/admin/field-builder" element={
+        <ProtectedRoute>
+          <FieldBuilder />
+        </ProtectedRoute>
+      } />
+
       {/* SAAS Owner routes */}
       <Route path="/saas/dashboard" element={
         <ProtectedRoute requireSaas>
@@ -282,6 +316,7 @@ function AppRoutes() {
 
       <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
       <Route path="/calls" element={<ProtectedRoute><Calls /></ProtectedRoute>} />
+      <Route path="/emails" element={<ProtectedRoute><EmailInbox /></ProtectedRoute>} />
       <Route path="/meetings/:id" element={<ProtectedRoute><MeetingDetail /></ProtectedRoute>} />
 
       <Route path="/forgot-password" element={<ForgotPassword />} />

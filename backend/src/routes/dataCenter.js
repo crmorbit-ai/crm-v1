@@ -11,7 +11,8 @@ const {
   uploadCandidatesFile,
   sendBulkEmail,
   sendBulkWhatsApp,
-  sendBulkSMS
+  sendBulkSMS,
+  downloadSampleTemplate
 } = require('../controllers/dataCenterController');
 const { protect, requireSaasAccess } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
@@ -33,6 +34,12 @@ router.get('/stats',
 router.post('/move-to-leads',
   requirePermission('data_center', 'move_to_leads'),
   moveToLeads
+);
+
+// Download template route
+router.get('/download-template',
+  requirePermission('data_center', 'read'),
+  downloadSampleTemplate
 );
 
 // Bulk import route (SAAS_OWNER only)

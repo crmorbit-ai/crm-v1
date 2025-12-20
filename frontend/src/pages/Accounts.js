@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { accountService } from '../services/accountService';
+import fieldDefinitionService from '../services/fieldDefinitionService';
 import Modal from '../components/common/Modal';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import DynamicField from '../components/DynamicField';
 import '../styles/crm.css';
 
 const Accounts = () => {
@@ -29,6 +31,11 @@ const Accounts = () => {
     shippingCountry: '', shippingZipCode: '', description: ''
   });
 
+  // Dynamic field definitions
+  const [fieldDefinitions, setFieldDefinitions] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
+
   const [stats, setStats] = useState({
     total: 0,
     customers: 0,
@@ -38,6 +45,7 @@ const Accounts = () => {
 
   useEffect(() => {
     loadAccounts();
+    loadCustomFields();
   }, [pagination.page, filters.search, filters.accountType, filters.industry]);
 
   const loadAccounts = async () => {
@@ -74,11 +82,85 @@ const Accounts = () => {
     }
   };
 
+  const loadCustomFields = async () => {
+    try {
+      const response = await fieldDefinitionService.getFieldDefinitions('Account', false);
+      if (response && Array.isArray(response)) {
+        const createFields = response
+          .filter(field => field.isActive && field.showInCreate)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+        setFieldDefinitions(createFields);
+      }
+    } catch (err) {
+      console.error('Load field definitions error:', err);
+    }
+  };
+
+  // Group fields by section
+  const groupFieldsBySection = (fields) => {
+    const grouped = {};
+    fields.forEach(field => {
+      const section = field.section || 'Additional Information';
+      if (!grouped[section]) {
+        grouped[section] = [];
+      }
+      grouped[section].push(field);
+    });
+    return grouped;
+  };
+
+  // Handle dynamic field value change
+  const handleFieldChange = (fieldName, value) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: null
+    }));
+  };
+
+  // Render dynamic field
+  const renderDynamicField = (field) => {
+    return (
+      <DynamicField
+        fieldDefinition={field}
+        value={fieldValues[field.fieldName] || ''}
+        onChange={handleFieldChange}
+        error={fieldErrors[field.fieldName]}
+      />
+    );
+  };
+
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     try {
       setError('');
-      await accountService.createAccount(formData);
+
+      // Separate standard fields from custom fields
+      const standardFields = {};
+      const customFields = {};
+
+      fieldDefinitions.forEach(field => {
+        const value = fieldValues[field.fieldName];
+        if (value !== undefined && value !== null && value !== '') {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+          } else {
+            customFields[field.fieldName] = value;
+          }
+        }
+      });
+
+      // Combine standard fields with form data and custom fields
+      const accountData = {
+        ...formData,
+        ...standardFields,
+        customFields: Object.keys(customFields).length > 0 ? customFields : undefined
+      };
+
+      await accountService.createAccount(accountData);
       setSuccess('Account created successfully!');
       setShowCreateModal(false);
       resetForm();
@@ -154,6 +236,8 @@ const Accounts = () => {
       billingCountry: '', billingZipCode: '', shippingStreet: '', shippingCity: '', shippingState: '',
       shippingCountry: '', shippingZipCode: '', description: ''
     });
+    setFieldValues({});
+    setFieldErrors({});
   };
 
   const handleChange = (e) => {
@@ -494,48 +578,37 @@ const Accounts = () => {
 
       <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); resetForm(); setError(''); }} title="Create New Account" size="large">
         <form onSubmit={handleCreateAccount}>
-          <div className="form-group">
-            <label className="form-label">Account Name *</label>
-            <input type="text" name="accountName" className="crm-form-input" value={formData.accountName} onChange={handleChange} required />
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Account Type</label>
-              <select name="accountType" className="crm-form-select" value={formData.accountType} onChange={handleChange}>
-                <option value="Customer">Customer</option>
-                <option value="Prospect">Prospect</option>
-                <option value="Partner">Partner</option>
-                <option value="Vendor">Vendor</option>
-                <option value="Competitor">Competitor</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Industry</label>
-              <select name="industry" className="crm-form-select" value={formData.industry} onChange={handleChange}>
-                <option value="">Select Industry</option>
-                <option value="Technology">Technology</option>
-                <option value="Healthcare">Healthcare</option>
-                <option value="Finance">Finance</option>
-                <option value="Manufacturing">Manufacturing</option>
-                <option value="Retail">Retail</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input type="tel" name="phone" className="crm-form-input" value={formData.phone} onChange={handleChange} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Website</label>
-              <input type="url" name="website" className="crm-form-input" value={formData.website} onChange={handleChange} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Description</label>
-            <textarea name="description" className="crm-form-textarea" rows="3" value={formData.description} onChange={handleChange} />
-          </div>
+          {/* Dynamic Form Sections - Rendered from Field Definitions */}
+          {(() => {
+            const groupedFields = groupFieldsBySection(fieldDefinitions);
+            const sectionOrder = ['Basic Information', 'Business Information', 'Address Information', 'Additional Information'];
+
+            return sectionOrder.map(sectionName => {
+              const sectionFields = groupedFields[sectionName];
+              if (!sectionFields || sectionFields.length === 0) return null;
+
+              return (
+                <div key={sectionName} style={{ marginBottom: '24px' }}>
+                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    {sectionName}
+                  </h4>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    {sectionFields.map((field) => {
+                      const isFullWidth = field.fieldType === 'textarea';
+
+                      return (
+                        <div key={field._id} style={isFullWidth ? { gridColumn: 'span 2' } : {}}>
+                          {renderDynamicField(field)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            });
+          })()}
+
           <div className="modal-footer">
             <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateModal(false); resetForm(); setError(''); }}>Cancel</button>
             <button type="submit" className="crm-btn crm-btn-primary">Create Account</button>

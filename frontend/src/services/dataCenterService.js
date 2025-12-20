@@ -60,7 +60,17 @@ export const exportCandidates = async (candidateIds) => {
   const response = await api.post('/data-center/export', { candidateIds }, {
     responseType: 'blob'
   });
-  return response;
+  return response.data;  // Extract blob from response
+};
+
+/**
+ * Download template with all active fields
+ */
+export const downloadTemplate = async () => {
+  const response = await api.get('/data-center/download-template', {
+    responseType: 'blob'
+  });
+  return response.data;  // Extract blob from response
 };
 
 // 🆕 CUSTOM FIELD TEMPLATE APIs
@@ -109,6 +119,7 @@ const dataCenterService = {
   bulkImportCandidates,
   uploadFile,
   exportCandidates,
+  downloadTemplate,
   getCustomFieldTemplates,
   createCustomFieldTemplate,
   updateCustomFieldTemplate,

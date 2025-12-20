@@ -77,7 +77,7 @@ const EmailCompose = ({
         message: emailData.message,
       });
 
-      alert(`✅ Successfully sent ${response.data.data.sent} emails!`);
+      alert(`✅ Successfully sent ${response.data.sent} emails!`);
 
       // Reset form
       setEmailData({

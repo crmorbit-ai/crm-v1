@@ -18,7 +18,7 @@ const leadSchema = new mongoose.Schema({
     lowercase: true
   },
   
-  // ✅ EMAIL VERIFICATION FIELDS
+  // EMAIL VERIFICATION FIELDS
   emailVerified: {
     type: Boolean,
     default: false
@@ -42,7 +42,7 @@ const leadSchema = new mongoose.Schema({
     trim: true
   },
   
-  // ✅ PHONE VERIFICATION FIELDS
+  // PHONE VERIFICATION FIELDS
   phoneVerified: {
     type: Boolean,
     default: false
@@ -244,7 +244,44 @@ const leadSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Opportunity'
   },
-  
+
+  // Product Information (link to ProductItem)
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ProductItem',
+    required: false
+  },
+
+  // NEW - Product Details with Rich Information
+  productDetails: {
+    quantity: {
+      type: Number,
+      min: 1,
+      default: 1
+    },
+    requirements: {
+      type: String,
+      trim: true
+    },
+    estimatedBudget: {
+      type: Number,
+      min: 0
+    },
+    priority: {
+      type: String,
+      enum: ['Low', 'Medium', 'High', 'Urgent', ''],
+      default: ''
+    },
+    notes: {
+      type: String,
+      trim: true
+    },
+    linkedDate: {
+      type: Date,
+      default: Date.now
+    }
+  },
+
   // Owner and Tenant
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -278,7 +315,13 @@ const leadSchema = new mongoose.Schema({
   tags: [{
     type: String,
     trim: true
-  }]
+  }],
+
+  // Custom Fields (Dynamic fields defined by Product Team)
+  customFields: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  }
 }, {
   timestamps: true
 });
@@ -292,6 +335,7 @@ leadSchema.index({ isConverted: 1 });
 leadSchema.index({ email: 1, tenant: 1 });
 leadSchema.index({ emailVerified: 1 });
 leadSchema.index({ phoneVerified: 1 });
+leadSchema.index({ product: 1 });
 leadSchema.index({ firstName: 'text', lastName: 'text', company: 'text', email: 'text' });
 
 // Virtual for full name

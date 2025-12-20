@@ -4,8 +4,12 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { leadService } from '../services/leadService';
 import { taskService } from '../services/taskService';
 import { noteService } from '../services/noteService';
+import { productItemService } from '../services/productItemService';
+import { productCategoryService } from '../services/productCategoryService';
+import fieldDefinitionService from '../services/fieldDefinitionService';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
+import EmailHistory from '../components/EmailHistory';
 import { API_URL } from '../config/api.config';
 import '../styles/crm.css';
 
@@ -19,6 +23,9 @@ const LeadDetail = () => {
   const [meetings, setMeetings] = useState([]);
   const [calls, setCalls] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -84,7 +91,60 @@ const LeadDetail = () => {
     loadMeetings();
     loadCalls();
     loadNotes();
+    loadProducts();
+    loadCategories();
+    loadCustomFields();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const loadProducts = async () => {
+    try {
+      const response = await productItemService.getAllProducts({ isActive: 'true' }, 1, 1000);
+      if (response && response.success === true && response.data) {
+        setProducts(response.data.products || []);
+      }
+    } catch (err) {
+      console.error('Load products error:', err);
+    }
+  };
+
+  const loadCategories = async () => {
+    try {
+      const response = await productCategoryService.getAllCategories({ isActive: 'true' }, 1, 100);
+      if (response && response.success === true && response.data) {
+        setCategories(response.data.categories || []);
+      }
+    } catch (err) {
+      console.error('Load categories error:', err);
+    }
+  };
+
+  const loadCustomFields = async () => {
+    try {
+      const response = await fieldDefinitionService.getFieldDefinitions('Lead', false);
+      if (response && Array.isArray(response)) {
+        const activeFields = response
+          .filter(field => field.isActive && field.showInDetail)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+        setCustomFieldDefinitions(activeFields);
+      }
+    } catch (err) {
+      console.error('Load custom fields error:', err);
+    }
+  };
+
+  // Group fields by section
+  const groupFieldsBySection = (fields) => {
+    const grouped = {};
+    fields.forEach(field => {
+      const section = field.section || 'Additional Information';
+      if (!grouped[section]) {
+        grouped[section] = [];
+      }
+      grouped[section].push(field);
+    });
+    return grouped;
+  };
 
   const loadLead = async () => {
     try {
@@ -281,7 +341,15 @@ const LeadDetail = () => {
       rating: lead.rating,
       industry: lead.industry || '',
       website: lead.website || '',
-      description: lead.description || ''
+      description: lead.description || '',
+      product: lead.product?._id || '',
+      productDetails: {
+        quantity: lead.productDetails?.quantity || 1,
+        requirements: lead.productDetails?.requirements || '',
+        estimatedBudget: lead.productDetails?.estimatedBudget || '',
+        priority: lead.productDetails?.priority || '',
+        notes: lead.productDetails?.notes || ''
+      }
     });
     setShowEditModal(true);
   };
@@ -390,6 +458,19 @@ const LeadDetail = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    if (name.startsWith('productDetails.')) {
+      const fieldName = name.split('.')[1];
+      setFormData(prev => ({
+        ...prev,
+        productDetails: {
+          ...prev.productDetails,
+          [fieldName]: value
+        }
+      }));
+      return;
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -589,6 +670,12 @@ const LeadDetail = () => {
           >
             Related Lists
           </button>
+          <button
+            className={`crm-tab ${activeTab === 'emails' ? 'active' : ''}`}
+            onClick={() => setActiveTab('emails')}
+          >
+            📧 Emails
+          </button>
         </div>
 
         <div style={{ padding: '24px' }}>
@@ -693,12 +780,179 @@ const LeadDetail = () => {
                 </div>
               </div>
 
+              {/* PRODUCT INFORMATION SECTION - NEW */}
+              {lead.product && (
+                <div style={{ marginTop: '24px', padding: '20px', background: '#F0F9FF', borderRadius: '12px', border: '2px solid #BFDBFE' }}>
+                  <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#1E40AF', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>📦</span> Product Information
+                  </h4>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                        Product Name
+                      </label>
+                      <div style={{ fontSize: '15px', color: '#1e3c72', fontWeight: '700' }}>
+                        {lead.product.name}
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                        Article Number
+                      </label>
+                      <div style={{ fontSize: '15px', color: '#1e3c72', fontWeight: '700' }}>
+                        {lead.product.articleNumber}
+                      </div>
+                    </div>
+                  </div>
+
+                  {lead.productDetails && (
+                    <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #BFDBFE' }}>
+                      <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#1E40AF', marginBottom: '12px' }}>
+                        Requirements & Details
+                      </h5>
+                      
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                        {lead.productDetails.quantity && (
+                          <div>
+                            <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                              Quantity
+                            </label>
+                            <div style={{ fontSize: '15px', color: '#1e3c72', fontWeight: '600' }}>
+                              {lead.productDetails.quantity}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {lead.productDetails.priority && (
+                          <div>
+                            <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                              Priority
+                            </label>
+                            <div>
+                              <span style={{
+                                padding: '4px 12px',
+                                background: lead.productDetails.priority === 'Urgent' ? '#FEE2E2' :
+                                           lead.productDetails.priority === 'High' ? '#FED7AA' :
+                                           lead.productDetails.priority === 'Medium' ? '#FEF3C7' : '#DBEAFE',
+                                color: lead.productDetails.priority === 'Urgent' ? '#991B1B' :
+                                       lead.productDetails.priority === 'High' ? '#9A3412' :
+                                       lead.productDetails.priority === 'Medium' ? '#92400E' : '#1E40AF',
+                                borderRadius: '6px',
+                                fontSize: '13px',
+                                fontWeight: '700'
+                              }}>
+                                {lead.productDetails.priority}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {lead.productDetails.estimatedBudget && (
+                          <div>
+                            <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                              Estimated Budget
+                            </label>
+                            <div style={{ fontSize: '15px', color: '#059669', fontWeight: '700' }}>
+                              ${Number(lead.productDetails.estimatedBudget).toLocaleString()}
+                            </div>
+                          </div>
+                        )}
+                        
+                        {lead.productDetails.linkedDate && (
+                          <div>
+                            <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>
+                              Linked Date
+                            </label>
+                            <div style={{ fontSize: '15px', color: '#1e3c72', fontWeight: '600' }}>
+                              {new Date(lead.productDetails.linkedDate).toLocaleDateString()}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {lead.productDetails.requirements && (
+                        <div style={{ marginTop: '16px' }}>
+                          <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '6px', display: 'block' }}>
+                            Requirements
+                          </label>
+                          <div style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                            {lead.productDetails.requirements}
+                          </div>
+                        </div>
+                      )}
+
+                      {lead.productDetails.notes && (
+                        <div style={{ marginTop: '12px' }}>
+                          <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '6px', display: 'block' }}>
+                            Notes
+                          </label>
+                          <div style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', padding: '12px', background: 'white', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                            {lead.productDetails.notes}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {lead.description && (
                 <div style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
                   <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Description</h4>
                   <p style={{ fontSize: '14px', lineHeight: '1.6', color: '#374151' }}>{lead.description}</p>
                 </div>
               )}
+
+              {/* Custom Fields Section - Grouped by Sections */}
+              {customFieldDefinitions.length > 0 && lead.customFields && Object.keys(lead.customFields).length > 0 && (() => {
+                const groupedFields = groupFieldsBySection(customFieldDefinitions);
+                const sections = Object.keys(groupedFields);
+
+                return sections.map(sectionName => (
+                  <div key={sectionName} style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>{sectionName}</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                      {groupedFields[sectionName].map((field) => {
+                        const value = lead.customFields[field.fieldName];
+                        if (!value) return null;
+
+                        let displayValue = value;
+
+                        // Format value based on field type
+                        if (field.fieldType === 'currency') {
+                          displayValue = `$${Number(value).toLocaleString()}`;
+                        } else if (field.fieldType === 'percentage') {
+                          displayValue = `${value}%`;
+                        } else if (field.fieldType === 'date') {
+                          displayValue = new Date(value).toLocaleDateString();
+                        } else if (field.fieldType === 'datetime') {
+                          displayValue = new Date(value).toLocaleString();
+                        } else if (field.fieldType === 'checkbox') {
+                          displayValue = value ? 'Yes' : 'No';
+                        } else if (field.fieldType === 'multi_select' && Array.isArray(value)) {
+                          const selectedOptions = field.options.filter(opt => value.includes(opt.value));
+                          displayValue = selectedOptions.map(opt => opt.label).join(', ');
+                        } else if (['dropdown', 'radio'].includes(field.fieldType)) {
+                          const selectedOption = field.options.find(opt => opt.value === value);
+                          displayValue = selectedOption ? selectedOption.label : value;
+                        }
+
+                        return (
+                          <div key={field._id}>
+                            <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                              {field.label}
+                            </label>
+                            <p style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                              {displayValue || 'Not provided'}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           )}
 
@@ -910,6 +1164,13 @@ const LeadDetail = () => {
                   No attachments found
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Emails Tab */}
+          {activeTab === 'emails' && lead && (
+            <div>
+              <EmailHistory entityType="Lead" entityId={lead._id} />
             </div>
           )}
         </div>
@@ -1146,167 +1407,256 @@ const LeadDetail = () => {
         </form>
       </Modal>
 
-      {/* Edit Modal */}
-     {/* Edit Modal */}
-<Modal
-  isOpen={showEditModal}
-  onClose={() => setShowEditModal(false)}
-  title="Edit Lead"
-  size="large"
->
-  <form onSubmit={handleUpdateLead}>
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-      <div className="crm-form-group">
-        <label>First Name *</label>
-        <input
-          type="text"
-          name="firstName"
-          className="crm-form-input"
-          value={formData.firstName || ''}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="crm-form-group">
-        <label>Last Name *</label>
-        <input
-          type="text"
-          name="lastName"
-          className="crm-form-input"
-          value={formData.lastName || ''}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="crm-form-group">
-        <label>Email *</label>
-        <input
-          type="email"
-          name="email"
-          className="crm-form-input"
-          value={formData.email || ''}
-          onChange={handleChange}
-          required
-        />
-      </div>
-      <div className="crm-form-group">
-        <label>Phone</label>
-        <input
-          type="tel"
-          name="phone"
-          className="crm-form-input"
-          value={formData.phone || ''}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="crm-form-group">
-        <label>Company</label>
-        <input
-          type="text"
-          name="company"
-          className="crm-form-input"
-          value={formData.company || ''}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="crm-form-group">
-        <label>Job Title</label>
-        <input
-          type="text"
-          name="jobTitle"
-          className="crm-form-input"
-          value={formData.jobTitle || ''}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="crm-form-group">
-        <label>Lead Status</label>
-        <select
-          name="leadStatus"
-          className="crm-form-select"
-          value={formData.leadStatus || 'New'}
-          onChange={handleChange}
-        >
-          <option value="New">New</option>
-          <option value="Contacted">Contacted</option>
-          <option value="Qualified">Qualified</option>
-          <option value="Unqualified">Unqualified</option>
-          <option value="Lost">Lost</option>
-        </select>
-      </div>
-      <div className="crm-form-group">
-        <label>Lead Source</label>
-        <select
-          name="leadSource"
-          className="crm-form-select"
-          value={formData.leadSource || 'Website'}
-          onChange={handleChange}
-        >
-          <option value="Website">Website</option>
-          <option value="Referral">Referral</option>
-          <option value="Social Media">Social Media</option>
-          <option value="Email Campaign">Email Campaign</option>
-          <option value="Advertisement">Advertisement</option>
-          <option value="Trade Show">Trade Show</option>
-          <option value="Cold Call">Cold Call</option>
-          <option value="Partner">Partner</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div className="crm-form-group">
-        <label>Rating</label>
-        <select
-          name="rating"
-          className="crm-form-select"
-          value={formData.rating || 'Warm'}
-          onChange={handleChange}
-        >
-          <option value="Hot">Hot</option>
-          <option value="Warm">Warm</option>
-          <option value="Cold">Cold</option>
-        </select>
-      </div>
-      <div className="crm-form-group">
-        <label>Industry</label>
-        <input
-          type="text"
-          name="industry"
-          className="crm-form-input"
-          value={formData.industry || ''}
-          onChange={handleChange}
-        />
-      </div>
-      <div className="crm-form-group">
-        <label>Website</label>
-        <input
-          type="url"
-          name="website"
-          className="crm-form-input"
-          value={formData.website || ''}
-          onChange={handleChange}
-        />
-      </div>
-    </div>
-    
-    <div className="crm-form-group" style={{ marginTop: '20px' }}>
-      <label>Description</label>
-      <textarea
-        name="description"
-        className="crm-form-textarea"
-        rows="3"
-        value={formData.description || ''}
-        onChange={handleChange}
-      />
-    </div>
+      {/* Edit Modal - WITH PRODUCT DETAILS */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => setShowEditModal(false)}
+        title="Edit Lead"
+        size="large"
+      >
+        <form onSubmit={handleUpdateLead}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="crm-form-group">
+              <label>First Name *</label>
+              <input
+                type="text"
+                name="firstName"
+                className="crm-form-input"
+                value={formData.firstName || ''}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Last Name *</label>
+              <input
+                type="text"
+                name="lastName"
+                className="crm-form-input"
+                value={formData.lastName || ''}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Email *</label>
+              <input
+                type="email"
+                name="email"
+                className="crm-form-input"
+                value={formData.email || ''}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Phone</label>
+              <input
+                type="tel"
+                name="phone"
+                className="crm-form-input"
+                value={formData.phone || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Company</label>
+              <input
+                type="text"
+                name="company"
+                className="crm-form-input"
+                value={formData.company || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Job Title</label>
+              <input
+                type="text"
+                name="jobTitle"
+                className="crm-form-input"
+                value={formData.jobTitle || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Lead Status</label>
+              <select
+                name="leadStatus"
+                className="crm-form-select"
+                value={formData.leadStatus || 'New'}
+                onChange={handleChange}
+              >
+                <option value="New">New</option>
+                <option value="Contacted">Contacted</option>
+                <option value="Qualified">Qualified</option>
+                <option value="Unqualified">Unqualified</option>
+                <option value="Lost">Lost</option>
+              </select>
+            </div>
+            <div className="crm-form-group">
+              <label>Lead Source</label>
+              <select
+                name="leadSource"
+                className="crm-form-select"
+                value={formData.leadSource || 'Website'}
+                onChange={handleChange}
+              >
+                <option value="Website">Website</option>
+                <option value="Referral">Referral</option>
+                <option value="Social Media">Social Media</option>
+                <option value="Email Campaign">Email Campaign</option>
+                <option value="Advertisement">Advertisement</option>
+                <option value="Trade Show">Trade Show</option>
+                <option value="Cold Call">Cold Call</option>
+                <option value="Partner">Partner</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div className="crm-form-group">
+              <label>Rating</label>
+              <select
+                name="rating"
+                className="crm-form-select"
+                value={formData.rating || 'Warm'}
+                onChange={handleChange}
+              >
+                <option value="Hot">Hot</option>
+                <option value="Warm">Warm</option>
+                <option value="Cold">Cold</option>
+              </select>
+            </div>
+            <div className="crm-form-group">
+              <label>Industry</label>
+              <input
+                type="text"
+                name="industry"
+                className="crm-form-input"
+                value={formData.industry || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Website</label>
+              <input
+                type="url"
+                name="website"
+                className="crm-form-input"
+                value={formData.website || ''}
+                onChange={handleChange}
+              />
+            </div>
+            <div className="crm-form-group">
+              <label>Product (Optional)</label>
+              <select 
+                name="product" 
+                className="crm-form-select" 
+                value={formData.product || ''} 
+                onChange={handleChange}
+              >
+                <option value="">-None-</option>
+                {products.map(product => (
+                  <option key={product._id} value={product._id}>
+                    {product.articleNumber} - {product.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+          
+          {/* PRODUCT DETAILS SECTION - NEW */}
+          {formData.product && (
+            <div style={{ marginTop: '24px', marginBottom: '24px', padding: '16px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+              <h5 style={{ fontSize: '13px', fontWeight: '700', color: '#1E40AF', marginBottom: '12px' }}>
+                📋 Product Requirements
+              </h5>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="crm-form-group">
+                  <label>Quantity</label>
+                  <input 
+                    type="number" 
+                    name="productDetails.quantity" 
+                    className="crm-form-input" 
+                    value={formData.productDetails?.quantity || 1} 
+                    onChange={handleChange}
+                    min="1"
+                  />
+                </div>
 
-    <div className="modal-footer">
-      <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowEditModal(false)}>
-        Cancel
-      </button>
-      <button type="submit" className="crm-btn crm-btn-primary">Update Lead</button>
-    </div>
-  </form>
-</Modal>
+                <div className="crm-form-group">
+                  <label>Priority</label>
+                  <select 
+                    name="productDetails.priority" 
+                    className="crm-form-select" 
+                    value={formData.productDetails?.priority || ''} 
+                    onChange={handleChange}
+                  >
+                    <option value="">-None-</option>
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                    <option value="Urgent">Urgent</option>
+                  </select>
+                </div>
+
+                <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Estimated Budget</label>
+                  <input 
+                    type="number" 
+                    name="productDetails.estimatedBudget" 
+                    className="crm-form-input" 
+                    value={formData.productDetails?.estimatedBudget || ''} 
+                    onChange={handleChange}
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+
+                <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Requirements</label>
+                  <textarea 
+                    name="productDetails.requirements" 
+                    className="crm-form-textarea" 
+                    rows="2"
+                    value={formData.productDetails?.requirements || ''} 
+                    onChange={handleChange}
+                  />
+                </div>
+
+                <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}>
+                  <label>Notes</label>
+                  <textarea 
+                    name="productDetails.notes" 
+                    className="crm-form-textarea" 
+                    rows="2"
+                    value={formData.productDetails?.notes || ''} 
+                    onChange={handleChange}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="crm-form-group" style={{ marginTop: '20px' }}>
+            <label>Description</label>
+            <textarea
+              name="description"
+              className="crm-form-textarea"
+              rows="3"
+              value={formData.description || ''}
+              onChange={handleChange}
+            />
+          </div>
+
+          <div className="modal-footer">
+            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowEditModal(false)}>
+              Cancel
+            </button>
+            <button type="submit" className="crm-btn crm-btn-primary">Update Lead</button>
+          </div>
+        </form>
+      </Modal>
 
       {/* Delete Modal */}
       <Modal

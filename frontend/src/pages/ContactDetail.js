@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { contactService } from '../services/contactService';
+import fieldDefinitionService from '../services/fieldDefinitionService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Modal from '../components/common/Modal';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +16,7 @@ const ContactDetail = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
 
   // Modals
   const [showEditModal, setShowEditModal] = useState(false);
@@ -25,6 +27,7 @@ const ContactDetail = () => {
 
   useEffect(() => {
     loadContact();
+    loadFieldDefinitions();
   }, [id]);
 
   const loadContact = async () => {
@@ -38,6 +41,33 @@ const ContactDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadFieldDefinitions = async () => {
+    try {
+      const response = await fieldDefinitionService.getFieldDefinitions('Contact', false);
+      if (response && Array.isArray(response)) {
+        const detailFields = response
+          .filter(field => field.isActive && field.showInDetail && !field.isStandardField)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+        setCustomFieldDefinitions(detailFields);
+      }
+    } catch (error) {
+      console.error('Load field definitions error:', error);
+    }
+  };
+
+  // Group fields by section
+  const groupFieldsBySection = (fields) => {
+    const grouped = {};
+    fields.forEach(field => {
+      const section = field.section || 'Additional Information';
+      if (!grouped[section]) {
+        grouped[section] = [];
+      }
+      grouped[section].push(field);
+    });
+    return grouped;
   };
 
   const openEditModal = () => {
@@ -236,6 +266,56 @@ const ContactDetail = () => {
                   )}
                 </div>
               </div>
+
+              {/* Custom Fields Section - Grouped by Sections */}
+              {customFieldDefinitions.length > 0 && contact.customFields && Object.keys(contact.customFields).length > 0 && (() => {
+                const groupedFields = groupFieldsBySection(customFieldDefinitions);
+                const sections = Object.keys(groupedFields);
+
+                return sections.map(sectionName => (
+                  <div key={sectionName} style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>{sectionName}</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+                      {groupedFields[sectionName].map((field) => {
+                        const value = contact.customFields[field.fieldName];
+                        if (!value) return null;
+
+                        let displayValue = value;
+
+                        // Format value based on field type
+                        if (field.fieldType === 'currency') {
+                          displayValue = `${Number(value).toLocaleString()}`;
+                        } else if (field.fieldType === 'percentage') {
+                          displayValue = `${value}%`;
+                        } else if (field.fieldType === 'date') {
+                          displayValue = new Date(value).toLocaleDateString();
+                        } else if (field.fieldType === 'datetime') {
+                          displayValue = new Date(value).toLocaleString();
+                        } else if (field.fieldType === 'checkbox') {
+                          displayValue = value ? 'Yes' : 'No';
+                        } else if (field.fieldType === 'multi_select' && Array.isArray(value)) {
+                          const selectedOptions = field.options.filter(opt => value.includes(opt.value));
+                          displayValue = selectedOptions.map(opt => opt.label).join(', ');
+                        } else if (['dropdown', 'radio'].includes(field.fieldType)) {
+                          const selectedOption = field.options.find(opt => opt.value === value);
+                          displayValue = selectedOption ? selectedOption.label : value;
+                        }
+
+                        return (
+                          <div key={field._id}>
+                            <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
+                              {field.label}
+                            </label>
+                            <p style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
+                              {displayValue || 'Not provided'}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           )}
 

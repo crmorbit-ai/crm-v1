@@ -146,7 +146,7 @@ const supportTicketSchema = new mongoose.Schema({
 supportTicketSchema.index({ status: 1, createdAt: -1 });
 supportTicketSchema.index({ tenant: 1, status: 1 });
 supportTicketSchema.index({ assignedTo: 1, status: 1 });
-supportTicketSchema.index({ ticketNumber: 1 });
+// ticketNumber index removed - already created by unique: true
 
 // Generate ticket number before saving
 supportTicketSchema.pre('save', async function(next) {

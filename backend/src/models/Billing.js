@@ -109,7 +109,7 @@ const billingSchema = new mongoose.Schema({
 
 // Index for faster queries
 billingSchema.index({ tenant: 1 });
-billingSchema.index({ invoiceNumber: 1 });
+// invoiceNumber index removed - already created by unique: true
 billingSchema.index({ paymentStatus: 1 });
 
 module.exports = mongoose.model('Billing', billingSchema);

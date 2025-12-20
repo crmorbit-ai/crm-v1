@@ -262,7 +262,13 @@ const dataCenterCandidateSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
+
+  // Custom Fields (Dynamic fields defined via Field Builder)
+  customFields: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
+
   // Import Information
   importedBy: {
     type: mongoose.Schema.Types.ObjectId,

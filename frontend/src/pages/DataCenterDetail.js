@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import dataCenterService from '../services/dataCenterService';
+import fieldDefinitionService from '../services/fieldDefinitionService';
 import '../styles/crm.css';
 
 const DataCenterDetail = () => {
@@ -12,6 +13,7 @@ const DataCenterDetail = () => {
   const [loading, setLoading] = useState(true);
   const [showMoveModal, setShowMoveModal] = useState(false);
   const [activeTab, setActiveTab] = useState('overview');
+  const [customFields, setCustomFields] = useState([]);
   const [moveForm, setMoveForm] = useState({
     leadStatus: 'New',
     leadSource: 'Customer',
@@ -20,6 +22,7 @@ const DataCenterDetail = () => {
 
   useEffect(() => {
     loadCandidate();
+    loadFieldDefinitions();
   }, [id]);
 
   const loadCandidate = async () => {
@@ -33,6 +36,66 @@ const DataCenterDetail = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadFieldDefinitions = async () => {
+    try {
+      console.log('🔍 Loading field definitions for Candidate detail view...');
+      const response = await fieldDefinitionService.getFieldDefinitions('Candidate', false);
+      console.log('📦 Field definitions response:', response);
+
+      // Response is already unwrapped by axios interceptor
+      if (response && Array.isArray(response)) {
+        console.log('✅ Total fields received:', response.length);
+        // Filter for active fields that should show in detail view (both standard and custom)
+        const detailFields = response
+          .filter(field => field.isActive && field.showInDetail)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+
+        console.log('✅ Active fields for detail view:', detailFields.length);
+        setCustomFields(detailFields);
+      }
+    } catch (error) {
+      console.error('❌ Load field definitions error:', error);
+    }
+  };
+
+  // Group fields by section
+  const groupFieldsBySection = (fields) => {
+    const grouped = {};
+    fields.forEach(field => {
+      const section = field.section || 'Additional Information';
+      if (!grouped[section]) {
+        grouped[section] = [];
+      }
+      grouped[section].push(field);
+    });
+    return grouped;
+  };
+
+  // Get field value from candidate (checks both top level and customFields)
+  const getFieldValue = (fieldName) => {
+    if (!candidate) return '-';
+
+    console.log(`🔍 Looking for field: ${fieldName}`);
+    console.log('📦 Candidate data:', candidate);
+    console.log('📦 Custom fields object:', candidate.customFields);
+
+    // Check if it's in customFields nested object
+    if (candidate.customFields && candidate.customFields[fieldName] !== undefined) {
+      const value = candidate.customFields[fieldName];
+      console.log(`✅ Found in customFields: ${fieldName} = ${value}`);
+      return value;
+    }
+    // Check if it's at top level
+    if (candidate[fieldName] !== undefined) {
+      const value = candidate[fieldName];
+      console.log(`✅ Found at top level: ${fieldName} = ${value}`);
+      return value;
+    }
+
+    console.log(`❌ Field not found: ${fieldName}`);
+    return '-';
   };
 
   const handleMoveToLead = async () => {
@@ -455,6 +518,50 @@ const DataCenterDetail = () => {
               </div>
             </div>
           )}
+
+          {/* Dynamic Fields Grouped by Section */}
+          {customFields.length > 0 && (() => {
+            const groupedFields = groupFieldsBySection(customFields);
+            const sections = Object.keys(groupedFields);
+
+            return sections.map(sectionName => (
+              <div key={sectionName} className="crm-card" style={{ gridColumn: '1 / -1' }}>
+                <div className="crm-card-header">
+                  <h3 className="crm-card-title">📋 {sectionName}</h3>
+                </div>
+                <div className="crm-card-body">
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
+                    {groupedFields[sectionName].map(field => (
+                      <div key={field._id} style={{
+                        padding: '16px',
+                        background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
+                        borderRadius: '12px',
+                        border: '2px solid #e2e8f0'
+                      }}>
+                        <div style={{
+                          fontSize: '13px',
+                          color: '#64748b',
+                          fontWeight: '700',
+                          marginBottom: '8px',
+                          textTransform: 'uppercase'
+                        }}>
+                          {field.label}
+                        </div>
+                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e3c72' }}>
+                          {getFieldValue(field.fieldName) || '-'}
+                        </div>
+                        {field.helpText && (
+                          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
+                            {field.helpText}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            ));
+          })()}
         </div>
       )}
 

@@ -234,6 +234,7 @@ const registerTenant = async (req, res) => {
         { feature: 'account_management', actions: ['create', 'read', 'update', 'delete', 'export', 'manage'] },
         { feature: 'contact_management', actions: ['create', 'read', 'update', 'delete', 'export', 'manage'] },
         { feature: 'opportunity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'product_management', actions: ['create', 'read', 'update', 'delete', 'export', 'manage'] },
         { feature: 'activity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
         { feature: 'task_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
         { feature: 'meeting_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },

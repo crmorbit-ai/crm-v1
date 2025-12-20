@@ -38,10 +38,28 @@ const AVAILABLE_FEATURES = {
     description: 'Manage contacts at accounts'
   },
 
+  // CRM - Opportunity Management
+  opportunity_management: {
+    actions: ['create', 'read', 'update', 'delete', 'manage'],
+    description: 'Manage sales opportunities and deals'
+  },
+
+  // CRM - Product Management
+  product_management: {
+    actions: ['create', 'read', 'update', 'delete', 'export', 'manage'],
+    description: 'Manage products and inventory'
+  },
+
   // CRM - Activity Management
   activity_management: {
     actions: ['create', 'read', 'update', 'delete', 'manage'],
     description: 'Create and track tasks, calls, emails, and meetings'
+  },
+
+  // Email Management
+  email_management: {
+    actions: ['create', 'read', 'update', 'delete', 'manage'],
+    description: 'View email history, send emails, track replies and conversations'
   },
 
   // Reports and Analytics
@@ -54,6 +72,12 @@ const AVAILABLE_FEATURES = {
   data_center: {
     actions: ['create', 'read', 'update', 'delete', 'export', 'move_to_leads', 'manage'],
     description: 'Manage customer database, import/export data, move to leads'
+  },
+
+  // Field Management (Product Team - Customization)
+  field_management: {
+    actions: ['create', 'read', 'update', 'delete', 'manage'],
+    description: 'Create and manage custom fields, design forms and dashboards (Product Team only)'
   }
 };
 
@@ -68,7 +92,8 @@ const PERMISSION_ACTIONS = {
   manage: 'Full access including all actions above',
   convert: 'Can convert leads to accounts/contacts',
   import: 'Can bulk import data',
-  export: 'Can export data to CSV/Excel'
+  export: 'Can export data to CSV/Excel',
+  move_to_leads: 'Can move data center records to leads'
 };
 
 /**

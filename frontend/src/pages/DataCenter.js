@@ -4,6 +4,8 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import dataCenterService from '../services/dataCenterService';
 import productService from '../services/productService';
 import BulkCommunication from '../components/BulkCommunication';
+import DynamicField from '../components/DynamicField';
+import fieldDefinitionService from '../services/fieldDefinitionService';
 import '../styles/crm.css';
 
 const DataCenter = () => {
@@ -61,24 +63,7 @@ const DataCenter = () => {
     assignTo: ''
   });
 
-  // Create Candidate form
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: '',
-    currentDesignation: '',
-    skills: '',
-    totalExperience: '0',
-    currentLocation: '',
-    availability: 'Immediate',
-    status: 'Available',
-    currentCTC: '0',
-    expectedCTC: '0',
-    noticePeriod: '30',
-    sourceWebsite: 'Other',
-    lastActiveOn: new Date().toISOString()
-  });
+  // Create Candidate form - now uses dynamic fieldValues instead of static formData
 
   // Stats
   const [stats, setStats] = useState({
@@ -87,6 +72,11 @@ const DataCenter = () => {
     immediate: 0,
     thisWeek: 0
   });
+
+  // Field Definitions for dynamic form rendering
+  const [fieldDefinitions, setFieldDefinitions] = useState([]);
+  const [fieldValues, setFieldValues] = useState({});
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Load candidates
   const loadCandidates = async () => {
@@ -127,7 +117,68 @@ const DataCenter = () => {
   useEffect(() => {
     loadCandidates();
     loadMyProducts();
+    loadFieldDefinitions();
   }, [pagination.page, pagination.limit]);
+
+  // Load field definitions
+  const loadFieldDefinitions = async () => {
+    try {
+      console.log('🔍 Loading ALL field definitions for Candidate...');
+      const response = await fieldDefinitionService.getFieldDefinitions('Candidate', false);
+      console.log('📦 Field definitions response:', response);
+
+      // Response is already unwrapped by axios interceptor
+      if (response && Array.isArray(response)) {
+        console.log('✅ Total fields received:', response.length);
+        // Filter for active fields that should show in create form (both standard and custom)
+        const createFields = response
+          .filter(field => field.isActive && field.showInCreate)
+          .sort((a, b) => a.displayOrder - b.displayOrder);
+
+        console.log('✅ Active fields for create form:', createFields.length);
+        setFieldDefinitions(createFields);
+      }
+    } catch (error) {
+      console.error('❌ Load field definitions error:', error);
+    }
+  };
+
+  // Group fields by section
+  const groupFieldsBySection = (fields) => {
+    const grouped = {};
+    fields.forEach(field => {
+      const section = field.section || 'Additional Information';
+      if (!grouped[section]) {
+        grouped[section] = [];
+      }
+      grouped[section].push(field);
+    });
+    return grouped;
+  };
+
+  // Handle dynamic field value change
+  const handleFieldChange = (fieldName, value) => {
+    setFieldValues(prev => ({
+      ...prev,
+      [fieldName]: value
+    }));
+    setFieldErrors(prev => ({
+      ...prev,
+      [fieldName]: null
+    }));
+  };
+
+  // Render dynamic field
+  const renderDynamicField = (field) => {
+    return (
+      <DynamicField
+        fieldDefinition={field}
+        value={fieldValues[field.fieldName] || ''}
+        onChange={handleFieldChange}
+        error={fieldErrors[field.fieldName]}
+      />
+    );
+  };
 
   // Load user's products
   const loadMyProducts = async () => {
@@ -228,6 +279,27 @@ const DataCenter = () => {
     }
   };
 
+  // Download CSV template with all active fields
+  const downloadTemplate = async () => {
+    try {
+      // Service returns blob directly (axios interceptor extracts response.data)
+      const blob = await dataCenterService.downloadTemplate();
+
+      // Download file
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'customers_import_template.xlsx';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download template error:', error);
+      alert('Failed to download template');
+    }
+  };
+
   // Move to Leads
   const handleMoveToLeads = async () => {
     if (selectedCandidates.length === 0) {
@@ -261,13 +333,14 @@ const DataCenter = () => {
       const candidateIds = selectedCandidates.length > 0 ? selectedCandidates : null;
       const blob = await dataCenterService.exportCandidates(candidateIds);
 
-      const url = window.URL.createObjectURL(new Blob([blob]));
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `candidates_${Date.now()}.xlsx`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Export error:', error);
       alert('Failed to export candidates');
@@ -277,55 +350,54 @@ const DataCenter = () => {
   // Create Candidate
   const handleCreateCandidate = async () => {
     try {
-      // Validate required core fields
-      if (!formData.firstName || !formData.lastName || !formData.email || !formData.phone || !formData.currentLocation) {
-        alert('Please fill all required fields (First Name, Last Name, Email, Phone, Current Location)');
-        return;
-      }
+      console.log('🚀 Starting candidate creation...');
+      console.log('📊 All field values:', fieldValues);
+      console.log('📋 Field definitions:', fieldDefinitions);
 
-      // Prepare data
+      // Separate standard fields from custom fields
+      const standardFields = {};
+      const customFields = {};
+
+      fieldDefinitions.forEach(field => {
+        const value = fieldValues[field.fieldName];
+        console.log(`\n🔍 Processing field: ${field.fieldName}`);
+        console.log(`   Label: ${field.label}`);
+        console.log(`   Type: ${field.fieldType}`);
+        console.log(`   Is Standard: ${field.isStandardField}`);
+        console.log(`   Value: ${value}`);
+        console.log(`   Value type: ${typeof value}`);
+
+        if (value !== undefined && value !== null && value !== '') {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+            console.log(`   ✅ Added to standardFields`);
+          } else {
+            customFields[field.fieldName] = value;
+            console.log(`   ✅ Added to customFields`);
+          }
+        } else {
+          console.log(`   ❌ Skipped (value is empty/null/undefined)`);
+        }
+      });
+
+      // Build candidate data with standard fields and custom fields
       const candidateData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        currentDesignation: formData.currentDesignation,
-        currentLocation: formData.currentLocation,
-        skills: formData.skills ? formData.skills.split(',').map(s => s.trim()).filter(s => s) : [],
-        totalExperience: formData.totalExperience ? parseFloat(formData.totalExperience) : 0,
-        currentCTC: formData.currentCTC ? parseFloat(formData.currentCTC) : 0,
-        expectedCTC: formData.expectedCTC ? parseFloat(formData.expectedCTC) : 0,
-        noticePeriod: formData.noticePeriod ? parseInt(formData.noticePeriod) : 30,
-        availability: formData.availability,
-        status: formData.status,
-        sourceWebsite: formData.sourceWebsite,
-        lastActiveOn: new Date().toISOString()
+        ...standardFields,  // All standard fields from field definitions
+        customFields: Object.keys(customFields).length > 0 ? customFields : undefined  // Custom fields in nested object
       };
+
+      console.log('\n📤 Final candidate data to submit:');
+      console.log('  📋 Standard fields:', standardFields);
+      console.log('  🎨 Custom fields:', customFields);
+      console.log('  📦 Complete data:', candidateData);
 
       await dataCenterService.createCandidate(candidateData);
 
       alert('✅ Candidate created successfully!');
 
       // Reset form
-      const resetData = {
-        firstName: '',
-        lastName: '',
-        email: '',
-        phone: '',
-        currentDesignation: '',
-        skills: '',
-        totalExperience: '0',
-        currentLocation: '',
-        availability: 'Immediate',
-        status: 'Available',
-        currentCTC: '0',
-        expectedCTC: '0',
-        noticePeriod: '30',
-        sourceWebsite: 'Other',
-        lastActiveOn: new Date().toISOString()
-      };
-
-      setFormData(resetData);
+      setFieldValues({});
+      setFieldErrors({});
       setShowCreateModal(false);
       loadCandidates();
     } catch (error) {
@@ -393,7 +465,7 @@ const DataCenter = () => {
               className="crm-btn crm-btn-primary crm-btn-sm"
               onClick={() => setShowCreateModal(true)}
             >
-              ➕ Add Candidate
+              ➕ Add Customer
             </button>
 
             <button
@@ -401,6 +473,13 @@ const DataCenter = () => {
               onClick={() => setShowFilters(!showFilters)}
             >
               🔍 {showFilters ? 'Hide' : 'Show'} Filters
+            </button>
+
+            <button
+              className="crm-btn crm-btn-success crm-btn-sm"
+              onClick={downloadTemplate}
+            >
+              📥 Download Template
             </button>
 
             <input
@@ -1355,7 +1434,7 @@ const DataCenter = () => {
               background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)'
             }}>
               <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: 'white' }}>
-                ➕ Add New Candidate
+                ➕ Add New Customer
               </h3>
               <button
                 onClick={() => setShowCreateModal(false)}
@@ -1372,158 +1451,57 @@ const DataCenter = () => {
             </div>
 
             <div style={{ padding: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div className="crm-form-group">
-                  <label className="crm-form-label">First Name *</label>
-                  <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="Enter first name"
-                  />
-                </div>
+              {/* Dynamic Form Sections - Rendered from Field Definitions */}
+              {(() => {
+                const groupedFields = groupFieldsBySection(fieldDefinitions);
+                const sectionOrder = [
+                  'Basic Information',
+                  'Professional Information',
+                  'Skills & Qualifications',
+                  'Location Information',
+                  'Salary Information',
+                  'Availability',
+                  'Resume & Links',
+                  'Source Information',
+                  'Job Preferences',
+                  'Status',
+                  'Additional Information'
+                ];
 
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Last Name *</label>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="Enter last name"
-                  />
-                </div>
+                return sectionOrder.map(sectionName => {
+                  const sectionFields = groupedFields[sectionName];
+                  if (!sectionFields || sectionFields.length === 0) return null;
 
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Email *</label>
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="candidate@example.com"
-                  />
-                </div>
+                  return (
+                    <div key={sectionName} style={{ marginBottom: '24px' }}>
+                      <h4 style={{
+                        fontSize: '12px',
+                        fontWeight: '700',
+                        color: '#111827',
+                        marginBottom: '16px',
+                        paddingBottom: '8px',
+                        borderBottom: '2px solid #E5E7EB',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                      }}>
+                        {sectionName}
+                      </h4>
 
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Phone *</label>
-                  <input
-                    type="tel"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="+91 XXXXXXXXXX"
-                  />
-                </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
+                        {sectionFields.map((field) => {
+                          const isFullWidth = field.fieldType === 'textarea' || field.fieldType === 'multi_select';
 
-                <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label className="crm-form-label">Current Designation</label>
-                  <input
-                    type="text"
-                    value={formData.currentDesignation}
-                    onChange={(e) => setFormData({ ...formData, currentDesignation: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="Senior Software Engineer"
-                  />
-                </div>
-
-                <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label className="crm-form-label">Skills (comma separated)</label>
-                  <input
-                    type="text"
-                    value={formData.skills}
-                    onChange={(e) => setFormData({ ...formData, skills: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="React, Node.js, Python, AWS"
-                  />
-                </div>
-
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Total Experience (Years)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.totalExperience}
-                    onChange={(e) => setFormData({ ...formData, totalExperience: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="5"
-                  />
-                </div>
-
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Current Location *</label>
-                  <input
-                    type="text"
-                    value={formData.currentLocation}
-                    onChange={(e) => setFormData({ ...formData, currentLocation: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="Bangalore"
-                  />
-                </div>
-
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Availability</label>
-                  <select
-                    value={formData.availability}
-                    onChange={(e) => setFormData({ ...formData, availability: e.target.value })}
-                    className="crm-form-select"
-                  >
-                    <option value="Immediate">Immediate</option>
-                    <option value="15 Days">15 Days</option>
-                    <option value="30 Days">30 Days</option>
-                    <option value="45 Days">45 Days</option>
-                    <option value="60 Days">60 Days</option>
-                  </select>
-                </div>
-
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Status</label>
-                  <select
-                    value={formData.status}
-                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                    className="crm-form-select"
-                  >
-                    <option value="Available">Available</option>
-                    <option value="Not Available">Not Available</option>
-                  </select>
-                </div>
-
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Current CTC (LPA)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.currentCTC}
-                    onChange={(e) => setFormData({ ...formData, currentCTC: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="12"
-                  />
-                </div>
-
-                <div className="crm-form-group">
-                  <label className="crm-form-label">Expected CTC (LPA)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={formData.expectedCTC}
-                    onChange={(e) => setFormData({ ...formData, expectedCTC: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="15"
-                  />
-                </div>
-
-                <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label className="crm-form-label">Notice Period</label>
-                  <input
-                    type="text"
-                    value={formData.noticePeriod}
-                    onChange={(e) => setFormData({ ...formData, noticePeriod: e.target.value })}
-                    className="crm-form-input"
-                    placeholder="30 Days"
-                  />
-                </div>
-              </div>
+                          return (
+                            <div key={field._id} style={isFullWidth ? { gridColumn: 'span 2' } : {}}>
+                              {renderDynamicField(field)}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
             </div>
 
             <div style={{
