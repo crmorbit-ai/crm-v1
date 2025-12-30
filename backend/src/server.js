@@ -102,6 +102,9 @@ const corsOptions = {
       return callback(null, true);
     }
 
+    // Production fallback - log and allow (temporary for debugging)
+    console.log('⚠️ CORS Request from:', origin);
+
     // Reject other origins
     callback(new Error('Not allowed by CORS'));
   },
@@ -109,11 +112,33 @@ const corsOptions = {
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
   maxAge: 86400
 };
 
 app.use(cors(corsOptions));
 app.options('*', cors(corsOptions));
+
+// Additional CORS headers as fallback
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  // Allow Vercel deployments
+  if (origin && origin.endsWith('.vercel.app')) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  }
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  next();
+});
 
 app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
