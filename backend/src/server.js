@@ -12,6 +12,31 @@ const { connectDataCenterDB } = require('./config/database');
 const app = express();
 const server = http.createServer(app);
 
+// CRITICAL: CORS must be the FIRST middleware (before body parsers)
+// This ensures preflight OPTIONS requests are handled correctly
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+
+  // Allow all Vercel deployments and localhost
+  if (origin && (origin.endsWith('.vercel.app') || origin.includes('localhost'))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else if (!origin) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+
+  // Handle preflight requests immediately
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+
+  next();
+});
+
 // Initialize Socket.io with CORS - Smart Origin Handling
 const getAllowedOrigins = () => {
   const origins = [
