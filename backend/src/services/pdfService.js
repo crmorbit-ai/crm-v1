@@ -15,9 +15,18 @@ exports.generateQuotationPDF = async (quotation, tenant) => {
       });
 
       // Create uploads directory if it doesn't exist
-      const uploadsDir = path.join(__dirname, '../../uploads/quotations');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
+      // Use /tmp for Vercel serverless, uploads for local
+      const uploadsDir = process.env.VERCEL
+        ? '/tmp/quotations'
+        : path.join(__dirname, '../../uploads/quotations');
+
+      try {
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+      } catch (error) {
+        console.error('Error creating PDF directory:', error);
+        // Continue anyway, might work without the directory
       }
 
       // File path
@@ -227,9 +236,17 @@ exports.generateInvoicePDF = async (invoice, tenant) => {
         margin: 50
       });
 
-      const uploadsDir = path.join(__dirname, '../../uploads/invoices');
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
+      // Use /tmp for Vercel serverless, uploads for local
+      const uploadsDir = process.env.VERCEL
+        ? '/tmp/invoices'
+        : path.join(__dirname, '../../uploads/invoices');
+
+      try {
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+      } catch (error) {
+        console.error('Error creating invoice PDF directory:', error);
       }
 
       const fileName = `invoice-${invoice.invoiceNumber}-${Date.now()}.pdf`;

@@ -24,9 +24,22 @@ const { protect } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 
 // Configure multer for file uploads
+const fs = require('fs');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/');
+    // Use /tmp for Vercel serverless, uploads for local
+    const uploadDir = process.env.VERCEL ? '/tmp' : 'uploads/';
+
+    // Create directory if it doesn't exist
+    try {
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      cb(null, uploadDir);
+    } catch (error) {
+      console.error('Error creating upload directory:', error);
+      cb(error);
+    }
   },
   filename: (req, file, cb) => {
     cb(null, `leads-${Date.now()}${path.extname(file.originalname)}`);

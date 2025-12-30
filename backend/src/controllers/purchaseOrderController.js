@@ -7,14 +7,28 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-const uploadsDir = path.join(__dirname, '../../uploads/purchase-orders');
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Use /tmp for Vercel serverless, uploads for local
+const getUploadsDir = () => {
+  if (process.env.VERCEL) {
+    return '/tmp/purchase-orders';
+  }
+  return path.join(__dirname, '../../uploads/purchase-orders');
+};
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, uploadsDir);
+    const uploadsDir = getUploadsDir();
+
+    // Create directory if it doesn't exist (try-catch to handle read-only filesystems)
+    try {
+      if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+      }
+      cb(null, uploadsDir);
+    } catch (error) {
+      console.error('Error creating upload directory:', error);
+      cb(error);
+    }
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

@@ -116,8 +116,21 @@ NODE_ENV=production
   - External job queue services (BullMQ, etc.)
 
 ### File Uploads
-- Files uploaded to serverless functions are temporary
-- Use cloud storage for persistent uploads:
-  - AWS S3
-  - Cloudinary
-  - Vercel Blob
+- Files uploaded to serverless functions are stored in `/tmp` (temporary)
+- Files in `/tmp` are deleted when the function execution completes
+- **IMPORTANT**: For production, you MUST use cloud storage for persistent uploads:
+  - **AWS S3** (Recommended)
+  - **Cloudinary** (For images)
+  - **Vercel Blob** (Vercel's storage solution)
+  - **Google Cloud Storage**
+  - **Azure Blob Storage**
+
+- Current behavior:
+  - Local development: Files saved to `uploads/` directory
+  - Vercel production: Files saved to `/tmp/` (temporary, will be deleted)
+
+- Routes affected by file uploads:
+  - `/api/leads` - Bulk import Excel/CSV files
+  - `/api/purchase-orders` - PO document uploads
+  - `/api/quotations` - PDF generation
+  - `/api/invoices` - PDF generation
