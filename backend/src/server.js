@@ -125,6 +125,15 @@ app.use('/api/product-items', require('./routes/productItems'));
 app.use('/api/field-definitions', require('./routes/fieldDefinitions'));
 // ============================================
 
+// ============================================
+// 💰 B2B WORKFLOW ROUTES (RFI → RFQ → PO → Invoice)
+// ============================================
+app.use('/api/rfi', require('./routes/rfi'));
+app.use('/api/quotations', require('./routes/quotations'));
+app.use('/api/purchase-orders', require('./routes/purchaseOrders'));
+app.use('/api/invoices', require('./routes/invoices'));
+// ============================================
+
 // CRM Routes
 app.use('/api/leads', require('./routes/leads'));
 app.use('/api/accounts', require('./routes/accounts'));
@@ -169,7 +178,7 @@ const startServer = async () => {
     await connectDB();
     await connectDataCenterDB();
 
-    // Start server
+    // Start server with error handling
     server.listen(PORT, async () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);
       console.log(`✅ Socket.io server ready`);
@@ -181,6 +190,22 @@ const startServer = async () => {
         console.error('❌ Failed to start IMAP IDLE service:', error.message);
       }
     });
+
+    // Handle server errors
+    server.on('error', (error) => {
+      if (error.code === 'EADDRINUSE') {
+        console.error(`\n❌ ERROR: Port ${PORT} is already in use!`);
+        console.error(`\n💡 SOLUTION: Kill the existing process using one of these commands:\n`);
+        console.error(`   Option 1: pkill -f "node src/server.js"`);
+        console.error(`   Option 2: lsof -ti:${PORT} | xargs kill -9`);
+        console.error(`   Option 3: npx kill-port ${PORT}\n`);
+        process.exit(1);
+      } else {
+        console.error('❌ Server error:', error.message);
+        process.exit(1);
+      }
+    });
+
   } catch (error) {
     console.error('❌ Failed to start server:', error.message);
     process.exit(1);

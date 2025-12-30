@@ -256,15 +256,28 @@ const Tasks = () => {
                         <div style={{
                           display: 'flex',
                           justifyContent: 'space-between',
-                          alignItems: 'center',
+                          alignItems: 'flex-start',
                           marginTop: '8px',
                           paddingTop: '8px',
-                          borderTop: '1px solid #F3F4F6'
+                          borderTop: '1px solid #F3F4F6',
+                          gap: '8px'
                         }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                             <span style={{ fontSize: '10px', color: '#9CA3AF' }}>
                               📅 {formatDate(task.dueDate)}
                             </span>
+                            {task.createdBy && (
+                              <div style={{ fontSize: '10px' }}>
+                                <div style={{ fontWeight: '600', color: '#1e3c72' }}>
+                                  👤 {task.createdBy.firstName} {task.createdBy.lastName}
+                                </div>
+                                {task.createdBy.groups && task.createdBy.groups.length > 0 && (
+                                  <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                                    📁 {task.createdBy.groups[0].name}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -278,18 +291,6 @@ const Tasks = () => {
                             }}>
                               {task.priority}
                             </span>
-
-                            {task.owner && (
-                              <span style={{
-                                fontSize: '10px',
-                                color: 'white',
-                                background: '#6B7280',
-                                padding: '2px 5px',
-                                borderRadius: '8px'
-                              }}>
-                                {task.owner.firstName?.charAt(0)}{task.owner.lastName?.charAt(0)}
-                              </span>
-                            )}
                           </div>
                         </div>
                       </div>

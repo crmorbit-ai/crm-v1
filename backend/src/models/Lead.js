@@ -286,9 +286,46 @@ const leadSchema = new mongoose.Schema({
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: true
+    required: false // 🔧 Changed to false to allow UNASSIGNED leads
   },
-  
+
+  // 🆕 Group Assignment
+  assignedGroup: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Group',
+    default: null
+  },
+
+  // 🆕 Specific Members Assigned (from the group)
+  assignedMembers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+
+  // 🆕 Assignment Chain (tracks hierarchy)
+  assignmentChain: [{
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: 'assignmentChain.assignedToModel'
+    },
+    assignedToModel: {
+      type: String,
+      enum: ['User', 'Group']
+    },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    },
+    role: {
+      type: String,
+      enum: ['senior_manager', 'manager', 'team_lead', 'member', 'owner']
+    }
+  }],
+
   tenant: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',

@@ -47,5 +47,17 @@ export const leadService = {
   getLeadStats: async () => {
     const response = await api.get('/leads/stats');
     return response;
+  },
+
+  // 🆕 Assign leads to group (with optional specific members)
+  assignLeadsToGroup: async (leadIds, groupId, memberIds = null) => {
+    const response = await api.post('/leads/assign-to-group', { leadIds, groupId, memberIds });
+    return response;
+  },
+
+  // 🆕 Assign lead to user
+  assignLeadToUser: async (leadId, userId, role) => {
+    const response = await api.post(`/leads/${leadId}/assign`, { userId, role });
+    return response;
   }
 };

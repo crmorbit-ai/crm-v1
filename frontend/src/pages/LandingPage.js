@@ -5,6 +5,7 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeFeature, setActiveFeature] = useState(0);
+  const [activeModule, setActiveModule] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -22,49 +23,57 @@ const LandingPage = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Auto-rotate modules showcase
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActiveModule((prev) => (prev + 1) % 18);
+    }, 2000); // Change every 2 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   const features = [
     {
       icon: "👥",
-      title: "Lead Management",
-      description: "Capture, track, and convert leads with our intelligent pipeline system",
+      title: "Complete Lead Management",
+      description: "Capture, track, and convert leads with bulk import, group assignment, and product linking",
       color: "#3B82F6"
     },
     {
-      icon: "📊",
-      title: "Advanced Analytics",
-      description: "Get real-time insights with customizable dashboards and reports",
+      icon: "📋",
+      title: "B2B Sales Workflow",
+      description: "Complete RFI → Quotation → Purchase Order → Invoice workflow with PDF generation",
       color: "#10B981"
     },
     {
       icon: "✉️",
       title: "Email Integration",
-      description: "Connect Gmail, Outlook, and sync all your communications",
+      description: "Built-in email inbox with IMAP sync, tracking, and entity linking",
       color: "#8B5CF6"
     },
     {
-      icon: "📅",
-      title: "Calendar Sync",
-      description: "Integrated Google Calendar for seamless meeting scheduling",
+      icon: "👨‍💼",
+      title: "Accounts & Contacts",
+      description: "Manage B2B organizations, contacts, and opportunities with complete relationship tracking",
       color: "#F59E0B"
     },
     {
-      icon: "🎯",
-      title: "Task Automation",
-      description: "Automate repetitive tasks and focus on closing deals",
+      icon: "📦",
+      title: "Product Management",
+      description: "Product catalog, categories, and marketplace with pricing management",
       color: "#EF4444"
     },
     {
-      icon: "🔒",
-      title: "Enterprise Security",
-      description: "Bank-level encryption with role-based access control",
+      icon: "🎯",
+      title: "Multi-Tenancy & Teams",
+      description: "Group management, role-based permissions, and complete tenant isolation",
       color: "#06B6D4"
     }
   ];
 
   const stats = [
-    { number: "10,000+", label: "Active Users" },
-    { number: "50,000+", label: "Leads Managed" },
-    { number: "98%", label: "Customer Satisfaction" },
+    { number: "25+", label: "Feature Modules" },
+    { number: "All-in-One", label: "CRM Platform" },
+    { number: "100%", label: "Customizable" },
     { number: "24/7", label: "Support Available" }
   ];
 
@@ -98,24 +107,41 @@ const LandingPage = () => {
       price: "₹0",
       period: "forever",
       features: [
+        "15-day trial all features",
         "Up to 5 users",
-        "1,000 contacts",
-        "Basic analytics",
+        "1,000 leads & contacts",
+        "Basic task management",
+        "1GB storage",
         "Email support"
       ],
       highlighted: false
     },
     {
-      name: "Professional",
-      price: "₹999",
+      name: "Basic",
+      price: "₹1,499",
       period: "per month",
       features: [
-        "Up to 25 users",
-        "Unlimited contacts",
-        "Advanced analytics",
-        "Priority support",
-        "Email & Calendar integration",
-        "Custom reports"
+        "Up to 10 users",
+        "5,000 leads & contacts",
+        "Email integration",
+        "Custom fields",
+        "5GB storage",
+        "Priority email support"
+      ],
+      highlighted: false
+    },
+    {
+      name: "Professional",
+      price: "₹2,999",
+      period: "per month",
+      features: [
+        "Up to 50 users",
+        "Unlimited leads & contacts",
+        "Complete B2B workflow",
+        "Advanced reports",
+        "API access",
+        "50GB storage",
+        "24/7 priority support"
       ],
       highlighted: true
     },
@@ -124,12 +150,12 @@ const LandingPage = () => {
       price: "Custom",
       period: "contact us",
       features: [
-        "Unlimited users",
         "Unlimited everything",
-        "Dedicated account manager",
-        "24/7 phone support",
+        "White labeling",
+        "Dedicated support",
         "Custom integrations",
-        "On-premise deployment"
+        "Multi-currency",
+        "SLA guarantee"
       ],
       highlighted: false
     }
@@ -208,8 +234,8 @@ const LandingPage = () => {
               </h1>
               
               <p className="text-xl text-gray-600 leading-relaxed">
-                The all-in-one CRM platform trusted by 10,000+ businesses. 
-                Manage leads, automate workflows, and close more deals with our powerful tools.
+                Complete CRM solution with B2B sales workflow, email integration, and powerful team management.
+                From leads to invoices - manage your entire sales pipeline in one platform.
               </p>
 
               <div className="flex flex-wrap gap-4">
@@ -223,7 +249,7 @@ const LandingPage = () => {
                   onClick={() => navigate("/login")}
                   className="px-8 py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-lg"
                 >
-                  Watch Demo →
+                  Sign In →
                 </button>
               </div>
 
@@ -263,6 +289,156 @@ const LandingPage = () => {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Moving Feature Marquee */}
+      <section className="py-8 bg-white overflow-hidden">
+        <div className="marquee-container">
+          <div className="marquee-content">
+            {[
+              "📋 Leads", "👥 Contacts", "🏢 Accounts", "💼 Opportunities",
+              "📄 RFI", "💰 Quotations", "📦 Purchase Orders", "🧾 Invoices",
+              "✅ Tasks", "📅 Meetings", "📞 Calls", "✉️ Email Inbox",
+              "📊 Data Center", "🎫 Support Tickets", "👨‍💼 Users & Roles",
+              "🔧 Field Builder", "📦 Products", "🏷️ Categories", "🤝 Reseller Program"
+            ].map((item, i) => (
+              <span key={i} className="marquee-item">
+                {item}
+              </span>
+            ))}
+            {/* Duplicate for seamless loop */}
+            {[
+              "📋 Leads", "👥 Contacts", "🏢 Accounts", "💼 Opportunities",
+              "📄 RFI", "💰 Quotations", "📦 Purchase Orders", "🧾 Invoices",
+              "✅ Tasks", "📅 Meetings", "📞 Calls", "✉️ Email Inbox",
+              "📊 Data Center", "🎫 Support Tickets", "👨‍💼 Users & Roles",
+              "🔧 Field Builder", "📦 Products", "🏷️ Categories", "🤝 Reseller Program"
+            ].map((item, i) => (
+              <span key={`dup-${i}`} className="marquee-item">
+                {item}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Complete CRM Ecosystem - Single Rotating Box */}
+      <section className="py-20 bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-2 gap-12 items-center">
+            {/* Left Side - Heading */}
+            <div>
+              <h3 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
+                <span className="text-gray-900">Complete CRM </span>
+                <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">
+                  Ecosystem
+                </span>
+              </h3>
+              <p className="text-xl text-gray-600 mb-8">
+                Everything you need to manage your business from a single platform
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+                  <span className="text-gray-700 font-medium">18+ Powerful Modules</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"></div>
+                  <span className="text-gray-700 font-medium">Complete B2B Workflow</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-3 h-3 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
+                  <span className="text-gray-700 font-medium">Real-time Automation</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Side - Rotating Showcase Box */}
+            <div>
+            <div className="rotating-showcase-box">
+              <div className="showcase-content" key={activeModule}>
+                <div className="text-8xl mb-6">
+                  {[
+                    { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
+                    { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
+                    { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
+                    { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
+                    { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
+                    { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
+                    { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
+                    { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
+                    { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
+                    { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
+                    { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
+                    { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
+                    { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
+                    { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
+                    { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
+                    { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
+                    { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
+                    { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
+                  ][activeModule].icon}
+                </div>
+                <h4 className="text-4xl font-bold text-white mb-4">
+                  {[
+                    { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
+                    { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
+                    { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
+                    { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
+                    { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
+                    { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
+                    { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
+                    { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
+                    { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
+                    { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
+                    { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
+                    { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
+                    { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
+                    { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
+                    { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
+                    { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
+                    { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
+                    { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
+                  ][activeModule].label}
+                </h4>
+                <p className="text-xl text-blue-100">
+                  {[
+                    { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
+                    { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
+                    { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
+                    { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
+                    { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
+                    { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
+                    { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
+                    { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
+                    { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
+                    { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
+                    { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
+                    { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
+                    { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
+                    { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
+                    { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
+                    { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
+                    { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
+                    { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
+                  ][activeModule].desc}
+                </p>
+              </div>
+
+              {/* Progress Indicator */}
+              <div className="progress-dots">
+                {Array.from({ length: 18 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className={`progress-dot ${activeModule === index ? 'active' : ''}`}
+                    onClick={() => setActiveModule(index)}
+                  ></div>
+                ))}
+              </div>
+            </div>
+            </div>
           </div>
         </div>
       </section>
@@ -315,18 +491,18 @@ const LandingPage = () => {
           <div className="grid md:grid-cols-2 gap-16 items-center mb-24">
             <div>
               <h2 className="text-4xl font-extrabold text-gray-900 mb-6">
-                📧 Email Integration That Actually Works
+                📋 Complete B2B Sales Workflow
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                Connect Gmail and Outlook in seconds. Track opens, clicks, and replies automatically. 
-                Never miss a follow-up with smart reminders.
+                Streamline your entire sales process from inquiry to payment.
+                Professional document generation with built-in PDF export.
               </p>
               <ul className="space-y-4">
                 {[
-                  "Two-way Gmail & Outlook sync",
-                  "Email templates & automation",
-                  "Track opens and clicks in real-time",
-                  "Smart reply suggestions with AI"
+                  "RFI (Request for Information) Management",
+                  "Professional Quotation Generation",
+                  "Purchase Order Processing",
+                  "Invoice Creation with Payment Tracking"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">
@@ -340,51 +516,51 @@ const LandingPage = () => {
             <div className="bg-gradient-to-br from-blue-100 to-purple-100 p-8 rounded-2xl">
               <div className="bg-white p-6 rounded-xl shadow-lg">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                    ✉️
+                  <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
+                    📋
                   </div>
                   <div>
-                    <div className="font-bold">New Lead Email</div>
-                    <div className="text-sm text-gray-500">2 mins ago</div>
+                    <div className="font-bold">Quotation #QT-2025-00123</div>
+                    <div className="text-sm text-gray-500">Status: Accepted</div>
                   </div>
                 </div>
-                <p className="text-gray-600">Meeting scheduled automatically via AI...</p>
+                <p className="text-gray-600">Convert to Invoice → PO-2025-00045</p>
               </div>
             </div>
           </div>
 
-          {/* Calendar Integration */}
+          {/* Team & Customization */}
           <div className="grid md:grid-cols-2 gap-16 items-center">
             <div className="order-2 md:order-1 bg-gradient-to-br from-purple-100 to-pink-100 p-8 rounded-2xl">
               <div className="bg-white p-6 rounded-xl shadow-lg">
-                <div className="text-2xl mb-4">📅</div>
-                <div className="font-bold text-lg mb-2">Today's Schedule</div>
+                <div className="text-2xl mb-4">👥</div>
+                <div className="font-bold text-lg mb-2">Team Assignment</div>
                 <div className="space-y-3">
                   <div className="flex gap-3 items-center">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm">10:00 AM - Client Meeting</span>
+                    <span className="text-sm">Sales Team - 12 members</span>
                   </div>
                   <div className="flex gap-3 items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">2:00 PM - Follow-up Call</span>
+                    <span className="text-sm">Support Team - 5 members</span>
                   </div>
                 </div>
               </div>
             </div>
             <div className="order-1 md:order-2">
               <h2 className="text-4xl font-extrabold text-gray-900 mb-6">
-                📅 Calendar Sync Made Simple
+                🎯 Powerful Team Management
               </h2>
               <p className="text-lg text-gray-600 mb-6">
-                Integrate Google Calendar and never double-book again. 
-                Auto-schedule meetings with leads and get smart reminders.
+                Organize teams with groups, assign leads to specific members,
+                and control access with role-based permissions.
               </p>
               <ul className="space-y-4">
                 {[
-                  "Google Calendar two-way sync",
-                  "Automatic meeting scheduling",
-                  "Timezone detection & conversion",
-                  "Smart notification system"
+                  "Group-based lead assignment",
+                  "Role-based access control",
+                  "Custom field builder for any entity",
+                  "Activity logs and audit trail"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
                     <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-bold">
@@ -407,7 +583,7 @@ const LandingPage = () => {
               💬 CUSTOMER REVIEWS
             </div>
             <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
-              Loved by 10,000+ Businesses
+              Trusted by Growing Businesses
             </h2>
           </div>
 
@@ -445,7 +621,7 @@ const LandingPage = () => {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
             {pricingPlans.map((plan, index) => (
               <div
                 key={index}
@@ -554,7 +730,7 @@ const LandingPage = () => {
             Ready to Transform Your Business?
           </h2>
           <p className="text-2xl text-gray-600 mb-12">
-            Join 10,000+ businesses already growing with CRM Orbit
+            Start managing leads, quotations, and invoices in one powerful platform
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <button
@@ -585,7 +761,7 @@ const LandingPage = () => {
                 CRM Orbit
               </div>
               <p className="text-gray-400 mb-6">
-                The all-in-one CRM platform trusted by 10,000+ businesses across India.
+                Complete CRM solution with B2B workflow, email integration, team management, and more.
               </p>
               <div className="flex gap-4">
                 <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition">
@@ -677,6 +853,169 @@ const LandingPage = () => {
         }
         .animation-delay-4000 {
           animation-delay: 4s;
+        }
+
+        /* Marquee Animation */
+        .marquee-container {
+          width: 100%;
+          overflow: hidden;
+          background: linear-gradient(to right, #f8fafc, #ffffff, #f8fafc);
+          padding: 20px 0;
+          position: relative;
+        }
+        .marquee-container::before,
+        .marquee-container::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          width: 100px;
+          height: 100%;
+          z-index: 2;
+        }
+        .marquee-container::before {
+          left: 0;
+          background: linear-gradient(to right, white, transparent);
+        }
+        .marquee-container::after {
+          right: 0;
+          background: linear-gradient(to left, white, transparent);
+        }
+        .marquee-content {
+          display: flex;
+          animation: marquee 40s linear infinite;
+          width: fit-content;
+        }
+        .marquee-item {
+          display: inline-block;
+          padding: 12px 24px;
+          margin: 0 12px;
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border-radius: 30px;
+          font-weight: 600;
+          font-size: 15px;
+          white-space: nowrap;
+          box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+        @keyframes marquee {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        .marquee-content:hover {
+          animation-play-state: paused;
+        }
+
+        /* Rotating Showcase Box */
+        .rotating-showcase-box {
+          background: linear-gradient(135deg,
+            #f472b6 0%,    /* Light Pink */
+            #c084fc 25%,   /* Light Purple */
+            #818cf8 50%,   /* Light Indigo */
+            #60a5fa 75%,   /* Light Blue */
+            #22d3ee 100%   /* Light Cyan */
+          );
+          border-radius: 32px;
+          padding: 60px 40px;
+          text-align: center;
+          box-shadow:
+            0 20px 60px rgba(244, 114, 182, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+          position: relative;
+          overflow: hidden;
+          min-height: 450px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          border: 3px solid transparent;
+          background-clip: padding-box;
+        }
+        .rotating-showcase-box::before {
+          content: '';
+          position: absolute;
+          top: -50%;
+          left: -50%;
+          width: 200%;
+          height: 200%;
+          background: linear-gradient(
+            60deg,
+            transparent,
+            rgba(255, 255, 255, 0.3),
+            transparent
+          );
+          animation: shine 4s infinite;
+        }
+        .rotating-showcase-box::after {
+          content: '';
+          position: absolute;
+          inset: -3px;
+          background: linear-gradient(
+            45deg,
+            #f472b6,
+            #c084fc,
+            #818cf8,
+            #60a5fa,
+            #22d3ee,
+            #f472b6
+          );
+          border-radius: 32px;
+          z-index: -1;
+          background-size: 300% 300%;
+          animation: gradientRotate 8s ease infinite;
+        }
+        @keyframes shine {
+          0% { transform: translateX(-100%) translateY(-100%) rotate(60deg); }
+          100% { transform: translateX(100%) translateY(100%) rotate(60deg); }
+        }
+        @keyframes gradientRotate {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+        }
+        .showcase-content {
+          position: relative;
+          z-index: 1;
+          animation: fadeInScale 0.8s ease-out;
+        }
+        @keyframes fadeInScale {
+          0% {
+            opacity: 0;
+            transform: scale(0.8) translateY(20px);
+          }
+          100% {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+          }
+        }
+
+        /* Progress Dots */
+        .progress-dots {
+          display: flex;
+          justify-content: center;
+          gap: 8px;
+          margin-top: 30px;
+          flex-wrap: wrap;
+          position: relative;
+          z-index: 2;
+        }
+        .progress-dot {
+          width: 10px;
+          height: 10px;
+          border-radius: 50%;
+          background: rgba(255, 255, 255, 0.3);
+          cursor: pointer;
+          transition: all 0.3s ease;
+        }
+        .progress-dot:hover {
+          background: rgba(255, 255, 255, 0.6);
+          transform: scale(1.3);
+        }
+        .progress-dot.active {
+          background: white;
+          width: 30px;
+          border-radius: 5px;
         }
       `}</style>
     </div>

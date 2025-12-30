@@ -6,6 +6,7 @@ import { productItemService } from '../services/productItemService';
 import { productCategoryService } from '../services/productCategoryService';
 import { verificationService, debounce } from '../services/verificationService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
+import { groupService } from '../services/groupService'; // 🆕 Group service (named export)
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
 import TooltipButton from '../components/common/TooltipButton';
@@ -47,8 +48,18 @@ const Leads = () => {
     search: '',
     leadStatus: '',
     leadSource: '',
-    rating: ''
+    rating: '',
+    assignedGroup: '', // 🆕 Group filter
+    unassigned: false  // 🆕 Unassigned filter
   });
+
+  // 🆕 Group management
+  const [groups, setGroups] = useState([]);
+  const [selectedLeads, setSelectedLeads] = useState([]); // 🆕 For bulk operations
+  const [showAssignGroupModal, setShowAssignGroupModal] = useState(false);
+  const [selectedGroupForAssignment, setSelectedGroupForAssignment] = useState(null); // 🆕 Selected group
+  const [groupMembers, setGroupMembers] = useState([]); // 🆕 Members of selected group
+  const [selectedMembers, setSelectedMembers] = useState([]); // 🆕 Selected members to assign
 
   const [stats, setStats] = useState({
     total: 0,
@@ -93,6 +104,7 @@ const Leads = () => {
     loadProducts();
     loadCategories();
     loadCustomFields();
+    loadGroups(); // 🆕 Load groups
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pagination.page, filters]);
 
@@ -115,6 +127,21 @@ const Leads = () => {
       }
     } catch (err) {
       console.error('Load categories error:', err);
+    }
+  };
+
+  // 🆕 Load groups for filtering and assignment
+  const loadGroups = async () => {
+    try {
+      const data = await groupService.getGroups();
+      if (data && Array.isArray(data)) {
+        setGroups(data);
+      } else if (data && data.groups) {
+        // If response has groups array
+        setGroups(data.groups);
+      }
+    } catch (err) {
+      console.error('Load groups error:', err);
     }
   };
 
@@ -424,6 +451,62 @@ const Leads = () => {
     }
   };
 
+  // 🆕 Handle group selection - load members
+  const handleGroupSelection = async (groupId) => {
+    try {
+      setError('');
+      setSelectedGroupForAssignment(groupId);
+
+      // Fetch group details with members
+      const groupData = await groupService.getGroup(groupId);
+
+      if (groupData && groupData.members) {
+        setGroupMembers(groupData.members);
+        // By default, select all members
+        setSelectedMembers(groupData.members.map(m => m._id));
+      }
+    } catch (err) {
+      console.error('Error loading group members:', err);
+      setError('Failed to load group members');
+    }
+  };
+
+  // 🆕 Handle bulk assign to group with specific members
+  const handleBulkAssignToGroup = async () => {
+    try {
+      setError('');
+
+      if (!selectedGroupForAssignment) {
+        setError('Please select a group');
+        return;
+      }
+
+      if (selectedMembers.length === 0) {
+        setError('Please select at least one member');
+        return;
+      }
+
+      const response = await leadService.assignLeadsToGroup(
+        selectedLeads,
+        selectedGroupForAssignment,
+        selectedMembers
+      );
+
+      if (response && response.success) {
+        setSuccess(`${selectedLeads.length} leads assigned to ${selectedMembers.length} member(s) successfully!`);
+        setSelectedLeads([]);
+        setShowAssignGroupModal(false);
+        setSelectedGroupForAssignment(null);
+        setGroupMembers([]);
+        setSelectedMembers([]);
+        await loadLeads();
+        setTimeout(() => setSuccess(''), 3000);
+      }
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to assign leads to group');
+    }
+  };
+
   const openCreateModal = () => {
     resetForm();
     setShowCreateModal(true);
@@ -697,6 +780,43 @@ const Leads = () => {
               <option value="Warm">Warm</option>
               <option value="Cold">Cold</option>
             </select>
+            {/* 🆕 Group Filter */}
+            <select
+              name="assignedGroup"
+              className="crm-form-select"
+              value={filters.assignedGroup}
+              onChange={handleFilterChange}
+            >
+              <option value="">All Groups</option>
+              <option value="unassigned">Unassigned</option>
+              {groups.map((group) => (
+                <option key={group._id} value={group._id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+            {/* 🆕 Unassigned Checkbox */}
+            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px', whiteSpace: 'nowrap' }}>
+              <input
+                type="checkbox"
+                checked={filters.unassigned}
+                onChange={(e) => {
+                  setFilters(prev => ({ ...prev, unassigned: e.target.checked }));
+                  setPagination(prev => ({ ...prev, page: 1 }));
+                }}
+              />
+              <span>Unassigned Only</span>
+            </label>
+            {/* 🆕 Bulk Assign Button */}
+            {selectedLeads.length > 0 && (
+              <button
+                className="crm-btn crm-btn-primary"
+                onClick={() => setShowAssignGroupModal(true)}
+                style={{ backgroundColor: '#10b981' }}
+              >
+                Assign {selectedLeads.length} to Group
+              </button>
+            )}
             {canImportLeads && (
               <button
                 className="crm-btn crm-btn-secondary"
@@ -775,7 +895,7 @@ const Leads = () => {
                       </div>
                       <div style={{ flex: 1 }}>
                         <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
-                          {lead.firstName} {lead.lastName}
+                          {lead.firstName || ''} {lead.lastName || ''}
                         </h3>
                         <p style={{ margin: '0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
                           {lead.jobTitle || 'No title'} {lead.company && `at ${lead.company}`}
@@ -820,6 +940,19 @@ const Leads = () => {
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                   <thead>
                     <tr style={{ background: 'transparent' }}>
+                      <th style={{ padding: '12px 16px', textAlign: 'center', width: '50px' }}>
+                        <input
+                          type="checkbox"
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedLeads(leads.map(l => l._id));
+                            } else {
+                              setSelectedLeads([]);
+                            }
+                          }}
+                          checked={selectedLeads.length === leads.length && leads.length > 0}
+                        />
+                      </th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Company</th>
                       <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact</th>
@@ -854,6 +987,19 @@ const Leads = () => {
                           e.currentTarget.style.borderColor = '#e5e7eb';
                         }}
                       >
+                        <td style={{ padding: '16px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            checked={selectedLeads.includes(lead._id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedLeads(prev => [...prev, lead._id]);
+                              } else {
+                                setSelectedLeads(prev => prev.filter(id => id !== lead._id));
+                              }
+                            }}
+                          />
+                        </td>
                         <td style={{ padding: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             <div style={{
@@ -873,7 +1019,7 @@ const Leads = () => {
                             </div>
                             <div>
                               <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '4px' }}>
-                                {lead.firstName} {lead.lastName}
+                                {lead.firstName || ''} {lead.lastName || ''}
                               </div>
                               {lead.jobTitle && (
                                 <div style={{ fontSize: '13px', color: '#64748b' }}>{lead.jobTitle}</div>
@@ -1392,6 +1538,234 @@ const Leads = () => {
       {showBulkUploadModal && (
         <Modal isOpen={showBulkUploadModal} onClose={() => setShowBulkUploadModal(false)} title="Bulk Upload Leads" size="large">
           <BulkUploadForm onClose={() => setShowBulkUploadModal(false)} onSuccess={loadLeads} />
+        </Modal>
+      )}
+
+      {/* 🆕 Assign to Group Modal - With Member Selection */}
+      {showAssignGroupModal && (
+        <Modal
+          isOpen={showAssignGroupModal}
+          onClose={() => {
+            setShowAssignGroupModal(false);
+            setSelectedGroupForAssignment(null);
+            setGroupMembers([]);
+            setSelectedMembers([]);
+          }}
+          title="Assign Leads to Group"
+          size="medium"
+        >
+          <div style={{ padding: '20px' }}>
+            <p style={{ marginBottom: '20px', color: '#64748b', fontWeight: '600' }}>
+              📋 Assigning {selectedLeads.length} selected lead{selectedLeads.length > 1 ? 's' : ''}
+            </p>
+
+            {/* Step 1: Select Group */}
+            {!selectedGroupForAssignment ? (
+              <div>
+                <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '12px' }}>
+                  Step 1: Select Group
+                </h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {groups.map((group) => (
+                    <button
+                      key={group._id}
+                      onClick={() => handleGroupSelection(group._id)}
+                      className="crm-btn crm-btn-secondary"
+                      style={{
+                        justifyContent: 'flex-start',
+                        padding: '16px 20px',
+                        fontSize: '15px',
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #e5e7eb',
+                        color: '#1e293b',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = '#4A90E2';
+                        e.currentTarget.style.backgroundColor = '#f8fafc';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = '#e5e7eb';
+                        e.currentTarget.style.backgroundColor = '#ffffff';
+                      }}
+                    >
+                      <span style={{ fontWeight: '600' }}>{group.name}</span>
+                      {group.category && (
+                        <span style={{
+                          marginLeft: '12px',
+                          fontSize: '12px',
+                          padding: '4px 12px',
+                          backgroundColor: '#f1f5f9',
+                          borderRadius: '6px',
+                          color: '#64748b'
+                        }}>
+                          {group.category}
+                        </span>
+                      )}
+                    </button>
+                  ))}
+                  {groups.length === 0 && (
+                    <p style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
+                      No groups available. Please create a group first.
+                    </p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* Step 2: Select Members */
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#111827', margin: 0 }}>
+                    Step 2: Select Members
+                  </h4>
+                  <button
+                    onClick={() => {
+                      setSelectedGroupForAssignment(null);
+                      setGroupMembers([]);
+                      setSelectedMembers([]);
+                    }}
+                    className="crm-btn crm-btn-secondary"
+                    style={{ fontSize: '12px', padding: '6px 12px' }}
+                  >
+                    ← Back to Groups
+                  </button>
+                </div>
+
+                {groupMembers.length > 0 ? (
+                  <>
+                    <div style={{
+                      padding: '12px 16px',
+                      backgroundColor: '#EFF6FF',
+                      borderRadius: '8px',
+                      marginBottom: '16px',
+                      border: '1px solid #BFDBFE'
+                    }}>
+                      <p style={{ fontSize: '13px', color: '#1E40AF', margin: 0 }}>
+                        💡 <strong>Tip:</strong> Select specific members to assign leads to, or keep all selected to assign to everyone in the group.
+                      </p>
+                    </div>
+
+                    {/* Select All / Deselect All Buttons */}
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+                      <button
+                        onClick={() => setSelectedMembers(groupMembers.map(m => m._id))}
+                        className="crm-btn crm-btn-secondary"
+                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                      >
+                        ✓ Select All ({groupMembers.length})
+                      </button>
+                      <button
+                        onClick={() => setSelectedMembers([])}
+                        className="crm-btn crm-btn-secondary"
+                        style={{ fontSize: '12px', padding: '6px 12px' }}
+                      >
+                        ✗ Deselect All
+                      </button>
+                    </div>
+
+                    {/* Member List with Checkboxes */}
+                    <div style={{
+                      maxHeight: '300px',
+                      overflowY: 'auto',
+                      border: '2px solid #e5e7eb',
+                      borderRadius: '8px',
+                      padding: '12px'
+                    }}>
+                      {groupMembers.map((member) => (
+                        <label
+                          key={member._id}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            padding: '12px',
+                            backgroundColor: selectedMembers.includes(member._id) ? '#F0F9FF' : '#ffffff',
+                            border: `2px solid ${selectedMembers.includes(member._id) ? '#4A90E2' : '#e5e7eb'}`,
+                            borderRadius: '8px',
+                            marginBottom: '8px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease'
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!selectedMembers.includes(member._id)) {
+                              e.currentTarget.style.backgroundColor = '#f8fafc';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!selectedMembers.includes(member._id)) {
+                              e.currentTarget.style.backgroundColor = '#ffffff';
+                            }
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedMembers.includes(member._id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setSelectedMembers(prev => [...prev, member._id]);
+                              } else {
+                                setSelectedMembers(prev => prev.filter(id => id !== member._id));
+                              }
+                            }}
+                            style={{ marginRight: '12px', width: '18px', height: '18px', cursor: 'pointer' }}
+                          />
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>
+                              {member.firstName} {member.lastName}
+                            </div>
+                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                              {member.email}
+                            </div>
+                          </div>
+                          {member.userType && (
+                            <span style={{
+                              fontSize: '11px',
+                              padding: '4px 8px',
+                              backgroundColor: '#f1f5f9',
+                              borderRadius: '4px',
+                              color: '#64748b',
+                              textTransform: 'uppercase'
+                            }}>
+                              {member.userType.replace('TENANT_', '')}
+                            </span>
+                          )}
+                        </label>
+                      ))}
+                    </div>
+
+                    {/* Assign Button */}
+                    <div style={{
+                      marginTop: '20px',
+                      paddingTop: '20px',
+                      borderTop: '2px solid #e5e7eb',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center'
+                    }}>
+                      <div style={{ fontSize: '13px', color: '#64748b' }}>
+                        {selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected
+                      </div>
+                      <button
+                        onClick={handleBulkAssignToGroup}
+                        className="crm-btn crm-btn-primary"
+                        disabled={selectedMembers.length === 0}
+                        style={{
+                          opacity: selectedMembers.length === 0 ? 0.5 : 1,
+                          cursor: selectedMembers.length === 0 ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Assign to {selectedMembers.length} Member{selectedMembers.length !== 1 ? 's' : ''}
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>👥</div>
+                    <p>No members found in this group.</p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </Modal>
       )}
     </DashboardLayout>

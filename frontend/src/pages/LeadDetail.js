@@ -555,11 +555,11 @@ const LeadDetail = () => {
                   fontSize: '24px',
                   fontWeight: 'bold'
                 }}>
-                  {lead.firstName.charAt(0)}{lead.lastName.charAt(0)}
+                  {lead.firstName?.charAt(0) || 'L'}{lead.lastName?.charAt(0) || 'D'}
                 </div>
                 <div>
                   <h1 style={{ fontSize: '28px', fontWeight: '700', margin: 0 }}>
-                    {lead.firstName} {lead.lastName}
+                    {lead.firstName || ''} {lead.lastName || ''}
                   </h1>
                   {lead.jobTitle && (
                     <p style={{ color: '#666', fontSize: '16px', margin: '4px 0' }}>
@@ -591,7 +591,7 @@ const LeadDetail = () => {
                 ← Back
               </button>
               {!lead.isConverted && canConvertLead && (
-                <button 
+                <button
                   className="crm-btn crm-btn-success"
                   onClick={() => setShowConvertModal(true)}
                 >
@@ -599,7 +599,7 @@ const LeadDetail = () => {
                 </button>
               )}
               {canUpdateLead && (
-                <button 
+                <button
                   className="crm-btn crm-btn-primary"
                   onClick={openEditModal}
                 >
@@ -1009,6 +1009,7 @@ const LeadDetail = () => {
                         <tr>
                           <th>Type</th>
                           <th>Subject</th>
+                          <th>Created By</th>
                           <th>Date/Time</th>
                           <th>Status</th>
                         </tr>
@@ -1018,6 +1019,20 @@ const LeadDetail = () => {
                           <tr key={task._id}>
                             <td>📋 Task</td>
                             <td>{task.subject}</td>
+                            <td>
+                              {task.createdBy ? (
+                                <div>
+                                  <div style={{ fontWeight: '600', color: '#1e3c72' }}>
+                                    {task.createdBy.firstName} {task.createdBy.lastName}
+                                  </div>
+                                  {task.createdBy.groups && task.createdBy.groups.length > 0 && (
+                                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                      📁 {task.createdBy.groups[0].name}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : '-'}
+                            </td>
                             <td>{new Date(task.dueDate).toLocaleDateString()}</td>
                             <td><span className="status-badge">{task.status}</span></td>
                           </tr>
@@ -1026,6 +1041,7 @@ const LeadDetail = () => {
                           <tr key={meeting._id}>
                             <td>📅 Meeting</td>
                             <td>{meeting.title}</td>
+                            <td>-</td>
                             <td>{new Date(meeting.from).toLocaleString()}</td>
                             <td><span className="status-badge">{meeting.status}</span></td>
                           </tr>
@@ -1034,6 +1050,7 @@ const LeadDetail = () => {
                           <tr key={call._id}>
                             <td>📞 Call</td>
                             <td>{call.subject}</td>
+                            <td>-</td>
                             <td>{new Date(call.callStartTime).toLocaleString()}</td>
                             <td><span className="status-badge">{call.callResult}</span></td>
                           </tr>
@@ -1060,6 +1077,7 @@ const LeadDetail = () => {
                         <tr>
                           <th>Type</th>
                           <th>Subject</th>
+                          <th>Created By</th>
                           <th>Date/Time</th>
                           <th>Status</th>
                         </tr>
@@ -1069,6 +1087,20 @@ const LeadDetail = () => {
                           <tr key={task._id}>
                             <td>📋 Task</td>
                             <td>{task.subject}</td>
+                            <td>
+                              {task.createdBy ? (
+                                <div>
+                                  <div style={{ fontWeight: '600', color: '#1e3c72' }}>
+                                    {task.createdBy.firstName} {task.createdBy.lastName}
+                                  </div>
+                                  {task.createdBy.groups && task.createdBy.groups.length > 0 && (
+                                    <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                                      📁 {task.createdBy.groups[0].name}
+                                    </div>
+                                  )}
+                                </div>
+                              ) : '-'}
+                            </td>
                             <td>{new Date(task.dueDate).toLocaleDateString()}</td>
                             <td><span className="status-badge">Completed</span></td>
                           </tr>
@@ -1077,6 +1109,7 @@ const LeadDetail = () => {
                           <tr key={meeting._id}>
                             <td>📅 Meeting</td>
                             <td>{meeting.title}</td>
+                            <td>-</td>
                             <td>{new Date(meeting.from).toLocaleString()}</td>
                             <td><span className="status-badge">Completed</span></td>
                           </tr>
@@ -1085,6 +1118,7 @@ const LeadDetail = () => {
                           <tr key={call._id}>
                             <td>📞 Call</td>
                             <td>{call.subject}</td>
+                            <td>-</td>
                             <td>{new Date(call.callStartTime).toLocaleString()}</td>
                             <td><span className="status-badge">Completed</span></td>
                           </tr>
@@ -1777,6 +1811,7 @@ const LeadDetail = () => {
           </div>
         </form>
       </Modal>
+
     </DashboardLayout>
   );
 };

@@ -20,7 +20,7 @@ class ImapIdleService {
         return;
       }
 
-      console.log(`🔄 Starting IMAP IDLE for ${smtpUser}...`);
+      // console.log(`🔄 Starting IMAP IDLE for ${smtpUser}...`);
 
       const imapHost = smtpHost.replace('smtp', 'imap');
       const imap = new Imap({
@@ -63,7 +63,7 @@ class ImapIdleService {
    */
   setupImapHandlers(imap, userId, tenantId, smtpUser, smtpHost, smtpPassword) {
     imap.once('ready', () => {
-      console.log(`✅ IMAP IDLE connected for ${smtpUser}`);
+      // console.log(`✅ IMAP IDLE connected for ${smtpUser}`);
 
       // Open INBOX in read-write mode
       imap.openBox('INBOX', false, (err, box) => {
@@ -73,7 +73,7 @@ class ImapIdleService {
           return;
         }
 
-        console.log(`📬 INBOX opened for ${smtpUser}, starting IDLE...`);
+        // console.log(`📬 INBOX opened for ${smtpUser}, starting IDLE...`);
 
         // Start IDLE mode
         imap.on('mail', (numNewMsgs) => {
@@ -273,14 +273,14 @@ class ImapIdleService {
    */
   async startAllIdleConnections() {
     try {
-      console.log('\n🚀 Starting IMAP IDLE service for all premium users...\n');
+      // console.log('\n🚀 Starting IMAP IDLE service for all premium users...\n');
 
       const premiumSettings = await UserSettings.find({
         'emailConfig.isPremium': true,
         'emailConfig.premiumSmtp.isVerified': true
       }).populate('user');
 
-      console.log(`📊 Found ${premiumSettings.length} premium users\n`);
+      // console.log(`📊 Found ${premiumSettings.length} premium users\n`);
 
       for (const settings of premiumSettings) {
         if (!settings.user) continue;

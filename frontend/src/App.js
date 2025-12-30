@@ -61,7 +61,20 @@ import ProductCategories from './pages/ProductCategories';
 // Field Customization (Product Team)
 import FieldBuilder from './pages/FieldBuilder';
 
+// Quotation & Invoice Pages
+import Quotations from './pages/Quotations';
+import QuotationForm from './pages/QuotationForm';
+import QuotationDetail from './pages/QuotationDetail';
+import Invoices from './pages/Invoices';
+import InvoiceDetail from './pages/InvoiceDetail';
 
+// RFI & Purchase Order Pages
+import RFIs from './pages/RFIs';
+import RFIForm from './pages/RFIForm';
+import RFIDetail from './pages/RFIDetail';
+import PurchaseOrders from './pages/PurchaseOrders';
+import PurchaseOrderForm from './pages/PurchaseOrderForm';
+import PurchaseOrderDetail from './pages/PurchaseOrderDetail';
 
 // RESELLER PAGES
 
@@ -205,6 +218,86 @@ function AppRoutes() {
 <Route path="/products-management" element={
   <ProtectedRoute>
     <Products />
+  </ProtectedRoute>
+} />
+
+{/* 💰 B2B WORKFLOW ROUTES (RFI → RFQ → PO → Invoice) */}
+
+{/* RFI Routes */}
+<Route path="/rfi" element={
+  <ProtectedRoute>
+    <RFIs />
+  </ProtectedRoute>
+} />
+<Route path="/rfi/new" element={
+  <ProtectedRoute>
+    <RFIForm />
+  </ProtectedRoute>
+} />
+<Route path="/rfi/:id" element={
+  <ProtectedRoute>
+    <RFIDetail />
+  </ProtectedRoute>
+} />
+<Route path="/rfi/:id/edit" element={
+  <ProtectedRoute>
+    <RFIForm />
+  </ProtectedRoute>
+} />
+
+{/* Quotation Routes */}
+<Route path="/quotations" element={
+  <ProtectedRoute>
+    <Quotations />
+  </ProtectedRoute>
+} />
+<Route path="/quotations/new" element={
+  <ProtectedRoute>
+    <QuotationForm />
+  </ProtectedRoute>
+} />
+<Route path="/quotations/:id" element={
+  <ProtectedRoute>
+    <QuotationDetail />
+  </ProtectedRoute>
+} />
+<Route path="/quotations/:id/edit" element={
+  <ProtectedRoute>
+    <QuotationForm />
+  </ProtectedRoute>
+} />
+
+{/* Purchase Order Routes */}
+<Route path="/purchase-orders" element={
+  <ProtectedRoute>
+    <PurchaseOrders />
+  </ProtectedRoute>
+} />
+<Route path="/purchase-orders/new" element={
+  <ProtectedRoute>
+    <PurchaseOrderForm />
+  </ProtectedRoute>
+} />
+<Route path="/purchase-orders/:id" element={
+  <ProtectedRoute>
+    <PurchaseOrderDetail />
+  </ProtectedRoute>
+} />
+<Route path="/purchase-orders/:id/edit" element={
+  <ProtectedRoute>
+    <PurchaseOrderForm />
+  </ProtectedRoute>
+} />
+
+{/* Invoice Routes */}
+<Route path="/invoices" element={
+  <ProtectedRoute>
+    <Invoices />
+  </ProtectedRoute>
+} />
+<Route path="/invoices/:id" element={
+  <ProtectedRoute>
+    <InvoiceDetail />
   </ProtectedRoute>
 } />
 

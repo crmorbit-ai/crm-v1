@@ -20,7 +20,7 @@ const activityLogSchema = new mongoose.Schema({
     enum: [
       'user.created', 'user.updated', 'user.deleted',
       'role.created', 'role.updated', 'role.deleted',
-      'group.created', 'group.updated', 'group.deleted',
+      'group.created', 'group.updated', 'group.deleted', 'group.member_added', 'group.member_removed', 'group.member_role_updated',
       'tenant.created', 'tenant.updated', 'tenant.suspended', 'tenant.activated',
       'subscription.created', 'subscription.updated', 'subscription.cancelled',
       'billing.created', 'billing.paid',
@@ -41,6 +41,10 @@ const activityLogSchema = new mongoose.Schema({
       'datacenter.create_candidate', 'datacenter.move_to_leads', 'datacenter.bulk_email',
       'datacenter.bulk_whatsapp', 'datacenter.bulk_sms',
       'product.purchase', 'product.use_credits',
+      'rfi.created', 'rfi.updated', 'rfi.deleted', 'rfi.status_updated', 'rfi.converted',
+      'quotation.created', 'quotation.updated', 'quotation.deleted', 'quotation.sent', 'quotation.status_updated', 'quotation.converted',
+      'purchase_order.created', 'purchase_order.updated', 'purchase_order.deleted', 'purchase_order.approved', 'purchase_order.status_updated', 'purchase_order.converted',
+      'invoice.created', 'invoice.updated', 'invoice.deleted', 'invoice.sent', 'invoice.payment_added', 'invoice.status_updated',
       'other'
     ]
   },
@@ -49,7 +53,7 @@ const activityLogSchema = new mongoose.Schema({
     type: String,
     enum: ['User', 'Role', 'Group', 'Tenant', 'Subscription', 'Billing', 'Feature', 'Settings',
            'Lead', 'Account', 'Contact', 'Opportunity', 'Task', 'Meeting', 'Call', 'Note', 'SupportTicket',
-           'Candidate', 'DataCenter', 'Product']
+           'Candidate', 'DataCenter', 'Product', 'RFI', 'Quotation', 'PurchaseOrder', 'Invoice']
   },
   resourceId: {
     type: mongoose.Schema.Types.ObjectId

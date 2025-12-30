@@ -29,7 +29,7 @@ class EmailService {
         },
       });
 
-      console.log('✅ Email Service initialized (Free + Premium)');
+      // console.log('✅ Email Service initialized (Free + Premium)');
     } catch (error) {
       console.error('❌ Email Service initialization failed:', error);
     }
@@ -178,7 +178,7 @@ class EmailService {
   /**
    * Send single email
    */
-  async sendEmail(userId, { to, subject, text, html }, tenantId = null) {
+  async sendEmail(userId, { to, subject, text, html, attachments }, tenantId = null) {
     try {
       const { transporter, mode, fromEmail } = await this.createTransporter(userId, tenantId);
       const userSettings = await this.getUserDisplaySettings(userId);
@@ -203,6 +203,7 @@ class EmailService {
           subject,
           text: finalText,
           html: html || finalText.replace(/\n/g, '<br>'),
+          attachments: attachments || []
         };
       } else {
         // Free: Send from system with Reply-To
@@ -213,6 +214,7 @@ class EmailService {
           subject,
           text: finalText,
           html: html || finalText.replace(/\n/g, '<br>'),
+          attachments: attachments || []
         };
       }
 

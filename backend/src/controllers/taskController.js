@@ -40,12 +40,25 @@ const getTasks = async (req, res) => {
     const tasks = await Task.find(query)
       .populate('owner', 'firstName lastName email')
       .populate('assignedTo', 'firstName lastName email')
+      .populate('createdBy', 'firstName lastName email')
       .populate('relatedToId')
       .populate('tenant', 'organizationName')
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ dueDate: 1 })
       .lean();
+
+    // 🆕 Fetch groups for each created user
+    const Group = require('../models/Group');
+    for (let task of tasks) {
+      if (task.createdBy && task.createdBy._id) {
+        const userGroups = await Group.find({
+          members: task.createdBy._id,
+          isActive: true
+        }).select('name category').lean();
+        task.createdBy.groups = userGroups;
+      }
+    }
 
     console.log('Tasks retrieved:', tasks.length); // DEBUG
 
@@ -69,8 +82,10 @@ const getTask = async (req, res) => {
     const task = await Task.findById(req.params.id)
       .populate('owner', 'firstName lastName email')
       .populate('assignedTo', 'firstName lastName email')
+      .populate('createdBy', 'firstName lastName email')
       .populate('relatedToId')
-      .populate('tenant', 'organizationName');
+      .populate('tenant', 'organizationName')
+      .lean();
 
     if (!task) {
       return errorResponse(res, 404, 'Task not found');
@@ -80,6 +95,16 @@ const getTask = async (req, res) => {
       if (task.tenant._id.toString() !== req.user.tenant.toString()) {
         return errorResponse(res, 403, 'Access denied');
       }
+    }
+
+    // 🆕 Fetch groups for created user
+    const Group = require('../models/Group');
+    if (task.createdBy && task.createdBy._id) {
+      const userGroups = await Group.find({
+        members: task.createdBy._id,
+        isActive: true
+      }).select('name category').lean();
+      task.createdBy.groups = userGroups;
     }
 
     successResponse(res, 200, 'Task retrieved successfully', task);

@@ -23,7 +23,9 @@ const getLeads = async (req, res) => {
       leadSource,
       rating,
       owner,
-      product
+      product,
+      assignedGroup,
+      unassigned
     } = req.query;
 
     let query = {
@@ -35,7 +37,50 @@ const getLeads = async (req, res) => {
       query.tenant = req.user.tenant;
     }
 
-    // Filters
+    // 🆕 Group-based Visibility
+    const Group = require('../models/Group');
+
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      // Get user's groups (members is simple array: [userId1, userId2, ...])
+      const userGroups = await Group.find({
+        members: req.user.id,  // ✅ FIXED: members is array of IDs, not objects
+        isActive: true
+      });
+
+      if (userGroups.length > 0) {
+        const groupIds = userGroups.map(g => g._id);
+
+        // User can see: 1) Leads assigned to them directly, OR
+        //              2) Leads assigned to their groups AND they are in assignedMembers
+        query.$or = [
+          { owner: req.user.id },                    // Assigned directly to user
+          {
+            assignedGroup: { $in: groupIds },        // Assigned to user's groups
+            assignedMembers: req.user.id             // 🆕 AND user is in assignedMembers
+          }
+        ];
+      } else {
+        // Not in any group - see only directly assigned leads
+        query.owner = req.user.id;
+      }
+    }
+
+    // 🆕 Unassigned filter
+    if (unassigned === 'true') {
+      query.owner = null;
+      query.assignedGroup = null;
+    }
+
+    // 🆕 Group filter
+    if (assignedGroup) {
+      if (assignedGroup === 'null' || assignedGroup === 'unassigned') {
+        query.assignedGroup = null;
+      } else {
+        query.assignedGroup = assignedGroup;
+      }
+    }
+
+    // Existing filters
     if (search) {
       query.$or = [
         { firstName: { $regex: search, $options: 'i' } },
@@ -52,21 +97,17 @@ const getLeads = async (req, res) => {
     if (owner) query.owner = owner;
     if (product) query.product = product;
 
-    console.log('Lead query:', query);
-
     const total = await Lead.countDocuments(query);
-    console.log('Total leads found:', total);
 
     const leads = await Lead.find(query)
       .populate('owner', 'firstName lastName email')
+      .populate('assignedGroup', 'name category') // 🆕 Populate group
       .populate('tenant', 'organizationName')
       .populate('product', 'name articleNumber')
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
       .lean();
-
-    console.log('Leads retrieved:', leads.length);
 
     successResponse(res, 200, 'Leads retrieved successfully', {
       leads,
@@ -745,7 +786,9 @@ const convertLead = async (req, res) => {
     });
   } catch (error) {
     console.error('Convert lead error:', error);
-    errorResponse(res, 500, 'Server error');
+    console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
+    errorResponse(res, 500, error.message || 'Server error');
   }
 };
 
@@ -782,7 +825,7 @@ const bulkImportLeads = async (req, res) => {
       try {
         const lead = await Lead.create({
           ...leadData,
-          owner: req.user._id,
+          owner: null, // 🔧 Keep UNASSIGNED on bulk import
           tenant,
           createdBy: req.user._id,
           lastModifiedBy: req.user._id
@@ -869,7 +912,7 @@ const bulkUploadLeads = async (req, res) => {
         // 🆕 Build leadData dynamically from field definitions
         const leadData = {
           tenant,
-          owner: req.user._id,
+          owner: null, // 🔧 Keep UNASSIGNED on bulk upload
           createdBy: req.user._id,
           lastModifiedBy: req.user._id
         };
@@ -1157,6 +1200,149 @@ const downloadSampleTemplate = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Assign leads to a group (with optional specific members)
+ * @route   POST /api/leads/assign-to-group
+ * @access  Private
+ */
+const assignLeadsToGroup = async (req, res) => {
+  try {
+    const { leadIds, groupId, memberIds } = req.body;
+
+    if (!leadIds || !Array.isArray(leadIds) || leadIds.length === 0) {
+      return errorResponse(res, 400, 'Please provide lead IDs');
+    }
+
+    if (!groupId) {
+      return errorResponse(res, 400, 'Please provide group ID');
+    }
+
+    const Group = require('../models/Group');
+
+    // Verify group exists
+    const group = await Group.findById(groupId).populate('members', 'firstName lastName email');
+    if (!group) {
+      return errorResponse(res, 404, 'Group not found');
+    }
+
+    // 🆕 If specific members provided, validate they belong to the group
+    let validatedMemberIds = [];
+    if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
+      const groupMemberIds = group.members.map(m => m._id.toString());
+
+      for (const memberId of memberIds) {
+        if (!groupMemberIds.includes(memberId.toString())) {
+          return errorResponse(res, 400, `Member ${memberId} does not belong to group ${group.name}`);
+        }
+      }
+      validatedMemberIds = memberIds;
+    } else {
+      // If no specific members, assign to ALL group members
+      validatedMemberIds = group.members.map(m => m._id);
+    }
+
+    // Update leads
+    const results = {
+      success: [],
+      failed: []
+    };
+
+    for (const leadId of leadIds) {
+      try {
+        const lead = await Lead.findById(leadId);
+
+        if (!lead) {
+          results.failed.push({ leadId, error: 'Lead not found' });
+          continue;
+        }
+
+        // Update lead with group and specific members
+        lead.assignedGroup = groupId;
+        lead.assignedMembers = validatedMemberIds; // 🆕 Set specific members
+        lead.assignmentChain.push({
+          assignedTo: groupId,
+          assignedToModel: 'Group',
+          assignedBy: req.user.id,
+          assignedAt: new Date()
+        });
+        lead.lastModifiedBy = req.user.id;
+
+        await lead.save();
+        results.success.push(leadId);
+
+        await logActivity(req, 'lead.updated', 'Lead', lead._id, {
+          action: 'Assigned to group',
+          groupId,
+          groupName: group.name,
+          assignedMembersCount: validatedMemberIds.length
+        });
+      } catch (error) {
+        results.failed.push({ leadId, error: error.message });
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${results.success.length} leads assigned to ${validatedMemberIds.length} member(s) successfully`,
+      data: results
+    });
+  } catch (error) {
+    console.error('Error assigning leads to group:', error);
+    return errorResponse(res, 500, 'Error assigning leads to group');
+  }
+};
+
+/**
+ * @desc    Assign lead to user (within group hierarchy)
+ * @route   POST /api/leads/:id/assign
+ * @access  Private
+ */
+const assignLeadToUser = async (req, res) => {
+  try {
+    const { userId, role } = req.body;
+
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) {
+      return errorResponse(res, 404, 'Lead not found');
+    }
+
+    const User = require('../models/User');
+    const user = await User.findById(userId);
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    // Update lead owner
+    lead.owner = userId;
+    lead.assignmentChain.push({
+      assignedTo: userId,
+      assignedToModel: 'User',
+      assignedBy: req.user.id,
+      assignedAt: new Date(),
+      role: role || 'member'
+    });
+    lead.lastModifiedBy = req.user.id;
+
+    await lead.save();
+
+    await logActivity(req, 'lead.updated', 'Lead', lead._id, {
+      action: 'Assigned to user',
+      userId,
+      userName: user.name,
+      role
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Lead assigned successfully',
+      data: lead
+    });
+  } catch (error) {
+    console.error('Error assigning lead to user:', error);
+    return errorResponse(res, 500, 'Error assigning lead to user');
+  }
+};
+
 module.exports = {
   getLeads,
   getLead,
@@ -1167,5 +1353,7 @@ module.exports = {
   bulkImportLeads,
   bulkUploadLeads,
   downloadSampleTemplate,
-  getLeadStats
+  getLeadStats,
+  assignLeadsToGroup,
+  assignLeadToUser
 };

@@ -11,7 +11,7 @@ class EmailSyncJob {
    * Start method (disabled automatic cron - only manual sync available)
    */
   start() {
-    console.log('✅ Email sync service ready (manual sync only)');
+    // console.log('✅ Email sync service ready (manual sync only)');
     // Automatic cron disabled - IMAP IDLE handles real-time sync
     // Manual sync still available via sync button
   }

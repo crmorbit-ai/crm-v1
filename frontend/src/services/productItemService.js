@@ -9,6 +9,14 @@ export const productItemService = {
     return response;
   },
 
+  // Get product items (for dropdowns)
+  getProductItems: async () => {
+    const response = await api.get('/product-items', {
+      params: { limit: 1000 }
+    });
+    return response;
+  },
+
   // Get single product
   getProduct: async (id) => {
     const response = await api.get(`/product-items/${id}`);

@@ -12,7 +12,9 @@ const {
   bulkImportLeads,
   bulkUploadLeads,
   downloadSampleTemplate,
-  getLeadStats
+  getLeadStats,
+  assignLeadsToGroup,
+  assignLeadToUser
 } = require('../controllers/leadController');
 const {
   verifyEmailAddress,
@@ -88,9 +90,20 @@ router.get('/stats',
 );
 
 // Convert lead route (BEFORE /:id route)
-router.post('/:id/convert', 
-  requirePermission('lead_management', 'convert'), 
+router.post('/:id/convert',
+  requirePermission('lead_management', 'convert'),
   convertLead
+);
+
+// 🆕 Group assignment routes
+router.post('/assign-to-group',
+  requirePermission('lead_management', 'update'),
+  assignLeadsToGroup
+);
+
+router.post('/:id/assign',
+  requirePermission('lead_management', 'update'),
+  assignLeadToUser
 );
 
 // CRUD routes
