@@ -1,13 +1,27 @@
-require('dotenv').config();
+// Wrap entire initialization in try-catch
+try {
+  require('dotenv').config();
+} catch (error) {
+  console.error('Error loading .env:', error);
+}
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const connectDB = require('../src/config/database');
-const { connectDataCenterDB } = require('../src/config/database');
+const mongoose = require('mongoose');
 
 // Initialize express app
 const app = express();
+
+// Global error handler for uncaught errors
+process.on('unhandledRejection', (error) => {
+  console.error('Unhandled Rejection:', error);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
 
 // CRITICAL: CORS must be the FIRST middleware
 app.use((req, res, next) => {
@@ -92,44 +106,80 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Connect to database (only once per serverless function execution)
-let isConnected = false;
+// Database connection management for serverless
+let cachedDb = null;
+let cachedDataCenterDb = null;
 
-const connectDatabases = async () => {
-  if (isConnected) {
-    return;
+const connectToDatabase = async () => {
+  if (cachedDb && mongoose.connection.readyState === 1) {
+    return cachedDb;
   }
 
   try {
-    await connectDB();
-    await connectDataCenterDB();
-    isConnected = true;
-    console.log('✅ Databases connected');
+    const conn = await mongoose.connect(process.env.MONGODB_URI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+
+    cachedDb = conn;
+    console.log('✅ Main DB connected');
+    return conn;
   } catch (error) {
-    console.error('❌ Database connection failed:', error.message);
+    console.error('❌ Main DB connection failed:', error.message);
     throw error;
   }
 };
 
-// Middleware to ensure database connection
-app.use(async (req, res, next) => {
-  try {
-    await connectDatabases();
-    next();
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: 'Database connection failed'
-    });
+const connectToDataCenterDB = async () => {
+  if (cachedDataCenterDb && cachedDataCenterDb.readyState === 1) {
+    return cachedDataCenterDb;
   }
+
+  try {
+    const dataCenterURI = process.env.DATA_CENTER_MONGODB_URI;
+
+    if (!dataCenterURI) {
+      console.log('⚠️ DATA_CENTER_MONGODB_URI not set, skipping data center DB');
+      return null;
+    }
+
+    cachedDataCenterDb = mongoose.createConnection(dataCenterURI, {
+      serverSelectionTimeoutMS: 5000,
+      socketTimeoutMS: 45000,
+    });
+
+    await cachedDataCenterDb.asPromise();
+
+    console.log('✅ Data Center DB connected');
+    return cachedDataCenterDb;
+  } catch (error) {
+    console.error('❌ Data Center DB connection failed:', error.message);
+    return null;
+  }
+};
+
+// Health check routes (no DB required)
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'CRM API is running on Vercel',
+    timestamp: new Date().toISOString(),
+    env: process.env.NODE_ENV || 'production',
+    hasMongoUri: !!process.env.MONGODB_URI
+  });
 });
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({
     success: true,
     message: 'Server is running',
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
+    envVars: {
+      hasMongoUri: !!process.env.MONGODB_URI,
+      hasDataCenterUri: !!process.env.DATA_CENTER_MONGODB_URI,
+      hasJwtSecret: !!process.env.JWT_SECRET
+    }
   });
 });
 
@@ -141,49 +191,81 @@ app.get('/api', (req, res) => {
   });
 });
 
-// Auth & User Routes
-app.use('/api/auth', require('../src/routes/auth'));
-app.use('/api/users', require('../src/routes/users'));
-app.use('/api/tenants', require('../src/routes/tenants'));
-app.use('/api/roles', require('../src/routes/roles'));
-app.use('/api/groups', require('../src/routes/groups'));
-app.use('/api/features', require('../src/routes/features'));
-app.use('/api/subscriptions', require('../src/routes/subscriptions'));
-app.use('/api/billings', require('../src/routes/billings'));
-app.use('/api/activity-logs', require('../src/routes/activityLogs'));
+// Middleware to ensure database connection (skip for health checks)
+app.use(async (req, res, next) => {
+  // Skip DB connection for health check routes
+  if (req.path === '/' || req.path === '/health' || req.path === '/api') {
+    return next();
+  }
 
-// Reseller Routes
-app.use('/api/resellers', require('../src/routes/resellers'));
+  try {
+    if (!process.env.MONGODB_URI) {
+      throw new Error('MONGODB_URI environment variable is not set');
+    }
 
-// Data Center Routes
-app.use('/api/data-center', require('../src/routes/dataCenter'));
-app.use('/api/products', require('../src/routes/products'));
-app.use('/api/user-settings', require('../src/routes/userSettings'));
-app.use('/api/support-tickets', require('../src/routes/supportTickets'));
+    await connectToDatabase();
+    await connectToDataCenterDB();
+    next();
+  } catch (error) {
+    console.error('Database connection error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Database connection failed',
+      error: error.message
+    });
+  }
+});
 
-// Product Management Routes
-app.use('/api/product-categories', require('../src/routes/productCategoryRoutes'));
-app.use('/api/product-items', require('../src/routes/productItems'));
+// Load routes with error handling
+try {
+  // Auth & User Routes
+  app.use('/api/auth', require('../src/routes/auth'));
+  app.use('/api/users', require('../src/routes/users'));
+  app.use('/api/tenants', require('../src/routes/tenants'));
+  app.use('/api/roles', require('../src/routes/roles'));
+  app.use('/api/groups', require('../src/routes/groups'));
+  app.use('/api/features', require('../src/routes/features'));
+  app.use('/api/subscriptions', require('../src/routes/subscriptions'));
+  app.use('/api/billings', require('../src/routes/billings'));
+  app.use('/api/activity-logs', require('../src/routes/activityLogs'));
 
-// Field Customization Routes
-app.use('/api/field-definitions', require('../src/routes/fieldDefinitions'));
+  // Reseller Routes
+  app.use('/api/resellers', require('../src/routes/resellers'));
 
-// B2B Workflow Routes
-app.use('/api/rfi', require('../src/routes/rfi'));
-app.use('/api/quotations', require('../src/routes/quotations'));
-app.use('/api/purchase-orders', require('../src/routes/purchaseOrders'));
-app.use('/api/invoices', require('../src/routes/invoices'));
+  // Data Center Routes
+  app.use('/api/data-center', require('../src/routes/dataCenter'));
+  app.use('/api/products', require('../src/routes/products'));
+  app.use('/api/user-settings', require('../src/routes/userSettings'));
+  app.use('/api/support-tickets', require('../src/routes/supportTickets'));
 
-// CRM Routes
-app.use('/api/leads', require('../src/routes/leads'));
-app.use('/api/accounts', require('../src/routes/accounts'));
-app.use('/api/contacts', require('../src/routes/contacts'));
-app.use('/api/opportunities', require('../src/routes/opportunities'));
-app.use('/api/tasks', require('../src/routes/taskRoutes'));
-app.use('/api/notes', require('../src/routes/noteRoutes'));
-app.use('/api/meetings', require('../src/routes/meetingRoutes'));
-app.use('/api/calls', require('../src/routes/callRoutes'));
-app.use('/api/emails', require('../src/routes/emails'));
+  // Product Management Routes
+  app.use('/api/product-categories', require('../src/routes/productCategoryRoutes'));
+  app.use('/api/product-items', require('../src/routes/productItems'));
+
+  // Field Customization Routes
+  app.use('/api/field-definitions', require('../src/routes/fieldDefinitions'));
+
+  // B2B Workflow Routes
+  app.use('/api/rfi', require('../src/routes/rfi'));
+  app.use('/api/quotations', require('../src/routes/quotations'));
+  app.use('/api/purchase-orders', require('../src/routes/purchaseOrders'));
+  app.use('/api/invoices', require('../src/routes/invoices'));
+
+  // CRM Routes
+  app.use('/api/leads', require('../src/routes/leads'));
+  app.use('/api/accounts', require('../src/routes/accounts'));
+  app.use('/api/contacts', require('../src/routes/contacts'));
+  app.use('/api/opportunities', require('../src/routes/opportunities'));
+  app.use('/api/tasks', require('../src/routes/taskRoutes'));
+  app.use('/api/notes', require('../src/routes/noteRoutes'));
+  app.use('/api/meetings', require('../src/routes/meetingRoutes'));
+  app.use('/api/calls', require('../src/routes/callRoutes'));
+  app.use('/api/emails', require('../src/routes/emails'));
+
+  console.log('✅ All routes loaded successfully');
+} catch (error) {
+  console.error('❌ Error loading routes:', error);
+}
 
 // 404 handler
 app.use((req, res) => {
