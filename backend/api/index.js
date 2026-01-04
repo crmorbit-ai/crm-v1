@@ -150,7 +150,27 @@ const connectToDataCenterDB = async () => {
 
     await cachedDataCenterDb.asPromise();
 
-    console.log('✅ Data Center DB connected');
+    // ✅ REGISTER DATA CENTER MODELS ON THIS CONNECTION
+    const DataCenterCandidate = require('../src/models/DataCenterCandidate');
+    const Product = require('../src/models/Product');
+    const UserProduct = require('../src/models/UserProduct');
+
+    // Re-register the models on this connection
+    if (!cachedDataCenterDb.models.DataCenterCandidate) {
+      cachedDataCenterDb.model('DataCenterCandidate', DataCenterCandidate.schema);
+    }
+    if (!cachedDataCenterDb.models.Product) {
+      cachedDataCenterDb.model('Product', Product.schema);
+    }
+    if (!cachedDataCenterDb.models.UserProduct) {
+      cachedDataCenterDb.model('UserProduct', UserProduct.schema);
+    }
+
+    // ✅ SET THE CONNECTION GLOBALLY SO CONTROLLERS CAN ACCESS IT
+    const { setDataCenterConnection } = require('../src/config/database');
+    setDataCenterConnection(cachedDataCenterDb);
+
+    console.log('✅ Data Center DB connected and models registered');
     return cachedDataCenterDb;
   } catch (error) {
     console.error('❌ Data Center DB connection failed:', error.message);

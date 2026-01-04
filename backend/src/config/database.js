@@ -87,6 +87,12 @@ const getDataCenterConnection = () => {
   return dataCenterConnection;
 };
 
+// Setter for data center connection (used by Vercel serverless)
+const setDataCenterConnection = (connection) => {
+  dataCenterConnection = connection;
+  console.log('✅ Data Center connection set globally');
+};
+
 // Export connectDB as default for backward compatibility
 module.exports = connectDB;
 
@@ -94,3 +100,4 @@ module.exports = connectDB;
 module.exports.connectDB = connectDB;
 module.exports.connectDataCenterDB = connectDataCenterDB;
 module.exports.getDataCenterConnection = getDataCenterConnection;
+module.exports.setDataCenterConnection = setDataCenterConnection;
