@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 
 const LandingPage = () => {
@@ -6,6 +6,8 @@ const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeModule, setActiveModule] = useState(0);
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const heroRef = useRef(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -13,6 +15,15 @@ const LandingPage = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Mouse tracking for 3D tilt effects
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleMouseMove);
+    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
   // Auto-rotate features
@@ -27,7 +38,7 @@ const LandingPage = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveModule((prev) => (prev + 1) % 18);
-    }, 2000); // Change every 2 seconds
+    }, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -161,19 +172,30 @@ const LandingPage = () => {
     }
   ];
 
+  // 3D Tilt effect calculator
+  const calculateTilt = (element, mouseX, mouseY) => {
+    if (!element) return { rotateX: 0, rotateY: 0 };
+    const rect = element.getBoundingClientRect();
+    const x = mouseX - rect.left - rect.width / 2;
+    const y = mouseY - rect.top - rect.height / 2;
+    const rotateY = (x / rect.width) * 20;
+    const rotateX = -(y / rect.height) * 20;
+    return { rotateX, rotateY };
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Sticky Navigation */}
-      <nav 
+      <nav
         className={`fixed w-full top-0 z-50 transition-all duration-300 ${
-          isScrolled 
-            ? 'bg-white shadow-lg py-3' 
+          isScrolled
+            ? 'bg-white/80 backdrop-blur-lg shadow-lg py-3'
             : 'bg-transparent py-4'
         }`}
       >
         <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
               CRM Orbit
             </div>
           </div>
@@ -184,9 +206,6 @@ const LandingPage = () => {
             </a>
             <a href="#pricing" className="text-gray-700 hover:text-blue-600 font-medium transition">
               Pricing
-            </a>
-            <a href="#testimonials" className="text-gray-700 hover:text-blue-600 font-medium transition">
-              Reviews
             </a>
             <button
               onClick={() => navigate("/reseller/register")}
@@ -210,29 +229,46 @@ const LandingPage = () => {
         </div>
       </nav>
 
-      {/* Hero Section with Animation */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50 opacity-50"></div>
-        <div className="absolute top-20 left-10 w-72 h-72 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob"></div>
-        <div className="absolute top-40 right-10 w-72 h-72 bg-purple-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-2000"></div>
-        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-pink-400 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-blob animation-delay-4000"></div>
+      {/* Hero Section with Particles & Morphing Shapes */}
+      <section ref={heroRef} className="relative pt-32 pb-20 overflow-hidden">
+        {/* Animated Grid Background */}
+        <div className="absolute inset-0 grid-background"></div>
+
+        {/* Particle System */}
+        <div className="particles-container">
+          {Array.from({ length: 50 }).map((_, i) => (
+            <div
+              key={i}
+              className="particle"
+              style={{
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 10}s`,
+                animationDuration: `${10 + Math.random() * 20}s`
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Morphing Blob Shapes */}
+        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph"></div>
+        <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph animation-delay-2000"></div>
+        <div className="absolute bottom-20 left-1/2 w-96 h-96 bg-gradient-to-br from-pink-400 to-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph animation-delay-4000"></div>
 
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left Side - Content */}
             <div className="space-y-8">
-              <div className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              <div className="inline-block px-4 py-2 glass-card text-blue-700 rounded-full text-sm font-semibold">
                 ⚡ #1 CRM Solution in India
               </div>
-              
+
               <h1 className="text-6xl font-extrabold text-gray-900 leading-tight">
                 Grow Your Business
-                <span className="block bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
                   10x Faster
                 </span>
               </h1>
-              
+
               <p className="text-xl text-gray-600 leading-relaxed">
                 Complete CRM solution with B2B sales workflow, email integration, and powerful team management.
                 From leads to invoices - manage your entire sales pipeline in one platform.
@@ -241,13 +277,13 @@ const LandingPage = () => {
               <div className="flex flex-wrap gap-4">
                 <button
                   onClick={() => navigate("/register")}
-                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-lg"
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-lg animate-gradient-shift"
                 >
                   Start Free Trial
                 </button>
                 <button
                   onClick={() => navigate("/login")}
-                  className="px-8 py-4 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-lg"
+                  className="px-8 py-4 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-lg"
                 >
                   Sign In →
                 </button>
@@ -270,18 +306,53 @@ const LandingPage = () => {
               </div>
             </div>
 
-           
+            {/* Right Side - 3D Floating Dashboard Preview */}
+            <div className="relative">
+              <div className="glass-card-strong p-8 rounded-3xl shadow-2xl transform-3d">
+                <div className="space-y-4">
+                  {/* Mini Dashboard Elements - FLOATING */}
+                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl animate-float">
+                    <div className="text-4xl">📊</div>
+                    <div className="text-white">
+                      <div className="font-bold text-lg">Real-time Analytics</div>
+                      <div className="text-sm opacity-90">Track your sales pipeline</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl animate-float animation-delay-500">
+                    <div className="text-4xl">💰</div>
+                    <div className="text-white">
+                      <div className="font-bold text-lg">Revenue Growth</div>
+                      <div className="text-sm opacity-90">+45% this month</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-pink-500 to-blue-500 rounded-xl animate-float animation-delay-1000">
+                    <div className="text-4xl">🎯</div>
+                    <div className="text-white">
+                      <div className="font-bold text-lg">Lead Conversion</div>
+                      <div className="text-sm opacity-90">98% success rate</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* Stats Section with Parallax */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-20">
+          <div className="absolute top-0 left-0 w-full h-full" style={{
+            backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)',
+            backgroundSize: '50px 50px',
+            animation: 'moveGrid 20s linear infinite'
+          }}></div>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
-              <div key={index} className="text-center">
-                <div className="text-4xl md:text-5xl font-extrabold text-white mb-2">
+              <div key={index} className="text-center transform hover:scale-110 transition duration-300">
+                <div className="text-4xl md:text-5xl font-extrabold text-white mb-2 animate-count-up">
                   {stat.number}
                 </div>
                 <div className="text-base md:text-lg text-blue-100 font-medium">
@@ -324,9 +395,24 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Complete CRM Ecosystem - Single Rotating Box */}
-      <section className="py-20 bg-gradient-to-br from-slate-50 via-white to-slate-100">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* Complete CRM Ecosystem - Rotating Box */}
+      <section className="py-20 bg-gradient-to-br from-slate-50 via-white to-slate-100 relative overflow-hidden">
+        {/* Background Particles */}
+        <div className="absolute inset-0 opacity-30">
+          {Array.from({ length: 20 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-blue-500 rounded-full animate-particle-float"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left Side - Heading */}
             <div>
@@ -357,97 +443,102 @@ const LandingPage = () => {
 
             {/* Right Side - Rotating Showcase Box */}
             <div>
-            <div className="rotating-showcase-box">
-              <div className="showcase-content" key={activeModule}>
-                <div className="text-8xl mb-6">
-                  {[
-                    { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
-                    { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
-                    { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
-                    { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
-                    { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
-                    { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
-                    { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
-                    { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
-                    { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
-                    { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
-                    { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
-                    { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
-                    { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
-                    { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
-                    { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
-                    { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
-                    { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
-                    { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
-                  ][activeModule].icon}
+              <div className="rotating-showcase-box">
+                <div className="showcase-content" key={activeModule}>
+                  <div className="text-8xl mb-6">
+                    {[
+                      { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
+                      { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
+                      { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
+                      { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
+                      { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
+                      { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
+                      { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
+                      { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
+                      { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
+                      { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
+                      { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
+                      { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
+                      { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
+                      { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
+                      { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
+                      { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
+                      { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
+                      { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
+                    ][activeModule].icon}
+                  </div>
+                  <h4 className="text-4xl font-bold text-white mb-4">
+                    {[
+                      { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
+                      { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
+                      { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
+                      { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
+                      { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
+                      { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
+                      { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
+                      { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
+                      { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
+                      { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
+                      { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
+                      { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
+                      { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
+                      { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
+                      { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
+                      { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
+                      { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
+                      { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
+                    ][activeModule].label}
+                  </h4>
+                  <p className="text-xl text-blue-100">
+                    {[
+                      { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
+                      { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
+                      { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
+                      { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
+                      { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
+                      { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
+                      { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
+                      { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
+                      { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
+                      { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
+                      { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
+                      { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
+                      { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
+                      { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
+                      { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
+                      { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
+                      { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
+                      { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
+                    ][activeModule].desc}
+                  </p>
                 </div>
-                <h4 className="text-4xl font-bold text-white mb-4">
-                  {[
-                    { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
-                    { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
-                    { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
-                    { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
-                    { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
-                    { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
-                    { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
-                    { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
-                    { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
-                    { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
-                    { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
-                    { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
-                    { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
-                    { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
-                    { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
-                    { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
-                    { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
-                    { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
-                  ][activeModule].label}
-                </h4>
-                <p className="text-xl text-blue-100">
-                  {[
-                    { icon: "📋", label: "Leads", desc: "Capture, track, and convert leads with intelligent pipeline" },
-                    { icon: "👥", label: "Contacts", desc: "Complete contact management with relationship tracking" },
-                    { icon: "🏢", label: "Accounts", desc: "B2B organization and company management system" },
-                    { icon: "💼", label: "Opportunities", desc: "Sales pipeline with stage tracking and forecasting" },
-                    { icon: "📄", label: "RFI", desc: "Request for Information management with responses" },
-                    { icon: "💰", label: "Quotations", desc: "Professional quotation generation with PDF export" },
-                    { icon: "📦", label: "Purchase Orders", desc: "PO processing with approval workflows" },
-                    { icon: "🧾", label: "Invoices", desc: "Invoice creation with payment tracking" },
-                    { icon: "✅", label: "Tasks", desc: "Task management with priorities and assignments" },
-                    { icon: "📅", label: "Meetings", desc: "Meeting scheduling with video call integration" },
-                    { icon: "📞", label: "Calls", desc: "Call logging and tracking system" },
-                    { icon: "✉️", label: "Email Inbox", desc: "Built-in email with IMAP sync and tracking" },
-                    { icon: "📊", label: "Data Center", desc: "Candidate and prospect database management" },
-                    { icon: "🎫", label: "Support Tickets", desc: "Complete ticketing system with SLA tracking" },
-                    { icon: "👨‍💼", label: "Users & Roles", desc: "Role-based access control and permissions" },
-                    { icon: "🔧", label: "Field Builder", desc: "Custom field builder for any entity" },
-                    { icon: "📦", label: "Products", desc: "Product catalog with pricing management" },
-                    { icon: "🤝", label: "Reseller Program", desc: "Partner management with commission tracking" }
-                  ][activeModule].desc}
-                </p>
-              </div>
 
-              {/* Progress Indicator */}
-              <div className="progress-dots">
-                {Array.from({ length: 18 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className={`progress-dot ${activeModule === index ? 'active' : ''}`}
-                    onClick={() => setActiveModule(index)}
-                  ></div>
-                ))}
+                {/* Progress Indicator */}
+                <div className="progress-dots">
+                  {Array.from({ length: 18 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className={`progress-dot ${activeModule === index ? 'active' : ''}`}
+                      onClick={() => setActiveModule(index)}
+                    ></div>
+                  ))}
+                </div>
               </div>
-            </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
+      {/* Features Section with 3D Tilt Cards */}
+      <section id="features" className="py-24 bg-gray-50 relative overflow-hidden">
+        {/* Animated Background Grid */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="grid-lines-background"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold mb-4">
+            <div className="inline-block px-4 py-2 glass-card text-blue-700 rounded-full text-sm font-semibold mb-4">
               ✨ POWERFUL FEATURES
             </div>
             <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
@@ -462,14 +553,16 @@ const LandingPage = () => {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className={`bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer ${
+                className={`glass-card-strong p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer tilt-card ${
                   activeFeature === index ? 'ring-4 ring-blue-500' : ''
                 }`}
                 onMouseEnter={() => setActiveFeature(index)}
               >
-                <div 
+                <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-3xl"
-                  style={{ background: `${feature.color}20` }}
+                  style={{
+                    background: `linear-gradient(135deg, ${feature.color}40, ${feature.color}20)`
+                  }}
                 >
                   {feature.icon}
                 </div>
@@ -486,8 +579,24 @@ const LandingPage = () => {
       </section>
 
       {/* Detailed Features Section */}
-      <section className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+      <section className="py-24 bg-white relative overflow-hidden">
+        {/* Floating Particles */}
+        <div className="absolute inset-0">
+          {Array.from({ length: 15 }).map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-1 h-1 bg-purple-500 rounded-full animate-particle-float opacity-50"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 5}s`,
+                animationDuration: `${5 + Math.random() * 10}s`
+              }}
+            />
+          ))}
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-16 items-center mb-24">
             <div>
               <h2 className="text-4xl font-extrabold text-gray-900 mb-6">
@@ -513,7 +622,7 @@ const LandingPage = () => {
                 ))}
               </ul>
             </div>
-            <div className="bg-gradient-to-br from-blue-100 to-purple-100 p-8 rounded-2xl">
+            <div className="glass-card p-8 rounded-2xl transform hover:scale-105 transition duration-500">
               <div className="bg-white p-6 rounded-xl shadow-lg">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
@@ -531,7 +640,7 @@ const LandingPage = () => {
 
           {/* Team & Customization */}
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="order-2 md:order-1 bg-gradient-to-br from-purple-100 to-pink-100 p-8 rounded-2xl">
+            <div className="order-2 md:order-1 glass-card p-8 rounded-2xl transform hover:scale-105 transition duration-500">
               <div className="bg-white p-6 rounded-xl shadow-lg">
                 <div className="text-2xl mb-4">👥</div>
                 <div className="font-bold text-lg mb-2">Team Assignment</div>
@@ -575,42 +684,15 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section id="testimonials" className="py-24 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-green-100 text-green-700 rounded-full text-sm font-semibold mb-4">
-              💬 CUSTOMER REVIEWS
-            </div>
-            <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
-              Trusted by Growing Businesses
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {testimonials.map((testimonial, index) => (
-              <div key={index} className="bg-white p-8 rounded-2xl shadow-lg hover:shadow-2xl transition">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="text-5xl">{testimonial.image}</div>
-                  <div>
-                    <div className="font-bold text-lg">{testimonial.name}</div>
-                    <div className="text-sm text-gray-500">{testimonial.role}</div>
-                    <div className="text-sm text-blue-600">{testimonial.company}</div>
-                  </div>
-                </div>
-                <div className="text-yellow-500 mb-4">⭐⭐⭐⭐⭐</div>
-                <p className="text-gray-600 italic">"{testimonial.text}"</p>
-              </div>
-            ))}
-          </div>
+      {/* Pricing Section with 3D Cards */}
+      <section id="pricing" className="py-24 bg-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="grid-lines-background"></div>
         </div>
-      </section>
 
-      {/* Pricing Section */}
-      <section id="pricing" className="py-24 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold mb-4">
+            <div className="inline-block px-4 py-2 glass-card text-purple-700 rounded-full text-sm font-semibold mb-4">
               💰 SIMPLE PRICING
             </div>
             <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
@@ -625,14 +707,15 @@ const LandingPage = () => {
             {pricingPlans.map((plan, index) => (
               <div
                 key={index}
-                className={`bg-white rounded-2xl p-8 ${
+                className={`glass-card-strong rounded-2xl p-8 tilt-card ${
                   plan.highlighted
                     ? 'ring-4 ring-blue-500 shadow-2xl scale-105'
                     : 'shadow-lg'
                 } transition-all hover:shadow-2xl`}
+                style={{ animationDelay: `${index * 0.1}s` }}
               >
                 {plan.highlighted && (
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-bold px-4 py-2 rounded-full inline-block mb-4">
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-bold px-4 py-2 rounded-full inline-block mb-4 animate-pulse">
                     ⭐ MOST POPULAR
                   </div>
                 )}
@@ -644,7 +727,7 @@ const LandingPage = () => {
                 <ul className="space-y-4 mb-8">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-center gap-3">
-                      <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-bold">
+                      <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-bold animate-pulse">
                         ✓
                       </div>
                       <span className="text-gray-700">{feature}</span>
@@ -653,7 +736,7 @@ const LandingPage = () => {
                 </ul>
                 <button
                   onClick={() => navigate("/register")}
-                  className={`w-full py-3 rounded-xl font-bold transition ${
+                  className={`w-full py-3 rounded-xl font-bold transition transform hover:scale-105 ${
                     plan.highlighted
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg'
                       : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
@@ -670,37 +753,37 @@ const LandingPage = () => {
       {/* Reseller Partner Program */}
       <section className="py-24 bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 text-white relative overflow-hidden">
         <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full filter blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full filter blur-3xl"></div>
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full filter blur-3xl animate-morph"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full filter blur-3xl animate-morph animation-delay-2000"></div>
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-extrabold mb-6">
+            <h2 className="text-5xl font-extrabold mb-6 animate-slide-in">
               💰 Become a Reseller Partner
             </h2>
-            <p className="text-2xl opacity-90 max-w-3xl mx-auto">
-              Earn 10% recurring commission on every client you refer. 
+            <p className="text-2xl opacity-90 max-w-3xl mx-auto animate-slide-in animation-delay-200">
+              Earn 10% recurring commission on every client you refer.
               Join our partner program and grow your income!
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-12">
-            <div className="bg-white bg-opacity-10 backdrop-blur-lg p-8 rounded-2xl text-center">
-              <div className="text-6xl mb-4">💵</div>
-              <h3 className="text-2xl font-bold mb-3">10% Commission</h3>
-              <p className="opacity-90">Earn recurring monthly commission on every subscription</p>
-            </div>
-            <div className="bg-white bg-opacity-10 backdrop-blur-lg p-8 rounded-2xl text-center">
-              <div className="text-6xl mb-4">📊</div>
-              <h3 className="text-2xl font-bold mb-3">Partner Dashboard</h3>
-              <p className="opacity-90">Track your clients and earnings in real-time</p>
-            </div>
-            <div className="bg-white bg-opacity-10 backdrop-blur-lg p-8 rounded-2xl text-center">
-              <div className="text-6xl mb-4">🎯</div>
-              <h3 className="text-2xl font-bold mb-3">Full Support</h3>
-              <p className="opacity-90">Get dedicated support to help you succeed</p>
-            </div>
+            {[
+              { icon: "💵", title: "10% Commission", desc: "Earn recurring monthly commission on every subscription" },
+              { icon: "📊", title: "Partner Dashboard", desc: "Track your clients and earnings in real-time" },
+              { icon: "🎯", title: "Full Support", desc: "Get dedicated support to help you succeed" }
+            ].map((item, i) => (
+              <div
+                key={i}
+                className="bg-white/20 backdrop-blur-lg p-8 rounded-2xl text-center transform hover:scale-110 transition duration-500 animate-float border border-white/30"
+                style={{ animationDelay: `${i * 0.5}s` }}
+              >
+                <div className="text-6xl mb-4">{item.icon}</div>
+                <h3 className="text-2xl font-bold mb-3 text-white">{item.title}</h3>
+                <p className="text-white/90">{item.desc}</p>
+              </div>
+            ))}
           </div>
 
           <div className="text-center">
@@ -726,10 +809,10 @@ const LandingPage = () => {
       {/* Final CTA */}
       <section className="py-24 bg-gradient-to-br from-blue-50 to-purple-50">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-5xl font-extrabold text-gray-900 mb-6">
+          <h2 className="text-5xl font-extrabold text-gray-900 mb-6 animate-slide-in">
             Ready to Transform Your Business?
           </h2>
-          <p className="text-2xl text-gray-600 mb-12">
+          <p className="text-2xl text-gray-600 mb-12 animate-slide-in animation-delay-200">
             Start managing leads, quotations, and invoices in one powerful platform
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
@@ -741,7 +824,7 @@ const LandingPage = () => {
             </button>
             <button
               onClick={() => navigate("/login")}
-              className="px-12 py-5 border-2 border-gray-300 text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-xl"
+              className="px-12 py-5 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-xl"
             >
               Sign In to Your Account
             </button>
@@ -764,16 +847,16 @@ const LandingPage = () => {
                 Complete CRM solution with B2B workflow, email integration, team management, and more.
               </p>
               <div className="flex gap-4">
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition">
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition transform hover:scale-110">
                   📘
                 </div>
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-400 transition">
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-400 transition transform hover:scale-110">
                   🐦
                 </div>
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-600 transition">
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-600 transition transform hover:scale-110">
                   📷
                 </div>
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition">
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition transform hover:scale-110">
                   💼
                 </div>
               </div>
@@ -800,16 +883,16 @@ const LandingPage = () => {
               <h4 className="font-bold text-lg mb-4">Partners</h4>
               <ul className="space-y-3 text-gray-400">
                 <li>
-                  <button 
-                    onClick={() => navigate("/reseller/register")} 
+                  <button
+                    onClick={() => navigate("/reseller/register")}
                     className="hover:text-white transition text-left"
                   >
                     Become a Partner
                   </button>
                 </li>
                 <li>
-                  <button 
-                    onClick={() => navigate("/reseller/login")} 
+                  <button
+                    onClick={() => navigate("/reseller/login")}
                     className="hover:text-white transition text-left"
                   >
                     Partner Login
@@ -839,20 +922,221 @@ const LandingPage = () => {
       </button>
 
       <style jsx>{`
-        @keyframes blob {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          25% { transform: translate(20px, -50px) scale(1.1); }
-          50% { transform: translate(-20px, 20px) scale(0.9); }
-          75% { transform: translate(50px, 50px) scale(1.05); }
+        /* Gradient Animation */
+        @keyframes gradient-shift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
-        .animate-blob {
-          animation: blob 7s infinite;
+        .animate-gradient {
+          background-size: 200% auto;
+          animation: gradient-shift 3s ease infinite;
+        }
+        .animate-gradient-shift {
+          background-size: 200% auto;
+          animation: gradient-shift 3s ease infinite;
+        }
+
+        /* Morphing Blobs */
+        @keyframes morph {
+          0%, 100% {
+            border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+            transform: translate(0, 0) scale(1) rotate(0deg);
+          }
+          25% {
+            border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+            transform: translate(20px, -50px) scale(1.1) rotate(90deg);
+          }
+          50% {
+            border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
+            transform: translate(-20px, 20px) scale(0.9) rotate(180deg);
+          }
+          75% {
+            border-radius: 70% 30% 50% 50% / 30% 50% 60% 40%;
+            transform: translate(50px, 50px) scale(1.05) rotate(270deg);
+          }
+        }
+        .animate-morph {
+          animation: morph 15s ease-in-out infinite;
         }
         .animation-delay-2000 {
           animation-delay: 2s;
         }
         .animation-delay-4000 {
           animation-delay: 4s;
+        }
+        .animation-delay-200 {
+          animation-delay: 0.2s;
+        }
+        .animation-delay-400 {
+          animation-delay: 0.4s;
+        }
+        .animation-delay-500 {
+          animation-delay: 0.5s;
+        }
+        .animation-delay-1000 {
+          animation-delay: 1s;
+        }
+
+        /* Particles */
+        .particles-container {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+          overflow: hidden;
+        }
+        .particle {
+          position: absolute;
+          width: 4px;
+          height: 4px;
+          background: linear-gradient(135deg, #667eea, #764ba2);
+          border-radius: 50%;
+          opacity: 0.6;
+          animation: float-particle 15s infinite;
+        }
+        @keyframes float-particle {
+          0% {
+            transform: translateY(0) translateX(0) scale(1);
+            opacity: 0;
+          }
+          10% {
+            opacity: 0.6;
+          }
+          90% {
+            opacity: 0.6;
+          }
+          100% {
+            transform: translateY(-100vh) translateX(100px) scale(0.5);
+            opacity: 0;
+          }
+        }
+
+        /* Grid Background */
+        .grid-background {
+          background-image:
+            linear-gradient(rgba(99, 102, 241, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(99, 102, 241, 0.05) 1px, transparent 1px);
+          background-size: 50px 50px;
+          animation: moveGrid 20s linear infinite;
+        }
+        .grid-lines-background {
+          width: 100%;
+          height: 100%;
+          background-image:
+            linear-gradient(rgba(99, 102, 241, 0.1) 2px, transparent 2px),
+            linear-gradient(90deg, rgba(99, 102, 241, 0.1) 2px, transparent 2px);
+          background-size: 100px 100px;
+          animation: moveGrid 30s linear infinite;
+        }
+        @keyframes moveGrid {
+          0% { transform: translate(0, 0); }
+          100% { transform: translate(50px, 50px); }
+        }
+
+        /* Floating Animation */
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        .animate-float {
+          animation: float 3s ease-in-out infinite;
+        }
+
+        /* Particle Float */
+        @keyframes particle-float {
+          0%, 100% {
+            transform: translateY(0px) translateX(0px);
+            opacity: 0.5;
+          }
+          50% {
+            transform: translateY(-30px) translateX(20px);
+            opacity: 1;
+          }
+        }
+        .animate-particle-float {
+          animation: particle-float 6s ease-in-out infinite;
+        }
+
+        /* Bounce Slow */
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 2s ease-in-out infinite;
+        }
+
+        /* Count Up */
+        @keyframes count-up {
+          from { opacity: 0; transform: scale(0.5); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        .animate-count-up {
+          animation: count-up 1s ease-out;
+        }
+
+        /* Slide In */
+        @keyframes slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(-50px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-slide-in {
+          animation: slide-in 0.8s ease-out forwards;
+        }
+
+        /* Slide Right */
+        @keyframes slide-right {
+          from {
+            opacity: 0;
+            transform: translateX(-30px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        .animate-slide-right {
+          animation: slide-right 0.6s ease-out forwards;
+        }
+
+        /* Glassmorphism */
+        .glass-card {
+          background: rgba(255, 255, 255, 0.7);
+          backdrop-filter: blur(10px);
+          border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .glass-card-strong {
+          background: rgba(255, 255, 255, 0.9);
+          backdrop-filter: blur(20px);
+          border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        /* 3D Tilt Cards */
+        .tilt-card {
+          transform-style: preserve-3d;
+          transition: transform 0.3s ease;
+        }
+        .tilt-card:hover {
+          transform: perspective(1000px) rotateX(5deg) rotateY(5deg);
+        }
+
+        /* Transform 3D */
+        .transform-3d {
+          transform-style: preserve-3d;
+        }
+
+        /* Floating Dashboard */
+        .floating-dashboard {
+          animation: float-dashboard 6s ease-in-out infinite;
+        }
+        @keyframes float-dashboard {
+          0%, 100% { transform: translateY(0px) rotateY(0deg); }
+          50% { transform: translateY(-30px) rotateY(5deg); }
         }
 
         /* Marquee Animation */
@@ -1016,6 +1300,15 @@ const LandingPage = () => {
           background: white;
           width: 30px;
           border-radius: 5px;
+        }
+
+        /* Parallax Content */
+        .parallax-content {
+          animation: parallax-float 4s ease-in-out infinite;
+        }
+        @keyframes parallax-float {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-10px); }
         }
       `}</style>
     </div>

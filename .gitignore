@@ -1,4 +1,9 @@
 node_modules/
 .claude/
+
+# Environment variables (all .env files in any directory)
 .env
-.env.localbackend/.env
+.env.*
+**/.env
+**/.env.*
+!.env.example

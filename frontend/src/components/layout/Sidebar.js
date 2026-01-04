@@ -120,7 +120,7 @@ const Sidebar = () => {
           style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
         >
           <span>Lead Management</span>
-          <span style={{ float: 'right' }}>{openSections.leadManagement ? '▼' : '▶'}</span>
+1          <span style={{ float: 'right' }}>{openSections.leadManagement ? '▼' : '▶'}</span>
         </div>
         {openSections.leadManagement && (
           <>
