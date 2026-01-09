@@ -52,6 +52,32 @@ export const AuthProvider = ({ children }) => {
     return response;
   };
 
+  // NEW: Two-step registration methods
+  const registerStep1 = async (formData) => {
+    const response = await authService.registerStep1(formData);
+    // Don't set token yet - user needs to verify email first
+    return response;
+  };
+
+  const verifyEmail = async (email, otp) => {
+    const response = await authService.verifyEmail(email, otp);
+    setToken(response.token);
+    setUser(response.user);
+    localStorage.setItem('token', response.token);
+    return response;
+  };
+
+  const resendOTP = async (email) => {
+    const response = await authService.resendOTP(email);
+    return response;
+  };
+
+  const completeProfile = async (profileData) => {
+    const response = await authService.completeProfile(profileData);
+    setUser(response); // Update user with tenant info
+    return response;
+  };
+
   const logout = () => {
     setUser(null);
     setToken(null);
@@ -91,10 +117,17 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    setUser, // NEW - needed for OAuth callback
     loading,
     token,
+    setToken, // NEW - needed for OAuth callback
+    loadUser, // NEW - needed for OAuth callback
     login,
     registerTenant,
+    registerStep1, // NEW
+    verifyEmail, // NEW
+    resendOTP, // NEW
+    completeProfile, // NEW
     logout,
     hasPermission,
     isSaasOwner

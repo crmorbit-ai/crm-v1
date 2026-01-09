@@ -154,11 +154,39 @@ const verifyTenantContext = (req, res, next) => {
   next();
 };
 
+/**
+ * Require profile completion
+ * Forces users to complete their profile before accessing protected routes
+ * Exceptions: /auth/complete-profile, /auth/me, /auth/logout
+ */
+const requireProfileComplete = (req, res, next) => {
+  // SAAS owners and admins don't need profile completion
+  if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
+    return next();
+  }
+
+  // Resellers don't need profile completion
+  if (req.user.userType === 'RESELLER') {
+    return next();
+  }
+
+  // Check if user has completed profile
+  if (!req.user.isProfileComplete) {
+    return errorResponse(res, 403, 'Please complete your profile to access this feature', {
+      requiresProfileCompletion: true,
+      redirectTo: '/complete-profile'
+    });
+  }
+
+  next();
+};
+
 module.exports = {
   protect,
   restrictTo,
   requireTenant,
   requireSaasAccess,
   requireReseller, // 🚀 NEW
-  verifyTenantContext
+  verifyTenantContext,
+  requireProfileComplete // 🆕 NEW
 };

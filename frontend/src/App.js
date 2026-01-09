@@ -6,7 +6,10 @@ import { ThemeProvider } from './context/ThemeContext';
 
 // Auth components
 import Login from './pages/Login';
-import Register from './pages/Register';
+import Register from './pages/RegisterNew'; // NEW: Using updated register
+import VerifyEmail from './pages/VerifyEmail'; // NEW
+import CompleteProfile from './pages/CompleteProfile'; // NEW
+import OAuthCallback from './pages/OAuthCallback'; // NEW
 import LandingPage from './pages/LandingPage';
 
 // Dashboard components
@@ -91,7 +94,7 @@ import ContactDetail from './pages/ContactDetail';
 import Loading from './components/common/Loading';
 
 // Protected route wrapper
-const ProtectedRoute = ({ children, requireSaas = false }) => {
+const ProtectedRoute = ({ children, requireSaas = false, skipProfileCheck = false }) => {
   const { user, loading, isSaasOwner } = useAuth();
 
   if (loading) {
@@ -100,6 +103,13 @@ const ProtectedRoute = ({ children, requireSaas = false }) => {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check profile completion (skip for SAAS owners and specific routes)
+  if (!skipProfileCheck && !isSaasOwner() && user.userType !== 'RESELLER') {
+    if (!user.isProfileComplete) {
+      return <Navigate to="/complete-profile" replace />;
+    }
   }
 
   if (requireSaas && !isSaasOwner()) {
@@ -144,7 +154,19 @@ function AppRoutes() {
         </PublicRoute>
       } />
 
-      
+      {/* 🆕 NEW: Two-step registration routes */}
+      <Route path="/verify-email" element={<VerifyEmail />} />
+      <Route path="/auth/callback" element={<OAuthCallback />} />
+      <Route path="/complete-profile" element={
+        <ProtectedRoute skipProfileCheck={true}>
+          <CompleteProfile />
+        </ProtectedRoute>
+      } />
+
+      {/* Forgot/Reset Password */}
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+
       {/* 🚀 RESELLER PUBLIC ROUTES */}
      
       <Route path="/reseller/register" element={<ResellerRegister />} />

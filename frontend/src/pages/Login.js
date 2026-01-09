@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../config/api.config';
 import '../styles/auth.css';
 
 const Login = () => {
@@ -224,6 +225,60 @@ const Login = () => {
             }}
           >
             {loading ? '⏳ Signing in...' : '🚀 Sign In'}
+          </button>
+
+          {/* OR Divider */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            margin: '24px 0',
+            textAlign: 'center'
+          }}>
+            <div style={{ flex: 1, borderBottom: '1px solid #E5E7EB' }}></div>
+            <span style={{ padding: '0 16px', color: '#9CA3AF', fontSize: '14px', fontWeight: '600' }}>OR</span>
+            <div style={{ flex: 1, borderBottom: '1px solid #E5E7EB' }}></div>
+          </div>
+
+          {/* Google Sign-In Button */}
+          <button
+            type="button"
+            onClick={() => window.location.href = `${API_URL}/auth/google`}
+            style={{
+              width: '100%',
+              padding: '14px 24px',
+              background: 'white',
+              border: '2px solid #E5E7EB',
+              borderRadius: '10px',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#1F2937',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px'
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#F9FAFB';
+              e.target.style.borderColor = '#D1D5DB';
+              e.target.style.transform = 'translateY(-1px)';
+              e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'white';
+              e.target.style.borderColor = '#E5E7EB';
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = 'none';
+            }}
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+              <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332A8.997 8.997 0 009.003 18z" fill="#34A853"/>
+              <path d="M3.964 10.712A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.96A8.996 8.996 0 000 9c0 1.452.348 2.827.96 4.042l3.004-2.33z" fill="#FBBC05"/>
+              <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0A8.997 8.997 0 00.96 4.958L3.964 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+            </svg>
+            Sign in with Google
           </button>
         </form>
 

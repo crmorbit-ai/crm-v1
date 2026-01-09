@@ -173,6 +173,13 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 🆕 Initialize Passport for Google OAuth
+const passport = require('./config/passport');
+app.use(passport.initialize());
+
+// 🆕 Serve uploaded files (logos)
+app.use('/uploads', express.static('uploads'));
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({

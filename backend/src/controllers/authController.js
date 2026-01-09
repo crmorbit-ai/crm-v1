@@ -7,7 +7,8 @@ const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { sendPasswordResetOTP } = require('../utils/emailService');
+const { sendPasswordResetOTP, sendSignupVerificationOTP } = require('../utils/emailService');
+const Role = require('../models/Role');
 
 /**
  * Generate 6-digit OTP
@@ -556,9 +557,453 @@ const changePassword = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Register user - Step 1 (Email verification required)
+ * @route   POST /api/auth/register-step1
+ * @access  Public
+ */
+const registerStep1 = async (req, res) => {
+  try {
+    const { firstName, lastName, email, phone, password, resellerId } = req.body;
+
+    console.log('📝 Step 1 Registration attempt:', { email, firstName, lastName });
+
+    // Validation
+    if (!firstName || !lastName || !email || !password) {
+      return errorResponse(res, 400, 'Please provide all required fields');
+    }
+
+    if (password.length < 6) {
+      return errorResponse(res, 400, 'Password must be at least 6 characters');
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+
+    if (existingUser) {
+      // If user exists but is pending verification, allow re-registration
+      if (existingUser.isPendingVerification) {
+        // Delete the pending user and allow new registration
+        await User.findByIdAndDelete(existingUser._id);
+        console.log('🗑️ Deleted pending verification user, allowing re-registration');
+      } else {
+        return errorResponse(res, 400, 'Email already registered');
+      }
+    }
+
+    // Generate 6-digit OTP
+    const otp = generateOTP();
+
+    // Hash OTP with SHA256
+    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Set OTP expiration (10 minutes)
+    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Create user with pending verification
+    const user = await User.create({
+      firstName,
+      lastName,
+      email,
+      phone,
+      password, // Will be hashed by pre-save middleware
+      userType: 'TENANT_ADMIN', // Will become admin of their tenant
+      isPendingVerification: true,
+      emailVerified: false,
+      isProfileComplete: false,
+      emailVerificationOTP: hashedOTP,
+      emailVerificationOTPExpire: otpExpire,
+      authProvider: 'local',
+      registrationData: resellerId ? { resellerId } : null,
+      isActive: false // Not active until email verified
+    });
+
+    // Send verification OTP email
+    await sendSignupVerificationOTP(email, otp, `${firstName} ${lastName}`);
+
+    console.log('✅ Step 1 registration successful, OTP sent to:', email);
+
+    successResponse(res, 201, 'Registration successful! Please check your email for verification code.', {
+      email,
+      requiresVerification: true
+    });
+  } catch (error) {
+    console.error('Step 1 registration error:', error);
+    errorResponse(res, 500, 'Server error during registration');
+  }
+};
+
+/**
+ * @desc    Verify email with OTP - Step 2
+ * @route   POST /api/auth/verify-email
+ * @access  Public
+ */
+const verifyEmailSignup = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+
+    console.log('🔐 Email verification attempt for:', email);
+
+    if (!email || !otp) {
+      return errorResponse(res, 400, 'Please provide email and OTP');
+    }
+
+    // Hash the provided OTP
+    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Find user with matching email, OTP, and not expired
+    const user = await User.findOne({
+      email,
+      emailVerificationOTP: hashedOTP,
+      emailVerificationOTPExpire: { $gt: Date.now() },
+      isPendingVerification: true
+    }).populate('tenant');
+
+    if (!user) {
+      return errorResponse(res, 400, 'Invalid or expired OTP');
+    }
+
+    // Verify email
+    user.emailVerified = true;
+    user.isPendingVerification = false;
+    user.emailVerificationOTP = undefined;
+    user.emailVerificationOTPExpire = undefined;
+    user.isActive = true; // Activate user after email verification
+    user.lastLogin = new Date();
+    await user.save();
+
+    // Generate JWT token
+    const token = generateToken(user);
+
+    // Remove password from response
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    console.log('✅ Email verified successfully for:', email);
+
+    successResponse(res, 200, 'Email verified successfully!', {
+      token,
+      user: userResponse,
+      requiresProfileCompletion: !user.isProfileComplete
+    });
+  } catch (error) {
+    console.error('Email verification error:', error);
+    errorResponse(res, 500, 'Server error during verification');
+  }
+};
+
+/**
+ * @desc    Resend verification OTP
+ * @route   POST /api/auth/resend-otp
+ * @access  Public
+ */
+const resendVerificationOTP = async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    console.log('🔄 Resend OTP request for:', email);
+
+    if (!email) {
+      return errorResponse(res, 400, 'Please provide email');
+    }
+
+    // Find pending verification user
+    const user = await User.findOne({
+      email,
+      isPendingVerification: true
+    });
+
+    if (!user) {
+      return errorResponse(res, 404, 'No pending verification found for this email');
+    }
+
+    // Generate new OTP
+    const otp = generateOTP();
+    const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
+
+    // Update user with new OTP
+    user.emailVerificationOTP = hashedOTP;
+    user.emailVerificationOTPExpire = otpExpire;
+    await user.save();
+
+    // Send new OTP email
+    await sendSignupVerificationOTP(email, otp, `${user.firstName} ${user.lastName}`);
+
+    console.log('✅ New OTP sent to:', email);
+
+    successResponse(res, 200, 'New verification code sent to your email');
+  } catch (error) {
+    console.error('Resend OTP error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Complete user profile and create tenant
+ * @route   POST /api/auth/complete-profile
+ * @access  Private (requires authentication)
+ */
+const completeProfile = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const {
+      organizationName,
+      slug,
+      businessType,
+      industry,
+      numberOfEmployees,
+      street,
+      city,
+      state,
+      country,
+      zipCode,
+      primaryColor,
+      timezone,
+      dateFormat,
+      currency
+    } = req.body;
+
+    console.log('🏢 Profile completion attempt for user:', req.user.email);
+
+    // Validation
+    if (!organizationName || !slug) {
+      return errorResponse(res, 400, 'Organization name and slug are required');
+    }
+
+    // Check if user already completed profile
+    const user = await User.findById(userId);
+
+    if (user.isProfileComplete) {
+      return errorResponse(res, 400, 'Profile already completed');
+    }
+
+    if (!user.emailVerified) {
+      return errorResponse(res, 403, 'Please verify your email first');
+    }
+
+    // Check if slug already exists
+    const existingTenant = await Tenant.findOne({ slug });
+    if (existingTenant) {
+      return errorResponse(res, 400, 'Organization slug already exists. Please choose another.');
+    }
+
+    // Handle logo upload (if provided)
+    let logoPath = null;
+    if (req.file) {
+      logoPath = `/uploads/logos/${req.file.filename}`;
+    }
+
+    // Get Free subscription plan
+    const SubscriptionPlan = require('../models/SubscriptionPlan');
+    const freePlan = await SubscriptionPlan.findOne({ name: 'Free', isActive: true });
+
+    const trialEndDate = new Date();
+    trialEndDate.setDate(trialEndDate.getDate() + (freePlan?.trialDays || 15));
+
+    // Create Tenant
+    const tenant = await Tenant.create({
+      organizationName,
+      slug,
+      contactEmail: user.email,
+      contactPhone: user.phone || '',
+      businessType: businessType || 'B2B',
+      industry: industry || '',
+      numberOfEmployees: numberOfEmployees || '',
+      address: {
+        street: street || '',
+        city: city || '',
+        state: state || '',
+        country: country || '',
+        zipCode: zipCode || ''
+      },
+      logo: logoPath,
+      primaryColor: primaryColor || '#4A90E2',
+      settings: {
+        timezone: timezone || 'Asia/Kolkata',
+        dateFormat: dateFormat || 'DD/MM/YYYY',
+        currency: currency || 'INR'
+      },
+      subscription: {
+        plan: freePlan?._id,
+        planName: 'Free',
+        status: 'trial',
+        isTrialActive: true,
+        trialStartDate: new Date(),
+        trialEndDate: trialEndDate,
+        billingCycle: 'monthly',
+        amount: 0,
+        currency: 'USD',
+        autoRenew: false
+      },
+      usage: {
+        users: 1,
+        leads: 0,
+        contacts: 0,
+        deals: 0,
+        storage: 0,
+        emailsSentToday: 0,
+        lastEmailResetDate: new Date()
+      },
+      isActive: true,
+      isSuspended: false
+    });
+
+    // Attach reseller if exists
+    if (user.registrationData && user.registrationData.resellerId) {
+      tenant.reseller = user.registrationData.resellerId;
+      await tenant.save();
+    }
+
+    console.log('✅ Tenant created:', tenant.organizationName);
+
+    // Create Tenant Admin Role
+    const adminRole = await Role.create({
+      name: `${organizationName} - Admin`,
+      slug: `${slug}-admin`,
+      description: 'Full administrative access for tenant',
+      tenant: tenant._id,
+      roleType: 'custom',
+      permissions: [
+        { feature: 'user_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'role_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'group_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'lead_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'account_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'contact_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'opportunity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'product_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'activity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'task_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'meeting_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'call_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'note_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'email_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'report_management', actions: ['read', 'manage'] },
+        { feature: 'advanced_analytics', actions: ['read', 'manage'] },
+        { feature: 'api_access', actions: ['read', 'manage'] },
+        { feature: 'data_center', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'quotations', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'invoices', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'rfi', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'purchase_orders', actions: ['create', 'read', 'update', 'delete', 'manage'] },
+        { feature: 'field_customization', actions: ['create', 'read', 'update', 'delete', 'manage'] }
+      ],
+      level: 100,
+      isActive: true
+    });
+
+    console.log('✅ Admin role created');
+
+    // Update user
+    user.tenant = tenant._id;
+    user.roles = [adminRole._id];
+    user.isProfileComplete = true;
+    user.registrationData = undefined; // Clear temporary data
+    await user.save();
+
+    // Fetch updated user with populated fields
+    const updatedUser = await User.findById(userId)
+      .populate('roles')
+      .populate('tenant')
+      .select('-password');
+
+    console.log('✅ Profile completion successful for:', user.email);
+
+    successResponse(res, 200, 'Profile completed successfully!', updatedUser);
+  } catch (error) {
+    console.error('❌ Profile completion error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
+    errorResponse(res, 500, `Server error during profile completion: ${error.message}`);
+  }
+};
+
+/**
+ * @desc    Initiate Google OAuth
+ * @route   GET /api/auth/google
+ * @access  Public
+ */
+const googleOAuthInitiate = (req, res, next) => {
+  const passport = require('../config/passport');
+  passport.authenticate('google', {
+    scope: ['profile', 'email']
+  })(req, res, next);
+};
+
+/**
+ * @desc    Google OAuth Callback
+ * @route   GET /api/auth/google/callback
+ * @access  Public
+ */
+const googleOAuthCallback = async (req, res) => {
+  try {
+    const profile = req.user;
+
+    console.log('🔐 Google OAuth callback:', profile.email);
+
+    // Check if this is a new user (from passport strategy)
+    if (profile.isNewUser) {
+      // Create new user with Google account
+      const newUser = await User.create({
+        email: profile.email,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        googleId: profile.googleId,
+        googleProfilePicture: profile.profilePicture,
+        authProvider: 'google',
+        emailVerified: true, // Google verifies emails
+        isPendingVerification: false,
+        isProfileComplete: false,
+        userType: 'TENANT_ADMIN',
+        isActive: true,
+        lastLogin: new Date()
+      });
+
+      // Generate token
+      const token = generateToken(newUser);
+
+      console.log('✅ New Google user created:', newUser.email);
+
+      // Redirect to frontend with token and profile completion flag
+      const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
+      return res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=true`);
+    }
+
+    // Existing user - populate tenant data before generating token
+    const existingUser = await User.findById(profile._id)
+      .populate('tenant')
+      .populate('roles');
+
+    if (!existingUser) {
+      throw new Error('User not found after OAuth');
+    }
+
+    // Generate token with fully populated user
+    const token = generateToken(existingUser);
+
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
+
+    console.log('✅ Google OAuth successful for existing user:', existingUser.email);
+
+    res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=${!existingUser.isProfileComplete}`);
+  } catch (error) {
+    console.error('Google OAuth callback error:', error);
+    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
+    res.redirect(`${frontendURL}/login?error=oauth_failed`);
+  }
+};
+
 module.exports = {
   login,
   registerTenant,
+  registerStep1, // NEW
+  verifyEmailSignup, // NEW
+  resendVerificationOTP, // NEW
+  completeProfile, // NEW
+  googleOAuthInitiate, // NEW
+  googleOAuthCallback, // NEW
   getMe,
   logout,
   forgotPassword,

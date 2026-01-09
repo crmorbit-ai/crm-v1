@@ -531,8 +531,118 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
   }
 };
 
+/**
+ * Send OTP for signup email verification
+ */
+const sendSignupVerificationOTP = async (email, otp, userName) => {
+  try {
+    const transporter = createTransporter();
+    await transporter.verify();
+    console.log('✅ SMTP connection verified for signup verification');
+
+    const mailOptions = {
+      from: `"CRM System" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      to: email,
+      subject: 'Verify Your Email - CRM System',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center; color: white; }
+            .logo { font-size: 32px; margin-bottom: 10px; }
+            .header h1 { margin: 0; font-size: 24px; font-weight: 600; }
+            .header p { margin: 10px 0 0; opacity: 0.95; font-size: 15px; }
+            .content { padding: 40px 30px; }
+            .welcome-text { font-size: 16px; color: #1F2937; margin-bottom: 24px; line-height: 1.6; }
+            .otp-container { background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-radius: 12px; padding: 30px; text-align: center; margin: 30px 0; }
+            .otp-code { font-size: 48px; font-weight: 700; letter-spacing: 12px; color: white; font-family: 'Courier New', monospace; }
+            .info-box { background: #D1FAE5; border-left: 4px solid #10b981; padding: 16px; margin: 24px 0; border-radius: 4px; }
+            .info-text { margin: 0; color: #065F46; font-size: 14px; line-height: 1.6; }
+            .footer { background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB; }
+            .footer p { margin: 5px 0; color: #6B7280; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo">✉️</div>
+              <h1>Welcome to CRM System!</h1>
+              <p>Complete your registration by verifying your email</p>
+            </div>
+            <div class="content">
+              <p class="welcome-text">
+                Hello <strong>${userName || 'there'}</strong>,
+              </p>
+              <p class="welcome-text">
+                Thank you for registering with our CRM System! To complete your registration and secure your account,
+                please verify your email address using the OTP code below:
+              </p>
+              <div class="otp-container">
+                <div class="otp-code">${otp}</div>
+              </div>
+              <div class="info-box">
+                <p class="info-text">
+                  <strong>⏰ This OTP expires in 10 minutes.</strong><br>
+                  If you didn't request this verification, please ignore this email.
+                </p>
+              </div>
+              <p style="color: #6B7280; font-size: 14px; margin-top: 24px;">
+                Once verified, you'll be able to complete your profile and start using the CRM platform.
+              </p>
+            </div>
+            <div class="footer">
+              <p style="font-weight: 600; color: #1F2937;">CRM System</p>
+              <p>© ${new Date().getFullYear()} All rights reserved.</p>
+              <p style="font-size: 12px; margin-top: 15px;">
+                This is an automated email. Please do not reply directly to this message.
+              </p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Signup verification OTP email sent:', info.messageId);
+
+    // Track sent email
+    try {
+      const User = require('../models/User');
+      const emailTrackingService = require('../services/emailTrackingService');
+      const user = await User.findOne({ email });
+
+      if (user) {
+        await emailTrackingService.trackSentEmail({
+          messageId: info.messageId,
+          from: mailOptions.from,
+          to: email,
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+          emailType: 'signup_verification',
+          userId: user._id,
+          tenantId: user.tenant,
+          smtpMode: 'free'
+        });
+      }
+    } catch (trackError) {
+      console.error('Email tracking failed:', trackError);
+      // Don't fail the email send if tracking fails
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Signup verification OTP email error:', error.message);
+    throw new Error('Failed to send signup verification OTP email: ' + error.message);
+  }
+};
+
 module.exports = {
   sendPasswordResetOTP,
+  sendSignupVerificationOTP,
   sendMeetingInvitation,
   sendMeetingReminder,
   sendMeetingCancellation,

@@ -11,7 +11,10 @@ const userSchema = new mongoose.Schema({
   },
   password: {
     type: String,
-    required: true,
+    required: function() {
+      // Password only required for local authentication
+      return this.authProvider === 'local' || !this.authProvider;
+    },
     minlength: 6
   },
   firstName: {
@@ -74,6 +77,45 @@ const userSchema = new mongoose.Schema({
   saasRole: {
     type: String
   },
+  // Email Verification (for signup)
+  emailVerified: {
+    type: Boolean,
+    default: false
+  },
+  emailVerificationOTP: {
+    type: String  // SHA256 hashed 6-digit OTP
+  },
+  emailVerificationOTPExpire: {
+    type: Date  // 10 minute expiry
+  },
+  // Profile Completion Status
+  isProfileComplete: {
+    type: Boolean,
+    default: false  // Forces profile completion flow
+  },
+  // OAuth Integration
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
+  },
+  googleId: {
+    type: String,
+    sparse: true,  // Allow null but unique when present
+    unique: true
+  },
+  googleProfilePicture: {
+    type: String  // Store Google profile image URL
+  },
+  // Pending User State (registered but not verified)
+  isPendingVerification: {
+    type: Boolean,
+    default: false
+  },
+  registrationData: {
+    type: mongoose.Schema.Types.Mixed,  // Temporary storage for registration info (e.g., resellerId)
+    default: null
+  },
   // Password reset fields - OTP based
   resetPasswordOTP: {
     type: String
@@ -91,7 +133,8 @@ const userSchema = new mongoose.Schema({
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
+  // Skip if password not modified or not set (OAuth users)
+  if (!this.isModified('password') || !this.password) return next();
 
   try {
     const salt = await bcrypt.genSalt(10);
