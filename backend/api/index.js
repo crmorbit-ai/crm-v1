@@ -106,6 +106,19 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// 🆕 Initialize Passport for Google OAuth
+try {
+  const passport = require('../src/config/passport');
+  app.use(passport.initialize());
+  console.log('✅ Passport initialized');
+} catch (error) {
+  console.error('⚠️ Passport initialization failed:', error.message);
+}
+
+// 🆕 Serve uploaded files (logos) - Note: This won't work in Vercel serverless
+// Consider using cloud storage (S3, Cloudinary) for production
+app.use('/uploads', express.static('uploads'));
+
 // Database connection management for serverless
 let cachedDb = null;
 let cachedDataCenterDb = null;
