@@ -2,15 +2,25 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Ensure upload directory exists
-const uploadDir = path.join(__dirname, '../../uploads/logos');
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
-}
+// Determine upload directory based on environment
+// In serverless (Vercel), use /tmp which is writable
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const uploadDir = isServerless
+  ? '/tmp/uploads/logos'
+  : path.join(__dirname, '../../uploads/logos');
 
 // Configure storage
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
+    // Create directory lazily when a file is uploaded (not at initialization)
+    if (!fs.existsSync(uploadDir)) {
+      try {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      } catch (error) {
+        console.error('Error creating upload directory:', error);
+        return cb(error);
+      }
+    }
     cb(null, uploadDir);
   },
   filename: (req, file, cb) => {

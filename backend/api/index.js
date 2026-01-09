@@ -5,23 +5,18 @@ try {
   console.error('Error loading .env:', error);
 }
 
-let app;
-try {
-  const express = require('express');
-  const cors = require('cors');
-  const helmet = require('helmet');
-  const morgan = require('morgan');
-  const mongoose = require('mongoose');
+// Load core modules - declare outside try block for proper scoping
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const mongoose = require('mongoose');
 
-  console.log('✅ Core modules loaded');
+console.log('✅ Core modules loaded');
 
-  // Initialize express app
-  app = express();
-  console.log('✅ Express app initialized');
-} catch (error) {
-  console.error('❌ CRITICAL: Failed to load core modules:', error);
-  throw error;
-}
+// Initialize express app
+const app = express();
+console.log('✅ Express app initialized');
 
 // Global error handler for uncaught errors
 process.on('unhandledRejection', (error) => {
