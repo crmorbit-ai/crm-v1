@@ -5,14 +5,23 @@ try {
   console.error('Error loading .env:', error);
 }
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const mongoose = require('mongoose');
+let app;
+try {
+  const express = require('express');
+  const cors = require('cors');
+  const helmet = require('helmet');
+  const morgan = require('morgan');
+  const mongoose = require('mongoose');
 
-// Initialize express app
-const app = express();
+  console.log('✅ Core modules loaded');
+
+  // Initialize express app
+  app = express();
+  console.log('✅ Express app initialized');
+} catch (error) {
+  console.error('❌ CRITICAL: Failed to load core modules:', error);
+  throw error;
+}
 
 // Global error handler for uncaught errors
 process.on('unhandledRejection', (error) => {
@@ -251,8 +260,12 @@ app.use(async (req, res, next) => {
 
 // Load routes with error handling
 try {
+  console.log('📂 Loading routes...');
+
   // Auth & User Routes
   app.use('/api/auth', require('../src/routes/auth'));
+  console.log('  ✅ auth routes loaded');
+
   app.use('/api/users', require('../src/routes/users'));
   app.use('/api/tenants', require('../src/routes/tenants'));
   app.use('/api/roles', require('../src/routes/roles'));
@@ -261,6 +274,7 @@ try {
   app.use('/api/subscriptions', require('../src/routes/subscriptions'));
   app.use('/api/billings', require('../src/routes/billings'));
   app.use('/api/activity-logs', require('../src/routes/activityLogs'));
+  console.log('  ✅ core routes loaded');
 
   // Reseller Routes
   app.use('/api/resellers', require('../src/routes/resellers'));
@@ -270,6 +284,7 @@ try {
   app.use('/api/products', require('../src/routes/products'));
   app.use('/api/user-settings', require('../src/routes/userSettings'));
   app.use('/api/support-tickets', require('../src/routes/supportTickets'));
+  console.log('  ✅ data center routes loaded');
 
   // Product Management Routes
   app.use('/api/product-categories', require('../src/routes/productCategoryRoutes'));
@@ -283,6 +298,7 @@ try {
   app.use('/api/quotations', require('../src/routes/quotations'));
   app.use('/api/purchase-orders', require('../src/routes/purchaseOrders'));
   app.use('/api/invoices', require('../src/routes/invoices'));
+  console.log('  ✅ B2B workflow routes loaded');
 
   // CRM Routes
   app.use('/api/leads', require('../src/routes/leads'));
@@ -294,10 +310,13 @@ try {
   app.use('/api/meetings', require('../src/routes/meetingRoutes'));
   app.use('/api/calls', require('../src/routes/callRoutes'));
   app.use('/api/emails', require('../src/routes/emails'));
+  console.log('  ✅ CRM routes loaded');
 
   console.log('✅ All routes loaded successfully');
 } catch (error) {
   console.error('❌ Error loading routes:', error);
+  console.error('❌ Stack:', error.stack);
+  // Don't throw - let the app start anyway for debugging
 }
 
 // 404 handler
