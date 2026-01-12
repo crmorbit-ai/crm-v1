@@ -7,19 +7,15 @@ import '../styles/auth.css';
 const Register = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const resellerId = searchParams.get('ref'); // Get reseller ID from URL
+  const resellerId = searchParams.get('ref');
+  const { registerStep1 } = useAuth();
 
   const [formData, setFormData] = useState({
-    organizationName: '',
-    slug: '',
-    contactEmail: '',
-    contactPhone: '',
-    adminFirstName: '',
-    adminLastName: '',
-    adminEmail: '',
-    adminPassword: '',
-    confirmPassword: '',
-    resellerId: resellerId || '' // Pre-fill if coming from reseller link
+    firstName: '',
+    lastName: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
   });
 
   const [error, setError] = useState('');
@@ -36,14 +32,24 @@ const Register = () => {
     e.preventDefault();
     setError('');
 
-    // Validation
-    if (formData.adminPassword !== formData.confirmPassword) {
+    if (!formData.firstName || !formData.lastName || !formData.email || !formData.password) {
+      setError('All fields are required');
+      return;
+    }
+
+    if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
     }
 
-    if (formData.adminPassword.length < 6) {
+    if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -51,404 +57,361 @@ const Register = () => {
 
     try {
       const payload = {
-        organizationName: formData.organizationName,
-        slug: formData.slug,
-        contactEmail: formData.contactEmail,
-        contactPhone: formData.contactPhone,
-        adminFirstName: formData.adminFirstName,
-        adminLastName: formData.adminLastName,
-        adminEmail: formData.adminEmail,
-        adminPassword: formData.adminPassword
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        password: formData.password
       };
 
-      // Add resellerId if present
-      if (formData.resellerId) {
-        payload.resellerId = formData.resellerId;
+      if (resellerId) {
+        payload.resellerId = resellerId;
       }
 
-      const response = await fetch(`${API_URL}/auth/register-tenant`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Store token and user
-        localStorage.setItem('token', data.data.token);
-        localStorage.setItem('user', JSON.stringify(data.data.user));
-        
-        // Redirect to dashboard
-        navigate('/dashboard');
-      } else {
-        setError(data.message || 'Registration failed');
-      }
+      await registerStep1(payload);
+      navigate('/verify-email', { state: { email: formData.email } });
     } catch (err) {
-      setError('Failed to register. Please try again.');
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="auth-container" style={{
+    <div style={{
       background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #1a2a35 50%, #95b5ef 75%, #2a5298 100%)',
       backgroundSize: '400% 400%',
       animation: 'gradientShift 15s ease infinite',
       minHeight: '100vh',
-      padding: '30px 20px'
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '20px'
     }}>
-      <div className="auth-card" style={{
-        maxWidth: '1000px',
-        padding: '28px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)',
-        borderRadius: '20px',
-        border: '1px solid rgba(255, 255, 255, 0.3)'
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-          <div style={{
-            width: '60px',
-            height: '60px',
-            margin: '0 auto 12px',
-            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '28px',
-            boxShadow: '0 8px 24px rgba(93, 185, 222, 0.4)'
-          }}>🏢</div>
-          <h1 className="auth-title" style={{
-            marginBottom: '6px',
-            fontSize: '26px',
-            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>Register Your Organization</h1>
-          <p className="auth-subtitle" style={{ marginBottom: '0', fontSize: '14px', color: '#6b7280' }}>
-            Get started with your free CRM account
-          </p>
-        </div>
-
-        {resellerId && (
-          <div style={{
-            padding: '12px 16px',
-            background: '#EFF6FF',
-            color: '#1E40AF',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            fontSize: '14px'
-          }}>
-            ✅ You're registering through a partner referral
-          </div>
-        )}
-
-        {error && (
-          <div style={{
-            padding: '12px 16px',
-            background: '#FEE2E2',
-            color: '#991B1B',
-            borderRadius: '8px',
-            marginBottom: '20px',
-            fontSize: '14px'
-          }}>
-            ❌ {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          {/* Organization & Admin Details Combined */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.08) 0%, rgba(42, 82, 152, 0.05) 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            marginBottom: '16px',
-            border: '1px solid rgba(93, 185, 222, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '14px',
-              paddingBottom: '10px',
-              borderBottom: '2px solid rgba(93, 185, 222, 0.3)'
-            }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
-              }}>📋</div>
-              <h3 style={{
-                fontSize: '16px',
-                fontWeight: '700',
-                margin: 0,
-                color: '#1a1a1a'
-              }}>Organization Details</h3>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Organization Name *</label>
-                <input
-                  type="text"
-                  name="organizationName"
-                  className="form-input"
-                  placeholder="Acme Corporation"
-                  value={formData.organizationName}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Slug *</label>
-                <input
-                  type="text"
-                  name="slug"
-                  className="form-input"
-                  placeholder="acme-corp"
-                  value={formData.slug}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Contact Email *</label>
-                <input
-                  type="email"
-                  name="contactEmail"
-                  className="form-input"
-                  placeholder="contact@acme.com"
-                  value={formData.contactEmail}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Contact Phone</label>
-                <input
-                  type="tel"
-                  name="contactPhone"
-                  className="form-input"
-                  placeholder="+1 234 567 8900"
-                  value={formData.contactPhone}
-                  onChange={handleChange}
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0', gridColumn: '2 / -1' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>
-                  Referral Code (Optional)
-                </label>
-                <input
-                  type="text"
-                  name="resellerId"
-                  className="form-input"
-                  placeholder="Enter referral code"
-                  value={formData.resellerId}
-                  onChange={handleChange}
-                  disabled={!!resellerId}
-                  style={{ padding: '10px' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Admin User Details */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(42, 82, 152, 0.08) 0%, rgba(93, 185, 222, 0.05) 100%)',
-            borderRadius: '16px',
-            padding: '20px',
-            marginBottom: '16px',
-            border: '1px solid rgba(42, 82, 152, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              marginBottom: '14px',
-              paddingBottom: '10px',
-              borderBottom: '2px solid rgba(42, 82, 152, 0.3)'
-            }}>
-              <div style={{
-                width: '32px',
-                height: '32px',
-                background: 'linear-gradient(135deg, #2a5298 0%, #5db9de 100%)',
-                borderRadius: '8px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '16px',
-                boxShadow: '0 4px 12px rgba(42, 82, 152, 0.3)'
-              }}>👤</div>
-              <h3 style={{
-                fontSize: '16px',
-                fontWeight: '700',
-                margin: 0,
-                color: '#1a1a1a'
-              }}>Admin User Details</h3>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>First Name *</label>
-                <input
-                  type="text"
-                  name="adminFirstName"
-                  className="form-input"
-                  placeholder="John"
-                  value={formData.adminFirstName}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Last Name *</label>
-                <input
-                  type="text"
-                  name="adminLastName"
-                  className="form-input"
-                  placeholder="Doe"
-                  value={formData.adminLastName}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Admin Email *</label>
-                <input
-                  type="email"
-                  name="adminEmail"
-                  className="form-input"
-                  placeholder="admin@acme.com"
-                  value={formData.adminEmail}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Password *</label>
-                <input
-                  type="password"
-                  name="adminPassword"
-                  className="form-input"
-                  placeholder="Min 6 characters"
-                  value={formData.adminPassword}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-
-              <div className="form-group" style={{ marginBottom: '0', gridColumn: '2 / -1' }}>
-                <label className="form-label" style={{ fontSize: '13px', marginBottom: '6px' }}>Confirm Password *</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  className="form-input"
-                  placeholder="Re-enter password"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '10px' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="btn btn-primary btn-block"
-            disabled={loading}
-            style={{
-              marginTop: '4px',
-              padding: '15px',
-              fontSize: '16px',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '12px',
-              boxShadow: '0 8px 24px rgba(93, 185, 222, 0.4)',
-              transition: 'all 0.3s ease',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1
-            }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 32px rgba(93, 185, 222, 0.5)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 24px rgba(93, 185, 222, 0.4)';
-              }
-            }}
-          >
-            {loading ? '⏳ Creating Account...' : '🚀 Create Account'}
-          </button>
-        </form>
-
-        <style>{`
+      <style>
+        {`
           @keyframes gradientShift {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
             100% { background-position: 0% 50%; }
           }
+        `}
+      </style>
 
-          @media (max-width: 1024px) {
-            form > div > div[style*="gridTemplateColumns"] {
-              grid-template-columns: 1fr 1fr !important;
-            }
-          }
+      <div style={{
+        maxWidth: '400px',
+        width: '100%',
+        padding: '12px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)',
+        borderRadius: '16px',
+        border: '1px solid rgba(255, 255, 255, 0.3)'
+      }}>
+        <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+          <img
+            src="/ufsscrmlogo.png"
+            alt="UFS CRM"
+            style={{
+              width: '180px',
+              height: 'auto',
+              mixBlendMode: 'multiply',
+              filter: 'contrast(1.1)',
+              display: 'block',
+              margin: '0 auto 8px'
+            }}
+          />
+          <p style={{ marginBottom: '0', fontSize: '13px', color: '#6b7280' }}>
+            Start your 15-day free trial
+          </p>
+        </div>
 
-          @media (max-width: 768px) {
-            .auth-card {
-              max-width: 100% !important;
-              padding: 20px !important;
-              margin: 0 10px !important;
-            }
-            form > div > div[style*="gridTemplateColumns"] {
-              grid-template-columns: 1fr !important;
-            }
-            form > div > div > div[style*="gridColumn"] {
-              grid-column: 1 / -1 !important;
-            }
-          }
-        `}</style>
+        {error && (
+          <div style={{
+            padding: '8px 12px',
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
+            color: '#991b1b',
+            borderRadius: '8px',
+            marginBottom: '10px',
+            fontSize: '13px',
+            fontWeight: '500',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span style={{ fontSize: '16px' }}>⚠️</span>
+            {error}
+          </div>
+        )}
 
-        <div className="auth-footer">
-          <p>
+        <form onSubmit={handleSubmit}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '6px' }}>
+            <div>
+              <label style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '3px',
+                display: 'block'
+              }}>First Name *</label>
+              <input
+                type="text"
+                name="firstName"
+                placeholder="John"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  border: '2px solid #e5e7eb',
+                  fontSize: '14px',
+                  transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#5db9de';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+
+            <div>
+              <label style={{
+                fontSize: '12px',
+                fontWeight: '600',
+                color: '#374151',
+                marginBottom: '3px',
+                display: 'block'
+              }}>Last Name *</label>
+              <input
+                type="text"
+                name="lastName"
+                placeholder="Doe"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  border: '2px solid #e5e7eb',
+                  fontSize: '14px',
+                  transition: 'all 0.3s ease'
+                }}
+                onFocus={(e) => {
+                  e.target.style.borderColor = '#5db9de';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
+                }}
+                onBlur={(e) => {
+                  e.target.style.borderColor = '#e5e7eb';
+                  e.target.style.boxShadow = 'none';
+                }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginBottom: '6px' }}>
+            <label style={{
+              fontSize: '13px',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '4px',
+              display: 'block'
+            }}>Email Address *</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="you@company.com"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: '2px solid #e5e7eb',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#5db9de';
+                e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '6px' }}>
+            <label style={{
+              fontSize: '13px',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '4px',
+              display: 'block'
+            }}>Password *</label>
+            <input
+              type="password"
+              name="password"
+              placeholder="Min 6 characters"
+              value={formData.password}
+              onChange={handleChange}
+              required
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: '2px solid #e5e7eb',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#5db9de';
+                e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '6px' }}>
+            <label style={{
+              fontSize: '13px',
+              fontWeight: '600',
+              color: '#374151',
+              marginBottom: '4px',
+              display: 'block'
+            }}>Confirm Password *</label>
+            <input
+              type="password"
+              name="confirmPassword"
+              placeholder="Re-enter password"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              required
+              style={{
+                width: '100%',
+                padding: '8px 10px',
+                borderRadius: '8px',
+                border: '2px solid #e5e7eb',
+                fontSize: '14px',
+                transition: 'all 0.3s ease'
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = '#5db9de';
+                e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.boxShadow = 'none';
+              }}
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '10px',
+              background: loading ? '#9ca3af' : 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              fontSize: '15px',
+              fontWeight: '700',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              transition: 'all 0.3s ease',
+              boxShadow: loading ? 'none' : '0 6px 20px rgba(93, 185, 222, 0.4)',
+              transform: loading ? 'none' : 'translateY(0)'
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 28px rgba(93, 185, 222, 0.5)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 6px 20px rgba(93, 185, 222, 0.4)';
+              }
+            }}
+          >
+            {loading ? 'Creating Account...' : 'Continue →'}
+          </button>
+        </form>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          margin: '10px 0 8px 0',
+          color: '#9ca3af',
+          fontSize: '12px'
+        }}>
+          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+          <span>OR</span>
+          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }}></div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => window.location.href = `${API_URL}/auth/google`}
+          style={{
+            width: '100%',
+            padding: '8px',
+            background: 'white',
+            color: '#374151',
+            border: '2px solid #e5e7eb',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px'
+          }}
+          onMouseEnter={(e) => {
+            e.target.style.borderColor = '#d1d5db';
+            e.target.style.background = '#f9fafb';
+          }}
+          onMouseLeave={(e) => {
+            e.target.style.borderColor = '#e5e7eb';
+            e.target.style.background = 'white';
+          }}
+        >
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+            <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+            <path d="M9.003 18c2.43 0 4.467-.806 5.956-2.18L12.05 13.56c-.806.54-1.836.86-3.047.86-2.344 0-4.328-1.584-5.036-3.711H.96v2.332A8.997 8.997 0 009.003 18z" fill="#34A853"/>
+            <path d="M3.964 10.712A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.96A8.996 8.996 0 000 9c0 1.452.348 2.827.96 4.042l3.004-2.33z" fill="#FBBC05"/>
+            <path d="M9.003 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.464.891 11.426 0 9.003 0A8.997 8.997 0 00.96 4.958L3.964 7.29c.708-2.127 2.692-3.71 5.036-3.71z" fill="#EA4335"/>
+          </svg>
+          Sign up with Google
+        </button>
+
+        <div style={{ textAlign: 'center', marginTop: '10px' }}>
+          <p style={{ fontSize: '13px', color: '#6b7280', marginBottom: '0' }}>
             Already have an account?{' '}
-            <Link to="/login" className="auth-link">
-              Sign in
-            </Link>
+            <Link to="/login" style={{
+              color: '#5db9de',
+              fontWeight: '600',
+              textDecoration: 'none'
+            }}>Sign In</Link>
+          </p>
+          <p style={{ fontSize: '11px', color: '#9ca3af', marginTop: '6px' }}>
+            By signing up, you agree to our Terms & Privacy Policy
           </p>
         </div>
       </div>

@@ -78,6 +78,28 @@ const DataCenter = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
 
+  // Dynamic columns state
+  const [displayColumns, setDisplayColumns] = useState([]);
+  const [showColumnSelector, setShowColumnSelector] = useState(false);
+
+  // Extract all unique columns from candidates data
+  const extractColumns = (candidatesData) => {
+    if (!candidatesData || candidatesData.length === 0) return [];
+
+    const allKeys = new Set();
+    const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'customFields'];
+
+    candidatesData.forEach(candidate => {
+      Object.keys(candidate).forEach(key => {
+        if (!excludeKeys.includes(key) && candidate[key] !== null && candidate[key] !== undefined && candidate[key] !== '') {
+          allKeys.add(key);
+        }
+      });
+    });
+
+    return Array.from(allKeys);
+  };
+
   // Load candidates
   const loadCandidates = async () => {
     try {
@@ -92,6 +114,14 @@ const DataCenter = () => {
       const candidatesData = response.data.candidates;
       setCandidates(candidatesData);
       setPagination(response.data.pagination);
+
+      // Auto-detect columns from data and merge with existing columns
+      const newColumns = extractColumns(candidatesData);
+      if (newColumns.length > 0) {
+        // Merge with existing columns to show all columns from all data
+        const mergedColumns = [...new Set([...displayColumns, ...newColumns])];
+        setDisplayColumns(mergedColumns);
+      }
 
       // Calculate stats
       const available = candidatesData.filter(c => c.status === 'Available').length;
@@ -415,6 +445,33 @@ const DataCenter = () => {
       '60 Days': 'secondary'
     };
     return colors[availability] || 'secondary';
+  };
+
+  // Format field name for display
+  const formatFieldName = (fieldName) => {
+    return fieldName
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+      .trim();
+  };
+
+  // Format field value for display
+  const formatFieldValue = (value, fieldName) => {
+    if (value === null || value === undefined || value === '') return '-';
+
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ') : '-';
+    }
+
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+
+    return value.toString();
   };
 
   return (
@@ -924,69 +981,20 @@ const DataCenter = () => {
                           }}
                         />
                       </th>
-                      <th style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>Name & Role</th>
-                      <th style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>Contact</th>
-                      <th style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>Experience</th>
-                      <th style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>Skills</th>
-                      <th style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>Location</th>
-                      <th style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>Availability</th>
-                      <th style={{
-                        padding: '12px 16px',
-                        textAlign: 'left',
-                        fontSize: '12px',
-                        fontWeight: '800',
-                        color: '#64748b',
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px'
-                      }}>Status</th>
+                      {displayColumns.map((column) => (
+                        <th key={column} style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          color: '#64748b',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {formatFieldName(column)}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
@@ -1048,194 +1056,27 @@ const DataCenter = () => {
                             }}
                           />
                         </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '48px',
-                              height: '48px',
-                              borderRadius: '12px',
-                              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '18px',
-                              fontWeight: '800',
-                              color: 'white',
-                              flexShrink: 0,
-                              boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                            }}>
-                              {candidate.firstName?.[0]}{candidate.lastName?.[0]}
-                            </div>
-                            <div>
-                              <div style={{
-                                fontWeight: '700',
-                                color: '#1e3c72',
-                                fontSize: '15px',
-                                marginBottom: '4px'
-                              }}>
-                                {candidate.firstName} {candidate.lastName}
-                              </div>
-                              <div style={{
-                                fontSize: '13px',
-                                color: '#64748b',
-                                fontWeight: '500'
-                              }}>
-                                {candidate.currentDesignation || 'Position not specified'}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              fontSize: '13px',
-                              color: '#475569'
-                            }}>
-                              <span style={{ fontSize: '14px' }}>📧</span>
-                              <span style={{
-                                maxWidth: '180px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap'
-                              }}>
-                                {candidate.email}
-                              </span>
-                            </div>
-                            <div style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              fontSize: '13px',
+                        {displayColumns.map((column, index) => (
+                          <td key={column} style={{
+                            padding: '16px',
+                            maxWidth: '250px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            ...(index === displayColumns.length - 1 && {
+                              borderTopRightRadius: '12px',
+                              borderBottomRightRadius: '12px'
+                            })
+                          }}>
+                            <span style={{
+                              fontSize: '14px',
                               color: '#475569',
-                              fontWeight: '600'
+                              fontWeight: '500'
                             }}>
-                              <span style={{ fontSize: '14px' }}>📞</span>
-                              <span>{candidate.phone}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '8px 14px',
-                            background: 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                            borderRadius: '10px',
-                            fontSize: '14px',
-                            fontWeight: '700',
-                            color: '#1e3c72',
-                            border: '2px solid #cbd5e1'
-                          }}>
-                            <span style={{ fontSize: '16px' }}>📊</span>
-                            <span>{candidate.totalExperience} yrs</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', maxWidth: '200px' }}>
-                            {candidate.skills && candidate.skills.length > 0 ? (
-                              <>
-                                {candidate.skills.slice(0, 2).map((skill, idx) => (
-                                  <span key={idx} style={{
-                                    padding: '4px 10px',
-                                    background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                                    borderRadius: '8px',
-                                    fontSize: '12px',
-                                    fontWeight: '600',
-                                    color: '#1e40af',
-                                    border: '1px solid #93c5fd'
-                                  }}>
-                                    {skill}
-                                  </span>
-                                ))}
-                                {candidate.skills.length > 2 && (
-                                  <span style={{
-                                    padding: '4px 10px',
-                                    background: '#e2e8f0',
-                                    borderRadius: '8px',
-                                    fontSize: '12px',
-                                    fontWeight: '700',
-                                    color: '#475569'
-                                  }}>
-                                    +{candidate.skills.length - 2}
-                                  </span>
-                                )}
-                              </>
-                            ) : (
-                              <span style={{ color: '#94a3b8', fontSize: '13px' }}>No skills</span>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            color: '#475569',
-                            fontSize: '14px',
-                            fontWeight: '600'
-                          }}>
-                            <span style={{ fontSize: '16px' }}>📍</span>
-                            <span>{candidate.currentLocation}</span>
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            fontWeight: '700',
-                            background: candidate.availability === 'Immediate'
-                              ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)'
-                              : candidate.availability === '15 Days' || candidate.availability === '30 Days'
-                              ? 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)'
-                              : 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',
-                            color: candidate.availability === 'Immediate'
-                              ? '#166534'
-                              : candidate.availability === '15 Days' || candidate.availability === '30 Days'
-                              ? '#92400e'
-                              : '#475569',
-                            border: candidate.availability === 'Immediate'
-                              ? '2px solid #86efac'
-                              : candidate.availability === '15 Days' || candidate.availability === '30 Days'
-                              ? '2px solid #fcd34d'
-                              : '2px solid #cbd5e1'
-                          }}>
-                            <span>📅</span>
-                            <span>{candidate.availability}</span>
-                          </span>
-                        </td>
-                        <td style={{
-                          padding: '16px',
-                          borderTopRightRadius: '12px',
-                          borderBottomRightRadius: '12px'
-                        }}>
-                          <span style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            padding: '6px 12px',
-                            borderRadius: '10px',
-                            fontSize: '13px',
-                            fontWeight: '700',
-                            background: candidate.status === 'Available'
-                              ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)'
-                              : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                            color: candidate.status === 'Available' ? '#166534' : '#991b1b',
-                            border: candidate.status === 'Available'
-                              ? '2px solid #86efac'
-                              : '2px solid #fca5a5'
-                          }}>
-                            <span>{candidate.status === 'Available' ? '✅' : '⚠️'}</span>
-                            <span>{candidate.status}</span>
-                          </span>
-                        </td>
+                              {formatFieldValue(candidate[column], column)}
+                            </span>
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>

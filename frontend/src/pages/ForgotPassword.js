@@ -114,7 +114,18 @@ const ForgotPassword = () => {
       <div className="auth-card">
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔐</div>
+          <img
+            src="/ufsscrmlogo.png"
+            alt="UFS CRM"
+            style={{
+              width: '140px',
+              height: 'auto',
+              mixBlendMode: 'multiply',
+              filter: 'contrast(1.1)',
+              display: 'block',
+              margin: '0 auto 16px'
+            }}
+          />
           <h1 className="auth-title">
             {step === 1 && 'Forgot Password?'}
             {step === 2 && 'Verify OTP'}

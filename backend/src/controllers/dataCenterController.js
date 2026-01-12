@@ -541,11 +541,23 @@ const bulkImportCandidates = async (req, res, isInternal = false) => {
         });
 
       } catch (error) {
+        console.error('❌ Failed to import candidate:', candidateData.firstName, candidateData.email);
+        console.error('   Error:', error.message);
+        console.error('   Stack:', error.stack);
         results.failed.push({
           data: candidateData,
           reason: error.message
         });
       }
+    }
+
+    // Log summary
+    console.log(`📊 Import Summary: Success: ${results.success.length}, Failed: ${results.failed.length}, Duplicates: ${results.duplicates.length}`);
+    if (results.failed.length > 0) {
+      console.log('❌ Failed records details:');
+      results.failed.forEach((f, i) => {
+        console.log(`   ${i + 1}. ${f.data?.firstName || 'N/A'} (${f.data?.email || 'N/A'}): ${f.reason}`);
+      });
     }
 
     if (isInternal) {
@@ -672,50 +684,77 @@ const uploadCandidatesFile = async (req, res) => {
           return errorResponse(res, 'File is empty or invalid format', 400);
         }
 
-        // Helper function to get mapped value
-        const getMappedValue = (row, csvColumn, fieldName) => {
+        // Helper function to safely parse numbers (returns undefined if no value)
+        const parseNumberOrUndefined = (value) => {
+          if (value === undefined || value === null || value === '') return undefined;
+          const parsed = parseFloat(value);
+          return isNaN(parsed) ? undefined : parsed;
+        };
+
+        // Helper function to safely parse integers (returns undefined if no value)
+        const parseIntOrUndefined = (value) => {
+          if (value === undefined || value === null || value === '') return undefined;
+          const parsed = parseInt(value);
+          return isNaN(parsed) ? undefined : parsed;
+        };
+
+        // Helper function to get mapped value with smart detection
+        const getMappedValue = (row, possibleNames, fieldName) => {
           // If column mapping exists, use it
           if (Object.keys(columnMapping).length > 0) {
-            // Find the CSV column that maps to this field
             const mappedCsvColumn = Object.keys(columnMapping).find(
               csvCol => columnMapping[csvCol] === fieldName
             );
-            return mappedCsvColumn ? row[mappedCsvColumn] : undefined;
+            if (mappedCsvColumn && row[mappedCsvColumn]) {
+              return row[mappedCsvColumn];
+            }
           }
-          // Otherwise, try common column names (fallback)
-          return row[csvColumn] || row[fieldName];
+
+          // Try all possible column names (case-insensitive)
+          for (const name of possibleNames) {
+            // Try exact match first
+            if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
+              return row[name];
+            }
+            // Try case-insensitive match
+            const key = Object.keys(row).find(k => k.toLowerCase() === name.toLowerCase());
+            if (key && row[key] !== undefined && row[key] !== null && row[key] !== '') {
+              return row[key];
+            }
+          }
+          return undefined;
         };
 
-        // Map CSV/Excel columns to model fields
-        const candidates = rawData.map(row => {
+        // Map CSV/Excel columns to model fields - Smart column detection
+        const candidates = rawData.map((row, index) => {
           const candidate = {
-            firstName: getMappedValue(row, 'First Name', 'firstName') || '',
-            lastName: getMappedValue(row, 'Last Name', 'lastName') || '',
-            email: getMappedValue(row, 'Email', 'email') || '',
-            phone: getMappedValue(row, 'Phone', 'phone') || '',
-            alternatePhone: getMappedValue(row, 'Alternate Phone', 'alternatePhone'),
+            firstName: getMappedValue(row, ['First Name', 'FirstName', 'fname', 'first_name', 'Name', 'Full Name', 'name'], 'firstName') || `Person ${index + 1}`,
+            lastName: getMappedValue(row, ['Last Name', 'LastName', 'lname', 'last_name', 'Surname', 'surname'], 'lastName') || '',
+            email: getMappedValue(row, ['Email', 'email', 'E-mail', 'Email Address', 'email_address', 'Mail'], 'email') || `import_${Date.now()}_${index}@temp.com`,
+            phone: getMappedValue(row, ['Phone', 'phone', 'Mobile', 'mobile', 'Phone Number', 'Contact', 'contact', 'cell'], 'phone') || '',
+            alternatePhone: getMappedValue(row, ['Alternate Phone', 'alternate_phone', 'Alt Phone', 'Secondary Phone', 'Phone2'], 'alternatePhone'),
 
-            currentCompany: getMappedValue(row, 'Current Company', 'currentCompany'),
-            currentDesignation: getMappedValue(row, 'Designation', 'currentDesignation'),
-            totalExperience: parseFloat(getMappedValue(row, 'Experience', 'totalExperience') || 0),
-            relevantExperience: parseFloat(getMappedValue(row, 'Relevant Experience', 'relevantExperience') || 0),
+            currentCompany: getMappedValue(row, ['Current Company', 'Company', 'company', 'Organization', 'Employer', 'org'], 'currentCompany'),
+            currentDesignation: getMappedValue(row, ['Designation', 'designation', 'Title', 'Job Title', 'Position', 'Role', 'job_title'], 'currentDesignation'),
+            totalExperience: parseNumberOrUndefined(getMappedValue(row, ['Experience', 'experience', 'Total Experience', 'Years of Experience', 'Exp', 'exp_years'], 'totalExperience')),
+            relevantExperience: parseNumberOrUndefined(getMappedValue(row, ['Relevant Experience', 'relevant_experience', 'Relevant Exp', 'rel_exp'], 'relevantExperience')),
 
-            currentLocation: getMappedValue(row, 'Location', 'currentLocation') || '',
-            availability: getMappedValue(row, 'Availability', 'availability') || 'Immediate',
+            currentLocation: getMappedValue(row, ['Location', 'location', 'City', 'city', 'Current Location', 'Place'], 'currentLocation') || '',
+            availability: getMappedValue(row, ['Availability', 'availability', 'Available', 'Notice', 'available'], 'availability') || 'Immediate',
 
-            currentCTC: parseFloat(getMappedValue(row, 'Current CTC', 'currentCTC') || 0),
-            expectedCTC: parseFloat(getMappedValue(row, 'Expected CTC', 'expectedCTC') || 0),
-            noticePeriod: parseInt(getMappedValue(row, 'Notice Period', 'noticePeriod') || 0),
+            currentCTC: parseNumberOrUndefined(getMappedValue(row, ['Current CTC', 'currentCTC', 'CTC', 'Salary', 'Current Salary', 'current_ctc'], 'currentCTC')),
+            expectedCTC: parseNumberOrUndefined(getMappedValue(row, ['Expected CTC', 'expectedCTC', 'Expected Salary', 'Expected', 'expected_ctc'], 'expectedCTC')),
+            noticePeriod: parseIntOrUndefined(getMappedValue(row, ['Notice Period', 'noticePeriod', 'Notice', 'NP', 'notice_period'], 'noticePeriod')),
 
-            education: getMappedValue(row, 'Education', 'education'),
-            highestQualification: getMappedValue(row, 'Qualification', 'highestQualification'),
+            education: getMappedValue(row, ['Education', 'education', 'Degree', 'degree', 'edu'], 'education'),
+            highestQualification: getMappedValue(row, ['Qualification', 'qualification', 'Highest Qualification', 'Degree', 'highest_qual'], 'highestQualification'),
 
-            linkedInUrl: getMappedValue(row, 'LinkedIn', 'linkedInUrl'),
-            resumeUrl: getMappedValue(row, 'Resume URL', 'resumeUrl'),
+            linkedInUrl: getMappedValue(row, ['LinkedIn', 'linkedIn', 'LinkedIn URL', 'LinkedIn Profile', 'linkedin_url'], 'linkedInUrl'),
+            resumeUrl: getMappedValue(row, ['Resume URL', 'resumeUrl', 'Resume', 'CV URL', 'cv'], 'resumeUrl'),
 
-            sourceWebsite: getMappedValue(row, 'Source', 'sourceWebsite') || 'Manual Upload',
-            jobType: getMappedValue(row, 'Job Type', 'jobType') || 'Full-time',
-            workMode: getMappedValue(row, 'Work Mode', 'workMode') || 'Hybrid',
+            sourceWebsite: getMappedValue(row, ['Source', 'source', 'Source Website', 'Platform', 'source_website'], 'sourceWebsite') || 'Manual Upload',
+            jobType: getMappedValue(row, ['Job Type', 'jobType', 'Employment Type', 'Type', 'job_type'], 'jobType') || 'Full-time',
+            workMode: getMappedValue(row, ['Work Mode', 'workMode', 'Mode', 'Working Mode', 'work_mode'], 'workMode') || 'Hybrid',
 
             status: 'Available',
             isActive: true,
@@ -723,21 +762,21 @@ const uploadCandidatesFile = async (req, res) => {
           };
 
           // Handle skills (comma-separated)
-          const skillsValue = getMappedValue(row, 'Skills', 'skills');
+          const skillsValue = getMappedValue(row, ['Skills', 'skills', 'Skill Set', 'Technologies', 'tech', 'skill'], 'skills');
           if (skillsValue) {
             candidate.skills = typeof skillsValue === 'string'
-              ? skillsValue.split(',').map(s => s.trim())
-              : skillsValue;
+              ? skillsValue.split(',').map(s => s.trim()).filter(Boolean)
+              : Array.isArray(skillsValue) ? skillsValue : [];
           } else {
             candidate.skills = [];
           }
 
           // Handle preferred locations (comma-separated)
-          const locationsValue = getMappedValue(row, 'Preferred Locations', 'preferredLocations');
+          const locationsValue = getMappedValue(row, ['Preferred Locations', 'preferredLocations', 'Preferred Location', 'Location Preference', 'pref_location'], 'preferredLocations');
           if (locationsValue) {
             candidate.preferredLocations = typeof locationsValue === 'string'
-              ? locationsValue.split(',').map(s => s.trim())
-              : locationsValue;
+              ? locationsValue.split(',').map(s => s.trim()).filter(Boolean)
+              : Array.isArray(locationsValue) ? locationsValue : [];
           } else {
             candidate.preferredLocations = [];
           }
@@ -745,12 +784,11 @@ const uploadCandidatesFile = async (req, res) => {
           return candidate;
         });
 
-        // Filter out candidates without email (required field)
-        const validCandidates = candidates.filter(c => c.email && c.firstName);
+        // Accept all rows - no strict validation
+        const validCandidates = candidates;
 
-        if (validCandidates.length === 0) {
-          return errorResponse(res, 'No valid candidates found. Ensure First Name and Email columns are present.', 400);
-        }
+        console.log(`✅ Processing ${validCandidates.length} candidates from Excel file`);
+        console.log(`📋 Sample candidate data (first record):`, JSON.stringify(validCandidates[0], null, 2));
 
         // Bulk import
         const result = await bulkImportCandidates({

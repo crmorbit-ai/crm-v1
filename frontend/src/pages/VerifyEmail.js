@@ -125,6 +125,18 @@ const VerifyEmail = () => {
     <div className="auth-container">
       <div className="auth-box">
         <div className="auth-header">
+          <img
+            src="/ufsscrmlogo.png"
+            alt="UFS CRM"
+            style={{
+              width: '140px',
+              height: 'auto',
+              mixBlendMode: 'multiply',
+              filter: 'contrast(1.1)',
+              display: 'block',
+              margin: '0 auto 20px'
+            }}
+          />
           <h1>Verify Your Email</h1>
           <p>We've sent a 6-digit verification code to</p>
           <p className="email-display"><strong>{email}</strong></p>

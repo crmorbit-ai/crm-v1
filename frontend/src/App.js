@@ -6,7 +6,7 @@ import { ThemeProvider } from './context/ThemeContext';
 
 // Auth components
 import Login from './pages/Login';
-import Register from './pages/RegisterNew'; // NEW: Using updated register
+import Register from './pages/Register';
 import VerifyEmail from './pages/VerifyEmail'; // NEW
 import CompleteProfile from './pages/CompleteProfile'; // NEW
 import OAuthCallback from './pages/OAuthCallback'; // NEW
@@ -32,6 +32,7 @@ import MeetingDetail from './pages/MeetingDetail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import ChangePassword from './pages/ChangePassword';
+import Profile from './pages/Profile';
 
 // User management (Settings)
 import Users from './pages/Users';
@@ -437,6 +438,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
       <Route path="/change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
       <Route path="/tasks" element={
         <ProtectedRoute>

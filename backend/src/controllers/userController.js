@@ -215,7 +215,8 @@ const createUser = async (req, res) => {
       tenant: tenant || null,
       roles: roles || [],
       groups: groups || [],
-      isActive: true
+      isActive: true,
+      isProfileComplete: true  // Admin-created users don't need profile completion
     };
 
     const user = await User.create(userData);

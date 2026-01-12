@@ -13,8 +13,10 @@ const AVAILABLE_FEATURES = [
   { slug: 'account_management', name: 'Account Management' },
   { slug: 'contact_management', name: 'Contact Management' },
   { slug: 'opportunity_management', name: 'Opportunity Management' },
+  { slug: 'product_management', name: 'Product Management' },
   { slug: 'activity_management', name: 'Activity Management' },
-  { slug: 'report_management', name: 'Report Management' }
+  { slug: 'report_management', name: 'Report Management' },
+  { slug: 'field_management', name: 'Field Management' }
 ];
 
 const AVAILABLE_ACTIONS = ['create', 'read', 'update', 'delete', 'convert', 'import', 'export', 'manage'];

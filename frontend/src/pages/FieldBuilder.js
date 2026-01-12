@@ -84,6 +84,27 @@ const FieldBuilder = () => {
     }
   };
 
+  const handleSeedStandardFields = async () => {
+    if (!window.confirm('This will add default standard fields for Lead, Contact, Account, and Product. Continue?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await fieldDefinitionService.seedStandardFields();
+      setSuccess(response.message || 'Standard fields seeded successfully!');
+      setError('');
+      // Refresh the field list
+      await fetchFields();
+    } catch (err) {
+      console.error('Error seeding standard fields:', err);
+      setError(err.response?.data?.message || 'Failed to seed standard fields');
+      setSuccess('');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleOpenModal = (field = null) => {
     if (field) {
       setEditingField(field);
@@ -325,12 +346,21 @@ const FieldBuilder = () => {
                 ))}
               </select>
             </div>
-            <button
-              onClick={() => handleOpenModal()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition"
-            >
-              + Add Custom Field
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={handleSeedStandardFields}
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md font-medium transition"
+                title="Add default standard fields for all entities"
+              >
+                🌱 Seed Standard Fields
+              </button>
+              <button
+                onClick={() => handleOpenModal()}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md font-medium transition"
+              >
+                + Add Custom Field
+              </button>
+            </div>
           </div>
 
           {/* Filters */}

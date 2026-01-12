@@ -81,7 +81,17 @@ const Sidebar = () => {
   return (
     <div className="crm-sidebar">
       <div className="sidebar-logo">
-        <h2>🚀 UFS CRM</h2>
+        <img
+          src="/ufsscrmlogo.png"
+          alt="UFS CRM"
+          style={{
+            width: '95%',
+            maxWidth: '240px',
+            height: 'auto',
+            display: 'block',
+            margin: '0 auto'
+          }}
+        />
       </div>
 
       <nav className="sidebar-nav">

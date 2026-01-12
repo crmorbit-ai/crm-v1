@@ -191,6 +191,7 @@ app.get('/health', (req, res) => {
 
 // Auth & User Routes
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/profile', require('./routes/profile'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/tenants', require('./routes/tenants'));
 app.use('/api/roles', require('./routes/roles'));

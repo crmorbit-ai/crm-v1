@@ -54,6 +54,12 @@ const fieldDefinitionService = {
   getFieldStats: async (entityType) => {
     const response = await api.get(`/field-definitions/${entityType}/stats`);
     return response.data;
+  },
+
+  // Seed standard fields for current tenant
+  seedStandardFields: async () => {
+    const response = await api.post('/field-definitions/seed-standard-fields');
+    return response.data;
   }
 };
 

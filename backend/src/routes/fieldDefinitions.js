@@ -8,7 +8,8 @@ const {
   deleteFieldDefinition,
   permanentDeleteFieldDefinition,
   reorderFieldDefinitions,
-  getFieldStats
+  getFieldStats,
+  seedStandardFieldsForTenant
 } = require('../controllers/fieldDefinitionController');
 
 const { protect, requireTenant } = require('../middleware/auth');
@@ -37,6 +38,12 @@ router.get(
 router.get(
   '/detail/:id',
   getFieldDefinition
+);
+
+// Seed standard fields for existing tenant
+router.post(
+  '/seed-standard-fields',
+  seedStandardFieldsForTenant
 );
 
 // Create a new field definition

@@ -1,5 +1,6 @@
 const FieldDefinition = require('../models/FieldDefinition');
 const { verifyToken } = require('../utils/jwt');
+const { seedStandardFields } = require('../utils/seedStandardFields');
 
 // @desc    Get all field definitions for a specific entity type
 // @route   GET /api/field-definitions/:entityType
@@ -440,6 +441,38 @@ exports.getFieldStats = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error fetching field stats',
+      error: error.message
+    });
+  }
+};
+
+// @desc    Seed standard fields for current tenant (for existing tenants)
+// @route   POST /api/field-definitions/seed-standard-fields
+// @access  Private (Admin only)
+exports.seedStandardFieldsForTenant = async (req, res) => {
+  try {
+    console.log(`📋 Seeding standard fields for tenant ${req.user.tenant}...`);
+
+    const result = await seedStandardFields(req.user.tenant, req.user._id);
+
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: `Successfully seeded ${result.created} standard field definitions`,
+        data: { created: result.created }
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: 'Error seeding standard fields',
+        error: result.error
+      });
+    }
+  } catch (error) {
+    console.error('Error seeding standard fields:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error seeding standard fields',
       error: error.message
     });
   }

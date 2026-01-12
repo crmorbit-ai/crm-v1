@@ -127,21 +127,21 @@ const ResellerRegister = () => {
         border: '1px solid rgba(255, 255, 255, 0.3)'
       }}>
         <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-          <div style={{
-            width: '50px',
-            height: '50px',
-            margin: '0 auto 8px',
-            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-            borderRadius: '50%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '24px',
-            boxShadow: '0 8px 24px rgba(93, 185, 222, 0.4)'
-          }}>🤝</div>
+          <img
+            src="/ufsscrmlogo.png"
+            alt="UFS CRM"
+            style={{
+              width: '130px',
+              height: 'auto',
+              mixBlendMode: 'multiply',
+              filter: 'contrast(1.1)',
+              display: 'block',
+              margin: '0 auto 8px'
+            }}
+          />
           <h1 className="auth-title" style={{
             marginBottom: '4px',
-            fontSize: '22px',
+            fontSize: '18px',
             background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',

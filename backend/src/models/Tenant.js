@@ -1,6 +1,14 @@
 const mongoose = require('mongoose');
 
 const tenantSchema = new mongoose.Schema({
+  // Unique Organization ID (UFSS001, UFSS002, etc.)
+  organizationId: {
+    type: String,
+    unique: true,
+    uppercase: true,
+    trim: true
+  },
+
   organizationName: {
     type: String,
     required: [true, 'Organization name is required'],
@@ -13,7 +21,7 @@ const tenantSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
-  
+
   // Contact Information
   contactEmail: {
     type: String,
@@ -291,6 +299,41 @@ tenantSchema.methods.getTrialDaysRemaining = function() {
 };
 
 // ============================================
+// PRE-SAVE HOOK: Auto-generate Organization ID
+// ============================================
+tenantSchema.pre('save', async function(next) {
+  // Only generate if organizationId doesn't exist
+  if (!this.organizationId && this.isNew) {
+    try {
+      // Find the highest organizationId
+      const Tenant = this.constructor;
+      const lastTenant = await Tenant.findOne({
+        organizationId: { $exists: true, $ne: null }
+      })
+        .sort({ organizationId: -1 })
+        .select('organizationId')
+        .lean();
+
+      let nextNumber = 1;
+      if (lastTenant && lastTenant.organizationId) {
+        // Extract number from format like UFSS001
+        const match = lastTenant.organizationId.match(/UFSS(\d+)/);
+        if (match) {
+          nextNumber = parseInt(match[1], 10) + 1;
+        }
+      }
+
+      // Generate new organizationId with padding (UFSS001, UFSS002, etc.)
+      this.organizationId = `UFSS${String(nextNumber).padStart(3, '0')}`;
+    } catch (error) {
+      console.error('Error generating organizationId:', error);
+      // Continue without organizationId (it's not required)
+    }
+  }
+  next();
+});
+
+// ============================================
 // INDEXES
 // ============================================
 // slug index removed - already created by unique: true
@@ -298,5 +341,6 @@ tenantSchema.index({ isActive: 1 });
 tenantSchema.index({ 'subscription.status': 1 });
 tenantSchema.index({ 'subscription.endDate': 1 });
 tenantSchema.index({ reseller: 1 });
+tenantSchema.index({ organizationId: 1 });
 
 module.exports = mongoose.model('Tenant', tenantSchema);

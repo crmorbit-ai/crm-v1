@@ -10,7 +10,7 @@ const dataCenterCandidateSchema = new mongoose.Schema({
   
   lastName: {
     type: String,
-    required: true,
+    required: false,
     trim: true
   },
   
@@ -23,7 +23,7 @@ const dataCenterCandidateSchema = new mongoose.Schema({
   
   phone: {
     type: String,
-    required: true,
+    required: false,
     trim: true
   },
   
@@ -45,7 +45,7 @@ const dataCenterCandidateSchema = new mongoose.Schema({
   
   totalExperience: {
     type: Number, // in years
-    required: true,
+    required: false,
     min: 0
   },
   
@@ -88,7 +88,7 @@ const dataCenterCandidateSchema = new mongoose.Schema({
   // Location Information
   currentLocation: {
     type: String,
-    required: true,
+    required: false,
     trim: true
   },
   
@@ -153,7 +153,7 @@ const dataCenterCandidateSchema = new mongoose.Schema({
   // Job Portal Information
   sourceWebsite: {
     type: String,
-    enum: ['Naukri', 'LinkedIn', 'Monster', 'Indeed', 'TimesJobs', 'Shine', 'Glassdoor', 'AngelList', 'Other'],
+    enum: ['Naukri', 'LinkedIn', 'Monster', 'Indeed', 'TimesJobs', 'Shine', 'Glassdoor', 'AngelList', 'Manual Upload', 'Other'],
     required: true
   },
   

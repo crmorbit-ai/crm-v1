@@ -592,6 +592,15 @@ const Tenants = () => {
                         fontSize: '13px',
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px'
+                      }}>Organization ID</th>
+                      <th style={{
+                        padding: '16px',
+                        textAlign: 'left',
+                        fontWeight: '800',
+                        color: '#2a5298',
+                        fontSize: '13px',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
                       }}>Admin Email</th>
                       <th style={{
                         padding: '16px',
@@ -665,6 +674,24 @@ const Tenants = () => {
                             </span>
                             {tenant.organizationName || 'N/A'}
                           </div>
+                        </td>
+                        <td style={{
+                          padding: '16px',
+                          fontWeight: '700'
+                        }}>
+                          <span style={{
+                            background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
+                            color: '#78350f',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '13px',
+                            fontWeight: '800',
+                            letterSpacing: '1px',
+                            display: 'inline-block',
+                            boxShadow: '0 2px 8px rgba(251, 191, 36, 0.3)'
+                          }}>
+                            {tenant.organizationId || 'Not Assigned'}
+                          </span>
                         </td>
                         <td style={{
                           padding: '16px',

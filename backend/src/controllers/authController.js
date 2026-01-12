@@ -9,6 +9,7 @@ const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const { sendPasswordResetOTP, sendSignupVerificationOTP } = require('../utils/emailService');
 const Role = require('../models/Role');
+const { seedStandardFields } = require('../utils/seedStandardFields');
 
 /**
  * Generate 6-digit OTP
@@ -287,6 +288,12 @@ const registerTenant = async (req, res) => {
     }
 
     await adminUser.populate('roles');
+
+    // ============================================
+    // 🎯 SEED STANDARD FIELDS FOR ALL ENTITIES
+    // ============================================
+    console.log('📋 Creating standard fields for Lead, Contact, Account, Product...');
+    await seedStandardFields(tenant._id, adminUser._id);
 
     // Generate token
     const token = generateToken(adminUser);
