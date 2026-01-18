@@ -640,11 +640,330 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
   }
 };
 
+/**
+ * Send Welcome Email after profile completion
+ */
+const sendWelcomeEmail = async (email, userName, organizationName) => {
+  try {
+    const transporter = createTransporter();
+    await transporter.verify();
+    console.log('✅ SMTP connection verified for welcome email');
+
+    const mailOptions = {
+      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      to: email,
+      subject: `Welcome to UFS CRM! 🎉`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 50px 30px; text-align: center; color: white; }
+            .logo-container { margin-bottom: 20px; }
+            .logo { max-width: 200px; height: auto; }
+            .header h1 { margin: 0; font-size: 32px; font-weight: 700; }
+            .header p { margin: 10px 0 0; opacity: 0.95; font-size: 18px; }
+            .content { padding: 40px 30px; }
+            .welcome-message { text-align: center; margin-bottom: 30px; }
+            .welcome-icon { font-size: 64px; margin-bottom: 20px; }
+            .welcome-title { font-size: 28px; font-weight: 700; color: #1F2937; margin-bottom: 12px; }
+            .welcome-subtitle { font-size: 16px; color: #6B7280; line-height: 1.6; }
+            .feature-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin: 30px 0; }
+            .feature-card { background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%); border-radius: 12px; padding: 20px; border: 1px solid rgba(102, 126, 234, 0.2); }
+            .feature-icon { font-size: 32px; margin-bottom: 12px; }
+            .feature-title { font-size: 16px; font-weight: 700; color: #1F2937; margin-bottom: 6px; }
+            .feature-desc { font-size: 14px; color: #6B7280; line-height: 1.5; margin: 0; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 16px; margin: 20px 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+            .cta-button:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5); }
+            .footer { background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB; }
+            .footer-text { font-size: 14px; color: #6B7280; margin: 5px 0; }
+            .social-links { margin-top: 20px; }
+            .social-links a { color: #667eea; text-decoration: none; margin: 0 10px; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="logo-container">
+                <img src="${process.env.FRONTEND_URL || 'https://crm-frontend-sooty-seven.vercel.app'}/ufsscrmlogo.png" alt="UFS CRM Logo" class="logo" />
+              </div>
+              <h1>Welcome to UFS CRM!</h1>
+              <p>Your journey to better customer relationships starts here</p>
+            </div>
+
+            <div class="content">
+              <div class="welcome-message">
+                <div class="welcome-icon">🎉</div>
+                <h2 class="welcome-title">Hi ${userName}!</h2>
+                <p class="welcome-subtitle">
+                  Thank you for completing your profile setup for <strong>${organizationName}</strong>.
+                  We're excited to have you on board! Your organization is now ready to streamline operations and boost productivity.
+                </p>
+              </div>
+
+              <div class="feature-grid">
+                <div class="feature-card">
+                  <div class="feature-icon">📊</div>
+                  <div class="feature-title">Lead Management</div>
+                  <p class="feature-desc">Track and manage your leads efficiently with our powerful CRM tools.</p>
+                </div>
+
+                <div class="feature-card">
+                  <div class="feature-icon">👥</div>
+                  <div class="feature-title">Customer Database</div>
+                  <p class="feature-desc">Organize and access your customer data anytime, anywhere.</p>
+                </div>
+
+                <div class="feature-card">
+                  <div class="feature-icon">💰</div>
+                  <div class="feature-title">Sales & Finance</div>
+                  <p class="feature-desc">Manage quotations, invoices, and track your revenue seamlessly.</p>
+                </div>
+
+                <div class="feature-card">
+                  <div class="feature-icon">📈</div>
+                  <div class="feature-title">Analytics & Reports</div>
+                  <p class="feature-desc">Get insights with comprehensive dashboards and reports.</p>
+                </div>
+              </div>
+
+              <div style="text-align: center; margin: 40px 0;">
+                <a href="${process.env.FRONTEND_URL || 'https://crm-frontend-sooty-seven.vercel.app'}/dashboard" class="cta-button">
+                  Get Started Now →
+                </a>
+              </div>
+
+              <div style="background: #FEF3C7; border-radius: 12px; padding: 20px; margin-top: 30px; border: 1px solid #FDE68A;">
+                <p style="margin: 0; font-size: 14px; color: #92400E;">
+                  <strong>💡 Quick Tip:</strong> Start by inviting your team members and setting up your first lead.
+                  Need help? Check out our <a href="#" style="color: #92400E; text-decoration: underline;">Getting Started Guide</a>.
+                </p>
+              </div>
+
+              <p style="margin-top: 30px; font-size: 14px; color: #6B7280;">
+                If you have any questions or need assistance, our support team is here to help.
+                Reply to this email or visit our support center.
+              </p>
+            </div>
+
+            <div class="footer">
+              <p class="footer-text"><strong>UFS CRM</strong> - Empowering Businesses</p>
+              <p class="footer-text">© ${new Date().getFullYear()} UFS CRM. All rights reserved.</p>
+              <div class="social-links">
+                <a href="#">Support</a> |
+                <a href="#">Documentation</a> |
+                <a href="#">Privacy Policy</a>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Welcome email sent:', info.messageId);
+
+    // Track sent email
+    try {
+      const User = require('../models/User');
+      const emailTrackingService = require('../services/emailTrackingService');
+      const user = await User.findOne({ email });
+
+      if (user) {
+        await emailTrackingService.trackSentEmail({
+          messageId: info.messageId,
+          from: mailOptions.from,
+          to: email,
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+          emailType: 'welcome',
+          userId: user._id,
+          tenantId: user.tenant,
+          smtpMode: 'free'
+        });
+      }
+    } catch (trackError) {
+      console.error('Email tracking failed:', trackError);
+      // Don't fail the email send if tracking fails
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Welcome email error:', error.message);
+    throw new Error('Failed to send welcome email: ' + error.message);
+  }
+};
+
+/**
+ * Send Lead Assignment Email
+ */
+const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, leadDetails, assignedByName) => {
+  try {
+    const transporter = createTransporter();
+    await transporter.verify();
+    console.log('✅ SMTP connection verified for lead assignment email');
+
+    const mailOptions = {
+      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      to: assignedUserEmail,
+      subject: `🎯 New Lead Assigned: ${leadDetails.name}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f5f5f5; }
+            .container { max-width: 600px; margin: 40px auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center; color: white; }
+            .header-icon { font-size: 48px; margin-bottom: 16px; }
+            .header h1 { margin: 0; font-size: 28px; font-weight: 700; }
+            .header p { margin: 10px 0 0; opacity: 0.95; font-size: 16px; }
+            .content { padding: 40px 30px; }
+            .lead-card { background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%); border-radius: 12px; padding: 24px; margin-bottom: 24px; border: 1px solid rgba(102, 126, 234, 0.2); }
+            .lead-title { font-size: 22px; font-weight: 700; color: #1F2937; margin-bottom: 16px; }
+            .detail-row { display: flex; margin-bottom: 12px; }
+            .detail-label { font-size: 13px; color: #6B7280; min-width: 120px; font-weight: 600; }
+            .detail-value { font-size: 14px; color: #1F2937; font-weight: 500; }
+            .cta-button { display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 14px 32px; text-decoration: none; border-radius: 10px; font-weight: 700; font-size: 15px; margin: 20px 0; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); }
+            .info-box { background: #EFF6FF; border-radius: 10px; padding: 16px; margin: 20px 0; border: 1px solid #BFDBFE; }
+            .info-box p { margin: 0; font-size: 14px; color: #1E40AF; }
+            .footer { background-color: #F9FAFB; padding: 30px; text-align: center; border-top: 1px solid #E5E7EB; }
+            .footer-text { font-size: 14px; color: #6B7280; margin: 5px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <div class="header-icon">🎯</div>
+              <h1>New Lead Assigned!</h1>
+              <p>You have a new lead to follow up</p>
+            </div>
+
+            <div class="content">
+              <p style="font-size: 16px; color: #1F2937; margin-bottom: 24px;">
+                Hi <strong>${assignedUserName}</strong>,
+              </p>
+              <p style="font-size: 15px; color: #6B7280; margin-bottom: 24px;">
+                <strong>${assignedByName}</strong> has assigned a new lead to you. Here are the details:
+              </p>
+
+              <div class="lead-card">
+                <div class="lead-title">${leadDetails.name}</div>
+
+                ${leadDetails.company ? `
+                <div class="detail-row">
+                  <span class="detail-label">Company:</span>
+                  <span class="detail-value">${leadDetails.company}</span>
+                </div>` : ''}
+
+                ${leadDetails.email ? `
+                <div class="detail-row">
+                  <span class="detail-label">Email:</span>
+                  <span class="detail-value">${leadDetails.email}</span>
+                </div>` : ''}
+
+                ${leadDetails.phone ? `
+                <div class="detail-row">
+                  <span class="detail-label">Phone:</span>
+                  <span class="detail-value">${leadDetails.phone}</span>
+                </div>` : ''}
+
+                ${leadDetails.jobTitle ? `
+                <div class="detail-row">
+                  <span class="detail-label">Job Title:</span>
+                  <span class="detail-value">${leadDetails.jobTitle}</span>
+                </div>` : ''}
+
+                ${leadDetails.leadSource ? `
+                <div class="detail-row">
+                  <span class="detail-label">Source:</span>
+                  <span class="detail-value">${leadDetails.leadSource}</span>
+                </div>` : ''}
+
+                ${leadDetails.leadStatus ? `
+                <div class="detail-row">
+                  <span class="detail-label">Status:</span>
+                  <span class="detail-value">${leadDetails.leadStatus}</span>
+                </div>` : ''}
+
+                ${leadDetails.rating ? `
+                <div class="detail-row">
+                  <span class="detail-label">Rating:</span>
+                  <span class="detail-value">${leadDetails.rating}</span>
+                </div>` : ''}
+              </div>
+
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${process.env.FRONTEND_URL || 'https://crm-frontend-sooty-seven.vercel.app'}/leads/${leadDetails.id}" class="cta-button">
+                  View Lead Details →
+                </a>
+              </div>
+
+              <div class="info-box">
+                <p>
+                  <strong>📌 Next Steps:</strong> Review the lead details and reach out to them as soon as possible to increase conversion chances.
+                </p>
+              </div>
+
+              <p style="margin-top: 30px; font-size: 14px; color: #6B7280;">
+                You can manage this lead and update its status from your CRM dashboard.
+              </p>
+            </div>
+
+            <div class="footer">
+              <p class="footer-text"><strong>UFS CRM</strong> - Lead Management System</p>
+              <p class="footer-text">© ${new Date().getFullYear()} UFS CRM. All rights reserved.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log('✅ Lead assignment email sent:', info.messageId);
+
+    // Track sent email
+    try {
+      const User = require('../models/User');
+      const emailTrackingService = require('../services/emailTrackingService');
+      const user = await User.findOne({ email: assignedUserEmail });
+
+      if (user) {
+        await emailTrackingService.trackSentEmail({
+          messageId: info.messageId,
+          from: mailOptions.from,
+          to: assignedUserEmail,
+          subject: mailOptions.subject,
+          html: mailOptions.html,
+          emailType: 'lead_assignment',
+          userId: user._id,
+          tenantId: user.tenant,
+          smtpMode: 'free'
+        });
+      }
+    } catch (trackError) {
+      console.error('Email tracking failed:', trackError);
+      // Don't fail the email send if tracking fails
+    }
+
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ Lead assignment email error:', error.message);
+    throw new Error('Failed to send lead assignment email: ' + error.message);
+  }
+};
+
 module.exports = {
   sendPasswordResetOTP,
   sendSignupVerificationOTP,
   sendMeetingInvitation,
   sendMeetingReminder,
   sendMeetingCancellation,
-  sendUserInvitationEmail
+  sendUserInvitationEmail,
+  sendWelcomeEmail,
+  sendLeadAssignmentEmail
 };

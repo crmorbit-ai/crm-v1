@@ -7,9 +7,9 @@ import { ThemeProvider } from './context/ThemeContext';
 // Auth components
 import Login from './pages/Login';
 import Register from './pages/Register';
-import VerifyEmail from './pages/VerifyEmail'; // NEW
-import CompleteProfile from './pages/CompleteProfile'; // NEW
-import OAuthCallback from './pages/OAuthCallback'; // NEW
+import VerifyEmail from './pages/VerifyEmail';
+import CompleteProfile from './pages/CompleteProfile';
+import OAuthCallback from './pages/OAuthCallback';
 import LandingPage from './pages/LandingPage';
 
 // Dashboard components
@@ -143,7 +143,7 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public routes */}
+      {/* Public routes - Login & Register Pages */}
       <Route path="/login" element={
         <PublicRoute>
           <Login />

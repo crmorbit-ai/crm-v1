@@ -411,7 +411,7 @@ const CompleteProfile = () => {
         <div style={{ position: 'relative', zIndex: 1 }}>
           <div style={{ marginBottom: '35px', textAlign: 'center' }}>
             <img
-              src="/ufsscrmlogo.png"
+              src="/logo.png"
               alt="UFS CRM"
               style={{
                 width: '280px',

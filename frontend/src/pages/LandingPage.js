@@ -26,21 +26,6 @@ const LandingPage = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
-  // Auto-rotate features
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveFeature((prev) => (prev + 1) % 6);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  // Auto-rotate modules showcase
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActiveModule((prev) => (prev + 1) % 18);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, []);
 
   const features = [
     {
@@ -193,11 +178,13 @@ const LandingPage = () => {
             : 'bg-transparent py-4'
         }`}
       >
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
+        <div className="max-w-9xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="text-3xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
-              CRM Orbit
-            </div>
+            <img
+              src="/logo.png"
+              alt="CRM Logo"
+              className="h-6 w-auto object-contain"
+            />
           </div>
 
           <div className="hidden md:flex gap-8 items-center">
@@ -214,13 +201,13 @@ const LandingPage = () => {
               🤝 Become Partner
             </button>
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => { navigate('/login'); }}
               className="px-4 py-2 text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition"
             >
               Sign In
             </button>
             <button
-              onClick={() => navigate("/register")}
+              onClick={() => { navigate('/register'); }}
               className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition transform hover:scale-105"
             >
               Get Started Free
@@ -276,13 +263,13 @@ const LandingPage = () => {
 
               <div className="flex flex-wrap gap-4">
                 <button
-                  onClick={() => navigate("/register")}
+                  onClick={() => { navigate('/register'); }}
                   className="px-8 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-lg animate-gradient-shift"
                 >
                   Start Free Trial
                 </button>
                 <button
-                  onClick={() => navigate("/login")}
+                  onClick={() => { navigate('/login'); }}
                   className="px-8 py-4 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-lg"
                 >
                   Sign In →
@@ -735,7 +722,7 @@ const LandingPage = () => {
                   ))}
                 </ul>
                 <button
-                  onClick={() => navigate("/register")}
+                  onClick={() => { navigate('/register'); }}
                   className={`w-full py-3 rounded-xl font-bold transition transform hover:scale-105 ${
                     plan.highlighted
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg'
@@ -817,13 +804,13 @@ const LandingPage = () => {
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <button
-              onClick={() => navigate("/register")}
+              onClick={() => { navigate('/register'); }}
               className="px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-xl"
             >
               Start Free Trial - No Credit Card Required
             </button>
             <button
-              onClick={() => navigate("/login")}
+              onClick={() => { navigate('/login'); }}
               className="px-12 py-5 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-xl"
             >
               Sign In to Your Account
@@ -840,9 +827,11 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-5 gap-8 mb-12">
             <div className="md:col-span-2">
-              <div className="text-3xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                CRM Orbit
-              </div>
+              <img
+                src="/logo.png"
+                alt="CRM Logo"
+                className="h-7 w-auto object-contain mb-4"
+              />
               <p className="text-gray-400 mb-6">
                 Complete CRM solution with B2B workflow, email integration, team management, and more.
               </p>
@@ -915,7 +904,7 @@ const LandingPage = () => {
 
       {/* Floating Action Button */}
       <button
-        onClick={() => navigate("/register")}
+        onClick={() => { navigate('/register'); }}
         className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-3xl transition transform hover:scale-110 flex items-center justify-center text-2xl z-50"
       >
         🚀

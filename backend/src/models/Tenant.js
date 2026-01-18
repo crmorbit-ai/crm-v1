@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const tenantSchema = new mongoose.Schema({
-  // Unique Organization ID (UFSS001, UFSS002, etc.)
+  // Unique Organization ID (UFS001, UFS002, etc.)
   organizationId: {
     type: String,
     unique: true,
@@ -316,15 +316,15 @@ tenantSchema.pre('save', async function(next) {
 
       let nextNumber = 1;
       if (lastTenant && lastTenant.organizationId) {
-        // Extract number from format like UFSS001
-        const match = lastTenant.organizationId.match(/UFSS(\d+)/);
+        // Extract number from format like UFS001
+        const match = lastTenant.organizationId.match(/UFS(\d+)/);
         if (match) {
           nextNumber = parseInt(match[1], 10) + 1;
         }
       }
 
-      // Generate new organizationId with padding (UFSS001, UFSS002, etc.)
-      this.organizationId = `UFSS${String(nextNumber).padStart(3, '0')}`;
+      // Generate new organizationId with padding (UFS001, UFS002, etc.)
+      this.organizationId = `UFS${String(nextNumber).padStart(3, '0')}`;
     } catch (error) {
       console.error('Error generating organizationId:', error);
       // Continue without organizationId (it's not required)

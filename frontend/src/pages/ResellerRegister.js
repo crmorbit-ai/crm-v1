@@ -128,7 +128,7 @@ const ResellerRegister = () => {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '12px' }}>
           <img
-            src="/ufsscrmlogo.png"
+            src="/logo.png"
             alt="UFS CRM"
             style={{
               width: '130px',

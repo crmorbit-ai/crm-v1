@@ -65,7 +65,7 @@ const ResetPassword = () => {
     <div className="auth-container">
       <div className="auth-card">
         <img
-          src="/ufsscrmlogo.png"
+          src="/logo.png"
           alt="UFS CRM"
           style={{
             width: '140px',

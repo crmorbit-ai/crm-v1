@@ -4,6 +4,7 @@ const {
   getCandidates,
   getCandidate,
   createCandidate,
+  deleteCandidates,
   getStats,
   moveToLeads,
   bulkImportCandidates,
@@ -34,6 +35,12 @@ router.get('/stats',
 router.post('/move-to-leads',
   requirePermission('data_center', 'move_to_leads'),
   moveToLeads
+);
+
+// Delete candidates route
+router.delete('/delete',
+  requirePermission('data_center', 'delete'),
+  deleteCandidates
 );
 
 // Download template route

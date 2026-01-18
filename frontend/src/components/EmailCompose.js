@@ -7,7 +7,9 @@ const EmailCompose = ({
   onClose,
   recipients,
   onSuccess,
-  remainingCredits
+  remainingCredits,
+  mode = 'new', // 'new', 'reply', 'forward'
+  replyToEmail = null
 }) => {
   const [sending, setSending] = useState(false);
   const [showCC, setShowCC] = useState(false);
@@ -17,13 +19,14 @@ const EmailCompose = ({
 
   const [emailData, setEmailData] = useState({
     from: '',
+    to: '',
     cc: '',
     bcc: '',
     subject: '',
     message: ''
   });
 
-  // Load user's email settings
+  // Load user's email settings and pre-fill for reply/forward
   useEffect(() => {
     const loadUserSettings = async () => {
       try {
@@ -35,9 +38,56 @@ const EmailCompose = ({
           const displayName = response.emailConfig?.displayName || 'CRM User';
           const fullFrom = `${displayName} <${fromEmail}>`;
 
-          setEmailData(prev => ({ ...prev, from: fullFrom }));
           setUserEmail(fromEmail);
           setEmailConfigured(true);
+
+          // Pre-fill based on mode
+          if (mode === 'reply' && replyToEmail) {
+            // Reply: Pre-fill To, Subject with Re:, and quote original message
+            const originalSender = typeof replyToEmail.from === 'object'
+              ? (replyToEmail.from.email || '')
+              : replyToEmail.from;
+
+            const originalSubject = replyToEmail.subject || '';
+            const replySubject = originalSubject.startsWith('Re:')
+              ? originalSubject
+              : `Re: ${originalSubject}`;
+
+            const quotedMessage = `\n\n------- Original Message -------\nFrom: ${originalSender}\nSubject: ${originalSubject}\n\n${replyToEmail.bodyText || ''}`;
+
+            setEmailData({
+              from: fullFrom,
+              to: originalSender,
+              cc: '',
+              bcc: '',
+              subject: replySubject,
+              message: quotedMessage
+            });
+          } else if (mode === 'forward' && replyToEmail) {
+            // Forward: Pre-fill Subject with Fwd:, and include original message
+            const originalSubject = replyToEmail.subject || '';
+            const forwardSubject = originalSubject.startsWith('Fwd:')
+              ? originalSubject
+              : `Fwd: ${originalSubject}`;
+
+            const originalSender = typeof replyToEmail.from === 'object'
+              ? (replyToEmail.from.email || '')
+              : replyToEmail.from;
+
+            const forwardedMessage = `\n\n------- Forwarded Message -------\nFrom: ${originalSender}\nSubject: ${originalSubject}\n\n${replyToEmail.bodyText || ''}`;
+
+            setEmailData({
+              from: fullFrom,
+              to: '',
+              cc: '',
+              bcc: '',
+              subject: forwardSubject,
+              message: forwardedMessage
+            });
+          } else {
+            // New email
+            setEmailData(prev => ({ ...prev, from: fullFrom }));
+          }
         } else {
           setEmailData(prev => ({ ...prev, from: 'Not Configured' }));
           setEmailConfigured(false);
@@ -51,7 +101,7 @@ const EmailCompose = ({
     if (isOpen) {
       loadUserSettings();
     }
-  }, [isOpen]);
+  }, [isOpen, mode, replyToEmail]);
 
   const handleSend = async () => {
     if (!emailConfigured) {
@@ -59,20 +109,39 @@ const EmailCompose = ({
       return;
     }
 
-    if (!emailData.subject || !emailData.message) {
-      alert('⚠️ Please enter subject and message');
+    // Check if we have recipients either from props or manual input
+    const hasRecipients = (recipients && recipients.length > 0) || emailData.to.trim();
+
+    if (!hasRecipients || !emailData.subject || !emailData.message) {
+      alert('⚠️ Please enter recipient, subject and message');
       return;
     }
 
     try {
       setSending(true);
 
-      const response = await api.post('/data-center/bulk-email', {
-        candidates: recipients.map(r => ({
+      // Prepare recipients list
+      let recipientsList = [];
+
+      if (recipients && recipients.length > 0) {
+        // Use provided recipients (from bulk action)
+        recipientsList = recipients.map(r => ({
           email: r.email,
           firstName: r.firstName,
           lastName: r.lastName,
-        })),
+        }));
+      } else if (emailData.to.trim()) {
+        // Parse manual email addresses (comma separated)
+        const emailAddresses = emailData.to.split(',').map(e => e.trim()).filter(Boolean);
+        recipientsList = emailAddresses.map(email => ({
+          email,
+          firstName: '',
+          lastName: ''
+        }));
+      }
+
+      const response = await api.post('/data-center/bulk-email', {
+        candidates: recipientsList,
         subject: emailData.subject,
         message: emailData.message,
       });
@@ -81,7 +150,8 @@ const EmailCompose = ({
 
       // Reset form
       setEmailData({
-        from: 'CRM System <iasabhishek6200@gmail.com>',
+        from: emailData.from, // Keep the from email
+        to: '',
         cc: '',
         bcc: '',
         subject: '',
@@ -144,7 +214,7 @@ const EmailCompose = ({
           alignItems: 'center'
         }}>
           <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '500', color: '#202124' }}>
-            New Message
+            {mode === 'reply' ? 'Reply' : mode === 'forward' ? 'Forward Message' : 'New Message'}
           </h3>
           <button
             onClick={onClose}
@@ -168,7 +238,9 @@ const EmailCompose = ({
           borderBottom: '1px solid #d2e3fc'
         }}>
           <div style={{ fontSize: '12px', color: '#1967d2', fontWeight: '500' }}>
-            💳 {remainingCredits} credits available | {recipients.length} will be used
+            💳 {remainingCredits} credits available
+            {recipients && recipients.length > 0 && ` | ${recipients.length} will be used`}
+            {emailData.to && !recipients?.length && ` | ${emailData.to.split(',').filter(Boolean).length} will be used`}
           </div>
         </div>
 
@@ -232,33 +304,51 @@ const EmailCompose = ({
               minWidth: '70px',
               fontWeight: '500'
             }}>To</span>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{
-                fontSize: '14px',
-                color: '#202124',
-                flex: 1,
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '4px',
-                alignItems: 'center'
-              }}>
-                {recipients.slice(0, 3).map((r, idx) => (
-                  <span key={idx} style={{
-                    background: '#e8f0fe',
-                    padding: '2px 8px',
-                    borderRadius: '12px',
-                    fontSize: '13px',
-                    color: '#1967d2'
-                  }}>
-                    {r.email}
-                  </span>
-                ))}
-                {recipients.length > 3 && (
-                  <span style={{ fontSize: '13px', color: '#5f6368' }}>
-                    +{recipients.length - 3} more
-                  </span>
-                )}
-              </div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {recipients && recipients.length > 0 ? (
+                <div style={{
+                  fontSize: '14px',
+                  color: '#202124',
+                  flex: 1,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '4px',
+                  alignItems: 'center'
+                }}>
+                  {recipients.slice(0, 3).map((r, idx) => (
+                    <span key={idx} style={{
+                      background: '#e8f0fe',
+                      padding: '2px 8px',
+                      borderRadius: '12px',
+                      fontSize: '13px',
+                      color: '#1967d2'
+                    }}>
+                      {r.email}
+                    </span>
+                  ))}
+                  {recipients.length > 3 && (
+                    <span style={{ fontSize: '13px', color: '#5f6368' }}>
+                      +{recipients.length - 3} more
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <input
+                  type="text"
+                  value={emailData.to}
+                  onChange={(e) => setEmailData({ ...emailData, to: e.target.value })}
+                  placeholder="Recipients (separate multiple emails with commas)"
+                  style={{
+                    flex: 1,
+                    border: 'none',
+                    outline: 'none',
+                    fontSize: '14px',
+                    padding: '6px 8px',
+                    color: '#202124',
+                    background: 'white'
+                  }}
+                />
+              )}
               <div style={{ display: 'flex', gap: '4px' }}>
                 <button
                   onClick={() => setShowCC(!showCC)}

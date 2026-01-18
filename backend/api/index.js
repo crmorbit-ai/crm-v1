@@ -261,6 +261,7 @@ try {
   app.use('/api/auth', require('../src/routes/auth'));
   console.log('  ✅ auth routes loaded');
 
+  app.use('/api/profile', require('../src/routes/profile'));
   app.use('/api/users', require('../src/routes/users'));
   app.use('/api/tenants', require('../src/routes/tenants'));
   app.use('/api/roles', require('../src/routes/roles'));

@@ -69,13 +69,6 @@ const Header = ({ title, actionButton }) => {
                 </div>
                 <div
                   className="user-menu-item"
-                  onClick={() => handleNavigation('/settings')}
-                >
-                  <span>⚙️</span>
-                  Settings
-                </div>
-                <div
-                  className="user-menu-item"
                   onClick={() => handleNavigation('/change-password')}
                 >
                   <span>🔐</span>

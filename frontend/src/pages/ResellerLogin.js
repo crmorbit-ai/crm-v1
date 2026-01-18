@@ -79,7 +79,7 @@ const ResellerLogin = () => {
       }}>
         <div style={{ textAlign: 'center', marginBottom: '32px' }}>
           <img
-            src="/ufsscrmlogo.png"
+            src="/logo.png"
             alt="UFS CRM"
             style={{
               width: '180px',

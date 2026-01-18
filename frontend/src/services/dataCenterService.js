@@ -22,6 +22,15 @@ export const createCandidate = async (data) => {
 };
 
 /**
+ * Delete candidates
+ */
+export const deleteCandidates = async (candidateIds) => {
+  return await api.delete('/data-center/delete', {
+    data: { candidateIds }
+  });
+};
+
+/**
  * Get Data Center statistics
  */
 export const getStats = async () => {
@@ -114,6 +123,7 @@ const dataCenterService = {
   getCandidates,
   getCandidate,
   createCandidate,
+  deleteCandidates,
   getStats,
   moveToLeads,
   bulkImportCandidates,

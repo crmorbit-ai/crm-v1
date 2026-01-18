@@ -43,6 +43,11 @@ const Products = () => {
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Modal navigation - track which modal opened which
+  const [modalStack, setModalStack] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -252,6 +257,47 @@ const Products = () => {
     resetForm();
     setEditingProduct(null);
     setShowCreateModal(true);
+    setModalStack(['createProduct']);
+  };
+
+  const openCreateCategoryModal = () => {
+    // Close parent modal and open this one
+    setShowCreateModal(false);
+    setShowCreateCategoryModal(true);
+    setModalStack(['createProduct', 'createCategory']);
+  };
+
+  const closeCreateCategoryModal = () => {
+    setShowCreateCategoryModal(false);
+    setNewCategoryName('');
+    setError('');
+    // Reopen parent modal
+    setShowCreateModal(true);
+    setModalStack(['createProduct']);
+  };
+
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) {
+      setError('Category name is required');
+      return;
+    }
+
+    try {
+      await productCategoryService.createCategory({ name: newCategoryName, isActive: true });
+      setSuccess('Category created successfully!');
+      setNewCategoryName('');
+
+      // Close this modal and reopen parent
+      setShowCreateCategoryModal(false);
+      setShowCreateModal(true);
+      setModalStack(['createProduct']);
+
+      await loadCategories();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create category');
+    }
   };
 
   const resetForm = () => {
@@ -293,45 +339,8 @@ const Products = () => {
   const canDeleteProduct = hasPermission('product_management', 'delete');
   const canManageCategories = hasPermission('product_management', 'create');
 
-  const actionButton = (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '8px', background: 'white', borderRadius: '8px', padding: '4px', border: '2px solid #e5e7eb' }}>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('table')}
-          style={{ padding: '6px 12px' }}
-        >
-          ☰ Table
-        </button>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('grid')}
-          style={{ padding: '6px 12px' }}
-        >
-          ⊞ Grid
-        </button>
-      </div>
-      {canManageCategories && (
-        <button
-          className="crm-btn crm-btn-secondary"
-          onClick={() => navigate('/product-categories')}
-        >
-          ⚙️ Manage Categories
-        </button>
-      )}
-      <TooltipButton
-        className="crm-btn crm-btn-primary"
-        onClick={openCreateModal}
-        disabled={!canCreateProduct}
-        tooltipText="You don't have permission to create products"
-      >
-        + New Product
-      </TooltipButton>
-    </div>
-  );
-
   return (
-    <DashboardLayout title="Products Management" actionButton={actionButton}>
+    <DashboardLayout title="Products Management">
       {success && (
         <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>
           ✓ {success}
@@ -371,7 +380,7 @@ const Products = () => {
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>
             🔍 Search & Filter
           </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
             <input
               type="text"
               name="search"
@@ -401,6 +410,36 @@ const Products = () => {
               <option value="true">Active</option>
               <option value="false">Inactive</option>
             </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', paddingTop: '16px', borderTop: '2px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', gap: '8px', background: 'white', borderRadius: '8px', padding: '4px', border: '2px solid #e5e7eb' }}>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+                onClick={() => setViewMode('table')}
+                style={{ padding: '6px 12px' }}
+              >
+                ☰ Table
+              </button>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+                onClick={() => setViewMode('grid')}
+                style={{ padding: '6px 12px' }}
+              >
+                ⊞ Grid
+              </button>
+            </div>
+            {canCreateProduct && (
+              <TooltipButton
+                className="crm-btn crm-btn-primary"
+                onClick={openCreateModal}
+                disabled={!canCreateProduct}
+                tooltipText="You don't have permission to create products"
+              >
+                + New Product
+              </TooltipButton>
+            )}
           </div>
         </div>
       </div>
@@ -756,10 +795,10 @@ const Products = () => {
                 <button
                   type="button"
                   className="crm-btn crm-btn-secondary"
-                  onClick={() => window.open('/product-categories', '_blank')}
-                  title="Manage Categories"
+                  onClick={openCreateCategoryModal}
+                  title="Create New Category"
                 >
-                  ⚙️
+                  ➕
                 </button>
               )}
             </div>
@@ -814,6 +853,46 @@ const Products = () => {
           </div>
         </form>
       </Modal>
+
+      {/* Create Category Modal */}
+      {showCreateCategoryModal && (
+        <Modal
+          isOpen={showCreateCategoryModal}
+          onClose={closeCreateCategoryModal}
+          title="Create New Category"
+          size="small"
+        >
+          <form onSubmit={handleCreateCategory}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Category Name *
+              </label>
+              <input
+                type="text"
+                className="crm-form-input"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                required
+                placeholder="e.g., Software, Hardware, Services"
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
+              <button
+                type="button"
+                className="crm-btn crm-btn-secondary"
+                onClick={closeCreateCategoryModal}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="crm-btn crm-btn-primary">
+                Create Category
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </DashboardLayout>
   );
 };

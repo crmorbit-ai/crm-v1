@@ -3,6 +3,7 @@ const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const bcrypt = require('bcryptjs');
+const { sendWelcomeEmail } = require('../utils/emailService');
 
 /**
  * @desc    Get current user profile with organization details
@@ -227,6 +228,9 @@ const updateOrganization = async (req, res) => {
       return errorResponse(res, 'Organization not found', 404);
     }
 
+    // Check if profile was incomplete before
+    const wasIncomplete = !tenant.organizationName || !tenant.contactEmail || !tenant.industry;
+
     // Update allowed fields only (NOT organizationId)
     if (organizationName) tenant.organizationName = organizationName;
     if (contactEmail) tenant.contactEmail = contactEmail;
@@ -235,6 +239,25 @@ const updateOrganization = async (req, res) => {
     if (businessType) tenant.businessType = businessType;
 
     await tenant.save();
+
+    // Check if profile is now complete
+    const isNowComplete = tenant.organizationName && tenant.contactEmail && tenant.industry;
+
+    // Send welcome email if profile just got completed
+    if (wasIncomplete && isNowComplete) {
+      try {
+        const user = await User.findById(req.user._id);
+        await sendWelcomeEmail(
+          user.email,
+          `${user.firstName} ${user.lastName}`,
+          tenant.organizationName
+        );
+        console.log('✅ Welcome email sent to:', user.email);
+      } catch (emailError) {
+        console.error('❌ Failed to send welcome email:', emailError.message);
+        // Don't fail the profile update if email fails
+      }
+    }
 
     // Log activity
     await logActivity({

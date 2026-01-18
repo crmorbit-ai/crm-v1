@@ -221,19 +221,25 @@ const createCandidate = async (req, res) => {
   try {
     const DataCenterCandidate = getDataCenterModel();
 
-    // 🔒 Tenant Isolation: Check if candidate with email already exists in this tenant
-    const existingCandidate = await DataCenterCandidate.findOne({
-      email: req.body.email,
-      tenant: req.user.tenant
-    });
+    // 🔒 Tenant Isolation: Check for duplicate email (flexible field name check)
+    const emailValue = req.body.email || req.body.Email;
+    if (emailValue) {
+      const existingCandidate = await DataCenterCandidate.findOne({
+        $or: [
+          { email: emailValue },
+          { Email: emailValue }
+        ],
+        tenant: req.user.tenant
+      });
 
-    if (existingCandidate) {
-      return errorResponse(res, 'Candidate with this email already exists in your database', 400);
+      if (existingCandidate) {
+        return errorResponse(res, 'Candidate with this email already exists in your database', 400);
+      }
     }
 
-    // Create candidate with tenant
+    // 🔥 Create candidate with ALL fields directly at root level
     const candidate = await DataCenterCandidate.create({
-      ...req.body,
+      ...req.body,  // All form fields go directly to root
       importedBy: req.user._id,
       importedAt: new Date(),
       isActive: true,
@@ -241,9 +247,12 @@ const createCandidate = async (req, res) => {
     });
 
     // Log activity
+    const candidateName = candidate.name || candidate.Name ||
+                         `${candidate.firstName || candidate.FirstName || ''} ${candidate.lastName || candidate.LastName || ''}`.trim() ||
+                         'Unknown';
     await logActivity(req, 'datacenter.create_candidate', 'Candidate', candidate._id, {
-      candidateName: `${candidate.firstName} ${candidate.lastName}`,
-      email: candidate.email
+      candidateName,
+      email: emailValue
     });
 
     return successResponse(res, candidate, 'Candidate created successfully', 201);
@@ -251,6 +260,47 @@ const createCandidate = async (req, res) => {
   } catch (error) {
     console.error('Error creating candidate:', error);
     return errorResponse(res, error.message || 'Error creating candidate', 500);
+  }
+};
+
+/**
+ * @desc    Delete candidates (soft delete by setting isActive to false)
+ * @route   DELETE /api/data-center
+ * @access  Private
+ */
+const deleteCandidates = async (req, res) => {
+  try {
+    const DataCenterCandidate = getDataCenterModel();
+    const { candidateIds } = req.body;
+
+    if (!candidateIds || !Array.isArray(candidateIds) || candidateIds.length === 0) {
+      return errorResponse(res, 'Please provide candidate IDs to delete', 400);
+    }
+
+    // 🔒 Tenant Isolation: Only delete own tenant's candidates
+    const result = await DataCenterCandidate.updateMany(
+      {
+        _id: { $in: candidateIds },
+        tenant: req.user.tenant
+      },
+      {
+        $set: { isActive: false }
+      }
+    );
+
+    // Log activity
+    await logActivity(req, 'datacenter.delete_candidates', 'Candidate', null, {
+      deletedCount: result.modifiedCount,
+      candidateIds
+    });
+
+    return successResponse(res, {
+      deleted: result.modifiedCount
+    }, `Successfully deleted ${result.modifiedCount} candidate(s)`);
+
+  } catch (error) {
+    console.error('Error deleting candidates:', error);
+    return errorResponse(res, 'Error deleting candidates', 500);
   }
 };
 
@@ -409,45 +459,38 @@ const moveToLeads = async (req, res) => {
           continue;
         }
 
-        // Create lead description
-        const description = `
-Candidate from Data Center:
-Experience: ${candidate.totalExperience} years
-Skills: ${candidate.skills ? candidate.skills.join(', ') : 'N/A'}
-Current CTC: ₹${candidate.currentCTC ? candidate.currentCTC.toLocaleString() : 'N/A'}
-Expected CTC: ₹${candidate.expectedCTC ? candidate.expectedCTC.toLocaleString() : 'N/A'}
-Availability: ${candidate.availability || 'N/A'}
-LinkedIn: ${candidate.linkedInUrl || 'N/A'}
-Resume: ${candidate.resumeUrl || 'N/A'}
-Source: ${candidate.sourceWebsite || 'N/A'}
-        `.trim();
+        // 🔥 Copy ALL dynamic fields from candidate to lead
+        const excludeFields = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'isActive', 'status', 'movedToLeadsAt', 'movedBy', 'movedToTenant', 'leadId', 'dataSource'];
 
-        // Create tags
-        const tags = [
-          'Data Center',
-          candidate.sourceWebsite
-        ];
-        if (candidate.skills && candidate.skills.length > 0) {
-          tags.push(...candidate.skills.slice(0, 3));
+        // Get all candidate fields
+        const candidateData = {};
+        const candidateObj = candidate.toObject();
+
+        Object.keys(candidateObj).forEach(key => {
+          if (!excludeFields.includes(key) && candidateObj[key] !== null && candidateObj[key] !== undefined && candidateObj[key] !== '') {
+            candidateData[key] = candidateObj[key];
+          }
+        });
+
+        // Create tags from available data
+        const tags = ['Data Center'];
+        const skillsField = candidate.skills || candidate.Skills || candidate.skill || candidate.Skill;
+        if (skillsField) {
+          const skillsArray = Array.isArray(skillsField) ? skillsField : skillsField.split(',').map(s => s.trim());
+          tags.push(...skillsArray.slice(0, 3));
         }
 
-        // Create lead
+        // 🔥 Create lead with ALL candidate fields + system fields
         const newLead = await Lead.create({
-          firstName: candidate.firstName,
-          lastName: candidate.lastName,
-          email: candidate.email,
-          phone: candidate.phone,
-          company: candidate.currentCompany,
-          jobTitle: candidate.currentDesignation,
-          city: candidate.currentLocation,
-          annualRevenue: candidate.expectedCTC,
-          description,
-          status: leadStatus || 'New',
+          ...candidateData,  // All candidate fields copied directly
+          leadStatus: leadStatus || 'New',
           source: leadSource || 'Data Center',
           rating: rating || 'Warm',
           owner: assignTo || req.user._id,
           tenant: targetTenant,
-          tags
+          tags,
+          dataCenterCandidateId: candidate._id,  // Track source candidate
+          createdBy: req.user._id
         });
 
         // Update candidate status
@@ -512,36 +555,44 @@ const bulkImportCandidates = async (req, res, isInternal = false) => {
 
     for (const candidateData of candidates) {
       try {
-        // 🔒 Tenant Isolation: Check for duplicate email within tenant only
-        const existingCandidate = await DataCenterCandidate.findOne({
-          email: candidateData.email,
-          tenant: req.user?.tenant
-        });
+        // 🔒 Tenant Isolation: Check for duplicate based on any email field
+        let existingCandidate = null;
+        if (candidateData.email || candidateData.Email) {
+          const emailToCheck = candidateData.email || candidateData.Email;
+          existingCandidate = await DataCenterCandidate.findOne({
+            $or: [
+              { email: emailToCheck },
+              { Email: emailToCheck }
+            ],
+            tenant: req.user?.tenant
+          });
+        }
 
         if (existingCandidate) {
           results.duplicates.push({
-            email: candidateData.email,
-            name: `${candidateData.firstName} ${candidateData.lastName}`
+            email: candidateData.email || candidateData.Email,
+            name: candidateData.name || candidateData.Name || candidateData.firstName || candidateData.FirstName || 'Unknown'
           });
           continue;
         }
 
-        // Create candidate with tenant
+        // 🔥 Create candidate with ALL fields at root level + system fields
         const candidate = await DataCenterCandidate.create({
-          ...candidateData,
+          ...candidateData,  // All Excel columns go directly to root
           importedBy: req.user?._id,
           importedAt: new Date(),
-          tenant: req.user?.tenant // 🔒 Add tenant
+          tenant: req.user?.tenant,  // 🔒 Add tenant
+          isActive: true
         });
 
         results.success.push({
           id: candidate._id,
-          name: `${candidate.firstName} ${candidate.lastName}`,
-          email: candidate.email
+          name: candidateData.name || candidateData.Name || candidateData.firstName || candidateData.FirstName || 'Unknown',
+          email: candidateData.email || candidateData.Email
         });
 
       } catch (error) {
-        console.error('❌ Failed to import candidate:', candidateData.firstName, candidateData.email);
+        console.error('❌ Failed to import candidate:', candidateData);
         console.error('   Error:', error.message);
         console.error('   Stack:', error.stack);
         results.failed.push({
@@ -601,26 +652,41 @@ const exportCandidates = async (req, res) => {
       return errorResponse(res, 'No candidates found to export', 404);
     }
 
-    // Prepare data for Excel
-    const data = candidates.map(candidate => ({
-      'Name': `${candidate.firstName} ${candidate.lastName}`,
-      'Email': candidate.email,
-      'Phone': candidate.phone,
-      'Current Company': candidate.currentCompany || '',
-      'Designation': candidate.currentDesignation || '',
-      'Experience (Years)': candidate.totalExperience || 0,
-      'Skills': candidate.skills ? candidate.skills.join(', ') : '',
-      'Location': candidate.currentLocation || '',
-      'Current CTC': candidate.currentCTC || '',
-      'Expected CTC': candidate.expectedCTC || '',
-      'Notice Period (Days)': candidate.noticePeriod || '',
-      'Availability': candidate.availability || '',
-      'Resume': candidate.resumeUrl || '',
-      'LinkedIn': candidate.linkedInUrl || '',
-      'Last Active': candidate.lastActiveOn ? new Date(candidate.lastActiveOn).toLocaleDateString() : '',
-      'Source': candidate.sourceWebsite || '',
-      'Status': candidate.status || ''
-    }));
+    // 🔥 Prepare data for Excel - Dynamic columns from all candidates
+    const excludeFields = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'dataSource'];
+
+    // Collect all unique column names from all candidates
+    const allColumns = new Set();
+    candidates.forEach(candidate => {
+      Object.keys(candidate.toObject()).forEach(key => {
+        if (!excludeFields.includes(key)) {
+          allColumns.add(key);
+        }
+      });
+    });
+
+    // Map candidates to Excel rows with all columns
+    const data = candidates.map(candidate => {
+      const row = {};
+      const candidateObj = candidate.toObject();
+
+      allColumns.forEach(column => {
+        const value = candidateObj[column];
+        if (value === null || value === undefined || value === '') {
+          row[column] = '';
+        } else if (Array.isArray(value)) {
+          row[column] = value.join(', ');
+        } else if (value instanceof Date) {
+          row[column] = value.toLocaleDateString();
+        } else if (typeof value === 'object') {
+          row[column] = JSON.stringify(value);
+        } else {
+          row[column] = value;
+        }
+      });
+
+      return row;
+    });
 
     // Create workbook
     const workbook = xlsx.utils.book_new();
@@ -698,88 +764,54 @@ const uploadCandidatesFile = async (req, res) => {
           return isNaN(parsed) ? undefined : parsed;
         };
 
-        // Helper function to get mapped value with smart detection
-        const getMappedValue = (row, possibleNames, fieldName) => {
-          // If column mapping exists, use it
-          if (Object.keys(columnMapping).length > 0) {
-            const mappedCsvColumn = Object.keys(columnMapping).find(
-              csvCol => columnMapping[csvCol] === fieldName
-            );
-            if (mappedCsvColumn && row[mappedCsvColumn]) {
-              return row[mappedCsvColumn];
-            }
-          }
+        // 🔥 FULLY DYNAMIC MAPPING - All Excel columns are saved directly at root level
+        const systemFields = ['tenant', 'status', 'movedToLeadsAt', 'movedBy', 'movedToTenant', 'leadId', 'importedBy', 'importedAt', 'dataSource', 'isActive', '_id', '__v', 'createdAt', 'updatedAt'];
 
-          // Try all possible column names (case-insensitive)
-          for (const name of possibleNames) {
-            // Try exact match first
-            if (row[name] !== undefined && row[name] !== null && row[name] !== '') {
-              return row[name];
-            }
-            // Try case-insensitive match
-            const key = Object.keys(row).find(k => k.toLowerCase() === name.toLowerCase());
-            if (key && row[key] !== undefined && row[key] !== null && row[key] !== '') {
-              return row[key];
-            }
-          }
-          return undefined;
-        };
-
-        // Map CSV/Excel columns to model fields - Smart column detection
+        // Map CSV/Excel columns to model fields - ALL columns become database fields
         const candidates = rawData.map((row, index) => {
-          const candidate = {
-            firstName: getMappedValue(row, ['First Name', 'FirstName', 'fname', 'first_name', 'Name', 'Full Name', 'name'], 'firstName') || `Person ${index + 1}`,
-            lastName: getMappedValue(row, ['Last Name', 'LastName', 'lname', 'last_name', 'Surname', 'surname'], 'lastName') || '',
-            email: getMappedValue(row, ['Email', 'email', 'E-mail', 'Email Address', 'email_address', 'Mail'], 'email') || `import_${Date.now()}_${index}@temp.com`,
-            phone: getMappedValue(row, ['Phone', 'phone', 'Mobile', 'mobile', 'Phone Number', 'Contact', 'contact', 'cell'], 'phone') || '',
-            alternatePhone: getMappedValue(row, ['Alternate Phone', 'alternate_phone', 'Alt Phone', 'Secondary Phone', 'Phone2'], 'alternatePhone'),
+          const candidate = {};
 
-            currentCompany: getMappedValue(row, ['Current Company', 'Company', 'company', 'Organization', 'Employer', 'org'], 'currentCompany'),
-            currentDesignation: getMappedValue(row, ['Designation', 'designation', 'Title', 'Job Title', 'Position', 'Role', 'job_title'], 'currentDesignation'),
-            totalExperience: parseNumberOrUndefined(getMappedValue(row, ['Experience', 'experience', 'Total Experience', 'Years of Experience', 'Exp', 'exp_years'], 'totalExperience')),
-            relevantExperience: parseNumberOrUndefined(getMappedValue(row, ['Relevant Experience', 'relevant_experience', 'Relevant Exp', 'rel_exp'], 'relevantExperience')),
+          // Process ALL columns from Excel/CSV
+          Object.keys(row).forEach(csvColumn => {
+            const value = row[csvColumn];
 
-            currentLocation: getMappedValue(row, ['Location', 'location', 'City', 'city', 'Current Location', 'Place'], 'currentLocation') || '',
-            availability: getMappedValue(row, ['Availability', 'availability', 'Available', 'Notice', 'available'], 'availability') || 'Immediate',
+            // Skip empty values
+            if (value === undefined || value === null || value === '') return;
 
-            currentCTC: parseNumberOrUndefined(getMappedValue(row, ['Current CTC', 'currentCTC', 'CTC', 'Salary', 'Current Salary', 'current_ctc'], 'currentCTC')),
-            expectedCTC: parseNumberOrUndefined(getMappedValue(row, ['Expected CTC', 'expectedCTC', 'Expected Salary', 'Expected', 'expected_ctc'], 'expectedCTC')),
-            noticePeriod: parseIntOrUndefined(getMappedValue(row, ['Notice Period', 'noticePeriod', 'Notice', 'NP', 'notice_period'], 'noticePeriod')),
+            // Skip system fields that shouldn't come from Excel
+            if (systemFields.includes(csvColumn)) return;
 
-            education: getMappedValue(row, ['Education', 'education', 'Degree', 'degree', 'edu'], 'education'),
-            highestQualification: getMappedValue(row, ['Qualification', 'qualification', 'Highest Qualification', 'Degree', 'highest_qual'], 'highestQualification'),
+            // Clean column name (remove extra spaces, special characters)
+            const cleanColumnName = csvColumn.trim();
 
-            linkedInUrl: getMappedValue(row, ['LinkedIn', 'linkedIn', 'LinkedIn URL', 'LinkedIn Profile', 'linkedin_url'], 'linkedInUrl'),
-            resumeUrl: getMappedValue(row, ['Resume URL', 'resumeUrl', 'Resume', 'CV URL', 'cv'], 'resumeUrl'),
-
-            sourceWebsite: getMappedValue(row, ['Source', 'source', 'Source Website', 'Platform', 'source_website'], 'sourceWebsite') || 'Manual Upload',
-            jobType: getMappedValue(row, ['Job Type', 'jobType', 'Employment Type', 'Type', 'job_type'], 'jobType') || 'Full-time',
-            workMode: getMappedValue(row, ['Work Mode', 'workMode', 'Mode', 'Working Mode', 'work_mode'], 'workMode') || 'Hybrid',
-
-            status: 'Available',
-            isActive: true,
-            lastActiveOn: new Date()
-          };
-
-          // Handle skills (comma-separated)
-          const skillsValue = getMappedValue(row, ['Skills', 'skills', 'Skill Set', 'Technologies', 'tech', 'skill'], 'skills');
-          if (skillsValue) {
-            candidate.skills = typeof skillsValue === 'string'
-              ? skillsValue.split(',').map(s => s.trim()).filter(Boolean)
-              : Array.isArray(skillsValue) ? skillsValue : [];
-          } else {
-            candidate.skills = [];
-          }
-
-          // Handle preferred locations (comma-separated)
-          const locationsValue = getMappedValue(row, ['Preferred Locations', 'preferredLocations', 'Preferred Location', 'Location Preference', 'pref_location'], 'preferredLocations');
-          if (locationsValue) {
-            candidate.preferredLocations = typeof locationsValue === 'string'
-              ? locationsValue.split(',').map(s => s.trim()).filter(Boolean)
-              : Array.isArray(locationsValue) ? locationsValue : [];
-          } else {
-            candidate.preferredLocations = [];
-          }
+            // Smart type detection and conversion
+            // Check if value looks like a number
+            if (typeof value === 'number') {
+              candidate[cleanColumnName] = value;
+            }
+            // Check if it's a string that looks like a comma-separated list
+            else if (typeof value === 'string' && value.includes(',') && value.split(',').length > 1) {
+              // Convert comma-separated to array
+              candidate[cleanColumnName] = value.split(',').map(s => s.trim()).filter(Boolean);
+            }
+            // Check if it's a date string
+            else if (typeof value === 'string' && !isNaN(Date.parse(value)) && value.match(/\d{4}-\d{2}-\d{2}/)) {
+              candidate[cleanColumnName] = new Date(value);
+            }
+            // Check if it's a boolean-like string
+            else if (typeof value === 'string' && ['true', 'false', 'yes', 'no'].includes(value.toLowerCase())) {
+              candidate[cleanColumnName] = ['true', 'yes'].includes(value.toLowerCase());
+            }
+            // Check if it's a numeric string
+            else if (typeof value === 'string' && !isNaN(value) && value.trim() !== '') {
+              const numValue = parseFloat(value);
+              candidate[cleanColumnName] = isNaN(numValue) ? value : numValue;
+            }
+            // Default: store as is
+            else {
+              candidate[cleanColumnName] = value;
+            }
+          });
 
           return candidate;
         });
@@ -1097,6 +1129,7 @@ module.exports = {
   getCandidates,
   getCandidate,
   createCandidate,
+  deleteCandidates,
   getStats,
   moveToLeads,
   bulkImportCandidates,

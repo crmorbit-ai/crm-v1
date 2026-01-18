@@ -61,6 +61,9 @@ const Leads = () => {
   const [groupMembers, setGroupMembers] = useState([]); // 🆕 Members of selected group
   const [selectedMembers, setSelectedMembers] = useState([]); // 🆕 Selected members to assign
 
+  // 🔥 Dynamic columns state
+  const [displayColumns, setDisplayColumns] = useState([]);
+
   const [stats, setStats] = useState({
     total: 0,
     new: 0,
@@ -71,6 +74,11 @@ const Leads = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+
+  // Modal navigation - track which modal opened which for proper back navigation
+  const [modalStack, setModalStack] = useState([]); // ['create', 'addProduct', 'createCategory']
 
   // All field definitions (standard + custom)
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
@@ -130,6 +138,30 @@ const Leads = () => {
     }
   };
 
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) {
+      setError('Category name is required');
+      return;
+    }
+
+    try {
+      await productCategoryService.createCategory({ name: newCategoryName, isActive: true });
+      setSuccess('Category created successfully!');
+      setNewCategoryName('');
+
+      // Close this modal and reopen parent
+      setShowCreateCategoryModal(false);
+      setShowAddProductModal(true);
+      setModalStack(['create', 'addProduct']);
+
+      await loadCategories();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to create category');
+    }
+  };
+
   // 🆕 Load groups for filtering and assignment
   const loadGroups = async () => {
     try {
@@ -166,6 +198,66 @@ const Leads = () => {
     } catch (err) {
       console.error('❌ Load field definitions error:', err);
     }
+  };
+
+  // 🔥 Extract all unique columns from leads data (fully dynamic)
+  const extractColumns = (leadsData) => {
+    if (!leadsData || leadsData.length === 0) return [];
+
+    const allKeys = new Set();
+    const excludeKeys = [
+      '_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'createdAt', 'updatedAt',
+      'isActive', 'isConverted', 'convertedDate', 'convertedAccount', 'convertedContact',
+      'convertedOpportunity', 'emailVerified', 'emailVerificationStatus', 'emailVerificationDetails',
+      'phoneVerified', 'phoneVerificationStatus', 'phoneVerificationDetails', 'emailOptOut',
+      'doNotCall', 'assignedGroup', 'assignedMembers', 'assignmentChain', 'dataCenterCandidateId',
+      'product', 'productDetails', 'owner'
+    ];
+
+    leadsData.forEach(lead => {
+      Object.keys(lead).forEach(key => {
+        if (!excludeKeys.includes(key) && lead[key] !== null && lead[key] !== undefined && lead[key] !== '') {
+          allKeys.add(key);
+        }
+      });
+    });
+
+    return Array.from(allKeys);
+  };
+
+  // 🔥 Get field value from lead (all fields are at root level now)
+  const getFieldValue = (lead, fieldName) => {
+    if (lead[fieldName] !== undefined && lead[fieldName] !== null && lead[fieldName] !== '') {
+      return lead[fieldName];
+    }
+    return null;
+  };
+
+  // Format field value for display
+  const formatFieldValue = (value) => {
+    if (value === null || value === undefined || value === '') return '-';
+
+    if (Array.isArray(value)) {
+      return value.length > 0 ? value.join(', ') : '-';
+    }
+
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+
+    if (typeof value === 'object') {
+      return JSON.stringify(value);
+    }
+
+    return value.toString();
+  };
+
+  // Format field name for display
+  const formatFieldName = (fieldName) => {
+    return fieldName
+      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
+      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
+      .trim();
   };
 
   // Group fields by section
@@ -275,6 +367,14 @@ const Leads = () => {
           total: response.data.pagination?.total || 0,
           pages: response.data.pagination?.pages || 0
         }));
+
+        // 🔥 Auto-detect columns from data and merge with existing columns
+        const newColumns = extractColumns(leadsData);
+        if (newColumns.length > 0) {
+          // Merge with existing columns to show all columns from all data
+          const mergedColumns = [...new Set([...displayColumns, ...newColumns])];
+          setDisplayColumns(mergedColumns);
+        }
 
         const newLeads = leadsData.filter(l => l.leadStatus === 'New').length;
         const qualified = leadsData.filter(l => l.leadStatus === 'Qualified').length;
@@ -428,22 +528,25 @@ const Leads = () => {
     e.preventDefault();
     try {
       setError('');
-      
+
       const response = await productItemService.createProduct(productFormData);
-      
+
       if (response && response.success && response.data) {
         setSuccess('Product created successfully!');
-        
+
         setFormData(prev => ({
           ...prev,
           product: response.data._id
         }));
-        
+
+        // Close this modal and reopen parent
         setShowAddProductModal(false);
         resetProductForm();
-        
+        setShowCreateModal(true);
+        setModalStack(['create']);
+
         await loadProducts();
-        
+
         setTimeout(() => setSuccess(''), 3000);
       }
     } catch (err) {
@@ -510,11 +613,40 @@ const Leads = () => {
   const openCreateModal = () => {
     resetForm();
     setShowCreateModal(true);
+    setModalStack(['create']);
   };
 
   const openAddProductModal = () => {
     resetProductForm();
+    // Close parent modal and open this one
+    setShowCreateModal(false);
     setShowAddProductModal(true);
+    setModalStack(['create', 'addProduct']);
+  };
+
+  const openCreateCategoryModal = () => {
+    // Close parent modal and open this one
+    setShowAddProductModal(false);
+    setShowCreateCategoryModal(true);
+    setModalStack(['create', 'addProduct', 'createCategory']);
+  };
+
+  const closeAddProductModal = () => {
+    setShowAddProductModal(false);
+    resetProductForm();
+    setError('');
+    // Reopen parent modal
+    setShowCreateModal(true);
+    setModalStack(['create']);
+  };
+
+  const closeCreateCategoryModal = () => {
+    setShowCreateCategoryModal(false);
+    setNewCategoryName('');
+    setError('');
+    // Reopen parent modal
+    setShowAddProductModal(true);
+    setModalStack(['create', 'addProduct']);
   };
 
   const resetForm = () => {
@@ -692,14 +824,6 @@ const Leads = () => {
           ⊞ Grid
         </button>
       </div>
-      <TooltipButton
-        className="crm-btn crm-btn-primary"
-        onClick={openCreateModal}
-        disabled={!canCreateLead}
-        tooltipText="You don't have permission to create leads"
-      >
-        + New Lead
-      </TooltipButton>
     </div>
   );
 
@@ -824,6 +948,16 @@ const Leads = () => {
               >
                 📤 Bulk Upload
               </button>
+            )}
+            {canCreateLead && (
+              <TooltipButton
+                className="crm-btn crm-btn-primary"
+                onClick={openCreateModal}
+                disabled={!canCreateLead}
+                tooltipText="You don't have permission to create leads"
+              >
+                + New Lead
+              </TooltipButton>
             )}
           </div>
         </div>
@@ -953,21 +1087,27 @@ const Leads = () => {
                           checked={selectedLeads.length === leads.length && leads.length > 0}
                         />
                       </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Company</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Article Number</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Rating</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Source</th>
+                      {displayColumns.map((column) => (
+                        <th key={column} style={{
+                          padding: '12px 16px',
+                          textAlign: 'left',
+                          fontSize: '12px',
+                          fontWeight: '800',
+                          color: '#64748b',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.5px',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {formatFieldName(column)}
+                        </th>
+                      ))}
                     </tr>
                   </thead>
                   <tbody>
                     {leads.map((lead) => (
                       <tr
                         key={lead._id}
-                        onClick={(e) => { if (e.target.tagName !== 'BUTTON') handleLeadClick(lead._id); }}
+                        onClick={(e) => { if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleLeadClick(lead._id); }}
                         style={{
                           background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
                           cursor: 'pointer',
@@ -987,7 +1127,7 @@ const Leads = () => {
                           e.currentTarget.style.borderColor = '#e5e7eb';
                         }}
                       >
-                        <td style={{ padding: '16px', textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
+                        <td style={{ padding: '16px', textAlign: 'center', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }} onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
                             checked={selectedLeads.includes(lead._id)}
@@ -1000,104 +1140,27 @@ const Leads = () => {
                             }}
                           />
                         </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '48px',
-                              height: '48px',
-                              borderRadius: '12px',
-                              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '18px',
-                              fontWeight: '800',
-                              color: 'white',
-                              boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
+                        {displayColumns.map((column, index) => (
+                          <td key={column} style={{
+                            padding: '16px',
+                            maxWidth: '250px',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            ...(index === displayColumns.length - 1 && {
+                              borderTopRightRadius: '12px',
+                              borderBottomRightRadius: '12px'
+                            })
+                          }}>
+                            <span style={{
+                              fontSize: '14px',
+                              color: '#475569',
+                              fontWeight: '500'
                             }}>
-                              {lead.firstName?.[0]}{lead.lastName?.[0]}
-                            </div>
-                            <div>
-                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '4px' }}>
-                                {lead.firstName || ''} {lead.lastName || ''}
-                              </div>
-                              {lead.jobTitle && (
-                                <div style={{ fontSize: '13px', color: '#64748b' }}>{lead.jobTitle}</div>
-                              )}
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ fontWeight: '600', color: '#475569', fontSize: '14px' }}>
-                            {lead.company || '-'}
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569' }}>
-                              <span>📧</span>
-                              <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.email}</span>
-                              {lead.emailVerified && <span style={{ color: '#10B981' }}>✅</span>}
-                            </div>
-                            {lead.phone && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', fontWeight: '600' }}>
-                                <span>📞</span>
-                                <span>{lead.phone}</span>
-                                {lead.phoneVerified && <span style={{ color: '#10B981' }}>✅</span>}
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          {lead.product ? (
-                            <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '13px' }}>
-                              {lead.product.articleNumber}
-                            </div>
-                          ) : (
-                            <span style={{ color: '#94A3B8' }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          {lead.product ? (
-                            <div
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/products-management?productId=${lead.product._id}`);
-                              }}
-                              style={{
-                                color: '#2563eb',
-                                fontWeight: '600',
-                                fontSize: '13px',
-                                cursor: 'pointer',
-                                textDecoration: 'underline',
-                                transition: 'color 0.2s ease'
-                              }}
-                              onMouseEnter={(e) => e.target.style.color = '#1d4ed8'}
-                              onMouseLeave={(e) => e.target.style.color = '#2563eb'}
-                            >
-                              {lead.product.name}
-                            </div>
-                          ) : (
-                            <span style={{ color: '#94A3B8' }}>-</span>
-                          )}
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <span className={`status-badge ${(lead.leadStatus || 'new').toLowerCase()}`}>
-                            {lead.leadStatus || 'New'}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          {lead.rating ? (
-                            <span className={`rating-badge ${lead.rating.toLowerCase()}`}>
-                              {getRatingIcon(lead.rating)} {lead.rating}
+                              {formatFieldValue(getFieldValue(lead, column))}
                             </span>
-                          ) : '-'}
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ fontWeight: '600', color: '#475569', fontSize: '14px' }}>
-                            {lead.leadSource || '-'}
-                          </div>
-                        </td>
+                          </td>
+                        ))}
                       </tr>
                     ))}
                   </tbody>
@@ -1390,11 +1453,7 @@ const Leads = () => {
 
       <Modal
         isOpen={showAddProductModal}
-        onClose={() => {
-          setShowAddProductModal(false);
-          resetProductForm();
-          setError('');
-        }}
+        onClose={closeAddProductModal}
         title="Add New Product"
         size="medium"
       >
@@ -1456,16 +1515,14 @@ const Leads = () => {
               <button
                 type="button"
                 className="crm-btn crm-btn-secondary"
-                onClick={() => {
-                  window.open('/product-categories', '_blank');
-                }}
-                title="Manage Categories"
+                onClick={openCreateCategoryModal}
+                title="Create New Category"
               >
-                ⚙️
+                ➕
               </button>
             </div>
             <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-              Don't see your category? Click ⚙️ to manage categories in a new tab
+              Don't see your category? Click ➕ to create a new one
             </p>
           </div>
 
@@ -1520,11 +1577,7 @@ const Leads = () => {
             <button
               type="button"
               className="crm-btn crm-btn-secondary"
-              onClick={() => {
-                setShowAddProductModal(false);
-                resetProductForm();
-                setError('');
-              }}
+              onClick={closeAddProductModal}
             >
               Cancel
             </button>
@@ -1766,6 +1819,46 @@ const Leads = () => {
               </div>
             )}
           </div>
+        </Modal>
+      )}
+
+      {/* Create Category Modal */}
+      {showCreateCategoryModal && (
+        <Modal
+          isOpen={showCreateCategoryModal}
+          onClose={closeCreateCategoryModal}
+          title="Create New Category"
+          size="small"
+        >
+          <form onSubmit={handleCreateCategory}>
+            <div style={{ marginBottom: '20px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Category Name *
+              </label>
+              <input
+                type="text"
+                className="crm-form-input"
+                value={newCategoryName}
+                onChange={(e) => setNewCategoryName(e.target.value)}
+                required
+                placeholder="e.g., Software, Hardware, Services"
+                autoFocus
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
+              <button
+                type="button"
+                className="crm-btn crm-btn-secondary"
+                onClick={closeCreateCategoryModal}
+              >
+                Cancel
+              </button>
+              <button type="submit" className="crm-btn crm-btn-primary">
+                Create Category
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </DashboardLayout>

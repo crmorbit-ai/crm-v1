@@ -7,6 +7,7 @@ const FieldDefinition = require('../models/FieldDefinition');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
+const { sendLeadAssignmentEmail } = require('../utils/emailService');
 
 /**
  * @desc    Get all leads
@@ -256,55 +257,16 @@ const getLeadStats = async (req, res) => {
  */
 const createLead = async (req, res) => {
   try {
-    const {
-      firstName,
-      lastName,
-      email,
-      phone,
-      mobilePhone,
-      fax,
-      company,
-      jobTitle,
-      website,
-      leadSource,
-      leadStatus,
-      industry,
-      numberOfEmployees,
-      annualRevenue,
-      rating,
-      emailOptOut,
-      doNotCall,
-      skypeId,
-      secondaryEmail,
-      twitter,
-      linkedIn,
-      street,
-      city,
-      state,
-      country,
-      zipCode,
-      flatHouseNo,
-      latitude,
-      longitude,
-      description,
-      product,
-      productDetails,
-      customFields
-    } = req.body;
-
     console.log('=== CREATE LEAD START ===');
     console.log('Request body:', JSON.stringify(req.body, null, 2));
 
-    // Basic validation
-    if (!firstName && !lastName && !email && !company) {
-      console.log('❌ Validation failed: No identifying field');
-      return errorResponse(res, 400, 'Please provide at least one of: First Name, Last Name, Email, or Company');
-    }
+    // 🔥 Extract system fields that need special handling
+    const { product, productDetails, tenant: bodyTenant, ...otherFields } = req.body;
 
     // Determine tenant
     let tenant;
     if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
-      tenant = req.body.tenant;
+      tenant = bodyTenant;
       if (!tenant) {
         console.log('❌ Tenant missing for SAAS user');
         return errorResponse(res, 400, 'Tenant is required');
@@ -316,11 +278,15 @@ const createLead = async (req, res) => {
     console.log('✅ Tenant:', tenant);
     console.log('User:', req.user._id, req.user.userType);
 
-    // Check for duplicate email
+    // Check for duplicate email (flexible field name)
+    const email = otherFields.email || otherFields.Email;
     if (email) {
       console.log('Checking duplicate email...');
       const existingLead = await Lead.findOne({
-        email,
+        $or: [
+          { email },
+          { Email: email }
+        ],
         tenant,
         isActive: true,
         isConverted: false
@@ -337,11 +303,9 @@ const createLead = async (req, res) => {
     if (product) {
       console.log('=== PRODUCT VALIDATION START ===');
       console.log('Product ID:', product);
-      console.log('Product ID type:', typeof product);
-      console.log('Product ID length:', product.length);
 
       const mongoose = require('mongoose');
-      
+
       // Check ObjectId validity
       if (!mongoose.Types.ObjectId.isValid(product)) {
         console.log('❌ Invalid ObjectId format');
@@ -350,7 +314,7 @@ const createLead = async (req, res) => {
       console.log('✅ Valid ObjectId format');
 
       const ProductItem = require('../models/ProductItem');
-      
+
       console.log('Searching for product with tenant:', tenant);
       const productExists = await ProductItem.findOne({
         _id: product,
@@ -367,8 +331,6 @@ const createLead = async (req, res) => {
       // Check if product belongs to tenant
       if (productExists.tenant.toString() !== tenant.toString()) {
         console.log('❌ Product tenant mismatch');
-        console.log('Product tenant:', productExists.tenant.toString());
-        console.log('User tenant:', tenant.toString());
         return errorResponse(res, 400, 'Product does not belong to your organization');
       }
 
@@ -390,60 +352,14 @@ const createLead = async (req, res) => {
       console.log('Product details:', productDetailsToSave);
     }
 
-    // Validate and prepare custom fields
-    let validatedCustomFields = {};
-    if (customFields && Object.keys(customFields).length > 0) {
-      console.log('=== VALIDATING CUSTOM FIELDS ===');
-      console.log('Custom fields received:', customFields);
-
-      const validation = await FieldDefinition.validateCustomFields(tenant, 'Lead', customFields);
-
-      if (!validation.valid) {
-        console.log('❌ Custom fields validation failed:', validation.errors);
-        return errorResponse(res, 400, 'Custom field validation failed', validation.errors);
-      }
-
-      validatedCustomFields = validation.validatedData;
-      console.log('✅ Custom fields validated:', validatedCustomFields);
-    }
-
     console.log('=== CREATING LEAD ===');
 
-    // Create lead
+    // 🔥 Create lead with ALL fields directly at root level + system fields
     const leadData = {
-      firstName: firstName || '',
-      lastName: lastName || '',
-      email: email || '',
-      phone,
-      mobilePhone,
-      fax,
-      company,
-      jobTitle,
-      website,
-      leadSource,
-      leadStatus: leadStatus || 'New',
-      industry,
-      numberOfEmployees,
-      annualRevenue,
-      rating,
-      emailOptOut: emailOptOut || false,
-      doNotCall: doNotCall || false,
-      skypeId,
-      secondaryEmail,
-      twitter,
-      linkedIn,
-      street,
-      city,
-      state,
-      country,
-      zipCode,
-      flatHouseNo,
-      latitude,
-      longitude,
-      description,
+      ...otherFields,  // All form fields go directly to root
       product: product || undefined,
       productDetails: productDetailsToSave,
-      customFields: validatedCustomFields,
+      leadStatus: otherFields.leadStatus || 'New',
       owner: req.body.owner || req.user._id,
       tenant,
       createdBy: req.user._id,
@@ -462,14 +378,56 @@ const createLead = async (req, res) => {
       await lead.populate('product', 'name articleNumber category price');
     }
 
+    // 🔥 Get lead name flexibly (handles different field name variations)
+    const getLeadName = (lead) => {
+      if (lead.name || lead.Name) return lead.name || lead.Name;
+      const firstName = lead.firstName || lead.FirstName || '';
+      const lastName = lead.lastName || lead.LastName || '';
+      return `${firstName} ${lastName}`.trim() || 'Unknown';
+    };
+
+    const leadName = getLeadName(lead);
+    const leadEmail = lead.email || lead.Email;
+    const leadCompany = lead.company || lead.Company;
+
     // Log activity
     await logActivity(req, 'lead.created', 'Lead', lead._id, {
-      firstName: lead.firstName,
-      lastName: lead.lastName,
-      email: lead.email,
-      company: lead.company,
+      name: leadName,
+      email: leadEmail,
+      company: leadCompany,
       product: product ? 'Product linked' : 'No product'
     });
+
+    // Send email notification if lead is assigned to someone other than creator
+    if (lead.owner && lead.owner.toString() !== req.user._id.toString()) {
+      try {
+        const ownerUser = await mongoose.model('User').findById(lead.owner);
+        const creator = await mongoose.model('User').findById(req.user._id);
+
+        if (ownerUser && creator) {
+          await sendLeadAssignmentEmail(
+            ownerUser.email,
+            `${ownerUser.firstName} ${ownerUser.lastName}`,
+            {
+              id: lead._id,
+              name: leadName,
+              company: leadCompany,
+              email: leadEmail,
+              phone: lead.phone || lead.Phone || lead.mobile || lead.Mobile,
+              jobTitle: lead.jobTitle || lead.JobTitle || lead.designation || lead.Designation,
+              leadSource: lead.source || 'Unknown',
+              leadStatus: lead.leadStatus || 'New',
+              rating: lead.rating || 'Warm'
+            },
+            `${creator.firstName} ${creator.lastName}`
+          );
+          console.log(`✅ Lead assignment email sent to ${ownerUser.email}`);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send lead assignment email:', emailError.message);
+        // Don't fail the lead creation if email fails
+      }
+    }
 
     console.log('=== CREATE LEAD SUCCESS ===');
 
@@ -620,6 +578,37 @@ const updateLead = async (req, res) => {
         changes: changes,
         fieldsChanged: Object.keys(changes)
       });
+    }
+
+    // Send email notification if owner changed
+    if (changes.owner) {
+      try {
+        const newOwner = await mongoose.model('User').findById(changes.owner.new);
+        const updatedBy = await mongoose.model('User').findById(req.user._id);
+
+        if (newOwner && updatedBy && newOwner._id.toString() !== req.user._id.toString()) {
+          await sendLeadAssignmentEmail(
+            newOwner.email,
+            `${newOwner.firstName} ${newOwner.lastName}`,
+            {
+              id: lead._id,
+              name: `${lead.firstName} ${lead.lastName}`,
+              company: lead.company,
+              email: lead.email,
+              phone: lead.phone || lead.mobilePhone,
+              jobTitle: lead.jobTitle,
+              leadSource: lead.leadSource,
+              leadStatus: lead.leadStatus,
+              rating: lead.rating
+            },
+            `${updatedBy.firstName} ${updatedBy.lastName}`
+          );
+          console.log(`✅ Lead reassignment email sent to ${newOwner.email}`);
+        }
+      } catch (emailError) {
+        console.error('❌ Failed to send lead reassignment email:', emailError.message);
+        // Don't fail the update if email fails
+      }
     }
 
     successResponse(res, 200, 'Lead updated successfully', lead);
@@ -1324,6 +1313,31 @@ const assignLeadToUser = async (req, res) => {
     lead.lastModifiedBy = req.user.id;
 
     await lead.save();
+
+    // Send email notification to assigned user
+    try {
+      const assignedBy = await mongoose.model('User').findById(req.user.id);
+      await sendLeadAssignmentEmail(
+        user.email,
+        `${user.firstName} ${user.lastName}`,
+        {
+          id: lead._id,
+          name: `${lead.firstName} ${lead.lastName}`,
+          company: lead.company,
+          email: lead.email,
+          phone: lead.phone || lead.mobilePhone,
+          jobTitle: lead.jobTitle,
+          leadSource: lead.leadSource,
+          leadStatus: lead.leadStatus,
+          rating: lead.rating
+        },
+        `${assignedBy.firstName} ${assignedBy.lastName}`
+      );
+      console.log(`✅ Lead assignment email sent to ${user.email}`);
+    } catch (emailError) {
+      console.error('❌ Failed to send lead assignment email:', emailError.message);
+      // Don't fail the assignment if email fails
+    }
 
     await logActivity(req, 'lead.updated', 'Lead', lead._id, {
       action: 'Assigned to user',

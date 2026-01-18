@@ -18,7 +18,6 @@ const Sidebar = () => {
           taskManagement: false,
           roleManagement: false,
           leadManagement: false,
-          salesManagement: false,
           salesFinance: false,
           product: false,
           accountManagement: false,
@@ -31,7 +30,6 @@ const Sidebar = () => {
       taskManagement: false,
       roleManagement: false,
       leadManagement: false,
-      salesManagement: false,
       salesFinance: false,
       product: false,
       accountManagement: false,
@@ -82,7 +80,7 @@ const Sidebar = () => {
     <div className="crm-sidebar">
       <div className="sidebar-logo">
         <img
-          src="/ufsscrmlogo.png"
+          src="/logo.png"
           alt="UFS CRM"
           style={{
             width: '95%',
@@ -103,37 +101,23 @@ const Sidebar = () => {
           Dashboard
         </Link>
 
-        {/* 2. Sales Management - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('salesManagement')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Sales Management</span>
-          <span style={{ float: 'right' }}>{openSections.salesManagement ? '▼' : '▶'}</span>
-        </div>
-        {openSections.salesManagement && (
-          <>
-            <Link
-              to="/data-center"
-              className={`nav-item ${isActive('/data-center') ? 'active' : ''}`}
-            >
-              Sales
-            </Link>
-          </>
-        )}
-
-        {/* 3. Lead Management - Dropdown */}
+        {/* 2. Lead Management - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('leadManagement')}
           style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
         >
           <span>Lead Management</span>
-1          <span style={{ float: 'right' }}>{openSections.leadManagement ? '▼' : '▶'}</span>
+          <span style={{ float: 'right' }}>{openSections.leadManagement ? '▼' : '▶'}</span>
         </div>
         {openSections.leadManagement && (
           <>
+            <Link
+              to="/data-center"
+              className={`nav-item ${isActive('/data-center') ? 'active' : ''}`}
+            >
+              Customers
+            </Link>
             <NavItem
               to="/leads"
               icon="📋"
@@ -161,7 +145,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* 4. Sales & Finance - Dropdown */}
+        {/* 3. Sales & Finance - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('salesFinance')}
@@ -199,7 +183,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* 5. Task Management - Dropdown */}
+        {/* 4. Task Management - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('taskManagement')}
@@ -237,7 +221,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* 6. Product - Dropdown */}
+        {/* 5. Product - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('product')}
@@ -263,7 +247,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* 7. Account Management - Dropdown */}
+        {/* 6. Account Management - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('accountManagement')}
@@ -283,7 +267,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* 8. Role Management - Dropdown */}
+        {/* 7. Role Management - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('roleManagement')}
@@ -321,7 +305,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* 9. Support - Dropdown */}
+        {/* 8. Support - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('support')}
@@ -350,7 +334,7 @@ const Sidebar = () => {
           </>
         )}
 
-        {/* 10. Customization - Dropdown */}
+        {/* 9. Customization - Dropdown */}
         <div
           className="nav-section-title clickable"
           onClick={() => toggleSection('customization')}

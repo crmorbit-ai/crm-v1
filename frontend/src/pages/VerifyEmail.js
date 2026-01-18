@@ -126,7 +126,7 @@ const VerifyEmail = () => {
       <div className="auth-box">
         <div className="auth-header">
           <img
-            src="/ufsscrmlogo.png"
+            src="/logo.png"
             alt="UFS CRM"
             style={{
               width: '140px',

@@ -115,7 +115,7 @@ const ForgotPassword = () => {
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
           <img
-            src="/ufsscrmlogo.png"
+            src="/logo.png"
             alt="UFS CRM"
             style={{
               width: '140px',

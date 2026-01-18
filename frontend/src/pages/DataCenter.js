@@ -82,14 +82,15 @@ const DataCenter = () => {
   const [displayColumns, setDisplayColumns] = useState([]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
 
-  // Extract all unique columns from candidates data
+  // 🔥 Extract all unique columns from candidates data (fully dynamic)
   const extractColumns = (candidatesData) => {
     if (!candidatesData || candidatesData.length === 0) return [];
 
     const allKeys = new Set();
-    const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'customFields'];
+    const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource'];
 
     candidatesData.forEach(candidate => {
+      // Add ALL fields directly (no nested customFields anymore)
       Object.keys(candidate).forEach(key => {
         if (!excludeKeys.includes(key) && candidate[key] !== null && candidate[key] !== undefined && candidate[key] !== '') {
           allKeys.add(key);
@@ -309,27 +310,6 @@ const DataCenter = () => {
     }
   };
 
-  // Download CSV template with all active fields
-  const downloadTemplate = async () => {
-    try {
-      // Service returns blob directly (axios interceptor extracts response.data)
-      const blob = await dataCenterService.downloadTemplate();
-
-      // Download file
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'customers_import_template.xlsx';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error('Download template error:', error);
-      alert('Failed to download template');
-    }
-  };
-
   // Move to Leads
   const handleMoveToLeads = async () => {
     if (selectedCandidates.length === 0) {
@@ -357,6 +337,33 @@ const DataCenter = () => {
     }
   };
 
+  // Delete Candidates
+  const handleDeleteCandidates = async () => {
+    if (selectedCandidates.length === 0) {
+      alert('Please select at least one candidate');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${selectedCandidates.length} candidate(s)? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await dataCenterService.deleteCandidates(selectedCandidates);
+
+      alert(`✅ Successfully deleted ${response.data.deleted} candidate(s)!`);
+
+      // Reset selection and reload
+      setSelectedCandidates([]);
+      loadCandidates();
+    } catch (error) {
+      console.error('Error deleting candidates:', error);
+      alert('Failed to delete candidates');
+    }
+  };
+
   // Export to Excel
   const handleExport = async () => {
     try {
@@ -377,49 +384,33 @@ const DataCenter = () => {
     }
   };
 
-  // Create Candidate
+  // 🔥 Create Candidate (all fields go to root level)
   const handleCreateCandidate = async () => {
     try {
       console.log('🚀 Starting candidate creation...');
       console.log('📊 All field values:', fieldValues);
       console.log('📋 Field definitions:', fieldDefinitions);
 
-      // Separate standard fields from custom fields
-      const standardFields = {};
-      const customFields = {};
+      // 🔥 All fields go directly to root level - no separation needed
+      const candidateData = {};
 
       fieldDefinitions.forEach(field => {
         const value = fieldValues[field.fieldName];
         console.log(`\n🔍 Processing field: ${field.fieldName}`);
         console.log(`   Label: ${field.label}`);
         console.log(`   Type: ${field.fieldType}`);
-        console.log(`   Is Standard: ${field.isStandardField}`);
         console.log(`   Value: ${value}`);
         console.log(`   Value type: ${typeof value}`);
 
         if (value !== undefined && value !== null && value !== '') {
-          if (field.isStandardField) {
-            standardFields[field.fieldName] = value;
-            console.log(`   ✅ Added to standardFields`);
-          } else {
-            customFields[field.fieldName] = value;
-            console.log(`   ✅ Added to customFields`);
-          }
+          candidateData[field.fieldName] = value;
+          console.log(`   ✅ Added to candidateData at root level`);
         } else {
           console.log(`   ❌ Skipped (value is empty/null/undefined)`);
         }
       });
 
-      // Build candidate data with standard fields and custom fields
-      const candidateData = {
-        ...standardFields,  // All standard fields from field definitions
-        customFields: Object.keys(customFields).length > 0 ? customFields : undefined  // Custom fields in nested object
-      };
-
-      console.log('\n📤 Final candidate data to submit:');
-      console.log('  📋 Standard fields:', standardFields);
-      console.log('  🎨 Custom fields:', customFields);
-      console.log('  📦 Complete data:', candidateData);
+      console.log('\n📤 Final candidate data to submit:', candidateData);
 
       await dataCenterService.createCandidate(candidateData);
 
@@ -455,8 +446,16 @@ const DataCenter = () => {
       .trim();
   };
 
+  // 🔥 Get field value from candidate (all fields are at root level now)
+  const getFieldValue = (candidate, fieldName) => {
+    if (candidate[fieldName] !== undefined && candidate[fieldName] !== null && candidate[fieldName] !== '') {
+      return candidate[fieldName];
+    }
+    return null;
+  };
+
   // Format field value for display
-  const formatFieldValue = (value, fieldName) => {
+  const formatFieldValue = (value) => {
     if (value === null || value === undefined || value === '') return '-';
 
     if (Array.isArray(value)) {
@@ -530,13 +529,6 @@ const DataCenter = () => {
               onClick={() => setShowFilters(!showFilters)}
             >
               🔍 {showFilters ? 'Hide' : 'Show'} Filters
-            </button>
-
-            <button
-              className="crm-btn crm-btn-success crm-btn-sm"
-              onClick={downloadTemplate}
-            >
-              📥 Download Template
             </button>
 
             <input
@@ -621,6 +613,19 @@ const DataCenter = () => {
                 }}
               >
                 ➡️ Move to Leads
+              </button>
+
+              {/* Delete Button */}
+              <button
+                className="crm-btn crm-btn-sm"
+                onClick={handleDeleteCandidates}
+                style={{
+                  background: '#ef4444',
+                  borderColor: '#ef4444',
+                  color: 'white'
+                }}
+              >
+                🗑️ Delete
               </button>
 
               <button
@@ -1073,7 +1078,7 @@ const DataCenter = () => {
                               color: '#475569',
                               fontWeight: '500'
                             }}>
-                              {formatFieldValue(candidate[column], column)}
+                              {formatFieldValue(getFieldValue(candidate, column))}
                             </span>
                           </td>
                         ))}

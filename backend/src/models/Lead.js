@@ -1,24 +1,26 @@
 const mongoose = require('mongoose');
 
+// 🔥 FULLY DYNAMIC SCHEMA - All fields from DataCenter can be preserved
 const leadSchema = new mongoose.Schema({
-  // Basic Information
-  firstName: {
+  // 🔒 System Fields Only (Required for CRM workflow and multi-tenant isolation)
+
+  // Status and Workflow
+  leadStatus: {
     type: String,
-    trim: true
+    default: 'New'
   },
-  
-  lastName: {
+
+  source: {
     type: String,
-    trim: true
+    default: 'Data Center'
   },
-  
-  email: {
+
+  rating: {
     type: String,
-    trim: true,
-    lowercase: true
+    default: 'Warm'
   },
-  
-  // EMAIL VERIFICATION FIELDS
+
+  // Verification Fields (system managed)
   emailVerified: {
     type: Boolean,
     default: false
@@ -36,13 +38,7 @@ const leadSchema = new mongoose.Schema({
     deliverability: String,
     verifiedAt: Date
   },
-  
-  phone: {
-    type: String,
-    trim: true
-  },
-  
-  // PHONE VERIFICATION FIELDS
+
   phoneVerified: {
     type: Boolean,
     default: false
@@ -59,200 +55,50 @@ const leadSchema = new mongoose.Schema({
     format: String,
     verifiedAt: Date
   },
-  
-  mobilePhone: {
-    type: String,
-    trim: true
-  },
-  
-  fax: {
-    type: String,
-    trim: true
-  },
-  
-  company: {
-    type: String,
-    trim: true
-  },
-  
-  jobTitle: {
-    type: String,
-    trim: true
-  },
-  
-  website: {
-    type: String,
-    trim: true
-  },
-  
-  // Lead Details
-  leadSource: {
-    type: String,
-    enum: [
-      'Advertisement',
-      'Cold Call',
-      'Employee Referral',
-      'External Referral',
-      'Online Store',
-      'Partner',
-      'Public Relations',
-      'Sales Mail Alias',
-      'Seminar Partner',
-      'Internal Seminar',
-      'Trade Show',
-      'Web Download',
-      'Web Research',
-      'Chat',
-      'Twitter',
-      'Facebook',
-      'Google+',
-      'Website',
-      'Campaign',
-      'Social Media',
-      'Other',
-      ''
-    ]
-  },
-  
-  leadStatus: {
-    type: String,
-    enum: ['New', 'Contacted', 'Qualified', 'Unqualified', 'Lost', 'Converted', ''],
-    default: 'New'
-  },
-  
-  industry: {
-    type: String,
-    trim: true
-  },
-  
-  numberOfEmployees: {
-    type: Number,
-    min: 0
-  },
-  
-  annualRevenue: {
-    type: Number,
-    min: 0
-  },
-  
-  rating: {
-    type: String,
-    enum: ['Hot', 'Warm', 'Cold', '']
-  },
-  
+
   // Communication Preferences
   emailOptOut: {
     type: Boolean,
     default: false
   },
-  
+
   doNotCall: {
     type: Boolean,
     default: false
   },
-  
-  // Social Media
-  skypeId: {
-    type: String,
-    trim: true
-  },
-  
-  secondaryEmail: {
-    type: String,
-    trim: true,
-    lowercase: true
-  },
-  
-  twitter: {
-    type: String,
-    trim: true
-  },
-  
-  linkedIn: {
-    type: String,
-    trim: true
-  },
-  
-  // Address Information
-  street: {
-    type: String,
-    trim: true
-  },
-  
-  city: {
-    type: String,
-    trim: true
-  },
-  
-  state: {
-    type: String,
-    trim: true
-  },
-  
-  country: {
-    type: String,
-    trim: true
-  },
-  
-  zipCode: {
-    type: String,
-    trim: true
-  },
-  
-  flatHouseNo: {
-    type: String,
-    trim: true
-  },
-  
-  latitude: {
-    type: String,
-    trim: true
-  },
-  
-  longitude: {
-    type: String,
-    trim: true
-  },
-  
-  // Description
-  description: {
-    type: String,
-    trim: true
-  },
-  
+
   // Conversion Information
   isConverted: {
     type: Boolean,
     default: false
   },
-  
+
   convertedDate: {
     type: Date
   },
-  
+
   convertedAccount: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Account'
   },
-  
+
   convertedContact: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Contact'
   },
-  
+
   convertedOpportunity: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Opportunity'
   },
 
-  // Product Information (link to ProductItem)
+  // Product Information
   product: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'ProductItem',
     required: false
   },
 
-  // NEW - Product Details with Rich Information
   productDetails: {
     quantity: {
       type: Number,
@@ -282,27 +128,24 @@ const leadSchema = new mongoose.Schema({
     }
   },
 
-  // Owner and Tenant
+  // Owner and Assignment
   owner: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
-    required: false // 🔧 Changed to false to allow UNASSIGNED leads
+    required: false
   },
 
-  // 🆕 Group Assignment
   assignedGroup: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Group',
     default: null
   },
 
-  // 🆕 Specific Members Assigned (from the group)
   assignedMembers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   }],
 
-  // 🆕 Assignment Chain (tracks hierarchy)
   assignmentChain: [{
     assignedTo: {
       type: mongoose.Schema.Types.ObjectId,
@@ -326,59 +169,60 @@ const leadSchema = new mongoose.Schema({
     }
   }],
 
+  // Tenant Isolation
   tenant: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',
     required: true
   },
-  
+
   // Tracking
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  
+
   lastModifiedBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
   },
-  
+
   isActive: {
     type: Boolean,
     default: true
   },
-  
+
   // Tags
   tags: [{
     type: String,
     trim: true
   }],
 
-  // Custom Fields (Dynamic fields defined by Product Team)
-  customFields: {
-    type: mongoose.Schema.Types.Mixed,
-    default: {}
+  // DataCenter Reference (to track where this lead came from)
+  dataCenterCandidateId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'DataCenterCandidate'
   }
+
+  // ⚡ ALL OTHER FIELDS ARE DYNAMIC - Accepts any field from DataCenter or manual entry
+  // No predefined schema - any field can be stored directly at root level
+
 }, {
-  timestamps: true
+  timestamps: true,
+  strict: false  // 🔥 This allows any field to be saved to the document
 });
 
-// Indexes for better query performance
+// Basic indexes for system fields and common query patterns
 leadSchema.index({ tenant: 1, isActive: 1 });
 leadSchema.index({ owner: 1 });
 leadSchema.index({ leadStatus: 1 });
-leadSchema.index({ leadSource: 1 });
 leadSchema.index({ isConverted: 1 });
-leadSchema.index({ email: 1, tenant: 1 });
 leadSchema.index({ emailVerified: 1 });
 leadSchema.index({ phoneVerified: 1 });
 leadSchema.index({ product: 1 });
-leadSchema.index({ firstName: 'text', lastName: 'text', company: 'text', email: 'text' });
+leadSchema.index({ tenant: 1, createdAt: -1 });
 
-// Virtual for full name
-leadSchema.virtual('fullName').get(function() {
-  return `${this.firstName || ''} ${this.lastName || ''}`.trim();
-});
+// 🔥 Dynamic field indexes - created automatically by MongoDB when querying
 
 // Pre-save middleware to set converted date
 leadSchema.pre('save', function(next) {
