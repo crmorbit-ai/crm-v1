@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
@@ -8,7 +8,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import '../styles/crm.css';
 
 const Users = () => {
-  const { user, logout, hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [users, setUsers] = useState([]);
   const [allRoles, setAllRoles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -46,9 +46,9 @@ const Users = () => {
   useEffect(() => {
     loadUsers();
     loadRoles();
-  }, [pagination.page]);
+  }, [pagination.page, loadUsers, loadRoles]);
 
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
@@ -67,16 +67,16 @@ const Users = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [pagination.page, pagination.limit]);
 
-  const loadRoles = async () => {
+  const loadRoles = useCallback(async () => {
     try {
       const response = await roleService.getRoles({ limit: 100 });
       setAllRoles(response.roles || []);
     } catch (err) {
       console.error('Failed to load roles:', err);
     }
-  };
+  }, []);
 
   const loadSubscriptionInfo = async () => {
     try {

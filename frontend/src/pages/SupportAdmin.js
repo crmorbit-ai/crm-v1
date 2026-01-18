@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import supportService from '../services/supportService';
 import '../styles/modal.css';
 
@@ -38,9 +38,9 @@ const SupportAdmin = () => {
   useEffect(() => {
     loadTickets();
     loadStats();
-  }, [filters, pagination.page]);
+  }, [filters, pagination.page, loadTickets, loadStats]);
 
-  const loadTickets = async () => {
+  const loadTickets = useCallback(async () => {
     try {
       setLoading(true);
       const params = {
@@ -57,16 +57,16 @@ const SupportAdmin = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [filters, pagination.page, pagination.limit]);
 
-  const loadStats = async () => {
+  const loadStats = useCallback(async () => {
     try {
       const response = await supportService.getStats();
       setStats(response.data || {});
     } catch (error) {
       console.error('Error loading stats:', error);
     }
-  };
+  }, []);
 
   const loadTicketDetails = async (ticketId) => {
     try {

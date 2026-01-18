@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { taskService } from '../services/taskService';
-import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
 import '../styles/crm.css';
 
 const Tasks = () => {
-  const { hasPermission } = useAuth();
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
