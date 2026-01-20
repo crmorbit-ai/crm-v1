@@ -43,11 +43,6 @@ const Users = () => {
     roles: []
   });
 
-  useEffect(() => {
-    loadUsers();
-    loadRoles();
-  }, [pagination.page, loadUsers, loadRoles]);
-
   const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
@@ -77,6 +72,12 @@ const Users = () => {
       console.error('Failed to load roles:', err);
     }
   }, []);
+
+  // Load users and roles on mount and when page changes
+  useEffect(() => {
+    loadUsers();
+    loadRoles();
+  }, [pagination.page, loadUsers, loadRoles]);
 
   const loadSubscriptionInfo = async () => {
     try {
