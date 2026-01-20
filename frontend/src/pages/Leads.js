@@ -201,6 +201,7 @@ const Leads = () => {
   };
 
   // 🔥 Extract all unique columns from leads data (fully dynamic)
+  // leadStatus field is always placed at the end
   const extractColumns = (leadsData) => {
     if (!leadsData || leadsData.length === 0) return [];
 
@@ -222,7 +223,15 @@ const Leads = () => {
       });
     });
 
-    return Array.from(allKeys);
+    // Convert to array and sort - leadStatus field always at the end
+    const columnsArray = Array.from(allKeys);
+    const statusIndex = columnsArray.indexOf('leadStatus');
+    if (statusIndex > -1) {
+      columnsArray.splice(statusIndex, 1); // Remove leadStatus from current position
+      columnsArray.push('leadStatus'); // Add leadStatus at the end
+    }
+
+    return columnsArray;
   };
 
   // 🔥 Get field value from lead (all fields are at root level now)
@@ -855,10 +864,9 @@ const Leads = () => {
         </div>
       </div>
 
-      <div className="crm-card" style={{ marginBottom: '24px' }}>
-        <div style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>🔍 Search & Filter</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
+      <div className="filters-container">
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Search & Filter</h3>
+          <div className="filters-grid">
             <input
               type="text"
               name="search"
@@ -960,7 +968,6 @@ const Leads = () => {
               </TooltipButton>
             )}
           </div>
-        </div>
       </div>
 
       <div className="crm-card">

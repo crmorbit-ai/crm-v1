@@ -683,101 +683,139 @@ const LeadDetail = () => {
           {activeTab === 'overview' && (
             <div>
               <h3 style={{ fontSize: '18px', fontWeight: '600', marginBottom: '20px' }}>Lead Information</h3>
-              
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Contact Information</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Full Name</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.firstName} {lead.lastName}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Email</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.email}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Phone</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.phone || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Website</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>
-                        {lead.website ? (
-                          <a href={lead.website} target="_blank" rel="noopener noreferrer" style={{ color: '#3B82F6', textDecoration: 'none' }}>
-                            {lead.website}
-                          </a>
-                        ) : 'Not provided'}
-                      </p>
+                {/* Contact Information - Only show fields with data */}
+                {(lead.firstName || lead.lastName || lead.email || lead.phone || lead.website) && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Contact Information</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {(lead.firstName || lead.lastName) && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Full Name</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.firstName} {lead.lastName}</p>
+                        </div>
+                      )}
+                      {lead.email && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Email</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.email}</p>
+                        </div>
+                      )}
+                      {lead.phone && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Phone</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.phone}</p>
+                        </div>
+                      )}
+                      {lead.website && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Website</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>
+                            <a href={lead.website} target="_blank" rel="noopener noreferrer" style={{ color: '#3B82F6', textDecoration: 'none' }}>
+                              {lead.website}
+                            </a>
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Company Information</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Company</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.company || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Job Title</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.jobTitle || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Industry</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.industry || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Annual Revenue</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>
-                        {lead.annualRevenue ? `$${lead.annualRevenue.toLocaleString()}` : 'Not provided'}
-                      </p>
+                {/* Company Information - Only show fields with data */}
+                {(lead.company || lead.jobTitle || lead.industry || lead.annualRevenue) && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Company Information</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {lead.company && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Company</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.company}</p>
+                        </div>
+                      )}
+                      {lead.jobTitle && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Job Title</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.jobTitle}</p>
+                        </div>
+                      )}
+                      {lead.industry && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Industry</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.industry}</p>
+                        </div>
+                      )}
+                      {lead.annualRevenue && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Annual Revenue</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>${lead.annualRevenue.toLocaleString()}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Lead Details</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Lead Status</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.leadStatus}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Lead Source</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.leadSource}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Rating</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.rating}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Lead Score</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.leadScore || 0}</p>
+                {/* Lead Details - Only show fields with data */}
+                {(lead.leadStatus || lead.leadSource || lead.rating || lead.leadScore) && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Lead Details</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {lead.leadStatus && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Lead Status</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.leadStatus}</p>
+                        </div>
+                      )}
+                      {lead.leadSource && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Lead Source</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.leadSource}</p>
+                        </div>
+                      )}
+                      {lead.rating && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Rating</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.rating}</p>
+                        </div>
+                      )}
+                      {lead.leadScore > 0 && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Lead Score</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.leadScore}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
 
-                <div>
-                  <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Address</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Street</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.street || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>City</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.city || 'Not provided'}</p>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>State / Country</label>
-                      <p style={{ fontSize: '14px', fontWeight: '500' }}>
-                        {lead.state && lead.country ? `${lead.state}, ${lead.country}` : lead.state || lead.country || 'Not provided'}
-                      </p>
+                {/* Address - Only show if any address field has data */}
+                {(lead.street || lead.city || lead.state || lead.country) && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Address</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {lead.street && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Street</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.street}</p>
+                        </div>
+                      )}
+                      {lead.city && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>City</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{lead.city}</p>
+                        </div>
+                      )}
+                      {(lead.state || lead.country) && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>State / Country</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>
+                            {lead.state && lead.country ? `${lead.state}, ${lead.country}` : lead.state || lead.country}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
-                </div>
+                )}
               </div>
 
               {/* PRODUCT INFORMATION SECTION - NEW */}

@@ -246,25 +246,24 @@ const Profile = () => {
 
   return (
     <DashboardLayout>
-      <div className="crm-container">
+      <div className="profile-container">
         {/* Header */}
-        <div className="crm-header">
+        <div className="profile-header">
           <div>
             <h1>My Profile</h1>
             <p>View and manage your profile information</p>
           </div>
-          <div className="header-actions">
+          <div className="profile-actions">
             {!isEditing ? (
               <>
                 <button onClick={handleEditToggle} className="btn-primary">
-                  ✏️ Edit Profile
+                  Edit Profile
                 </button>
                 <button
                   onClick={() => setShowPasswordModal(true)}
                   className="btn-secondary"
-                  style={{ marginLeft: '10px' }}
                 >
-                  🔐 Change Password
+                  Change Password
                 </button>
               </>
             ) : (
@@ -276,42 +275,27 @@ const Profile = () => {
                   onClick={handleSave}
                   className="btn-primary"
                   disabled={saving}
-                  style={{ marginLeft: '10px' }}
                 >
-                  {saving ? 'Saving...' : '💾 Save Changes'}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </button>
               </>
             )}
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '24px', marginTop: '24px' }}>
+        <div className="profile-grid">
           {/* Left Side - Profile Picture & Quick Info */}
           <div>
-            <div className="card" style={{ textAlign: 'center' }}>
-              <div
-                style={{
-                  width: '150px',
-                  height: '150px',
-                  borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  fontSize: '48px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  margin: '0 auto 20px',
-                  fontWeight: 'bold'
-                }}
-              >
+            <div className="card profile-sidebar-card">
+              <div className="profile-avatar">
                 {getInitials()}
               </div>
 
-              <h2 style={{ marginBottom: '8px' }}>
+              <h2 style={{ marginBottom: '8px', fontSize: '20px' }}>
                 {user.firstName} {user.lastName}
               </h2>
-              <p style={{ color: '#6b7280', marginBottom: '4px' }}>{user.email}</p>
-              <p style={{ color: '#9ca3af', fontSize: '14px' }}>
+              <p style={{ color: '#6b7280', marginBottom: '4px', fontSize: '14px', wordBreak: 'break-all' }}>{user.email}</p>
+              <p style={{ color: '#9ca3af', fontSize: '13px' }}>
                 {user.userType?.replace(/_/g, ' ')}
               </p>
 
@@ -341,50 +325,22 @@ const Profile = () => {
               )}
 
               <div style={{ marginTop: '20px', textAlign: 'left' }}>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '8px 0',
-                    borderBottom: '1px solid #e5e7eb'
-                  }}
-                >
-                  <span style={{ color: '#6b7280', fontSize: '14px' }}>Status</span>
-                  <span
-                    className={`badge ${user.isActive ? 'badge-success' : 'badge-error'}`}
-                  >
+                <div className="profile-info-row">
+                  <span style={{ color: '#6b7280' }}>Status</span>
+                  <span className={`badge ${user.isActive ? 'badge-success' : 'badge-error'}`}>
                     {user.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    padding: '8px 0',
-                    borderBottom: '1px solid #e5e7eb'
-                  }}
-                >
-                  <span style={{ color: '#6b7280', fontSize: '14px' }}>Email Verified</span>
-                  <span
-                    className={`badge ${
-                      user.emailVerified ? 'badge-success' : 'badge-warning'
-                    }`}
-                  >
+                <div className="profile-info-row">
+                  <span style={{ color: '#6b7280' }}>Email Verified</span>
+                  <span className={`badge ${user.emailVerified ? 'badge-success' : 'badge-warning'}`}>
                     {user.emailVerified ? 'Verified' : 'Not Verified'}
                   </span>
                 </div>
                 {user.lastLogin && (
-                  <div
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      padding: '8px 0'
-                    }}
-                  >
-                    <span style={{ color: '#6b7280', fontSize: '14px' }}>Last Login</span>
-                    <span style={{ fontSize: '14px' }}>
-                      {new Date(user.lastLogin).toLocaleDateString()}
-                    </span>
+                  <div className="profile-info-row">
+                    <span style={{ color: '#6b7280' }}>Last Login</span>
+                    <span>{new Date(user.lastLogin).toLocaleDateString()}</span>
                   </div>
                 )}
               </div>
@@ -395,9 +351,9 @@ const Profile = () => {
           <div>
             {/* Personal Information */}
             <div className="card" style={{ marginBottom: '24px' }}>
-              <h3 style={{ marginBottom: '20px' }}>Personal Information</h3>
+              <h3 style={{ marginBottom: '20px', fontSize: '18px' }}>Personal Information</h3>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="profile-form-grid">
                 <div className="form-group">
                   <label>First Name *</label>
                   <input
@@ -465,13 +421,13 @@ const Profile = () => {
             {/* Organization Information */}
             {tenant && (
               <div className="card" style={{ marginBottom: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                  <h3 style={{ margin: 0 }}>Organization Information</h3>
-                  <div>
+                <div className="org-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+                  <h3 style={{ margin: 0, fontSize: '18px' }}>Organization Information</h3>
+                  <div className="profile-actions">
                     {(user.userType === 'TENANT_ADMIN' || user.userType === 'SAAS_OWNER') && (
                       !isEditingOrg ? (
                         <button onClick={handleOrgEditToggle} className="btn-secondary">
-                          ✏️ Edit Organization
+                          Edit Organization
                         </button>
                       ) : (
                         <>
@@ -482,9 +438,8 @@ const Profile = () => {
                             onClick={handleOrgSave}
                             className="btn-primary"
                             disabled={savingOrg}
-                            style={{ marginLeft: '10px' }}
                           >
-                            {savingOrg ? 'Saving...' : '💾 Save Changes'}
+                            {savingOrg ? 'Saving...' : 'Save Changes'}
                           </button>
                         </>
                       )
@@ -492,7 +447,7 @@ const Profile = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="profile-form-grid">
                   <div className="form-group">
                     <label>Organization ID</label>
                     <input

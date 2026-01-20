@@ -83,6 +83,7 @@ const DataCenter = () => {
   const [showColumnSelector, setShowColumnSelector] = useState(false);
 
   // 🔥 Extract all unique columns from candidates data (fully dynamic)
+  // Status field is always placed at the end
   const extractColumns = (candidatesData) => {
     if (!candidatesData || candidatesData.length === 0) return [];
 
@@ -98,7 +99,15 @@ const DataCenter = () => {
       });
     });
 
-    return Array.from(allKeys);
+    // Convert to array and sort - status field always at the end
+    const columnsArray = Array.from(allKeys);
+    const statusIndex = columnsArray.indexOf('status');
+    if (statusIndex > -1) {
+      columnsArray.splice(statusIndex, 1); // Remove status from current position
+      columnsArray.push('status'); // Add status at the end
+    }
+
+    return columnsArray;
   };
 
   // Load candidates
@@ -500,156 +509,115 @@ const DataCenter = () => {
       </div>
 
       {/* Action Buttons Section */}
-      <div style={{
-        background: 'white',
-        padding: '16px 20px',
-        borderRadius: '12px',
-        marginBottom: '20px',
-        border: '2px solid #e5e7eb',
-        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
-      }}>
-        <div style={{
-          display: 'flex',
-          gap: '12px',
-          alignItems: 'center',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between'
-        }}>
-          {/* Left Side - Main Actions */}
-          <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-            <button
-              className="crm-btn crm-btn-primary crm-btn-sm"
-              onClick={() => setShowCreateModal(true)}
-            >
-              ➕ Add Customer
-            </button>
+      <div className="action-bar">
+        {/* Left Side - Main Actions */}
+        <div className="action-bar-left">
+          <button
+            className="crm-btn crm-btn-primary crm-btn-sm"
+            onClick={() => setShowCreateModal(true)}
+          >
+            Add Customer
+          </button>
 
-            <button
-              className="crm-btn crm-btn-secondary crm-btn-sm"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              🔍 {showFilters ? 'Hide' : 'Show'} Filters
-            </button>
+          <button
+            className="crm-btn crm-btn-secondary crm-btn-sm"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            {showFilters ? 'Hide' : 'Show'} Filters
+          </button>
 
-            <input
-              type="file"
-              ref={fileInputRef}
-              style={{ display: 'none' }}
-              accept=".csv,.xlsx,.xls"
-              onChange={handleFileUpload}
-            />
-            <button
-              className="crm-btn crm-btn-secondary crm-btn-sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={uploading}
-            >
-              {uploading ? '⏳ Uploading...' : '📤 Upload CSV/Excel'}
-            </button>
+          <input
+            type="file"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            accept=".csv,.xlsx,.xls"
+            onChange={handleFileUpload}
+          />
+          <button
+            className="crm-btn crm-btn-secondary crm-btn-sm"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={uploading}
+          >
+            {uploading ? 'Uploading...' : 'Upload CSV'}
+          </button>
 
-            <button
-              className="crm-btn crm-btn-secondary crm-btn-sm"
-              onClick={handleExport}
-            >
-              📥 Export {selectedCandidates.length > 0 ? `(${selectedCandidates.length})` : '(All)'}
-            </button>
+          <button
+            className="crm-btn crm-btn-secondary crm-btn-sm"
+            onClick={handleExport}
+          >
+            Export {selectedCandidates.length > 0 ? `(${selectedCandidates.length})` : ''}
+          </button>
 
-            {/* View Mode Toggle */}
-            <div style={{
-              display: 'flex',
-              gap: '6px',
-              background: '#f8fafc',
-              borderRadius: '8px',
-              padding: '4px',
-              border: '1px solid #e5e7eb'
-            }}>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-                onClick={() => setViewMode('table')}
-                style={{ padding: '6px 12px', minWidth: 'auto' }}
-              >
-                ☰
-              </button>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-                onClick={() => setViewMode('grid')}
-                style={{ padding: '6px 12px', minWidth: 'auto' }}
-              >
-                ⊞
-              </button>
-            </div>
+          {/* View Mode Toggle */}
+          <div className="view-toggle">
+            <button
+              className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+              onClick={() => setViewMode('table')}
+              style={{ padding: '6px 12px', minWidth: 'auto' }}
+            >
+              ☰
+            </button>
+            <button
+              className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
+              onClick={() => setViewMode('grid')}
+              style={{ padding: '6px 12px', minWidth: 'auto' }}
+            >
+              ⊞
+            </button>
           </div>
-
-          {/* Right Side - Bulk Actions (shown when candidates selected) */}
-          {selectedCandidates.length > 0 && (
-            <div style={{
-              display: 'flex',
-              gap: '10px',
-              alignItems: 'center',
-              padding: '8px 16px',
-              background: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
-              borderRadius: '8px',
-              border: '2px solid #93C5FD'
-            }}>
-              <span style={{ fontWeight: '700', color: '#1e40af', fontSize: '14px' }}>
-                {selectedCandidates.length} Selected:
-              </span>
-
-              {/* Bulk Communication Buttons */}
-              <BulkCommunication
-                selectedCandidates={selectedCandidates}
-                candidates={candidates}
-                myProducts={myProducts}
-                loadMyProducts={loadMyProducts}
-                onSuccess={() => setSelectedCandidates([])}
-              />
-
-              {/* Move to Leads Button */}
-              <button
-                className="crm-btn crm-btn-primary crm-btn-sm"
-                onClick={() => setShowMoveModal(true)}
-                style={{
-                  background: '#10b981',
-                  borderColor: '#10b981'
-                }}
-              >
-                ➡️ Move to Leads
-              </button>
-
-              {/* Delete Button */}
-              <button
-                className="crm-btn crm-btn-sm"
-                onClick={handleDeleteCandidates}
-                style={{
-                  background: '#ef4444',
-                  borderColor: '#ef4444',
-                  color: 'white'
-                }}
-              >
-                🗑️ Delete
-              </button>
-
-              <button
-                className="crm-btn crm-btn-sm crm-btn-secondary"
-                onClick={() => setSelectedCandidates([])}
-                style={{ padding: '6px 12px' }}
-              >
-                ✕ Clear
-              </button>
-            </div>
-          )}
         </div>
+
+        {/* Right Side - Bulk Actions (shown when candidates selected) */}
+        {selectedCandidates.length > 0 && (
+          <div className="bulk-actions-bar">
+            <span className="selection-count">
+              {selectedCandidates.length} Selected
+            </span>
+
+            {/* Bulk Communication Buttons */}
+            <BulkCommunication
+              selectedCandidates={selectedCandidates}
+              candidates={candidates}
+              myProducts={myProducts}
+              loadMyProducts={loadMyProducts}
+              onSuccess={() => setSelectedCandidates([])}
+            />
+
+            {/* Move to Leads Button */}
+            <button
+              className="crm-btn crm-btn-success crm-btn-sm"
+              onClick={() => setShowMoveModal(true)}
+            >
+              Move to Leads
+            </button>
+
+            {/* Delete Button */}
+            <button
+              className="crm-btn crm-btn-danger crm-btn-sm"
+              onClick={handleDeleteCandidates}
+            >
+              Delete
+            </button>
+
+            <button
+              className="crm-btn crm-btn-sm crm-btn-secondary"
+              onClick={() => setSelectedCandidates([])}
+            >
+              Clear
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Filters Panel */}
       {showFilters && (
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
-          <div style={{ padding: '24px' }}>
-            <h3 style={{ margin: '0 0 20px 0', fontSize: '18px', fontWeight: '700', color: '#1e3c72' }}>
-              🔍 Advanced Search Filters
-            </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+        <div className="filters-container">
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>
+            Advanced Search Filters
+          </h3>
+          <div className="filters-grid">
               <div className="crm-form-group">
-                <label className="crm-form-label">🔎 Search</label>
+                <label className="crm-form-label">Search</label>
                 <input
                   type="text"
                   name="search"
@@ -661,7 +629,7 @@ const DataCenter = () => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">💻 Skills</label>
+                <label className="crm-form-label">Skills</label>
                 <input
                   type="text"
                   name="skills"
@@ -673,7 +641,7 @@ const DataCenter = () => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">📊 Min Experience (Years)</label>
+                <label className="crm-form-label">Min Experience</label>
                 <input
                   type="number"
                   name="experience_min"
@@ -685,7 +653,7 @@ const DataCenter = () => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">📊 Max Experience (Years)</label>
+                <label className="crm-form-label">Max Experience</label>
                 <input
                   type="number"
                   name="experience_max"
@@ -697,7 +665,7 @@ const DataCenter = () => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">📍 Location</label>
+                <label className="crm-form-label">Location</label>
                 <input
                   type="text"
                   name="location"
@@ -709,7 +677,7 @@ const DataCenter = () => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">📅 Availability</label>
+                <label className="crm-form-label">Availability</label>
                 <select
                   name="availability"
                   value={filters.availability}
@@ -726,7 +694,7 @@ const DataCenter = () => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">🕐 Last Active</label>
+                <label className="crm-form-label">Last Active</label>
                 <select
                   name="lastActive"
                   value={filters.lastActive}
@@ -742,7 +710,7 @@ const DataCenter = () => {
               </div>
 
               <div className="crm-form-group">
-                <label className="crm-form-label">🌐 Source</label>
+                <label className="crm-form-label">Source</label>
                 <select
                   name="sourceWebsite"
                   value={filters.sourceWebsite}
@@ -759,7 +727,7 @@ const DataCenter = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+            <div className="filters-actions">
               <button className="crm-btn crm-btn-primary" onClick={applyFilters}>
                 Apply Filters
               </button>
@@ -767,7 +735,6 @@ const DataCenter = () => {
                 Clear All
               </button>
             </div>
-          </div>
         </div>
       )}
 

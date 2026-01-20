@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/crm.css';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose, isMobile }) => {
   const location = useLocation();
   const { hasPermission, isSaasOwner } = useAuth();
 
@@ -54,6 +54,13 @@ const Sidebar = () => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
+  // Close sidebar on mobile when navigating
+  const handleNavClick = () => {
+    if (isMobile && onClose) {
+      onClose();
+    }
+  };
+
   const NavItem = ({ to, icon, label, permission }) => {
     const hasAccess = permission ? hasPermission(permission, 'read') : true;
     const active = isActive(to);
@@ -70,14 +77,35 @@ const Sidebar = () => {
     }
 
     return (
-      <Link to={to} className={`nav-item ${active ? 'active' : ''}`}>
+      <Link
+        to={to}
+        className={`nav-item ${active ? 'active' : ''}`}
+        onClick={handleNavClick}
+      >
         {label}
       </Link>
     );
   };
 
+  // Determine sidebar class based on mobile state
+  const sidebarClass = `crm-sidebar ${isMobile ? (isOpen ? 'mobile-open' : 'mobile-closed') : ''}`;
+
   return (
-    <div className="crm-sidebar">
+    <div className={sidebarClass}>
+      {/* Mobile Close Button */}
+      {isMobile && (
+        <button
+          className="sidebar-close-btn"
+          onClick={onClose}
+          aria-label="Close menu"
+        >
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      )}
+
       <div className="sidebar-logo">
         <img
           src="/logo.png"
@@ -97,6 +125,7 @@ const Sidebar = () => {
         <Link
           to="/dashboard"
           className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
+          onClick={handleNavClick}
         >
           Dashboard
         </Link>
@@ -115,6 +144,7 @@ const Sidebar = () => {
             <Link
               to="/data-center"
               className={`nav-item ${isActive('/data-center') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Customers
             </Link>
@@ -159,24 +189,28 @@ const Sidebar = () => {
             <Link
               to="/rfi"
               className={`nav-item ${isActive('/rfi') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               RFI
             </Link>
             <Link
               to="/quotations"
               className={`nav-item ${isActive('/quotations') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Quotations
             </Link>
             <Link
               to="/purchase-orders"
               className={`nav-item ${isActive('/purchase-orders') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Purchase Orders
             </Link>
             <Link
               to="/invoices"
               className={`nav-item ${isActive('/invoices') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Invoices
             </Link>
@@ -197,24 +231,28 @@ const Sidebar = () => {
             <Link
               to="/tasks"
               className={`nav-item ${isActive('/tasks') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Tasks
             </Link>
             <Link
               to="/meetings"
               className={`nav-item ${isActive('/meetings') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Meetings
             </Link>
             <Link
               to="/calls"
               className={`nav-item ${isActive('/calls') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Calls
             </Link>
             <Link
               to="/emails"
               className={`nav-item ${isActive('/emails') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Email Inbox
             </Link>
@@ -241,6 +279,7 @@ const Sidebar = () => {
             <Link
               to="/products"
               className={`nav-item ${isActive('/products') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Product Marketplace
             </Link>
@@ -261,6 +300,7 @@ const Sidebar = () => {
             <Link
               to="/subscription"
               className={`nav-item ${isActive('/subscription') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Subscription & Billing
             </Link>
@@ -299,6 +339,7 @@ const Sidebar = () => {
             <Link
               to="/activity-logs"
               className={`nav-item ${isActive('/activity-logs') ? 'active' : ''}`}
+              onClick={handleNavClick}
             >
               Audit Logs
             </Link>
@@ -320,6 +361,7 @@ const Sidebar = () => {
               <Link
                 to="/support-admin"
                 className={`nav-item ${isActive('/support-admin') ? 'active' : ''}`}
+                onClick={handleNavClick}
               >
                 Support Dashboard
               </Link>
@@ -327,6 +369,7 @@ const Sidebar = () => {
               <Link
                 to="/support"
                 className={`nav-item ${isActive('/support') ? 'active' : ''}`}
+                onClick={handleNavClick}
               >
                 My Tickets
               </Link>

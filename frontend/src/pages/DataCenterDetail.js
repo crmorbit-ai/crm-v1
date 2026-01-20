@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import dataCenterService from '../services/dataCenterService';
-import fieldDefinitionService from '../services/fieldDefinitionService';
 import '../styles/crm.css';
 
 const DataCenterDetail = () => {
@@ -12,8 +11,6 @@ const DataCenterDetail = () => {
   const [candidate, setCandidate] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showMoveModal, setShowMoveModal] = useState(false);
-  const [activeTab, setActiveTab] = useState('overview');
-  const [customFields, setCustomFields] = useState([]);
   const [moveForm, setMoveForm] = useState({
     leadStatus: 'New',
     leadSource: 'Customer',
@@ -22,7 +19,6 @@ const DataCenterDetail = () => {
 
   useEffect(() => {
     loadCandidate();
-    loadFieldDefinitions();
   }, [id]);
 
   const loadCandidate = async () => {
@@ -38,66 +34,6 @@ const DataCenterDetail = () => {
     }
   };
 
-  const loadFieldDefinitions = async () => {
-    try {
-      console.log('🔍 Loading field definitions for Candidate detail view...');
-      const response = await fieldDefinitionService.getFieldDefinitions('Candidate', false);
-      console.log('📦 Field definitions response:', response);
-
-      // Response is already unwrapped by axios interceptor
-      if (response && Array.isArray(response)) {
-        console.log('✅ Total fields received:', response.length);
-        // Filter for active fields that should show in detail view (both standard and custom)
-        const detailFields = response
-          .filter(field => field.isActive && field.showInDetail)
-          .sort((a, b) => a.displayOrder - b.displayOrder);
-
-        console.log('✅ Active fields for detail view:', detailFields.length);
-        setCustomFields(detailFields);
-      }
-    } catch (error) {
-      console.error('❌ Load field definitions error:', error);
-    }
-  };
-
-  // Group fields by section
-  const groupFieldsBySection = (fields) => {
-    const grouped = {};
-    fields.forEach(field => {
-      const section = field.section || 'Additional Information';
-      if (!grouped[section]) {
-        grouped[section] = [];
-      }
-      grouped[section].push(field);
-    });
-    return grouped;
-  };
-
-  // Get field value from candidate (checks both top level and customFields)
-  const getFieldValue = (fieldName) => {
-    if (!candidate) return '-';
-
-    console.log(`🔍 Looking for field: ${fieldName}`);
-    console.log('📦 Candidate data:', candidate);
-    console.log('📦 Custom fields object:', candidate.customFields);
-
-    // Check if it's in customFields nested object
-    if (candidate.customFields && candidate.customFields[fieldName] !== undefined) {
-      const value = candidate.customFields[fieldName];
-      console.log(`✅ Found in customFields: ${fieldName} = ${value}`);
-      return value;
-    }
-    // Check if it's at top level
-    if (candidate[fieldName] !== undefined) {
-      const value = candidate[fieldName];
-      console.log(`✅ Found at top level: ${fieldName} = ${value}`);
-      return value;
-    }
-
-    console.log(`❌ Field not found: ${fieldName}`);
-    return '-';
-  };
-
   const handleMoveToLead = async () => {
     try {
       const data = {
@@ -106,12 +42,117 @@ const DataCenterDetail = () => {
       };
 
       await dataCenterService.moveToLeads(data);
-      alert('✅ Successfully moved to Leads!');
+      alert('Successfully moved to Leads!');
       navigate('/leads');
     } catch (error) {
       console.error('Error moving to lead:', error);
       alert('Failed to move to leads');
     }
+  };
+
+  // Format field name for display
+  const formatFieldName = (key) => {
+    return key
+      .replace(/([A-Z])/g, ' $1')
+      .replace(/^./, str => str.toUpperCase())
+      .replace(/_/g, ' ')
+      .trim();
+  };
+
+  // Check if value is valid (not empty, null, undefined)
+  const hasValue = (value) => {
+    if (value === null || value === undefined || value === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return false;
+    return true;
+  };
+
+  // Format value for display
+  const formatValue = (key, value) => {
+    if (!hasValue(value)) return null;
+
+    // Handle arrays
+    if (Array.isArray(value)) {
+      return value.join(', ');
+    }
+
+    // Handle dates
+    if (key.toLowerCase().includes('date') || key.toLowerCase().includes('at')) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric'
+        });
+      }
+    }
+
+    // Handle CTC/salary values
+    if (key.toLowerCase().includes('ctc') || key.toLowerCase().includes('salary')) {
+      const num = Number(value);
+      if (!isNaN(num)) {
+        return `₹${num.toLocaleString('en-IN')}`;
+      }
+    }
+
+    // Handle boolean
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+
+    return String(value);
+  };
+
+  // Fields to exclude from display
+  const excludeFields = [
+    '_id', 'id', 'ID', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt',
+    'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource', 'customFields',
+    'tenantId', 'userId', 'candidateId', 'objectId', 'ObjectId'
+  ];
+
+  // Check if a value looks like an ID (MongoDB ObjectId or similar)
+  const isIdLikeValue = (value) => {
+    if (!value || typeof value !== 'string') return false;
+    // MongoDB ObjectId is 24 hex characters
+    if (/^[a-f0-9]{24}$/i.test(value)) return true;
+    // UUID format
+    if (/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) return true;
+    // Numeric ID (more than 10 digits)
+    if (/^\d{10,}$/.test(value)) return true;
+    return false;
+  };
+
+  // Get all displayable fields from candidate
+  const getDisplayFields = () => {
+    if (!candidate) return [];
+
+    const fields = [];
+
+    Object.keys(candidate).forEach(key => {
+      // Skip excluded fields
+      if (excludeFields.includes(key)) return;
+
+      // Skip fields with "id" in the name (case insensitive)
+      if (key.toLowerCase().includes('id') && key.toLowerCase() !== 'paid') return;
+
+      const value = candidate[key];
+      if (!hasValue(value)) return;
+
+      // Skip nested objects except arrays
+      if (typeof value === 'object' && !Array.isArray(value)) return;
+
+      // Skip values that look like MongoDB ObjectIds or other IDs
+      if (typeof value === 'string' && isIdLikeValue(value)) return;
+
+      fields.push({
+        key,
+        label: formatFieldName(key),
+        value: formatValue(key, value)
+      });
+    });
+
+    return fields;
   };
 
   if (loading) {
@@ -120,7 +161,7 @@ const DataCenterDetail = () => {
         <div style={{ textAlign: 'center', padding: '60px' }}>
           <div className="spinner" style={{ margin: '0 auto' }}></div>
           <p style={{ marginTop: '16px', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>
-            Loading candidate details...
+            Loading details...
           </p>
         </div>
       </DashboardLayout>
@@ -132,763 +173,213 @@ const DataCenterDetail = () => {
       <DashboardLayout>
         <div style={{ textAlign: 'center', padding: '60px' }}>
           <div style={{ fontSize: '64px', marginBottom: '16px' }}>❌</div>
-          <h2 style={{ color: '#1e3c72', marginBottom: '8px' }}>Candidate not found</h2>
+          <h2 style={{ color: '#1e3c72', marginBottom: '8px' }}>Data not found</h2>
           <p style={{ color: '#64748b', marginBottom: '24px' }}>
-            This candidate may have been removed or doesn't exist.
+            This record may have been removed or doesn't exist.
           </p>
           <button className="crm-btn crm-btn-primary" onClick={() => navigate('/data-center')}>
-            ← Back to Customer Database
+            Back to Data Center
           </button>
         </div>
       </DashboardLayout>
     );
   }
 
-  const actionButtons = (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <button
-        className="crm-btn crm-btn-secondary"
-        onClick={() => navigate('/data-center')}
-      >
-        ← Back to List
-      </button>
-      <button
-        className="crm-btn crm-btn-primary"
-        onClick={() => setShowMoveModal(true)}
-        disabled={candidate.status === 'Moved to Leads'}
-      >
-        ➡️ Move to Leads
-      </button>
-    </div>
-  );
+  const displayFields = getDisplayFields();
+
+  // Get name for header - check multiple possible field names
+  const getName = () => {
+    // Check firstName + lastName combination
+    if (candidate.firstName || candidate.lastName) {
+      return `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim();
+    }
+
+    // Check various possible name fields (case-insensitive search)
+    const nameFields = [
+      'name', 'Name', 'NAME',
+      'fullName', 'FullName', 'fullname', 'full_name', 'Full Name', 'Full_Name',
+      'customerName', 'CustomerName', 'customer_name', 'Customer Name', 'Customer_Name',
+      'contactName', 'ContactName', 'contact_name', 'Contact Name', 'Contact_Name',
+      'clientName', 'ClientName', 'client_name', 'Client Name', 'Client_Name',
+      'companyName', 'CompanyName', 'company_name', 'Company Name', 'Company_Name',
+      'company', 'Company', 'COMPANY',
+      'title', 'Title', 'TITLE'
+    ];
+
+    for (const field of nameFields) {
+      if (candidate[field] && String(candidate[field]).trim()) {
+        const value = String(candidate[field]).trim();
+        // Skip if it looks like an ID (24 char hex string)
+        if (!isIdLikeValue(value)) {
+          return value;
+        }
+      }
+    }
+
+    // Fallback to email if available
+    const emailFields = ['email', 'Email', 'EMAIL', 'emailAddress', 'EmailAddress'];
+    for (const field of emailFields) {
+      if (candidate[field] && String(candidate[field]).trim()) {
+        return String(candidate[field]).trim();
+      }
+    }
+
+    // Last resort - get the first non-empty string field that looks like a name
+    const excludeKeys = ['_id', 'id', 'ID', 'status', 'Status', 'tenant', 'dataSource'];
+    for (const key of Object.keys(candidate)) {
+      if (excludeKeys.includes(key) || key.toLowerCase().includes('id')) continue;
+
+      const value = candidate[key];
+      if (typeof value === 'string' && value.trim()) {
+        const trimmedValue = value.trim();
+        // Skip ID-like values and very long strings
+        if (!isIdLikeValue(trimmedValue) && trimmedValue.length < 100) {
+          return trimmedValue;
+        }
+      }
+    }
+
+    return 'Customer';
+  };
+
+  // Get initials for avatar
+  const getInitials = () => {
+    const name = getName();
+    if (!name || name === 'Customer') return 'CU';
+
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2 && parts[0] && parts[1]) {
+      return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   return (
-    <DashboardLayout title="Candidate Profile" actionButton={actionButtons}>
-      {/* Status Badge */}
+    <DashboardLayout title="Customer Details">
+      {/* Header with Back and Move buttons */}
+      <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+        <button
+          className="crm-btn crm-btn-secondary"
+          onClick={() => navigate('/data-center')}
+        >
+          ← Back to List
+        </button>
+        <button
+          className="crm-btn crm-btn-primary"
+          onClick={() => setShowMoveModal(true)}
+          disabled={candidate.status === 'Moved to Leads'}
+        >
+          Move to Leads
+        </button>
+      </div>
+
+      {/* Status Badge if moved */}
       {candidate.status === 'Moved to Leads' && (
         <div style={{
-          background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)',
+          background: '#DCFCE7',
           border: '2px solid #86EFAC',
           padding: '16px 20px',
           borderRadius: '12px',
           marginBottom: '24px',
           color: '#166534',
-          fontWeight: '600',
-          boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px'
+          fontWeight: '600'
         }}>
-          <span style={{ fontSize: '24px' }}>✅</span>
-          <span>This candidate has been successfully moved to Leads module</span>
+          This record has been moved to Leads
         </div>
       )}
 
-      {/* Hero Section - Profile Card */}
+      {/* Profile Header Card */}
       <div className="crm-card" style={{ marginBottom: '24px' }}>
         <div style={{
           background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
           padding: '32px',
-          borderRadius: '16px 16px 0 0',
-          color: 'white',
-          position: 'relative',
-          overflow: 'hidden'
+          borderRadius: '12px 12px 0 0',
+          color: 'white'
         }}>
-          <div style={{
-            position: 'absolute',
-            top: '-50px',
-            right: '-50px',
-            width: '200px',
-            height: '200px',
-            background: 'rgba(255, 255, 255, 0.1)',
-            borderRadius: '50%'
-          }}></div>
-          <div style={{
-            position: 'absolute',
-            bottom: '-30px',
-            left: '-30px',
-            width: '150px',
-            height: '150px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '50%'
-          }}></div>
-
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
-              <div style={{
-                width: '100px',
-                height: '100px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '48px',
-                fontWeight: '800',
-                color: '#4A90E2',
-                border: '4px solid rgba(255, 255, 255, 0.3)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.2)'
-              }}>
-                {candidate.firstName?.[0]}{candidate.lastName?.[0]}
-              </div>
-              <div style={{ flex: 1 }}>
-                <h1 style={{
-                  margin: '0 0 8px 0',
-                  fontSize: '32px',
-                  fontWeight: '800',
-                  textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                }}>
-                  {candidate.firstName} {candidate.lastName}
-                </h1>
-                <p style={{
-                  margin: '0 0 16px 0',
-                  fontSize: '18px',
-                  opacity: 0.95,
-                  fontWeight: '600'
-                }}>
-                  {candidate.currentDesignation || 'Position not specified'}
-                  {candidate.currentCompany && ` at ${candidate.currentCompany}`}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '20px', flexWrap: 'wrap' }}>
+            <div style={{
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              background: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '32px',
+              fontWeight: '800',
+              color: '#4A90E2',
+              flexShrink: 0
+            }}>
+              {getInitials()}
+            </div>
+            <div>
+              <h1 style={{ margin: '0 0 8px 0', fontSize: '28px', fontWeight: '700' }}>
+                {getName()}
+              </h1>
+              {candidate.email && (
+                <p style={{ margin: '0', fontSize: '16px', opacity: 0.9 }}>
+                  {candidate.email}
                 </p>
-                <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                  <span style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    backdropFilter: 'blur(10px)'
-                  }}>
-                    📊 {candidate.totalExperience} years exp
-                  </span>
-                  <span style={{
-                    background: 'rgba(255, 255, 255, 0.2)',
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    backdropFilter: 'blur(10px)'
-                  }}>
-                    📍 {candidate.currentLocation}
-                  </span>
-                  <span style={{
-                    background: candidate.status === 'Available'
-                      ? 'rgba(34, 197, 94, 0.3)'
-                      : 'rgba(255, 255, 255, 0.2)',
-                    padding: '6px 14px',
-                    borderRadius: '20px',
-                    fontSize: '14px',
-                    fontWeight: '600',
-                    backdropFilter: 'blur(10px)'
-                  }}>
-                    {candidate.status}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Stats */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '0',
-          borderTop: '2px solid #f1f5f9'
-        }}>
-          <div style={{
-            padding: '24px',
-            borderRight: '2px solid #f1f5f9',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '8px' }}>
-              Current CTC
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#1e3c72' }}>
-              ₹{candidate.currentCTC ? candidate.currentCTC.toLocaleString() : 'N/A'}
-            </div>
-          </div>
-          <div style={{
-            padding: '24px',
-            borderRight: '2px solid #f1f5f9',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '8px' }}>
-              Expected CTC
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>
-              ₹{candidate.expectedCTC ? candidate.expectedCTC.toLocaleString() : 'N/A'}
-            </div>
-          </div>
-          <div style={{
-            padding: '24px',
-            borderRight: '2px solid #f1f5f9',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '8px' }}>
-              Notice Period
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#1e3c72' }}>
-              {candidate.noticePeriod} days
-            </div>
-          </div>
-          <div style={{
-            padding: '24px',
-            textAlign: 'center'
-          }}>
-            <div style={{ fontSize: '14px', color: '#64748b', fontWeight: '600', marginBottom: '8px' }}>
-              Availability
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>
-              {candidate.availability}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="crm-tabs" style={{ marginBottom: '24px' }}>
-        <button
-          className={`crm-tab ${activeTab === 'overview' ? 'active' : ''}`}
-          onClick={() => setActiveTab('overview')}
-        >
-          📋 Overview
-        </button>
-        <button
-          className={`crm-tab ${activeTab === 'professional' ? 'active' : ''}`}
-          onClick={() => setActiveTab('professional')}
-        >
-          💼 Professional
-        </button>
-        <button
-          className={`crm-tab ${activeTab === 'skills' ? 'active' : ''}`}
-          onClick={() => setActiveTab('skills')}
-        >
-          💻 Skills & Links
-        </button>
-        <button
-          className={`crm-tab ${activeTab === 'activity' ? 'active' : ''}`}
-          onClick={() => setActiveTab('activity')}
-        >
-          📊 Activity
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'overview' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '24px' }}>
-          {/* Contact Information */}
-          <div className="crm-card">
-            <div className="crm-card-header">
-              <h3 className="crm-card-title">📞 Contact Information</h3>
-            </div>
-            <div className="crm-card-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  background: '#f8fafc',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px'
-                  }}>📧</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '2px' }}>
-                      Email Address
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e3c72' }}>
-                      {candidate.email}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  background: '#f8fafc',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px'
-                  }}>📞</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '2px' }}>
-                      Phone Number
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e3c72' }}>
-                      {candidate.phone}
-                    </div>
-                  </div>
-                </div>
-
-                {candidate.alternatePhone && (
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    padding: '12px',
-                    background: '#f8fafc',
-                    borderRadius: '8px'
-                  }}>
-                    <div style={{
-                      width: '40px',
-                      height: '40px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '20px'
-                    }}>☎️</div>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '2px' }}>
-                        Alternate Phone
-                      </div>
-                      <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e3c72' }}>
-                        {candidate.alternatePhone}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '12px',
-                  background: '#f8fafc',
-                  borderRadius: '8px'
-                }}>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '8px',
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '20px'
-                  }}>📍</div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontWeight: '600', marginBottom: '2px' }}>
-                      Current Location
-                    </div>
-                    <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e3c72' }}>
-                      {candidate.currentLocation}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Summary */}
-          {candidate.summary && (
-            <div className="crm-card" style={{ gridColumn: '1 / -1' }}>
-              <div className="crm-card-header">
-                <h3 className="crm-card-title">📝 Professional Summary</h3>
-              </div>
-              <div className="crm-card-body">
-                <p style={{
-                  fontSize: '15px',
-                  lineHeight: '1.8',
-                  color: '#475569',
-                  margin: 0
-                }}>
-                  {candidate.summary}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Dynamic Fields Grouped by Section */}
-          {customFields.length > 0 && (() => {
-            const groupedFields = groupFieldsBySection(customFields);
-            const sections = Object.keys(groupedFields);
-
-            return sections.map(sectionName => (
-              <div key={sectionName} className="crm-card" style={{ gridColumn: '1 / -1' }}>
-                <div className="crm-card-header">
-                  <h3 className="crm-card-title">📋 {sectionName}</h3>
-                </div>
-                <div className="crm-card-body">
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-                    {groupedFields[sectionName].map(field => (
-                      <div key={field._id} style={{
-                        padding: '16px',
-                        background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                        borderRadius: '12px',
-                        border: '2px solid #e2e8f0'
-                      }}>
-                        <div style={{
-                          fontSize: '13px',
-                          color: '#64748b',
-                          fontWeight: '700',
-                          marginBottom: '8px',
-                          textTransform: 'uppercase'
-                        }}>
-                          {field.label}
-                        </div>
-                        <div style={{ fontSize: '16px', fontWeight: '600', color: '#1e3c72' }}>
-                          {getFieldValue(field.fieldName) || '-'}
-                        </div>
-                        {field.helpText && (
-                          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '4px' }}>
-                            {field.helpText}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            ));
-          })()}
-        </div>
-      )}
-
-      {activeTab === 'professional' && (
-        <div className="crm-card">
-          <div className="crm-card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0'
-              }}>
-                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '8px' }}>
-                  💼 CURRENT COMPANY
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
-                  {candidate.currentCompany || 'Not specified'}
-                </div>
-              </div>
-
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0'
-              }}>
-                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '8px' }}>
-                  👨‍💼 DESIGNATION
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
-                  {candidate.currentDesignation || 'Not specified'}
-                </div>
-              </div>
-
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0'
-              }}>
-                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '8px' }}>
-                  📊 TOTAL EXPERIENCE
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
-                  {candidate.totalExperience} years
-                </div>
-              </div>
-
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0'
-              }}>
-                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '8px' }}>
-                  🎓 EDUCATION
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
-                  {candidate.highestQualification || 'Not specified'}
-                </div>
-              </div>
-
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)',
-                borderRadius: '12px',
-                border: '2px solid #86efac'
-              }}>
-                <div style={{ fontSize: '13px', color: '#166534', fontWeight: '700', marginBottom: '8px' }}>
-                  💰 CURRENT CTC
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#15803d' }}>
-                  ₹{candidate.currentCTC ? candidate.currentCTC.toLocaleString() : 'Not specified'}
-                </div>
-              </div>
-
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)',
-                borderRadius: '12px',
-                border: '2px solid #93c5fd'
-              }}>
-                <div style={{ fontSize: '13px', color: '#1e40af', fontWeight: '700', marginBottom: '8px' }}>
-                  🎯 EXPECTED CTC
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#1e3a8a' }}>
-                  ₹{candidate.expectedCTC ? candidate.expectedCTC.toLocaleString() : 'Not specified'}
-                </div>
-              </div>
-
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
-                borderRadius: '12px',
-                border: '2px solid #fcd34d'
-              }}>
-                <div style={{ fontSize: '13px', color: '#92400e', fontWeight: '700', marginBottom: '8px' }}>
-                  ⏰ NOTICE PERIOD
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#b45309' }}>
-                  {candidate.noticePeriod} days
-                </div>
-              </div>
-
-              <div style={{
-                padding: '20px',
-                background: 'linear-gradient(135deg, #fae8ff 0%, #f5d0fe 100%)',
-                borderRadius: '12px',
-                border: '2px solid #e9d5ff'
-              }}>
-                <div style={{ fontSize: '13px', color: '#7e22ce', fontWeight: '700', marginBottom: '8px' }}>
-                  📅 AVAILABILITY
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '800', color: '#6b21a8' }}>
-                  {candidate.availability}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'skills' && (
-        <div style={{ display: 'grid', gap: '24px' }}>
-          {/* Skills */}
-          <div className="crm-card">
-            <div className="crm-card-header">
-              <h3 className="crm-card-title">💻 Technical Skills</h3>
-            </div>
-            <div className="crm-card-body">
-              {candidate.skills && candidate.skills.length > 0 ? (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                  {candidate.skills.map((skill, index) => (
-                    <span key={index} style={{
-                      padding: '10px 18px',
-                      background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                      color: 'white',
-                      borderRadius: '20px',
-                      fontSize: '14px',
-                      fontWeight: '600',
-                      boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)',
-                      transition: 'all 0.3s ease'
-                    }}>
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
-                  No skills listed
+              )}
+              {candidate.phone && (
+                <p style={{ margin: '4px 0 0 0', fontSize: '14px', opacity: 0.8 }}>
+                  {candidate.phone}
                 </p>
               )}
             </div>
           </div>
-
-          {/* Links */}
-          <div className="crm-card">
-            <div className="crm-card-header">
-              <h3 className="crm-card-title">🔗 Professional Links</h3>
-            </div>
-            <div className="crm-card-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {candidate.linkedInUrl && (
-                  <a
-                    href={candidate.linkedInUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px',
-                      padding: '16px',
-                      background: 'linear-gradient(135deg, #0077b5 0%, #005582 100%)',
-                      borderRadius: '12px',
-                      color: 'white',
-                      textDecoration: 'none',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 4px 12px rgba(0, 119, 181, 0.3)'
-                    }}
-                  >
-                    <div style={{ fontSize: '32px' }}>💼</div>
-                    <div>
-                      <div style={{ fontWeight: '700', marginBottom: '4px' }}>LinkedIn Profile</div>
-                      <div style={{ fontSize: '13px', opacity: 0.9 }}>View professional profile</div>
-                    </div>
-                  </a>
-                )}
-
-                {candidate.githubUrl && (
-                  <a
-                    href={candidate.githubUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px',
-                      padding: '16px',
-                      background: 'linear-gradient(135deg, #24292e 0%, #1a1d21 100%)',
-                      borderRadius: '12px',
-                      color: 'white',
-                      textDecoration: 'none',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 4px 12px rgba(36, 41, 46, 0.3)'
-                    }}
-                  >
-                    <div style={{ fontSize: '32px' }}>🐙</div>
-                    <div>
-                      <div style={{ fontWeight: '700', marginBottom: '4px' }}>GitHub Profile</div>
-                      <div style={{ fontSize: '13px', opacity: 0.9 }}>View code repositories</div>
-                    </div>
-                  </a>
-                )}
-
-                {candidate.resumeUrl && (
-                  <a
-                    href={candidate.resumeUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '16px',
-                      padding: '16px',
-                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                      borderRadius: '12px',
-                      color: 'white',
-                      textDecoration: 'none',
-                      transition: 'all 0.3s ease',
-                      boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)'
-                    }}
-                  >
-                    <div style={{ fontSize: '32px' }}>📄</div>
-                    <div>
-                      <div style={{ fontWeight: '700', marginBottom: '4px' }}>Resume / CV</div>
-                      <div style={{ fontSize: '13px', opacity: 0.9 }}>Download resume document</div>
-                    </div>
-                  </a>
-                )}
-
-                {!candidate.linkedInUrl && !candidate.githubUrl && !candidate.resumeUrl && (
-                  <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
-                    No professional links available
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
         </div>
-      )}
+      </div>
 
-      {activeTab === 'activity' && (
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <h3 className="crm-card-title">📊 Activity & Source Information</h3>
-          </div>
-          <div className="crm-card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px' }}>
-              <div style={{
-                padding: '24px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🌐</div>
-                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '8px' }}>
-                  SOURCE WEBSITE
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e3c72' }}>
-                  {candidate.sourceWebsite}
-                </div>
-              </div>
-
-              <div style={{
-                padding: '24px',
-                background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                borderRadius: '12px',
-                border: '2px solid #e2e8f0',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>🕐</div>
-                <div style={{ fontSize: '13px', color: '#64748b', fontWeight: '700', marginBottom: '8px' }}>
-                  LAST ACTIVE ON
-                </div>
-                <div style={{ fontSize: '20px', fontWeight: '800', color: '#1e3c72' }}>
-                  {new Date(candidate.lastActiveOn).toLocaleDateString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  })}
-                </div>
-              </div>
-
-              <div style={{
-                padding: '24px',
-                background: candidate.status === 'Available'
-                  ? 'linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)'
-                  : 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-                borderRadius: '12px',
-                border: candidate.status === 'Available' ? '2px solid #86efac' : '2px solid #fca5a5',
-                textAlign: 'center'
-              }}>
-                <div style={{ fontSize: '48px', marginBottom: '12px' }}>
-                  {candidate.status === 'Available' ? '✅' : '⚠️'}
-                </div>
-                <div style={{
-                  fontSize: '13px',
-                  color: candidate.status === 'Available' ? '#166534' : '#991b1b',
-                  fontWeight: '700',
-                  marginBottom: '8px'
-                }}>
-                  CURRENT STATUS
-                </div>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  color: candidate.status === 'Available' ? '#15803d' : '#b91c1c'
-                }}>
-                  {candidate.status}
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* All Data Fields - Dynamic */}
+      <div className="crm-card">
+        <div className="crm-card-header">
+          <h3 className="crm-card-title">All Information</h3>
         </div>
-      )}
+        <div className="crm-card-body">
+          {displayFields.length === 0 ? (
+            <p style={{ color: '#64748b', textAlign: 'center', padding: '20px' }}>
+              No data available
+            </p>
+          ) : (
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+              gap: '20px'
+            }}>
+              {displayFields.map((field, index) => (
+                <div
+                  key={index}
+                  style={{
+                    padding: '16px',
+                    background: '#f8fafc',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0'
+                  }}
+                >
+                  <div style={{
+                    fontSize: '12px',
+                    color: '#64748b',
+                    fontWeight: '600',
+                    marginBottom: '6px',
+                    textTransform: 'uppercase'
+                  }}>
+                    {field.label}
+                  </div>
+                  <div style={{
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    color: '#1e3c72',
+                    wordBreak: 'break-word'
+                  }}>
+                    {field.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Move to Leads Modal */}
       {showMoveModal && (
@@ -903,8 +394,7 @@ const DataCenterDetail = () => {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            zIndex: 9999,
-            backdropFilter: 'blur(4px)'
+            zIndex: 9999
           }}
           onClick={() => setShowMoveModal(false)}
         >
@@ -915,19 +405,18 @@ const DataCenterDetail = () => {
               maxWidth: '500px',
               width: '90%',
               maxHeight: '90vh',
-              overflow: 'auto',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
+              overflow: 'auto'
             }}
             onClick={(e) => e.stopPropagation()}
           >
             <div style={{
-              padding: '24px',
-              borderBottom: '2px solid #f1f5f9',
+              padding: '20px',
+              borderBottom: '1px solid #e5e7eb',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
             }}>
-              <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: '#1e3c72' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1e3c72' }}>
                 Move to Leads
               </h3>
               <button
@@ -940,16 +429,16 @@ const DataCenterDetail = () => {
                   color: '#64748b'
                 }}
               >
-                ✕
+                ×
               </button>
             </div>
 
-            <div style={{ padding: '24px' }}>
+            <div style={{ padding: '20px' }}>
               <p style={{ marginBottom: '20px', color: '#475569' }}>
-                Move <strong>{candidate.firstName} {candidate.lastName}</strong> to the Leads module?
+                Move <strong>{getName()}</strong> to the Leads module?
               </p>
 
-              <div className="crm-form-group" style={{ marginBottom: '20px' }}>
+              <div className="crm-form-group" style={{ marginBottom: '16px' }}>
                 <label className="crm-form-label">Lead Status</label>
                 <select
                   value={moveForm.leadStatus}
@@ -962,7 +451,7 @@ const DataCenterDetail = () => {
                 </select>
               </div>
 
-              <div className="crm-form-group" style={{ marginBottom: '20px' }}>
+              <div className="crm-form-group" style={{ marginBottom: '16px' }}>
                 <label className="crm-form-label">Lead Source</label>
                 <input
                   type="text"
@@ -972,23 +461,23 @@ const DataCenterDetail = () => {
                 />
               </div>
 
-              <div className="crm-form-group" style={{ marginBottom: '20px' }}>
+              <div className="crm-form-group" style={{ marginBottom: '16px' }}>
                 <label className="crm-form-label">Rating</label>
                 <select
                   value={moveForm.rating}
                   onChange={(e) => setMoveForm({ ...moveForm, rating: e.target.value })}
                   className="crm-form-select"
                 >
-                  <option value="Hot">🔥 Hot</option>
-                  <option value="Warm">🌤️ Warm</option>
-                  <option value="Cold">❄️ Cold</option>
+                  <option value="Hot">Hot</option>
+                  <option value="Warm">Warm</option>
+                  <option value="Cold">Cold</option>
                 </select>
               </div>
             </div>
 
             <div style={{
-              padding: '24px',
-              borderTop: '2px solid #f1f5f9',
+              padding: '20px',
+              borderTop: '1px solid #e5e7eb',
               display: 'flex',
               justifyContent: 'flex-end',
               gap: '12px'
@@ -1003,7 +492,7 @@ const DataCenterDetail = () => {
                 className="crm-btn crm-btn-primary"
                 onClick={handleMoveToLead}
               >
-                ✅ Confirm & Move
+                Confirm & Move
               </button>
             </div>
           </div>

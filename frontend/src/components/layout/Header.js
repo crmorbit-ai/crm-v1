@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import '../../styles/crm.css';
 
-const Header = ({ title, actionButton }) => {
+const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -23,12 +23,26 @@ const Header = ({ title, actionButton }) => {
   return (
     <header className="crm-header">
       <div className="header-left">
+        {/* Hamburger Menu Button for Mobile */}
+        {isMobile && (
+          <button
+            className="hamburger-btn"
+            onClick={onMenuClick}
+            aria-label="Toggle menu"
+          >
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="3" y1="6" x2="21" y2="6"></line>
+              <line x1="3" y1="12" x2="21" y2="12"></line>
+              <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+          </button>
+        )}
         <h1 className="header-title">{title}</h1>
       </div>
 
       <div className="header-right">
         {/* Action Button (optional) */}
-        {actionButton && actionButton}
+        {actionButton && <div className="header-action-wrapper">{actionButton}</div>}
 
         {/* User Menu */}
         <div className="user-menu">
@@ -37,12 +51,14 @@ const Header = ({ title, actionButton }) => {
             onClick={() => setShowUserMenu(!showUserMenu)}
           >
             <div className="user-avatar">{getInitials()}</div>
-            <div className="user-info">
-              <span className="user-name">
-                {user?.firstName} {user?.lastName}
-              </span>
-              <span className="user-role">{user?.userType?.replace(/_/g, ' ')}</span>
-            </div>
+            {!isMobile && (
+              <div className="user-info">
+                <span className="user-name">
+                  {user?.firstName} {user?.lastName}
+                </span>
+                <span className="user-role">{user?.userType?.replace(/_/g, ' ')}</span>
+              </div>
+            )}
             <span style={{ fontSize: '12px', color: '#9CA3AF' }}>▼</span>
           </div>
 
@@ -60,6 +76,21 @@ const Header = ({ title, actionButton }) => {
                 onClick={() => setShowUserMenu(false)}
               />
               <div className="user-menu-dropdown">
+                {/* Show user info in dropdown on mobile */}
+                {isMobile && (
+                  <div style={{
+                    padding: '12px 16px',
+                    borderBottom: '1px solid #E5E7EB',
+                    marginBottom: '8px'
+                  }}>
+                    <div style={{ fontWeight: '600', color: '#1e293b' }}>
+                      {user?.firstName} {user?.lastName}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>
+                      {user?.userType?.replace(/_/g, ' ')}
+                    </div>
+                  </div>
+                )}
                 <div
                   className="user-menu-item"
                   onClick={() => handleNavigation('/profile')}

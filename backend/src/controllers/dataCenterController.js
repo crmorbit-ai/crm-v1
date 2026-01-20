@@ -60,9 +60,11 @@ const getCandidates = async (req, res) => {
     } = req.query;
 
     // 🔒 Tenant Isolation: Only show candidates belonging to user's tenant
+    // Also exclude candidates that have been moved to leads
     let query = {
       isActive: true,
-      tenant: req.user.tenant
+      tenant: req.user.tenant,
+      status: { $ne: 'Moved to Leads' }  // Hide moved candidates from Data Center
     };
 
     // Search by name, email, skills
