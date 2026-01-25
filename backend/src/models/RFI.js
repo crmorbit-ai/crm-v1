@@ -97,8 +97,21 @@ const rfiSchema = new mongoose.Schema({
 rfiSchema.pre('save', async function(next) {
   if (this.isNew && !this.rfiNumber) {
     const year = new Date().getFullYear();
-    const count = await this.constructor.countDocuments({ tenant: this.tenant });
-    this.rfiNumber = `RFI-${year}-${String(count + 1).padStart(5, '0')}`;
+    const prefix = `RFI-${year}-`;
+
+    // Find the last RFI number for this year and tenant
+    const lastRFI = await this.constructor.findOne({
+      tenant: this.tenant,
+      rfiNumber: { $regex: `^${prefix}` }
+    }).sort({ rfiNumber: -1 });
+
+    let nextNumber = 1;
+    if (lastRFI && lastRFI.rfiNumber) {
+      const lastNumber = parseInt(lastRFI.rfiNumber.split('-')[2], 10);
+      nextNumber = lastNumber + 1;
+    }
+
+    this.rfiNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
   }
   next();
 });

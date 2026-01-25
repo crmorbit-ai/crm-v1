@@ -772,7 +772,44 @@ const Products = () => {
         size="large"
       >
         <form onSubmit={handleCreateProduct}>
-          {/* Category Selection - Always at top */}
+          {/* Basic Information Section */}
+          <div style={{ marginBottom: '24px' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Basic Information
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                  Product Name *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  className="crm-form-input"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter product name"
+                />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                  Article Number / SKU *
+                </label>
+                <input
+                  type="text"
+                  name="articleNumber"
+                  className="crm-form-input"
+                  value={formData.articleNumber}
+                  onChange={handleChange}
+                  required
+                  placeholder="e.g., PROD-001"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Category Selection */}
           <div className="form-group" style={{ marginBottom: '24px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
               Category *
@@ -798,16 +835,106 @@ const Products = () => {
                   onClick={openCreateCategoryModal}
                   title="Create New Category"
                 >
-                  ➕
+                  +
                 </button>
               )}
             </div>
           </div>
 
-          {/* Dynamic Form Sections - Rendered from Field Definitions */}
+          {/* Pricing & Inventory Section */}
+          <div style={{ marginBottom: '24px' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Pricing & Inventory
+            </h4>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div className="form-group">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                  Price *
+                </label>
+                <input
+                  type="number"
+                  name="price"
+                  className="crm-form-input"
+                  value={formData.price}
+                  onChange={handleChange}
+                  required
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                />
+              </div>
+              <div className="form-group">
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                  Stock Quantity
+                </label>
+                <input
+                  type="number"
+                  name="stock"
+                  className="crm-form-input"
+                  value={formData.stock}
+                  onChange={handleChange}
+                  min="0"
+                  placeholder="0"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Description Section */}
+          <div style={{ marginBottom: '24px' }}>
+            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              Additional Details
+            </h4>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Description
+              </label>
+              <textarea
+                name="description"
+                className="crm-form-input"
+                value={formData.description}
+                onChange={handleChange}
+                rows="3"
+                placeholder="Enter product description"
+                style={{ resize: 'vertical' }}
+              />
+            </div>
+            <div className="form-group" style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Image URL
+              </label>
+              <input
+                type="url"
+                name="imageUrl"
+                className="crm-form-input"
+                value={formData.imageUrl}
+                onChange={handleChange}
+                placeholder="https://example.com/image.jpg"
+              />
+            </div>
+            <div className="form-group">
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  name="isActive"
+                  checked={formData.isActive}
+                  onChange={handleChange}
+                />
+                <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Active Product</span>
+              </label>
+            </div>
+          </div>
+
+          {/* Dynamic Form Sections - Only Custom Fields (excluding standard fields) */}
           {(() => {
-            const groupedFields = groupFieldsBySection(fieldDefinitions);
-            const sectionOrder = ['Basic Information', 'Product Details', 'Pricing & Inventory', 'Additional Information'];
+            // Standard fields already rendered above - exclude them from dynamic rendering
+            const standardFieldNames = ['name', 'articleNumber', 'category', 'price', 'stock', 'description', 'imageUrl', 'isActive'];
+            const customFields = fieldDefinitions.filter(field => !standardFieldNames.includes(field.fieldName));
+
+            if (customFields.length === 0) return null;
+
+            const groupedFields = groupFieldsBySection(customFields);
+            const sectionOrder = ['Custom Fields', 'Additional Information', 'Other'];
 
             return sectionOrder.map(sectionName => {
               const sectionFields = groupedFields[sectionName];

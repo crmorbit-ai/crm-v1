@@ -15,6 +15,10 @@ const Calls = () => {
   const [success, setSuccess] = useState('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
+  // Related records for dropdown
+  const [relatedRecords, setRelatedRecords] = useState([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
   const [formData, setFormData] = useState({
     subject: '',
     callStartTime: '',
@@ -30,6 +34,52 @@ const Calls = () => {
   useEffect(() => {
     loadCalls();
   }, []);
+
+  // Load related records when relatedTo type changes
+  useEffect(() => {
+    if (showCreateModal && formData.relatedTo) {
+      loadRelatedRecords(formData.relatedTo);
+    }
+  }, [showCreateModal, formData.relatedTo]);
+
+  const loadRelatedRecords = async (type) => {
+    try {
+      setLoadingRecords(true);
+      let endpoint = '';
+      switch (type) {
+        case 'Lead': endpoint = '/leads'; break;
+        case 'Contact': endpoint = '/contacts'; break;
+        case 'Account': endpoint = '/accounts'; break;
+        case 'Opportunity': endpoint = '/opportunities'; break;
+        case 'Deal': endpoint = '/deals'; break;
+        default: endpoint = '/leads';
+      }
+      const response = await fetch(`${API_URL}${endpoint}?limit=100`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await response.json();
+      if (data.success) {
+        // Handle different response structures
+        const records = data.data?.leads || data.data?.contacts || data.data?.accounts ||
+                       data.data?.opportunities || data.data?.deals || data.data || [];
+        setRelatedRecords(Array.isArray(records) ? records : []);
+      }
+    } catch (err) {
+      console.error('Failed to load related records:', err);
+      setRelatedRecords([]);
+    } finally {
+      setLoadingRecords(false);
+    }
+  };
+
+  const getRecordDisplayName = (record) => {
+    if (record.firstName && record.lastName) return `${record.firstName} ${record.lastName}`;
+    if (record.name) return record.name;
+    if (record.title) return record.title;
+    if (record.companyName) return record.companyName;
+    if (record.email) return record.email;
+    return record._id;
+  };
 
   const loadCalls = async () => {
     try {
@@ -63,8 +113,11 @@ const Calls = () => {
         setSuccess('Call logged!');
         setShowCreateModal(false);
         setFormData({ subject: '', callStartTime: '', callDuration: '', callType: 'Outbound', callPurpose: 'Follow-up', callResult: 'Completed', relatedTo: 'Lead', relatedToId: '', description: '' });
+        setRelatedRecords([]);
         loadCalls();
         setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError(data.message || 'Failed to log call');
       }
     } catch (err) {
       setError('Failed to log call');
@@ -194,6 +247,33 @@ const Calls = () => {
               <option value="Call Back Later">Call Back Later</option>
               <option value="Completed">Completed</option>
             </select>
+          </div>
+          <div className="form-row">
+            <div className="crm-form-group">
+              <label>Related To *</label>
+              <select className="crm-form-select" value={formData.relatedTo}
+                onChange={(e) => setFormData({ ...formData, relatedTo: e.target.value, relatedToId: '' })} required>
+                <option value="Lead">Lead</option>
+                <option value="Contact">Contact</option>
+                <option value="Account">Account</option>
+                <option value="Opportunity">Opportunity</option>
+                <option value="Deal">Deal</option>
+              </select>
+            </div>
+            <div className="crm-form-group">
+              <label>Select {formData.relatedTo} *</label>
+              <select className="crm-form-select" value={formData.relatedToId}
+                onChange={(e) => setFormData({ ...formData, relatedToId: e.target.value })} required>
+                <option value="">-- Select {formData.relatedTo} --</option>
+                {loadingRecords ? (
+                  <option disabled>Loading...</option>
+                ) : relatedRecords.map(record => (
+                  <option key={record._id} value={record._id}>
+                    {getRecordDisplayName(record)}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="crm-form-group">
             <label>Description</label>
