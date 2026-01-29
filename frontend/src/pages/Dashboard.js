@@ -2,12 +2,25 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import SubscriptionAlert from '../components/SubscriptionAlert';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 import { leadService } from '../services/leadService';
 import { accountService } from '../services/accountService';
 import { contactService } from '../services/contactService';
 import { opportunityService } from '../services/opportunityService';
 import { useAuth } from '../context/AuthContext';
-import '../styles/crm.css';
+import {
+  Building2,
+  Contact,
+  DollarSign,
+  Target,
+  TrendingUp,
+  TrendingDown,
+  CreditCard,
+  ClipboardList,
+  UserCircle,
+} from 'lucide-react';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -26,13 +39,11 @@ const Dashboard = () => {
   const loadStats = async () => {
     try {
       setLoading(true);
-
-      // Load all stats in parallel
       const [leadStats, accountStats, contactStats, opportunityStats] = await Promise.all([
-        leadService.getLeadStats().catch(err => ({ data: null })),
-        accountService.getAccountStats().catch(err => ({ data: null })),
-        contactService.getContactStats().catch(err => ({ data: null })),
-        opportunityService.getOpportunityStats().catch(err => ({ data: null }))
+        leadService.getLeadStats().catch(() => ({ data: null })),
+        accountService.getAccountStats().catch(() => ({ data: null })),
+        contactService.getContactStats().catch(() => ({ data: null })),
+        opportunityService.getOpportunityStats().catch(() => ({ data: null }))
       ]);
 
       setStats({
@@ -57,301 +68,245 @@ const Dashboard = () => {
     }).format(amount);
   };
 
+  // Stat card with original gradient styling
+  const StatCard = ({ title, value, subtitle, icon: Icon, trend }) => (
+    <div
+      className="relative overflow-hidden rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400"
+      style={{
+        background: 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+      }}
+    >
+      {/* Top accent bar */}
+      <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
+
+      <div className="flex items-center gap-3">
+        {Icon && (
+          <div
+            className="h-12 w-12 rounded-lg flex items-center justify-center text-2xl shadow-md"
+            style={{
+              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
+              color: 'white',
+            }}
+          >
+            <Icon className="h-6 w-6" />
+          </div>
+        )}
+        <div className="flex-1">
+          <p className="text-2xl font-extrabold text-gray-800 leading-none">
+            {loading ? '...' : value}
+          </p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
+            {title}
+          </p>
+          {subtitle && (
+            <p className={`text-xs mt-1 flex items-center gap-1 font-semibold ${
+              trend === 'up' ? 'text-green-600' :
+              trend === 'down' ? 'text-red-600' :
+              'text-gray-500'
+            }`}>
+              {trend === 'up' && <TrendingUp className="h-3 w-3" />}
+              {trend === 'down' && <TrendingDown className="h-3 w-3" />}
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  // Card with blue accent bar
+  const AccentCard = ({ children, className = "" }) => (
+    <div className={`relative overflow-hidden rounded-lg border border-gray-200 bg-white shadow-md transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400 ${className}`}>
+      <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
+      {children}
+    </div>
+  );
+
   return (
-    <DashboardLayout title={`Welcome back, ${user?.firstName}! 👋`}>
-      
-      {/* ⭐ SUBSCRIPTION ALERT - NEW */}
+    <DashboardLayout title={`Welcome back, ${user?.firstName}!`}>
       <SubscriptionAlert />
 
       {/* Main Stats Grid */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">Total Leads</div>
-          <div className="stat-value">{loading ? '...' : stats?.leads?.total || 0}</div>
-          <div className="stat-change">
-            {loading ? '...' : stats?.leads?.newThisMonth || 0} new this month
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Accounts</div>
-          <div className="stat-value">{loading ? '...' : stats?.accounts?.total || 0}</div>
-          <div className="stat-change">
-            {loading ? '...' : stats?.accounts?.newThisMonth || 0} new this month
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Contacts</div>
-          <div className="stat-value">{loading ? '...' : stats?.contacts?.total || 0}</div>
-          <div className="stat-change">
-            {loading ? '...' : stats?.contacts?.newThisMonth || 0} new this month
-          </div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Total Pipeline</div>
-          <div className="stat-value">
-            {loading ? '...' : formatCurrency(stats?.opportunities?.totalValue || 0)}
-          </div>
-          <div className="stat-change positive">
-            {loading ? '...' : stats?.opportunities?.total || 0} opportunities
-          </div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard
+          title="Total Leads"
+          value={stats?.leads?.total || 0}
+          subtitle={`${stats?.leads?.newThisMonth || 0} new this month`}
+          icon={Target}
+          trend="up"
+        />
+        <StatCard
+          title="Accounts"
+          value={stats?.accounts?.total || 0}
+          subtitle={`${stats?.accounts?.newThisMonth || 0} new this month`}
+          icon={Building2}
+        />
+        <StatCard
+          title="Contacts"
+          value={stats?.contacts?.total || 0}
+          subtitle={`${stats?.contacts?.newThisMonth || 0} new this month`}
+          icon={Contact}
+        />
+        <StatCard
+          title="Total Pipeline"
+          value={formatCurrency(stats?.opportunities?.totalValue || 0)}
+          subtitle={`${stats?.opportunities?.total || 0} opportunities`}
+          icon={DollarSign}
+          trend="up"
+        />
       </div>
 
       {/* Opportunity Stats */}
       {stats.opportunities && (
-        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-          <div className="stat-card">
-            <div className="stat-label">Weighted Pipeline</div>
-            <div className="stat-value" style={{ fontSize: '20px' }}>
-              {formatCurrency(stats.opportunities.weightedValue || 0)}
-            </div>
-            <small className="stat-change">Expected value</small>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Closing This Month</div>
-            <div className="stat-value">{stats.opportunities.closingThisMonth || 0}</div>
-            <small className="stat-change">Opportunities</small>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Closed Won</div>
-            <div className="stat-value">{stats.opportunities.wonCount || 0}</div>
-            <small className="stat-change positive">Success</small>
-          </div>
-          <div className="stat-card">
-            <div className="stat-label">Closed Lost</div>
-            <div className="stat-value">{stats.opportunities.lostCount || 0}</div>
-            <small className="stat-change">Lost deals</small>
-          </div>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <StatCard
+            title="Weighted Pipeline"
+            value={formatCurrency(stats.opportunities.weightedValue || 0)}
+            subtitle="Expected value"
+          />
+          <StatCard
+            title="Closing This Month"
+            value={stats.opportunities.closingThisMonth || 0}
+            subtitle="Opportunities"
+          />
+          <StatCard
+            title="Closed Won"
+            value={stats.opportunities.wonCount || 0}
+            subtitle="Success"
+            trend="up"
+          />
+          <StatCard
+            title="Closed Lost"
+            value={stats.opportunities.lostCount || 0}
+            subtitle="Lost deals"
+            trend="down"
+          />
         </div>
       )}
 
       {/* Quick Actions */}
-      <div className="crm-card">
-        <div className="crm-card-header">
-          <h2 className="crm-card-title">Quick Actions</h2>
+      <AccentCard className="mb-6">
+        <div className="p-4 border-b border-gray-200 bg-gray-50">
+          <h3 className="text-sm font-bold text-gray-800">Quick Actions</h3>
         </div>
-        <div className="crm-card-body">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-            {/* ⭐ NEW - Subscription Button */}
-            <Link to="/subscription" className="crm-btn" style={{
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)'
-            }}>
-              💳 Subscription
-            </Link>
-            <Link to="/leads" className="crm-btn crm-btn-primary">
-              📋 Leads
-            </Link>
-            <Link to="/accounts" className="crm-btn crm-btn-secondary">
-              🏢 Accounts
-            </Link>
-            <Link to="/contacts" className="crm-btn crm-btn-secondary">
-              👤 Contacts
-            </Link>
-            <Link to="/opportunities" className="crm-btn crm-btn-secondary">
-              💰 Opportunities
-            </Link>
+        <div className="p-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+            <Button asChild variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-blue-50 hover:border-blue-400">
+              <Link to="/subscription">
+                <CreditCard className="h-5 w-5 text-blue-600" />
+                <span>Subscription</span>
+              </Link>
+            </Button>
+            <Button asChild className="h-auto py-4 flex flex-col gap-2 bg-blue-600 hover:bg-blue-700">
+              <Link to="/leads">
+                <ClipboardList className="h-5 w-5" />
+                <span>Leads</span>
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" className="h-auto py-4 flex flex-col gap-2 hover:bg-gray-200">
+              <Link to="/accounts">
+                <Building2 className="h-5 w-5" />
+                <span>Accounts</span>
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" className="h-auto py-4 flex flex-col gap-2 hover:bg-gray-200">
+              <Link to="/contacts">
+                <UserCircle className="h-5 w-5" />
+                <span>Contacts</span>
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" className="h-auto py-4 flex flex-col gap-2 hover:bg-gray-200">
+              <Link to="/opportunities">
+                <DollarSign className="h-5 w-5" />
+                <span>Opportunities</span>
+              </Link>
+            </Button>
           </div>
         </div>
-      </div>
+      </AccentCard>
 
       {/* Opportunity Pipeline by Stage */}
-      {stats.opportunities && stats.opportunities.byStage && stats.opportunities.byStage.length > 0 && (
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <h2 className="crm-card-title">Opportunity Pipeline by Stage</h2>
+      {stats.opportunities?.byStage?.length > 0 && (
+        <AccentCard className="mb-6">
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-sm font-bold text-gray-800">Opportunity Pipeline by Stage</h3>
           </div>
-          <div className="crm-card-body">
-            <div style={{ display: 'grid', gap: '14px' }}>
-              {stats.opportunities.byStage.map((item, index) => (
+          <div className="p-4">
+            <div className="space-y-3">
+              {stats.opportunities.byStage.map((item) => (
                 <div
                   key={item._id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '18px 20px',
-                    background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                    borderRadius: '12px',
-                    border: '2px solid #e2e8f0',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateX(4px)';
-                    e.currentTarget.style.borderColor = '#4A90E2';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(74, 144, 226, 0.15)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateX(0)';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
+                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 bg-gradient-to-r from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200"
                 >
-                  <div style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    bottom: 0,
-                    width: '4px',
-                    background: `linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)`
-                  }} />
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1, paddingLeft: '12px' }}>
-                    <span style={{
-                      fontWeight: '700',
-                      minWidth: '150px',
-                      fontSize: '15px',
-                      color: '#1e3c72'
-                    }}>
-                      {item._id || 'Unknown'}
-                    </span>
-                    <span style={{
-                      color: '#64748b',
-                      fontSize: '14px',
-                      fontWeight: '600'
-                    }}>
-                      {item.count} {item.count === 1 ? 'opportunity' : 'opportunities'}
-                    </span>
+                  <div className="flex items-center gap-4">
+                    <div className="w-1 h-10 bg-blue-500 rounded-full" />
+                    <div>
+                      <p className="font-bold text-gray-800">{item._id || 'Unknown'}</p>
+                      <p className="text-sm text-gray-500">
+                        {item.count} {item.count === 1 ? 'opportunity' : 'opportunities'}
+                      </p>
+                    </div>
                   </div>
-                  <div style={{
-                    fontWeight: '800',
-                    fontSize: '18px',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
+                  <p className="text-lg font-extrabold text-green-600">
                     {formatCurrency(item.totalAmount || 0)}
-                  </div>
+                  </p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </AccentCard>
       )}
 
       {/* Lead Status Breakdown */}
-      {stats.leads && stats.leads.byStatusDetailed && stats.leads.byStatusDetailed.length > 0 && (
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <h2 className="crm-card-title">Lead Pipeline</h2>
+      {stats.leads?.byStatusDetailed?.length > 0 && (
+        <AccentCard className="mb-6">
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-sm font-bold text-gray-800">Lead Pipeline</h3>
           </div>
-          <div className="crm-card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '14px' }}>
+          <div className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {stats.leads.byStatusDetailed.map((item) => (
                 <div
                   key={item._id}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '24px 16px',
-                    background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                    borderRadius: '12px',
-                    border: '2px solid #e2e8f0',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer',
-                    gap: '12px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'translateY(-4px)';
-                    e.currentTarget.style.borderColor = '#4A90E2';
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 144, 226, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
+                  className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200"
                 >
-                  <span
-                    className={`status-badge ${item._id?.toLowerCase() || 'new'}`}
-                    style={{ fontSize: '13px', padding: '6px 14px' }}
-                  >
+                  <Badge variant={
+                    item._id?.toLowerCase() === 'converted' ? 'success' :
+                    item._id?.toLowerCase() === 'lost' || item._id?.toLowerCase() === 'unqualified' ? 'destructive' :
+                    'secondary'
+                  }>
                     {item._id || 'Unknown'}
-                  </span>
-                  <div style={{
-                    fontWeight: '800',
-                    fontSize: '32px',
-                    background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
-                    {item.count}
-                  </div>
+                  </Badge>
+                  <p className="text-3xl font-extrabold text-gray-800 mt-3">{item.count}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </AccentCard>
       )}
 
       {/* Account Types */}
-      {stats.accounts && stats.accounts.byType && stats.accounts.byType.length > 0 && (
-        <div className="crm-card">
-          <div className="crm-card-header">
-            <h2 className="crm-card-title">Accounts by Type</h2>
+      {stats.accounts?.byType?.length > 0 && (
+        <AccentCard>
+          <div className="p-4 border-b border-gray-200 bg-gray-50">
+            <h3 className="text-sm font-bold text-gray-800">Accounts by Type</h3>
           </div>
-          <div className="crm-card-body">
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '14px' }}>
+          <div className="p-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {stats.accounts.byType.map((item) => (
                 <div
                   key={item._id}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '20px 16px',
-                    background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)',
-                    borderRadius: '12px',
-                    border: '2px solid #e2e8f0',
-                    transition: 'all 0.3s ease',
-                    cursor: 'pointer',
-                    gap: '10px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.transform = 'scale(1.05)';
-                    e.currentTarget.style.borderColor = '#4A90E2';
-                    e.currentTarget.style.boxShadow = '0 6px 16px rgba(74, 144, 226, 0.2)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.transform = 'scale(1)';
-                    e.currentTarget.style.borderColor = '#e2e8f0';
-                    e.currentTarget.style.boxShadow = 'none';
-                  }}
+                  className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200"
                 >
-                  <div style={{
-                    fontWeight: '700',
-                    fontSize: '14px',
-                    color: '#64748b',
-                    textAlign: 'center'
-                  }}>
+                  <p className="text-sm font-semibold text-gray-500 text-center">
                     {item._id || 'Unknown'}
-                  </div>
-                  <div style={{
-                    fontWeight: '800',
-                    fontSize: '28px',
-                    background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    backgroundClip: 'text'
-                  }}>
-                    {item.count}
-                  </div>
+                  </p>
+                  <p className="text-2xl font-extrabold text-gray-800 mt-2">{item.count}</p>
                 </div>
               ))}
             </div>
           </div>
-        </div>
+        </AccentCard>
       )}
     </DashboardLayout>
   );

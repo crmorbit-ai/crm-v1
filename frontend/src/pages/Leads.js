@@ -6,13 +6,46 @@ import { productItemService } from '../services/productItemService';
 import { productCategoryService } from '../services/productCategoryService';
 import { verificationService, debounce } from '../services/verificationService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
-import { groupService } from '../services/groupService'; // 🆕 Group service (named export)
+import { groupService } from '../services/groupService';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/common/Modal';
 import TooltipButton from '../components/common/TooltipButton';
 import DynamicField from '../components/DynamicField';
-import '../styles/crm.css';
 import BulkUploadForm from '../components/BulkUploadForm';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Badge } from '../components/ui/badge';
+import { Alert, AlertDescription } from '../components/ui/alert';
+import { Label } from '../components/ui/label';
+import { Checkbox } from '../components/ui/checkbox';
+// Using native select for filters (Radix Select doesn't allow empty string values)
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../components/ui/table';
+import {
+  Target,
+  Plus,
+  Upload,
+  LayoutGrid,
+  List,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+  Loader2,
+  Mail,
+  Phone,
+  Globe,
+  Users,
+  Trash2,
+} from 'lucide-react';
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -25,86 +58,40 @@ const Leads = () => {
   const [success, setSuccess] = useState('');
   const [viewMode, setViewMode] = useState('table');
 
-  const [emailVerification, setEmailVerification] = useState({
-    status: 'pending',
-    message: '',
-    isValid: null
-  });
+  const [emailVerification, setEmailVerification] = useState({ status: 'pending', message: '', isValid: null });
+  const [phoneVerification, setPhoneVerification] = useState({ status: 'pending', message: '', isValid: null });
 
-  const [phoneVerification, setPhoneVerification] = useState({
-    status: 'pending',
-    message: '',
-    isValid: null
-  });
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
+  const [filters, setFilters] = useState({ search: '', leadStatus: '', leadSource: '', rating: '', assignedGroup: '', unassigned: false });
 
-  const [pagination, setPagination] = useState({
-    page: 1,
-    limit: 20,
-    total: 0,
-    pages: 0
-  });
-
-  const [filters, setFilters] = useState({
-    search: '',
-    leadStatus: '',
-    leadSource: '',
-    rating: '',
-    assignedGroup: '', // 🆕 Group filter
-    unassigned: false  // 🆕 Unassigned filter
-  });
-
-  // 🆕 Group management
   const [groups, setGroups] = useState([]);
-  const [selectedLeads, setSelectedLeads] = useState([]); // 🆕 For bulk operations
+  const [selectedLeads, setSelectedLeads] = useState([]);
   const [showAssignGroupModal, setShowAssignGroupModal] = useState(false);
-  const [selectedGroupForAssignment, setSelectedGroupForAssignment] = useState(null); // 🆕 Selected group
-  const [groupMembers, setGroupMembers] = useState([]); // 🆕 Members of selected group
-  const [selectedMembers, setSelectedMembers] = useState([]); // 🆕 Selected members to assign
-
-  // 🔥 Dynamic columns state
+  const [selectedGroupForAssignment, setSelectedGroupForAssignment] = useState(null);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [selectedMembers, setSelectedMembers] = useState([]);
   const [displayColumns, setDisplayColumns] = useState([]);
 
-  const [stats, setStats] = useState({
-    total: 0,
-    new: 0,
-    qualified: 0,
-    contacted: 0
-  });
+  const [stats, setStats] = useState({ total: 0, new: 0, qualified: 0, contacted: 0 });
 
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
+  const [modalStack, setModalStack] = useState([]);
 
-  // Modal navigation - track which modal opened which for proper back navigation
-  const [modalStack, setModalStack] = useState([]); // ['create', 'addProduct', 'createCategory']
-
-  // All field definitions (standard + custom)
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
 
-  // Legacy formData for backward compatibility (product, productDetails)
   const [formData, setFormData] = useState({
     product: '',
-    productDetails: {
-      quantity: 1,
-      requirements: '',
-      estimatedBudget: '',
-      priority: '',
-      notes: ''
-    }
+    productDetails: { quantity: 1, requirements: '', estimatedBudget: '', priority: '', notes: '' }
   });
 
   const [productFormData, setProductFormData] = useState({
-    name: '',
-    articleNumber: '',
-    category: '',
-    price: '',
-    stock: '',
-    description: '',
-    imageUrl: ''
+    name: '', articleNumber: '', category: '', price: '', stock: '', description: '', imageUrl: ''
   });
 
   useEffect(() => {
@@ -112,294 +99,113 @@ const Leads = () => {
     loadProducts();
     loadCategories();
     loadCustomFields();
-    loadGroups(); // 🆕 Load groups
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    loadGroups();
   }, [pagination.page, filters]);
 
   const loadProducts = async () => {
     try {
       const response = await productItemService.getAllProducts({ isActive: 'true' }, 1, 1000);
-      if (response && response.success === true && response.data) {
-        setProducts(response.data.products || []);
-      }
-    } catch (err) {
-      console.error('Load products error:', err);
-    }
+      if (response?.success && response.data) setProducts(response.data.products || []);
+    } catch (err) { console.error('Load products error:', err); }
   };
 
   const loadCategories = async () => {
     try {
       const response = await productCategoryService.getAllCategories({ isActive: 'true' }, 1, 100);
-      if (response && response.success === true && response.data) {
-        setCategories(response.data.categories || []);
-      }
-    } catch (err) {
-      console.error('Load categories error:', err);
-    }
+      if (response?.success && response.data) setCategories(response.data.categories || []);
+    } catch (err) { console.error('Load categories error:', err); }
   };
 
-  const handleCreateCategory = async (e) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) {
-      setError('Category name is required');
-      return;
-    }
-
-    try {
-      await productCategoryService.createCategory({ name: newCategoryName, isActive: true });
-      setSuccess('Category created successfully!');
-      setNewCategoryName('');
-
-      // Close this modal and reopen parent
-      setShowCreateCategoryModal(false);
-      setShowAddProductModal(true);
-      setModalStack(['create', 'addProduct']);
-
-      await loadCategories();
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create category');
-    }
-  };
-
-  // 🆕 Load groups for filtering and assignment
   const loadGroups = async () => {
     try {
       const data = await groupService.getGroups();
-      if (data && Array.isArray(data)) {
-        setGroups(data);
-      } else if (data && data.groups) {
-        // If response has groups array
-        setGroups(data.groups);
-      }
-    } catch (err) {
-      console.error('Load groups error:', err);
-    }
+      setGroups(Array.isArray(data) ? data : data?.groups || []);
+    } catch (err) { console.error('Load groups error:', err); }
   };
 
   const loadCustomFields = async () => {
     try {
-      console.log('🔍 Loading ALL field definitions for Lead...');
       const response = await fieldDefinitionService.getFieldDefinitions('Lead', false);
-      console.log('📦 Field definitions response:', response);
-
-      // Response is already unwrapped by axios interceptor
       if (response && Array.isArray(response)) {
-        console.log('✅ Total fields received:', response.length);
-        // Filter for active fields that should show in create form
-        const createFields = response
-          .filter(field => field.isActive && field.showInCreate)
-          .sort((a, b) => a.displayOrder - b.displayOrder);
-
-        console.log('✅ Active fields for create form:', createFields.length);
-        console.log('📋 Fields by section:', groupFieldsBySection(createFields));
+        const createFields = response.filter(field => field.isActive && field.showInCreate).sort((a, b) => a.displayOrder - b.displayOrder);
         setFieldDefinitions(createFields);
       }
-    } catch (err) {
-      console.error('❌ Load field definitions error:', err);
-    }
+    } catch (err) { console.error('Load field definitions error:', err); }
   };
 
-  // 🔥 Extract all unique columns from leads data (fully dynamic)
-  // leadStatus field is always placed at the end
   const extractColumns = (leadsData) => {
-    if (!leadsData || leadsData.length === 0) return [];
-
+    if (!leadsData?.length) return [];
     const allKeys = new Set();
-    const excludeKeys = [
-      '_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'createdAt', 'updatedAt',
-      'isActive', 'isConverted', 'convertedDate', 'convertedAccount', 'convertedContact',
-      'convertedOpportunity', 'emailVerified', 'emailVerificationStatus', 'emailVerificationDetails',
-      'phoneVerified', 'phoneVerificationStatus', 'phoneVerificationDetails', 'emailOptOut',
-      'doNotCall', 'assignedGroup', 'assignedMembers', 'assignmentChain', 'dataCenterCandidateId',
-      'product', 'productDetails', 'owner'
-    ];
+    const excludeKeys = ['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'createdAt', 'updatedAt', 'isActive', 'isConverted', 'convertedDate', 'convertedAccount', 'convertedContact', 'convertedOpportunity', 'emailVerified', 'emailVerificationStatus', 'emailVerificationDetails', 'phoneVerified', 'phoneVerificationStatus', 'phoneVerificationDetails', 'emailOptOut', 'doNotCall', 'assignedGroup', 'assignedMembers', 'assignmentChain', 'dataCenterCandidateId', 'product', 'productDetails', 'owner'];
 
     leadsData.forEach(lead => {
       Object.keys(lead).forEach(key => {
-        if (!excludeKeys.includes(key) && lead[key] !== null && lead[key] !== undefined && lead[key] !== '') {
-          allKeys.add(key);
-        }
+        if (!excludeKeys.includes(key) && lead[key] != null && lead[key] !== '') allKeys.add(key);
       });
     });
 
-    // Convert to array and sort - leadStatus field always at the end
     const columnsArray = Array.from(allKeys);
     const statusIndex = columnsArray.indexOf('leadStatus');
     if (statusIndex > -1) {
-      columnsArray.splice(statusIndex, 1); // Remove leadStatus from current position
-      columnsArray.push('leadStatus'); // Add leadStatus at the end
+      columnsArray.splice(statusIndex, 1);
+      columnsArray.push('leadStatus');
     }
-
     return columnsArray;
   };
 
-  // 🔥 Get field value from lead (all fields are at root level now)
-  const getFieldValue = (lead, fieldName) => {
-    if (lead[fieldName] !== undefined && lead[fieldName] !== null && lead[fieldName] !== '') {
-      return lead[fieldName];
-    }
-    return null;
-  };
+  const getFieldValue = (lead, fieldName) => lead[fieldName] ?? null;
 
-  // Format field value for display
   const formatFieldValue = (value) => {
-    if (value === null || value === undefined || value === '') return '-';
-
-    if (Array.isArray(value)) {
-      return value.length > 0 ? value.join(', ') : '-';
-    }
-
-    if (typeof value === 'boolean') {
-      return value ? 'Yes' : 'No';
-    }
-
-    if (typeof value === 'object') {
-      return JSON.stringify(value);
-    }
-
+    if (value == null || value === '') return '-';
+    if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : '-';
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    if (typeof value === 'object') return JSON.stringify(value);
     return value.toString();
   };
 
-  // Format field name for display
-  const formatFieldName = (fieldName) => {
-    return fieldName
-      .replace(/([A-Z])/g, ' $1') // Add space before capital letters
-      .replace(/^./, str => str.toUpperCase()) // Capitalize first letter
-      .trim();
-  };
+  const formatFieldName = (fieldName) => fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
 
-  // Group fields by section
   const groupFieldsBySection = (fields) => {
     const grouped = {};
     fields.forEach(field => {
       const section = field.section || 'Additional Information';
-      if (!grouped[section]) {
-        grouped[section] = [];
-      }
+      if (!grouped[section]) grouped[section] = [];
       grouped[section].push(field);
     });
     return grouped;
   };
 
-  // Handle dynamic field value change
   const handleFieldChange = (fieldName, value) => {
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-    setFieldErrors(prev => ({
-      ...prev,
-      [fieldName]: null
-    }));
-
-    // Trigger verification for email and phone fields
-    if (fieldName === 'email') {
-      debouncedEmailVerify(value);
-    } else if (fieldName === 'phone') {
-      debouncedPhoneVerify(value);
-    }
-  };
-
-  // Render dynamic field with special handling for email/phone
-  const renderDynamicField = (field) => {
-    const isEmail = field.fieldName === 'email';
-    const isPhone = field.fieldName === 'phone';
-
-    if (isEmail) {
-      return (
-        <div style={{ position: 'relative' }}>
-          <DynamicField
-            fieldDefinition={field}
-            value={fieldValues[field.fieldName] || ''}
-            onChange={handleFieldChange}
-            error={fieldErrors[field.fieldName]}
-          />
-          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-            <VerificationIcon status={emailVerification.status} message={emailVerification.message} />
-          </div>
-          {emailVerification.message && emailVerification.status !== 'pending' && (
-            <div style={{ fontSize: '11px', marginTop: '4px', color: emailVerification.status === 'valid' ? '#10B981' : emailVerification.status === 'invalid' ? '#EF4444' : '#F59E0B' }}>
-              {emailVerification.message}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    if (isPhone) {
-      return (
-        <div style={{ position: 'relative' }}>
-          <DynamicField
-            fieldDefinition={field}
-            value={fieldValues[field.fieldName] || ''}
-            onChange={handleFieldChange}
-            error={fieldErrors[field.fieldName]}
-          />
-          <div style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)' }}>
-            <VerificationIcon status={phoneVerification.status} message={phoneVerification.message} />
-          </div>
-          {phoneVerification.message && phoneVerification.status !== 'pending' && (
-            <div style={{ fontSize: '11px', marginTop: '4px', color: phoneVerification.status === 'valid' ? '#10B981' : phoneVerification.status === 'invalid' ? '#EF4444' : '#F59E0B' }}>
-              {phoneVerification.message}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    return (
-      <DynamicField
-        fieldDefinition={field}
-        value={fieldValues[field.fieldName] || ''}
-        onChange={handleFieldChange}
-        error={fieldErrors[field.fieldName]}
-      />
-    );
+    setFieldValues(prev => ({ ...prev, [fieldName]: value }));
+    setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+    if (fieldName === 'email') debouncedEmailVerify(value);
+    else if (fieldName === 'phone') debouncedPhoneVerify(value);
   };
 
   const loadLeads = async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await leadService.getLeads({
-        page: pagination.page,
-        limit: pagination.limit,
-        ...filters
-      });
+      const response = await leadService.getLeads({ page: pagination.page, limit: pagination.limit, ...filters });
 
-      if (response && response.success === true && response.data) {
+      if (response?.success && response.data) {
         const leadsData = response.data.leads || [];
         setLeads(leadsData);
-        setPagination(prev => ({
-          ...prev,
-          total: response.data.pagination?.total || 0,
-          pages: response.data.pagination?.pages || 0
-        }));
+        setPagination(prev => ({ ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0 }));
 
-        // 🔥 Auto-detect columns from data and merge with existing columns
         const newColumns = extractColumns(leadsData);
-        if (newColumns.length > 0) {
-          // Merge with existing columns to show all columns from all data
-          const mergedColumns = [...new Set([...displayColumns, ...newColumns])];
-          setDisplayColumns(mergedColumns);
-        }
-
-        const newLeads = leadsData.filter(l => l.leadStatus === 'New').length;
-        const qualified = leadsData.filter(l => l.leadStatus === 'Qualified').length;
-        const contacted = leadsData.filter(l => l.leadStatus === 'Contacted').length;
+        if (newColumns.length > 0) setDisplayColumns([...new Set([...displayColumns, ...newColumns])]);
 
         setStats({
           total: response.data.pagination?.total || 0,
-          new: newLeads,
-          qualified,
-          contacted
+          new: leadsData.filter(l => l.leadStatus === 'New').length,
+          qualified: leadsData.filter(l => l.leadStatus === 'Qualified').length,
+          contacted: leadsData.filter(l => l.leadStatus === 'Contacted').length
         });
       } else {
         setError(response?.message || 'Failed to load leads');
       }
     } catch (err) {
-      console.error('Load leads error:', err);
       setError(err.response?.data?.message || err.message || 'Failed to load leads');
     } finally {
       setLoading(false);
@@ -407,205 +213,119 @@ const Leads = () => {
   };
 
   const verifyEmail = async (email) => {
-    if (!email || email.length < 5) {
-      setEmailVerification({ status: 'pending', message: '', isValid: null });
-      return;
-    }
-
+    if (!email || email.length < 5) { setEmailVerification({ status: 'pending', message: '', isValid: null }); return; }
     setEmailVerification({ status: 'verifying', message: 'Verifying...', isValid: null });
-
     try {
       const result = await verificationService.verifyEmail(email);
-
       if (result.success && result.data) {
         const { isValid, status, message } = result.data;
-
-        setEmailVerification({
-          status: isValid ? 'valid' : status === 'unknown' ? 'unknown' : 'invalid',
-          message: message || '',
-          isValid: isValid
-        });
+        setEmailVerification({ status: isValid ? 'valid' : status === 'unknown' ? 'unknown' : 'invalid', message: message || '', isValid });
       } else {
-        setEmailVerification({
-          status: 'unknown',
-          message: 'Unable to verify',
-          isValid: null
-        });
+        setEmailVerification({ status: 'unknown', message: 'Unable to verify', isValid: null });
       }
-    } catch (err) {
-      console.error('Email verification error:', err);
-      setEmailVerification({
-        status: 'unknown',
-        message: 'Verification failed',
-        isValid: null
-      });
-    }
+    } catch (err) { setEmailVerification({ status: 'unknown', message: 'Verification failed', isValid: null }); }
   };
 
   const verifyPhone = async (phone) => {
-    if (!phone || phone.length < 10) {
-      setPhoneVerification({ status: 'pending', message: '', isValid: null });
-      return;
-    }
-
+    if (!phone || phone.length < 10) { setPhoneVerification({ status: 'pending', message: '', isValid: null }); return; }
     setPhoneVerification({ status: 'verifying', message: 'Verifying...', isValid: null });
-
     try {
       const result = await verificationService.verifyPhone(phone);
-
       if (result.success && result.data) {
         const { isValid, status, message } = result.data;
-
-        setPhoneVerification({
-          status: isValid ? 'valid' : status === 'unknown' ? 'unknown' : 'invalid',
-          message: message || '',
-          isValid: isValid
-        });
+        setPhoneVerification({ status: isValid ? 'valid' : status === 'unknown' ? 'unknown' : 'invalid', message: message || '', isValid });
       } else {
-        setPhoneVerification({
-          status: 'unknown',
-          message: 'Unable to verify',
-          isValid: null
-        });
+        setPhoneVerification({ status: 'unknown', message: 'Unable to verify', isValid: null });
       }
-    } catch (err) {
-      console.error('Phone verification error:', err);
-      setPhoneVerification({
-        status: 'unknown',
-        message: 'Verification failed',
-        isValid: null
-      });
-    }
+    } catch (err) { setPhoneVerification({ status: 'unknown', message: 'Verification failed', isValid: null }); }
   };
 
-  const debouncedEmailVerify = useCallback(
-    debounce((email) => verifyEmail(email), 2000),
-    []
-  );
-
-  const debouncedPhoneVerify = useCallback(
-    debounce((phone) => verifyPhone(phone), 2000),
-    []
-  );
+  const debouncedEmailVerify = useCallback(debounce((email) => verifyEmail(email), 2000), []);
+  const debouncedPhoneVerify = useCallback(debounce((phone) => verifyPhone(phone), 2000), []);
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
     try {
       setError('');
-
-      // Separate standard fields from custom fields
       const standardFields = {};
       const customFields = {};
 
       fieldDefinitions.forEach(field => {
         const value = fieldValues[field.fieldName];
-        if (value !== undefined && value !== null && value !== '') {
-          if (field.isStandardField) {
-            standardFields[field.fieldName] = value;
-          } else {
-            customFields[field.fieldName] = value;
-          }
+        if (value != null && value !== '') {
+          if (field.isStandardField) standardFields[field.fieldName] = value;
+          else customFields[field.fieldName] = value;
         }
       });
 
-      // Combine standard fields with product data and custom fields
       const leadData = {
-        ...standardFields,  // Standard fields at top level
-        product: formData.product,  // Product selection
-        productDetails: formData.productDetails,  // Product details
-        customFields: Object.keys(customFields).length > 0 ? customFields : undefined  // Custom fields in nested object
+        ...standardFields,
+        product: formData.product,
+        productDetails: formData.productDetails,
+        customFields: Object.keys(customFields).length > 0 ? customFields : undefined
       };
-
-      console.log('📤 Submitting lead data:', leadData);
-      console.log('  📋 Standard fields:', Object.keys(standardFields));
-      console.log('  🎨 Custom fields:', Object.keys(customFields));
 
       await leadService.createLead(leadData);
       setSuccess('Lead created successfully!');
       setShowCreateModal(false);
       resetForm();
       loadLeads();
-      loadProducts();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      console.error('❌ Create lead error:', err);
-      setError(err.response?.data?.message || 'Failed to create lead');
-    }
+    } catch (err) { setError(err.response?.data?.message || 'Failed to create lead'); }
   };
 
   const handleCreateProductFromLead = async (e) => {
     e.preventDefault();
     try {
       setError('');
-
       const response = await productItemService.createProduct(productFormData);
-
-      if (response && response.success && response.data) {
+      if (response?.success && response.data) {
         setSuccess('Product created successfully!');
-
-        setFormData(prev => ({
-          ...prev,
-          product: response.data._id
-        }));
-
-        // Close this modal and reopen parent
+        setFormData(prev => ({ ...prev, product: response.data._id }));
         setShowAddProductModal(false);
         resetProductForm();
         setShowCreateModal(true);
-        setModalStack(['create']);
-
         await loadProducts();
-
         setTimeout(() => setSuccess(''), 3000);
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create product');
-    }
+    } catch (err) { setError(err.response?.data?.message || 'Failed to create product'); }
   };
 
-  // 🆕 Handle group selection - load members
+  const handleCreateCategory = async (e) => {
+    e.preventDefault();
+    if (!newCategoryName.trim()) { setError('Category name is required'); return; }
+    try {
+      await productCategoryService.createCategory({ name: newCategoryName, isActive: true });
+      setSuccess('Category created successfully!');
+      setNewCategoryName('');
+      setShowCreateCategoryModal(false);
+      setShowAddProductModal(true);
+      await loadCategories();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) { setError(err.response?.data?.message || 'Failed to create category'); }
+  };
+
   const handleGroupSelection = async (groupId) => {
     try {
       setError('');
       setSelectedGroupForAssignment(groupId);
-
-      // Fetch group details with members
       const groupData = await groupService.getGroup(groupId);
-
-      if (groupData && groupData.members) {
+      if (groupData?.members) {
         setGroupMembers(groupData.members);
-        // By default, select all members
         setSelectedMembers(groupData.members.map(m => m._id));
       }
-    } catch (err) {
-      console.error('Error loading group members:', err);
-      setError('Failed to load group members');
-    }
+    } catch (err) { setError('Failed to load group members'); }
   };
 
-  // 🆕 Handle bulk assign to group with specific members
   const handleBulkAssignToGroup = async () => {
     try {
       setError('');
+      if (!selectedGroupForAssignment) { setError('Please select a group'); return; }
+      if (selectedMembers.length === 0) { setError('Please select at least one member'); return; }
 
-      if (!selectedGroupForAssignment) {
-        setError('Please select a group');
-        return;
-      }
-
-      if (selectedMembers.length === 0) {
-        setError('Please select at least one member');
-        return;
-      }
-
-      const response = await leadService.assignLeadsToGroup(
-        selectedLeads,
-        selectedGroupForAssignment,
-        selectedMembers
-      );
-
-      if (response && response.success) {
-        setSuccess(`${selectedLeads.length} leads assigned to ${selectedMembers.length} member(s) successfully!`);
+      const response = await leadService.assignLeadsToGroup(selectedLeads, selectedGroupForAssignment, selectedMembers);
+      if (response?.success) {
+        setSuccess(`${selectedLeads.length} leads assigned successfully!`);
         setSelectedLeads([]);
         setShowAssignGroupModal(false);
         setSelectedGroupForAssignment(null);
@@ -614,89 +334,11 @@ const Leads = () => {
         await loadLeads();
         setTimeout(() => setSuccess(''), 3000);
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to assign leads to group');
-    }
-  };
-
-  const openCreateModal = () => {
-    resetForm();
-    setShowCreateModal(true);
-    setModalStack(['create']);
-  };
-
-  const openAddProductModal = () => {
-    resetProductForm();
-    // Close parent modal and open this one
-    setShowCreateModal(false);
-    setShowAddProductModal(true);
-    setModalStack(['create', 'addProduct']);
-  };
-
-  const openCreateCategoryModal = () => {
-    // Close parent modal and open this one
-    setShowAddProductModal(false);
-    setShowCreateCategoryModal(true);
-    setModalStack(['create', 'addProduct', 'createCategory']);
-  };
-
-  const closeAddProductModal = () => {
-    setShowAddProductModal(false);
-    resetProductForm();
-    setError('');
-    // Reopen parent modal
-    setShowCreateModal(true);
-    setModalStack(['create']);
-  };
-
-  const closeCreateCategoryModal = () => {
-    setShowCreateCategoryModal(false);
-    setNewCategoryName('');
-    setError('');
-    // Reopen parent modal
-    setShowAddProductModal(true);
-    setModalStack(['create', 'addProduct']);
+    } catch (err) { setError(err.response?.data?.message || 'Failed to assign leads'); }
   };
 
   const resetForm = () => {
-    setFormData({
-      firstName: '',
-      lastName: '',
-      email: '',
-      phone: '',
-      mobilePhone: '',
-      fax: '',
-      company: '',
-      jobTitle: '',
-      website: '',
-      leadSource: '',
-      leadStatus: '',
-      industry: '',
-      numberOfEmployees: '',
-      annualRevenue: '',
-      rating: '',
-      emailOptOut: false,
-      skypeId: '',
-      secondaryEmail: '',
-      twitter: '',
-      street: '',
-      city: '',
-      state: '',
-      country: '',
-      zipCode: '',
-      flatHouseNo: '',
-      latitude: '',
-      longitude: '',
-      description: '',
-      product: '',
-      productDetails: {
-        quantity: 1,
-        requirements: '',
-        estimatedBudget: '',
-        priority: '',
-        notes: ''
-      }
-    });
+    setFormData({ product: '', productDetails: { quantity: 1, requirements: '', estimatedBudget: '', priority: '', notes: '' } });
     setEmailVerification({ status: 'pending', message: '', isValid: null });
     setPhoneVerification({ status: 'pending', message: '', isValid: null });
     setFieldValues({});
@@ -704,182 +346,143 @@ const Leads = () => {
   };
 
   const resetProductForm = () => {
-    setProductFormData({
-      name: '',
-      articleNumber: '',
-      category: '',
-      price: '',
-      stock: '',
-      description: '',
-      imageUrl: ''
-    });
+    setProductFormData({ name: '', articleNumber: '', category: '', price: '', stock: '', description: '', imageUrl: '' });
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-
     if (name.startsWith('productDetails.')) {
       const fieldName = name.split('.')[1];
-      setFormData(prev => ({
-        ...prev,
-        productDetails: {
-          ...prev.productDetails,
-          [fieldName]: value
-        }
-      }));
+      setFormData(prev => ({ ...prev, productDetails: { ...prev.productDetails, [fieldName]: value } }));
       return;
     }
-
     const newValue = type === 'checkbox' ? checked : value;
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: newValue
-    }));
-
-    if (name === 'email') {
-      debouncedEmailVerify(newValue);
-    }
-
-    if (name === 'phone') {
-      debouncedPhoneVerify(newValue);
-    }
+    setFormData(prev => ({ ...prev, [name]: newValue }));
+    if (name === 'email') debouncedEmailVerify(newValue);
+    if (name === 'phone') debouncedPhoneVerify(newValue);
   };
 
   const handleProductFormChange = (e) => {
     const { name, value } = e.target;
-    setProductFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setProductFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleFilterChange = (e) => {
-    const { name, value } = e.target;
+  const handleFilterChange = (name, value) => {
     setFilters(prev => ({ ...prev, [name]: value }));
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const handleLeadClick = (leadId) => {
-    navigate(`/leads/${leadId}`);
-  };
+  const handleLeadClick = (leadId) => navigate(`/leads/${leadId}`);
 
   const canCreateLead = hasPermission('lead_management', 'create');
   const canImportLeads = hasPermission('lead_management', 'import');
   const canManageProducts = hasPermission('product_management', 'create');
+  const canDeleteLead = hasPermission('lead_management', 'delete');
 
-  const getRatingIcon = (rating) => {
-    const icons = {
-      'Hot': '🔥',
-      'Warm': '🌤️',
-      'Cold': '❄️'
-    };
-    return icons[rating] || '📊';
+  const handleDeleteLead = async (e, leadId) => {
+    e.stopPropagation();
+    if (!window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
+      return;
+    }
+    try {
+      setError('');
+      await leadService.deleteLead(leadId);
+      setSuccess('Lead deleted successfully!');
+      loadLeads();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete lead');
+    }
   };
 
-  const VerificationIcon = ({ status, message }) => {
+  const getStatusBadgeVariant = (status) => {
+    const variants = { 'New': 'info', 'Contacted': 'secondary', 'Qualified': 'success', 'Unqualified': 'destructive', 'Lost': 'destructive', 'Converted': 'success' };
+    return variants[status] || 'secondary';
+  };
+
+  const VerificationIcon = ({ status }) => {
     if (status === 'pending') return null;
-
-    if (status === 'verifying') {
-      return (
-        <span style={{ marginLeft: '8px', color: '#3B82F6', fontSize: '12px' }}>
-          🔄 Verifying...
-        </span>
-      );
-    }
-
-    if (status === 'valid') {
-      return (
-        <span style={{ marginLeft: '8px', color: '#10B981', fontSize: '16px' }} title={message}>
-          ✅
-        </span>
-      );
-    }
-
-    if (status === 'invalid') {
-      return (
-        <span style={{ marginLeft: '8px', color: '#EF4444', fontSize: '16px' }} title={message}>
-          ❌
-        </span>
-      );
-    }
-
-    if (status === 'unknown') {
-      return (
-        <span style={{ marginLeft: '8px', color: '#F59E0B', fontSize: '16px' }} title={message}>
-          ⚠️
-        </span>
-      );
-    }
-
+    if (status === 'verifying') return <Loader2 className="h-4 w-4 animate-spin text-blue-500" />;
+    if (status === 'valid') return <CheckCircle2 className="h-4 w-4 text-green-500" />;
+    if (status === 'invalid') return <XCircle className="h-4 w-4 text-red-500" />;
+    if (status === 'unknown') return <AlertCircle className="h-4 w-4 text-yellow-500" />;
     return null;
   };
 
-  const actionButton = (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '8px', background: 'white', borderRadius: '8px', padding: '4px', border: '2px solid #e5e7eb' }}>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('table')}
-          style={{ padding: '6px 12px' }}
-        >
-          ☰ Table
-        </button>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('grid')}
-          style={{ padding: '6px 12px' }}
-        >
-          ⊞ Grid
-        </button>
+  const renderDynamicField = (field) => {
+    const isEmail = field.fieldName === 'email';
+    const isPhone = field.fieldName === 'phone';
+
+    return (
+      <div className="relative">
+        <DynamicField
+          fieldDefinition={field}
+          value={fieldValues[field.fieldName] || ''}
+          onChange={handleFieldChange}
+          error={fieldErrors[field.fieldName]}
+        />
+        {isEmail && <div className="absolute right-3 top-1/2 -translate-y-1/2"><VerificationIcon status={emailVerification.status} /></div>}
+        {isPhone && <div className="absolute right-3 top-1/2 -translate-y-1/2"><VerificationIcon status={phoneVerification.status} /></div>}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <DashboardLayout title="Leads" actionButton={actionButton}>
-      {success && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>✓ {success}</div>}
-      {error && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>⚠ {error}</div>}
+    <DashboardLayout title="Leads">
+      {success && <Alert variant="success" className="mb-4"><AlertDescription>{success}</AlertDescription></Alert>}
+      {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
 
-      <div className="stats-grid">
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div className="stat-card">
-          <div className="stat-label">Total Leads</div>
-          <div className="stat-value">{stats.total}</div>
-          <div className="stat-change">All leads</div>
+          <div className="stat-icon"><Target className="h-5 w-5" /></div>
+          <div>
+            <p className="stat-value">{stats.total}</p>
+            <p className="stat-label">Total Leads</p>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">New Leads</div>
-          <div className="stat-value">{stats.new}</div>
-          <div className="stat-change positive">Fresh prospects</div>
+          <div className="stat-icon" style={{background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'}}><Target className="h-5 w-5" /></div>
+          <div>
+            <p className="stat-value text-blue-600">{stats.new}</p>
+            <p className="stat-label">New Leads</p>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Qualified</div>
-          <div className="stat-value">{stats.qualified}</div>
-          <div className="stat-change positive">Ready to convert</div>
+          <div className="stat-icon" style={{background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)'}}><Target className="h-5 w-5" /></div>
+          <div>
+            <p className="stat-value text-green-600">{stats.qualified}</p>
+            <p className="stat-label">Qualified</p>
+          </div>
         </div>
         <div className="stat-card">
-          <div className="stat-label">Contacted</div>
-          <div className="stat-value">{stats.contacted}</div>
-          <div className="stat-change">In progress</div>
+          <div className="stat-icon" style={{background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)'}}><Target className="h-5 w-5" /></div>
+          <div>
+            <p className="stat-value text-purple-600">{stats.contacted}</p>
+            <p className="stat-label">Contacted</p>
+          </div>
         </div>
       </div>
 
-      <div className="filters-container">
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Search & Filter</h3>
-          <div className="filters-grid">
-            <input
-              type="text"
-              name="search"
+      {/* Filters */}
+      <div className="crm-card mb-6">
+        <div className="p-4">
+          {/* Search Bar */}
+          <div className="mb-4">
+            <Input
               placeholder="Search leads..."
-              className="crm-form-input"
               value={filters.search}
-              onChange={handleFilterChange}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              className="w-full"
             />
+          </div>
+
+          {/* Filter Dropdowns - 3 per row */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
             <select
-              name="leadStatus"
               className="crm-form-select"
               value={filters.leadStatus}
-              onChange={handleFilterChange}
+              onChange={(e) => handleFilterChange('leadStatus', e.target.value)}
             >
               <option value="">All Statuses</option>
               <option value="New">New</option>
@@ -889,10 +492,9 @@ const Leads = () => {
               <option value="Lost">Lost</option>
             </select>
             <select
-              name="leadSource"
               className="crm-form-select"
               value={filters.leadSource}
-              onChange={handleFilterChange}
+              onChange={(e) => handleFilterChange('leadSource', e.target.value)}
             >
               <option value="">All Sources</option>
               <option value="Website">Website</option>
@@ -902,972 +504,351 @@ const Leads = () => {
               <option value="Social Media">Social Media</option>
             </select>
             <select
-              name="rating"
               className="crm-form-select"
               value={filters.rating}
-              onChange={handleFilterChange}
+              onChange={(e) => handleFilterChange('rating', e.target.value)}
             >
               <option value="">All Ratings</option>
               <option value="Hot">Hot</option>
               <option value="Warm">Warm</option>
               <option value="Cold">Cold</option>
             </select>
-            {/* 🆕 Group Filter */}
-            <select
-              name="assignedGroup"
-              className="crm-form-select"
-              value={filters.assignedGroup}
-              onChange={handleFilterChange}
-            >
-              <option value="">All Groups</option>
-              <option value="unassigned">Unassigned</option>
-              {groups.map((group) => (
-                <option key={group._id} value={group._id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
-            {/* 🆕 Unassigned Checkbox */}
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '0 12px', whiteSpace: 'nowrap' }}>
-              <input
-                type="checkbox"
-                checked={filters.unassigned}
-                onChange={(e) => {
-                  setFilters(prev => ({ ...prev, unassigned: e.target.checked }));
-                  setPagination(prev => ({ ...prev, page: 1 }));
-                }}
-              />
-              <span>Unassigned Only</span>
-            </label>
-            {/* 🆕 Bulk Assign Button */}
-            {selectedLeads.length > 0 && (
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <button
-                className="crm-btn crm-btn-primary"
-                onClick={() => setShowAssignGroupModal(true)}
-                style={{ backgroundColor: '#10b981' }}
+                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
+                onClick={() => setViewMode('table')}
               >
-                Assign {selectedLeads.length} to Group
+                Table
               </button>
-            )}
-            {canImportLeads && (
               <button
-                className="crm-btn crm-btn-secondary"
-                onClick={() => setShowBulkUploadModal(true)}
+                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
+                onClick={() => setViewMode('grid')}
               >
-                📤 Bulk Upload
+                Grid
               </button>
-            )}
-            {canCreateLead && (
-              <TooltipButton
-                className="crm-btn crm-btn-primary"
-                onClick={openCreateModal}
-                disabled={!canCreateLead}
-                tooltipText="You don't have permission to create leads"
-              >
-                + New Lead
-              </TooltipButton>
-            )}
-          </div>
-      </div>
+            </div>
 
-      <div className="crm-card">
-        <div className="crm-card-header">
-          <h2 className="crm-card-title">{viewMode === 'grid' ? 'Lead Cards' : 'Lead List'} ({pagination.total})</h2>
-        </div>
-
-        {loading ? (
-          <div style={{ padding: '60px', textAlign: 'center' }}>
-            <div className="spinner" style={{ margin: '0 auto' }}></div>
-            <p style={{ marginTop: '16px', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>Loading leads...</p>
-          </div>
-        ) : leads.length === 0 ? (
-          <div style={{ padding: '60px', textAlign: 'center' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎯</div>
-            <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No leads found</p>
-            <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first lead to get started!</p>
-            {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ Create First Lead</button>}
-          </div>
-        ) : (
-          <>
-            {viewMode === 'grid' ? (
-              <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-                {leads.map((lead) => (
-                  <div
-                    key={lead._id}
-                    onClick={() => handleLeadClick(lead._id)}
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                      borderRadius: '16px',
-                      padding: '24px',
-                      cursor: 'pointer',
-                      border: '2px solid #e5e7eb',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-8px)';
-                      e.currentTarget.style.boxShadow = '0 12px 32px rgba(74, 144, 226, 0.2)';
-                      e.currentTarget.style.borderColor = '#4A90E2';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.05)';
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                    }}
-                  >
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #4A90E2 0%, #2c5364 100%)' }}></div>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
-                      <div style={{
-                        width: '56px',
-                        height: '56px',
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '24px',
-                        fontWeight: '800',
-                        color: 'white',
-                        boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                      }}>
-                        {lead.firstName?.[0]}{lead.lastName?.[0]}
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
-                          {lead.firstName || ''} {lead.lastName || ''}
-                        </h3>
-                        <p style={{ margin: '0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                          {lead.jobTitle || 'No title'} {lead.company && `at ${lead.company}`}
-                        </p>
-                      </div>
-                    </div>
-                    <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <span className={`status-badge ${(lead.leadStatus || 'new').toLowerCase()}`}>
-                        {lead.leadStatus || 'New'}
-                      </span>
-                      {lead.rating && (
-                        <span className={`rating-badge ${lead.rating.toLowerCase()}`}>
-                          {getRatingIcon(lead.rating)} {lead.rating}
-                        </span>
-                      )}
-                    </div>
-                    <div style={{ marginBottom: '16px', color: '#64748b', fontSize: '14px' }}>
-                      <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>📧</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{lead.email}</span>
-                        {lead.emailVerified && <span style={{ color: '#10B981' }}>✅</span>}
-                      </div>
-                      {lead.phone && (
-                        <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>📞</span>
-                          <span>{lead.phone}</span>
-                          {lead.phoneVerified && <span style={{ color: '#10B981' }}>✅</span>}
-                        </div>
-                      )}
-                      {lead.leadSource && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>🌐</span>
-                          <span>{lead.leadSource}</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto', padding: '0' }}>
-                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
-                  <thead>
-                    <tr style={{ background: 'transparent' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'center', width: '50px' }}>
-                        <input
-                          type="checkbox"
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              setSelectedLeads(leads.map(l => l._id));
-                            } else {
-                              setSelectedLeads([]);
-                            }
-                          }}
-                          checked={selectedLeads.length === leads.length && leads.length > 0}
-                        />
-                      </th>
-                      {displayColumns.map((column) => (
-                        <th key={column} style={{
-                          padding: '12px 16px',
-                          textAlign: 'left',
-                          fontSize: '12px',
-                          fontWeight: '800',
-                          color: '#64748b',
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.5px',
-                          whiteSpace: 'nowrap'
-                        }}>
-                          {formatFieldName(column)}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leads.map((lead) => (
-                      <tr
-                        key={lead._id}
-                        onClick={(e) => { if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT') handleLeadClick(lead._id); }}
-                        style={{
-                          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          borderRadius: '12px',
-                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                          border: '2px solid #e5e7eb'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 144, 226, 0.15)';
-                          e.currentTarget.style.borderColor = '#4A90E2';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                        }}
-                      >
-                        <td style={{ padding: '16px', textAlign: 'center', borderTopLeftRadius: '12px', borderBottomLeftRadius: '12px' }} onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            checked={selectedLeads.includes(lead._id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedLeads(prev => [...prev, lead._id]);
-                              } else {
-                                setSelectedLeads(prev => prev.filter(id => id !== lead._id));
-                              }
-                            }}
-                          />
-                        </td>
-                        {displayColumns.map((column, index) => (
-                          <td key={column} style={{
-                            padding: '16px',
-                            maxWidth: '250px',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            ...(index === displayColumns.length - 1 && {
-                              borderTopRightRadius: '12px',
-                              borderBottomRightRadius: '12px'
-                            })
-                          }}>
-                            <span style={{
-                              fontSize: '14px',
-                              color: '#475569',
-                              fontWeight: '500'
-                            }}>
-                              {formatFieldValue(getFieldValue(lead, column))}
-                            </span>
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {pagination.pages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderTop: '2px solid #f1f5f9' }}>
-                <button
-                  className="crm-btn crm-btn-secondary"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                  disabled={pagination.page === 1}
-                >
-                  ← Previous
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginLeft: 'auto' }}>
+              {selectedLeads.length > 0 && (
+                <button className="crm-btn crm-btn-secondary" onClick={() => setShowAssignGroupModal(true)}>
+                  Assign {selectedLeads.length} to Group
                 </button>
-                <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>
-                  Page {pagination.page} of {pagination.pages}
-                </span>
-                <button
-                  className="crm-btn crm-btn-secondary"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page === pagination.pages}
-                >
-                  Next →
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          resetForm();
-          setError('');
-        }}
-        title="Create Lead"
-        size="large"
-      >
-        <form onSubmit={handleCreateLead}>
-          <div style={{ marginBottom: '24px', paddingBottom: '20px', borderBottom: '1px solid #E5E7EB' }}>
-            <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B7280', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Lead Image
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#F3F4F6', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px dashed #D1D5DB', overflow: 'hidden' }}>
-                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="12" cy="7" r="4"></circle>
-                </svg>
-              </div>
+              )}
+              {canImportLeads && <button className="crm-btn crm-btn-outline" onClick={() => setShowBulkUploadModal(true)}>Bulk Upload</button>}
+              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateModal(true); }}>+ New Lead</button>}
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Dynamic Form Sections - Rendered from Field Definitions */}
+      {/* Lead List */}
+      <div className="crm-card">
+        <div className="crm-card-header">
+          <h2 className="crm-card-title flex items-center gap-2">
+            <Target className="h-5 w-5" />
+            {viewMode === 'grid' ? 'Lead Cards' : 'Lead List'} ({pagination.total})
+          </h2>
+        </div>
+        <div className="p-4">
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : leads.length === 0 ? (
+            <div style={{ padding: '60px', textAlign: 'center' }}>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎯</div>
+              <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No leads found</p>
+              <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first lead to get started!</p>
+              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateModal(true); }}>+ Create First Lead</button>}
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {leads.map((lead) => (
+                <div key={lead._id} className="grid-card" onClick={() => handleLeadClick(lead._id)}>
+                  <div className="flex items-start gap-4 mb-4">
+                    <div className="avatar">
+                      {lead.firstName?.[0]}{lead.lastName?.[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-extrabold text-gray-800 text-lg truncate">{lead.firstName} {lead.lastName}</h3>
+                      <p className="text-sm text-gray-500 font-semibold truncate">{lead.jobTitle} {lead.company && `at ${lead.company}`}</p>
+                    </div>
+                    {canDeleteLead && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                        onClick={(e) => handleDeleteLead(e, lead._id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex gap-2 mb-4">
+                    <Badge variant={getStatusBadgeVariant(lead.leadStatus)}>{lead.leadStatus || 'New'}</Badge>
+                    {lead.rating && <Badge variant="outline">{lead.rating}</Badge>}
+                  </div>
+                  <div className="space-y-2 text-sm text-gray-600">
+                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-500" /><span className="truncate">{lead.email}</span></div>
+                    {lead.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-green-500" /><span>{lead.phone}</span></div>}
+                    {lead.leadSource && <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-purple-500" /><span>{lead.leadSource}</span></div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedLeads.length === leads.length && leads.length > 0}
+                      onCheckedChange={(checked) => setSelectedLeads(checked ? leads.map(l => l._id) : [])}
+                    />
+                  </TableHead>
+                  {displayColumns.map((column) => (
+                    <TableHead key={column}>{formatFieldName(column)}</TableHead>
+                  ))}
+                  {canDeleteLead && <TableHead className="w-16">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {leads.map((lead) => (
+                  <TableRow key={lead._id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleLeadClick(lead._id)}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedLeads.includes(lead._id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedLeads(checked ? [...selectedLeads, lead._id] : selectedLeads.filter(id => id !== lead._id));
+                        }}
+                      />
+                    </TableCell>
+                    {displayColumns.map((column) => (
+                      <TableCell key={column}>
+                        {column === 'leadStatus' ? (
+                          <Badge variant={getStatusBadgeVariant(lead.leadStatus)}>{lead.leadStatus || 'New'}</Badge>
+                        ) : (
+                          <span className="truncate max-w-[200px] block">{formatFieldValue(getFieldValue(lead, column))}</span>
+                        )}
+                      </TableCell>
+                    ))}
+                    {canDeleteLead && (
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                          onClick={(e) => handleDeleteLead(e, lead._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+
+          {/* Pagination */}
+          {pagination.pages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <Button variant="outline" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>
+                <ChevronLeft className="h-4 w-4 mr-1" />Previous
+              </Button>
+              <span className="text-sm font-bold text-gray-700">Page {pagination.page} of {pagination.pages}</span>
+              <Button variant="outline" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>
+                Next<ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Create Lead Modal */}
+      <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); resetForm(); }} title="Create Lead" size="large">
+        <form onSubmit={handleCreateLead} className="space-y-6">
           {(() => {
             const groupedFields = groupFieldsBySection(fieldDefinitions);
-            const sectionOrder = ['Basic Information', 'Lead Classification', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information'];
+            const sectionOrder = ['Basic Information', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information', 'Lead Details', 'Lead Classification'];
 
             return sectionOrder.map(sectionName => {
               const sectionFields = groupedFields[sectionName];
-              if (!sectionFields || sectionFields.length === 0) return null;
+              if (!sectionFields?.length) return null;
 
               return (
-                <div key={sectionName} style={{ marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {sectionName}
-                  </h4>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', alignItems: 'start' }}>
-                    {/* Show Lead Owner only in Basic Information section */}
+                <div key={sectionName}>
+                  <h4 className="text-sm font-semibold text-foreground mb-4 pb-2 border-b">{sectionName}</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {sectionName === 'Basic Information' && (
-                      <div style={{ gridColumn: 'span 2' }}>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">Lead Owner</label>
-                        <select className="crm-form-input" disabled style={{ background: '#F9FAFB' }}>
-                          <option>{user?.firstName} {user?.lastName}</option>
-                        </select>
+                      <div className="md:col-span-2">
+                        <Label>Lead Owner</Label>
+                        <Input value={`${user?.firstName} ${user?.lastName}`} disabled className="bg-muted" />
                       </div>
                     )}
-
-                    {sectionFields.map((field) => {
-                      const isFullWidth = field.fieldType === 'textarea' || field.fieldType === 'text' && field.fieldName === 'description';
-
-                      return (
-                        <div key={field._id} style={isFullWidth ? { gridColumn: 'span 2' } : {}}>
-                          {renderDynamicField(field)}
-                        </div>
-                      );
-                    })}
+                    {sectionFields.map((field) => (
+                      <div key={field._id} className={field.fieldType === 'textarea' ? 'md:col-span-2' : ''}>
+                        {renderDynamicField(field)}
+                      </div>
+                    ))}
                   </div>
                 </div>
               );
             });
           })()}
 
-          {/* Product Selection - Special Section */}
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Product Information
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '12px 16px', alignItems: 'center' }}>
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Product (Optional)</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <select
-                  name="product"
-                  className="crm-form-select"
-                  value={formData.product}
-                  onChange={handleChange}
-                  style={{ flex: 1 }}
-                >
+          {/* Product Selection */}
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-4 pb-2 border-b">Product Information</h4>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label>Product (Optional)</Label>
+                <select name="product" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={formData.product} onChange={handleChange}>
                   <option value="">-None-</option>
                   {products.map(product => (
-                    <option key={product._id} value={product._id}>
-                      {product.articleNumber} - {product.name}
-                    </option>
+                    <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
                   ))}
                 </select>
-                {canManageProducts && (
-                  <button
-                    type="button"
-                    className="crm-btn crm-btn-primary"
-                    onClick={openAddProductModal}
-                    style={{ whiteSpace: 'nowrap' }}
-                  >
-                    + Add Product
-                  </button>
-                )}
               </div>
+              {canManageProducts && (
+                <Button type="button" variant="outline" className="mt-6" onClick={() => { setShowCreateModal(false); setShowAddProductModal(true); }}>
+                  <Plus className="h-4 w-4 mr-1" />Add
+                </Button>
+              )}
             </div>
           </div>
 
-          {formData.product && (
-            <div style={{ gridColumn: 'span 4', marginTop: '16px', padding: '16px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #BFDBFE', marginBottom: '24px' }}>
-              <h5 style={{ fontSize: '13px', fontWeight: '700', color: '#1E40AF', marginBottom: '12px' }}>
-                📋 Product Requirements
-              </h5>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '12px 16px', alignItems: 'center' }}>
-                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Quantity</label>
-                <div>
-                  <input 
-                    type="number" 
-                    name="productDetails.quantity" 
-                    className="crm-form-input" 
-                    value={formData.productDetails.quantity} 
-                    onChange={handleChange}
-                    min="1"
-                    placeholder="1"
-                  />
-                </div>
-
-                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Priority</label>
-                <div>
-                  <select 
-                    name="productDetails.priority" 
-                    className="crm-form-select" 
-                    value={formData.productDetails.priority} 
-                    onChange={handleChange}
-                  >
-                    <option value="">-None-</option>
-                    <option value="Low">Low</option>
-                    <option value="Medium">Medium</option>
-                    <option value="High">High</option>
-                    <option value="Urgent">Urgent</option>
-                  </select>
-                </div>
-
-                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Estimated Budget</label>
-                <div style={{ gridColumn: 'span 3' }}>
-                  <input 
-                    type="number" 
-                    name="productDetails.estimatedBudget" 
-                    className="crm-form-input" 
-                    value={formData.productDetails.estimatedBudget} 
-                    onChange={handleChange}
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right', alignSelf: 'start', paddingTop: '8px' }}>Requirements</label>
-                <div style={{ gridColumn: 'span 3' }}>
-                  <textarea 
-                    name="productDetails.requirements" 
-                    className="crm-form-textarea" 
-                    rows="2"
-                    value={formData.productDetails.requirements} 
-                    onChange={handleChange}
-                    placeholder="e.g., Need custom reporting module, 24/7 support required"
-                  />
-                </div>
-
-                <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right', alignSelf: 'start', paddingTop: '8px' }}>Notes</label>
-                <div style={{ gridColumn: 'span 3' }}>
-                  <textarea 
-                    name="productDetails.notes" 
-                    className="crm-form-textarea" 
-                    rows="2"
-                    value={formData.productDetails.notes} 
-                    onChange={handleChange}
-                    placeholder="Additional notes or special requests"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Address Information
-            </h4>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr 140px 1fr', gap: '12px 16px', alignItems: 'start' }}>
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Flat/House No/<br/>Building/Apartment<br/>Name</label>
-              <div>
-                <input type="text" name="flatHouseNo" className="crm-form-input" value={formData.flatHouseNo} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Street Address</label>
-              <div>
-                <input type="text" name="street" className="crm-form-input" value={formData.street} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>City</label>
-              <div>
-                <input type="text" name="city" className="crm-form-input" value={formData.city} onChange={handleChange} />
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>State/Province</label>
-              <div>
-                <select name="state" className="crm-form-select" value={formData.state} onChange={handleChange}>
-                  <option value="">-None-</option>
-                  <option value="Delhi">Delhi</option>
-                  <option value="Maharashtra">Maharashtra</option>
-                  <option value="Karnataka">Karnataka</option>
-                  <option value="Tamil Nadu">Tamil Nadu</option>
-                  <option value="Gujarat">Gujarat</option>
-                </select>
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Country/Region</label>
-              <div>
-                <select name="country" className="crm-form-select" value={formData.country} onChange={handleChange}>
-                  <option value="">-None-</option>
-                  <option value="India">India</option>
-                  <option value="United States">United States</option>
-                  <option value="United Kingdom">United Kingdom</option>
-                  <option value="Canada">Canada</option>
-                  <option value="Australia">Australia</option>
-                  <option value="Germany">Germany</option>
-                  <option value="France">France</option>
-                </select>
-              </div>
-
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right' }}>Zip/Postal Code</label>
-              <div>
-                <input type="text" name="zipCode" className="crm-form-input" value={formData.zipCode} onChange={handleChange} />
-              </div>
-            </div>
-          </div>
-
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Description Information
-            </h4>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: '12px 16px', alignItems: 'start' }}>
-              <label style={{ fontSize: '13px', color: '#374151', textAlign: 'right', paddingTop: '8px' }}>Description</label>
-              <div>
-                <textarea name="description" className="crm-form-textarea" rows="4" value={formData.description} onChange={handleChange} style={{ resize: 'vertical' }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Submit Buttons */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB', marginTop: '20px' }}>
-            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => { setShowCreateModal(false); resetForm(); setError(''); }}>
-              Cancel
-            </button>
-            <button type="submit" className="crm-btn crm-btn-primary">
-              Save
-            </button>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => { setShowCreateModal(false); resetForm(); }}>Cancel</Button>
+            <Button type="submit">Save</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal
-        isOpen={showAddProductModal}
-        onClose={closeAddProductModal}
-        title="Add New Product"
-        size="medium"
-      >
-        <form onSubmit={handleCreateProductFromLead}>
-          <div style={{ marginBottom: '16px', padding: '12px', background: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-            <p style={{ fontSize: '13px', color: '#1E40AF', margin: 0 }}>
-              💡 <strong></strong> Create a new product 
-            </p>
+      {/* Add Product Modal */}
+      <Modal isOpen={showAddProductModal} onClose={() => { setShowAddProductModal(false); setShowCreateModal(true); }} title="Add New Product" size="medium">
+        <form onSubmit={handleCreateProductFromLead} className="space-y-4">
+          <div>
+            <Label>Product Name *</Label>
+            <Input name="name" value={productFormData.name} onChange={handleProductFormChange} required placeholder="e.g., CRM Software License" />
           </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-              Product Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              className="crm-form-input"
-              value={productFormData.name}
-              onChange={handleProductFormChange}
-              required
-              placeholder="e.g., CRM Software License"
-            />
+          <div>
+            <Label>Article Number *</Label>
+            <Input name="articleNumber" value={productFormData.articleNumber} onChange={handleProductFormChange} required placeholder="e.g., CRM-001" />
           </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-              Article Number  *
-            </label>
-            <input
-              type="text"
-              name="articleNumber"
-              className="crm-form-input"
-              value={productFormData.articleNumber}
-              onChange={handleProductFormChange}
-              required
-              placeholder="e.g., CRM-001"
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-              Category *
-            </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <select
-                name="category"
-                className="crm-form-select"
-                value={productFormData.category}
-                onChange={handleProductFormChange}
-                required
-                style={{ flex: 1 }}
-              >
+          <div>
+            <Label>Category *</Label>
+            <div className="flex gap-2">
+              <select name="category" className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={productFormData.category} onChange={handleProductFormChange} required>
                 <option value="">Select Category</option>
-                {categories.map(cat => (
-                  <option key={cat._id} value={cat.name}>{cat.name}</option>
-                ))}
+                {categories.map(cat => <option key={cat._id} value={cat.name}>{cat.name}</option>)}
               </select>
-              <button
-                type="button"
-                className="crm-btn crm-btn-secondary"
-                onClick={openCreateCategoryModal}
-                title="Create New Category"
-              >
-                ➕
-              </button>
+              <Button type="button" variant="outline" onClick={() => { setShowAddProductModal(false); setShowCreateCategoryModal(true); }}><Plus className="h-4 w-4" /></Button>
             </div>
-            <p style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>
-              Don't see your category? Click ➕ to create a new one
-            </p>
           </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+          <div className="grid grid-cols-2 gap-4">
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                Price *
-              </label>
-              <input
-                type="number"
-                name="price"
-                className="crm-form-input"
-                value={productFormData.price}
-                onChange={handleProductFormChange}
-                required
-                min="0"
-                step="0.01"
-                placeholder="0.00"
-              />
+              <Label>Price *</Label>
+              <Input name="price" type="number" value={productFormData.price} onChange={handleProductFormChange} required min="0" step="0.01" placeholder="0.00" />
             </div>
             <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                Stock (Optional)
-              </label>
-              <input
-                type="number"
-                name="stock"
-                className="crm-form-input"
-                value={productFormData.stock}
-                onChange={handleProductFormChange}
-                min="0"
-                placeholder="0"
-              />
+              <Label>Stock</Label>
+              <Input name="stock" type="number" value={productFormData.stock} onChange={handleProductFormChange} min="0" placeholder="0" />
             </div>
           </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-              Description (Optional)
-            </label>
-            <textarea
-              name="description"
-              className="crm-form-input"
-              value={productFormData.description}
-              onChange={handleProductFormChange}
-              rows="3"
-              placeholder="Product description..."
-            />
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
-            <button
-              type="button"
-              className="crm-btn crm-btn-secondary"
-              onClick={closeAddProductModal}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="crm-btn crm-btn-primary">
-              Create & Select Product
-            </button>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => { setShowAddProductModal(false); setShowCreateModal(true); }}>Cancel</Button>
+            <Button type="submit">Create & Select</Button>
           </div>
         </form>
       </Modal>
 
+      {/* Create Category Modal */}
+      <Modal isOpen={showCreateCategoryModal} onClose={() => { setShowCreateCategoryModal(false); setShowAddProductModal(true); }} title="Create New Category" size="small">
+        <form onSubmit={handleCreateCategory} className="space-y-4">
+          <div>
+            <Label>Category Name *</Label>
+            <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} required placeholder="e.g., Software, Hardware" />
+          </div>
+          <div className="flex justify-end gap-3 pt-4 border-t">
+            <Button type="button" variant="outline" onClick={() => { setShowCreateCategoryModal(false); setShowAddProductModal(true); }}>Cancel</Button>
+            <Button type="submit">Create</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Bulk Upload Modal */}
       {showBulkUploadModal && (
         <Modal isOpen={showBulkUploadModal} onClose={() => setShowBulkUploadModal(false)} title="Bulk Upload Leads" size="large">
           <BulkUploadForm onClose={() => setShowBulkUploadModal(false)} onSuccess={loadLeads} />
         </Modal>
       )}
 
-      {/* 🆕 Assign to Group Modal - With Member Selection */}
-      {showAssignGroupModal && (
-        <Modal
-          isOpen={showAssignGroupModal}
-          onClose={() => {
-            setShowAssignGroupModal(false);
-            setSelectedGroupForAssignment(null);
-            setGroupMembers([]);
-            setSelectedMembers([]);
-          }}
-          title="Assign Leads to Group"
-          size="medium"
-        >
-          <div style={{ padding: '20px' }}>
-            <p style={{ marginBottom: '20px', color: '#64748b', fontWeight: '600' }}>
-              📋 Assigning {selectedLeads.length} selected lead{selectedLeads.length > 1 ? 's' : ''}
-            </p>
+      {/* Assign Group Modal */}
+      <Modal
+        isOpen={showAssignGroupModal}
+        onClose={() => { setShowAssignGroupModal(false); setSelectedGroupForAssignment(null); setGroupMembers([]); setSelectedMembers([]); }}
+        title="Assign Leads to Group"
+        size="medium"
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-muted-foreground">Assigning {selectedLeads.length} selected lead{selectedLeads.length > 1 ? 's' : ''}</p>
 
-            {/* Step 1: Select Group */}
-            {!selectedGroupForAssignment ? (
-              <div>
-                <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#111827', marginBottom: '12px' }}>
-                  Step 1: Select Group
-                </h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {groups.map((group) => (
-                    <button
-                      key={group._id}
-                      onClick={() => handleGroupSelection(group._id)}
-                      className="crm-btn crm-btn-secondary"
-                      style={{
-                        justifyContent: 'flex-start',
-                        padding: '16px 20px',
-                        fontSize: '15px',
-                        backgroundColor: '#ffffff',
-                        border: '2px solid #e5e7eb',
-                        color: '#1e293b',
-                        transition: 'all 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.borderColor = '#4A90E2';
-                        e.currentTarget.style.backgroundColor = '#f8fafc';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                        e.currentTarget.style.backgroundColor = '#ffffff';
-                      }}
-                    >
-                      <span style={{ fontWeight: '600' }}>{group.name}</span>
-                      {group.category && (
-                        <span style={{
-                          marginLeft: '12px',
-                          fontSize: '12px',
-                          padding: '4px 12px',
-                          backgroundColor: '#f1f5f9',
-                          borderRadius: '6px',
-                          color: '#64748b'
-                        }}>
-                          {group.category}
-                        </span>
-                      )}
-                    </button>
-                  ))}
-                  {groups.length === 0 && (
-                    <p style={{ textAlign: 'center', color: '#64748b', padding: '20px' }}>
-                      No groups available. Please create a group first.
-                    </p>
-                  )}
-                </div>
+          {!selectedGroupForAssignment ? (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold">Step 1: Select Group</h4>
+              {groups.map((group) => (
+                <Button key={group._id} variant="outline" className="w-full justify-start" onClick={() => handleGroupSelection(group._id)}>
+                  {group.name}
+                  {group.category && <Badge variant="secondary" className="ml-2">{group.category}</Badge>}
+                </Button>
+              ))}
+              {groups.length === 0 && <p className="text-center text-muted-foreground py-4">No groups available.</p>}
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">Step 2: Select Members</h4>
+                <Button variant="ghost" size="sm" onClick={() => { setSelectedGroupForAssignment(null); setGroupMembers([]); setSelectedMembers([]); }}>
+                  <ChevronLeft className="h-4 w-4 mr-1" />Back
+                </Button>
               </div>
-            ) : (
-              /* Step 2: Select Members */
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                  <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#111827', margin: 0 }}>
-                    Step 2: Select Members
-                  </h4>
-                  <button
-                    onClick={() => {
-                      setSelectedGroupForAssignment(null);
-                      setGroupMembers([]);
-                      setSelectedMembers([]);
-                    }}
-                    className="crm-btn crm-btn-secondary"
-                    style={{ fontSize: '12px', padding: '6px 12px' }}
-                  >
-                    ← Back to Groups
-                  </button>
-                </div>
 
-                {groupMembers.length > 0 ? (
-                  <>
-                    <div style={{
-                      padding: '12px 16px',
-                      backgroundColor: '#EFF6FF',
-                      borderRadius: '8px',
-                      marginBottom: '16px',
-                      border: '1px solid #BFDBFE'
-                    }}>
-                      <p style={{ fontSize: '13px', color: '#1E40AF', margin: 0 }}>
-                        💡 <strong>Tip:</strong> Select specific members to assign leads to, or keep all selected to assign to everyone in the group.
-                      </p>
-                    </div>
-
-                    {/* Select All / Deselect All Buttons */}
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-                      <button
-                        onClick={() => setSelectedMembers(groupMembers.map(m => m._id))}
-                        className="crm-btn crm-btn-secondary"
-                        style={{ fontSize: '12px', padding: '6px 12px' }}
-                      >
-                        ✓ Select All ({groupMembers.length})
-                      </button>
-                      <button
-                        onClick={() => setSelectedMembers([])}
-                        className="crm-btn crm-btn-secondary"
-                        style={{ fontSize: '12px', padding: '6px 12px' }}
-                      >
-                        ✗ Deselect All
-                      </button>
-                    </div>
-
-                    {/* Member List with Checkboxes */}
-                    <div style={{
-                      maxHeight: '300px',
-                      overflowY: 'auto',
-                      border: '2px solid #e5e7eb',
-                      borderRadius: '8px',
-                      padding: '12px'
-                    }}>
-                      {groupMembers.map((member) => (
-                        <label
-                          key={member._id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            padding: '12px',
-                            backgroundColor: selectedMembers.includes(member._id) ? '#F0F9FF' : '#ffffff',
-                            border: `2px solid ${selectedMembers.includes(member._id) ? '#4A90E2' : '#e5e7eb'}`,
-                            borderRadius: '8px',
-                            marginBottom: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
-                          onMouseEnter={(e) => {
-                            if (!selectedMembers.includes(member._id)) {
-                              e.currentTarget.style.backgroundColor = '#f8fafc';
-                            }
-                          }}
-                          onMouseLeave={(e) => {
-                            if (!selectedMembers.includes(member._id)) {
-                              e.currentTarget.style.backgroundColor = '#ffffff';
-                            }
-                          }}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={selectedMembers.includes(member._id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedMembers(prev => [...prev, member._id]);
-                              } else {
-                                setSelectedMembers(prev => prev.filter(id => id !== member._id));
-                              }
-                            }}
-                            style={{ marginRight: '12px', width: '18px', height: '18px', cursor: 'pointer' }}
-                          />
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '14px' }}>
-                              {member.firstName} {member.lastName}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                              {member.email}
-                            </div>
-                          </div>
-                          {member.userType && (
-                            <span style={{
-                              fontSize: '11px',
-                              padding: '4px 8px',
-                              backgroundColor: '#f1f5f9',
-                              borderRadius: '4px',
-                              color: '#64748b',
-                              textTransform: 'uppercase'
-                            }}>
-                              {member.userType.replace('TENANT_', '')}
-                            </span>
-                          )}
-                        </label>
-                      ))}
-                    </div>
-
-                    {/* Assign Button */}
-                    <div style={{
-                      marginTop: '20px',
-                      paddingTop: '20px',
-                      borderTop: '2px solid #e5e7eb',
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center'
-                    }}>
-                      <div style={{ fontSize: '13px', color: '#64748b' }}>
-                        {selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected
-                      </div>
-                      <button
-                        onClick={handleBulkAssignToGroup}
-                        className="crm-btn crm-btn-primary"
-                        disabled={selectedMembers.length === 0}
-                        style={{
-                          opacity: selectedMembers.length === 0 ? 0.5 : 1,
-                          cursor: selectedMembers.length === 0 ? 'not-allowed' : 'pointer'
-                        }}
-                      >
-                        Assign to {selectedMembers.length} Member{selectedMembers.length !== 1 ? 's' : ''}
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
-                    <div style={{ fontSize: '48px', marginBottom: '12px' }}>👥</div>
-                    <p>No members found in this group.</p>
+              {groupMembers.length > 0 ? (
+                <>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedMembers(groupMembers.map(m => m._id))}>Select All</Button>
+                    <Button variant="outline" size="sm" onClick={() => setSelectedMembers([])}>Deselect All</Button>
                   </div>
-                )}
-              </div>
-            )}
-          </div>
-        </Modal>
-      )}
-
-      {/* Create Category Modal */}
-      {showCreateCategoryModal && (
-        <Modal
-          isOpen={showCreateCategoryModal}
-          onClose={closeCreateCategoryModal}
-          title="Create New Category"
-          size="small"
-        >
-          <form onSubmit={handleCreateCategory}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                Category Name *
-              </label>
-              <input
-                type="text"
-                className="crm-form-input"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                required
-                placeholder="e.g., Software, Hardware, Services"
-                autoFocus
-              />
+                  <div className="max-h-64 overflow-y-auto space-y-2 border rounded-md p-2">
+                    {groupMembers.map((member) => (
+                      <label key={member._id} className={`flex items-center gap-3 p-3 rounded-md cursor-pointer border ${selectedMembers.includes(member._id) ? 'bg-primary/5 border-primary' : 'hover:bg-muted'}`}>
+                        <Checkbox checked={selectedMembers.includes(member._id)} onCheckedChange={(checked) => {
+                          setSelectedMembers(checked ? [...selectedMembers, member._id] : selectedMembers.filter(id => id !== member._id));
+                        }} />
+                        <div className="flex-1">
+                          <p className="font-medium text-sm">{member.firstName} {member.lastName}</p>
+                          <p className="text-xs text-muted-foreground">{member.email}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between pt-4 border-t">
+                    <span className="text-sm text-muted-foreground">{selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected</span>
+                    <Button onClick={handleBulkAssignToGroup} disabled={selectedMembers.length === 0}>Assign</Button>
+                  </div>
+                </>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No members in this group.</p>
+              )}
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
-              <button
-                type="button"
-                className="crm-btn crm-btn-secondary"
-                onClick={closeCreateCategoryModal}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="crm-btn crm-btn-primary">
-                Create Category
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+          )}
+        </div>
+      </Modal>
     </DashboardLayout>
   );
 };

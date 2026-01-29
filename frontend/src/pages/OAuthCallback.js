@@ -32,9 +32,6 @@ const OAuthCallback = () => {
 
       // Fetch user data using API_URL
       try {
-        console.log('🔍 Fetching user data from:', `${API_URL}/auth/me`);
-        console.log('🔑 Token:', token);
-
         const response = await fetch(`${API_URL}/auth/me`, {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -42,32 +39,24 @@ const OAuthCallback = () => {
           }
         });
 
-        console.log('📥 Response status:', response.status);
-
         if (response.ok) {
           const result = await response.json();
-          console.log('✅ User data received:', result);
-
-          const userData = result.data || result; // Handle both wrapped and unwrapped responses
+          const userData = result.data || result;
 
           // Update auth context
           setUser(userData);
 
           // Check if profile completion is required
           if (requiresProfileCompletion || !userData.isProfileComplete) {
-            console.log('➡️ Redirecting to complete-profile');
             navigate('/complete-profile');
           } else {
-            console.log('➡️ Redirecting to dashboard');
             navigate('/dashboard');
           }
         } else {
           const errorData = await response.json().catch(() => ({}));
-          console.error('❌ Response not ok:', response.status, errorData);
           throw new Error(`Failed to fetch user data: ${errorData.message || response.statusText}`);
         }
       } catch (err) {
-        console.error('❌ OAuth callback error:', err);
         setError('Failed to complete authentication. Please try logging in again.');
         localStorage.removeItem('token');
         setTimeout(() => navigate('/login'), 3000);

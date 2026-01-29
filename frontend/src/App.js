@@ -71,6 +71,7 @@ import QuotationForm from './pages/QuotationForm';
 import QuotationDetail from './pages/QuotationDetail';
 import Invoices from './pages/Invoices';
 import InvoiceDetail from './pages/InvoiceDetail';
+import InvoiceForm from './pages/InvoiceForm';
 
 // RFI & Purchase Order Pages
 import RFIs from './pages/RFIs';
@@ -316,6 +317,16 @@ function AppRoutes() {
 <Route path="/invoices" element={
   <ProtectedRoute>
     <Invoices />
+  </ProtectedRoute>
+} />
+<Route path="/invoices/new" element={
+  <ProtectedRoute>
+    <InvoiceForm />
+  </ProtectedRoute>
+} />
+<Route path="/invoices/:id/edit" element={
+  <ProtectedRoute>
+    <InvoiceForm />
   </ProtectedRoute>
 } />
 <Route path="/invoices/:id" element={

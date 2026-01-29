@@ -1,58 +1,32 @@
-import React, { useEffect } from 'react';
-import Portal from './Portal';
-import '../../styles/modal.css';
+import React from 'react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '../ui/dialog';
+import { cn } from '../../lib/utils';
 
 const Modal = ({ isOpen, onClose, title, children, size = 'medium' }) => {
-  // Lock body scroll when modal is open
-  useEffect(() => {
-    if (isOpen) {
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = 'unset';
-      };
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  const sizeClasses = {
+    small: 'max-w-md',
+    medium: 'max-w-lg',
+    large: 'max-w-2xl',
+    xlarge: 'max-w-4xl',
+    full: 'max-w-6xl',
+  };
 
   return (
-    <Portal>
-      <div
-        className="modal-overlay"
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 999999,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          isolation: 'isolate'
-        }}
-      >
-        <div
-          className={`modal-content modal-${size}`}
-          onClick={(e) => e.stopPropagation()}
-          style={{
-            position: 'relative',
-            zIndex: 1000000
-          }}
-        >
-          <div className="modal-header">
-            <h2>{title}</h2>
-            <button className="modal-close" onClick={onClose}>
-              &times;
-            </button>
-          </div>
-          <div className="modal-body">
-            {children}
-          </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className={cn(sizeClasses[size] || sizeClasses.medium, "max-h-[90vh] overflow-y-auto")}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <div className="mt-4">
+          {children}
         </div>
-      </div>
-    </Portal>
+      </DialogContent>
+    </Dialog>
   );
 };
 

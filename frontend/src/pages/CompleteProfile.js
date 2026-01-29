@@ -28,6 +28,7 @@ const CompleteProfile = () => {
   const [logoPreview, setLogoPreview] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingStatus, setLoadingStatus] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const handleChange = (e) => {
@@ -102,15 +103,34 @@ const CompleteProfile = () => {
     if (!validateStep(currentStep)) return;
 
     setLoading(true);
+    setLoadingStatus('Creating your organization...');
 
     try {
+      // Show progress messages
+      const statusMessages = [
+        'Creating your organization...',
+        'Setting up your workspace...',
+        'Configuring CRM modules...',
+        'Almost done...'
+      ];
+
+      let messageIndex = 0;
+      const statusInterval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % statusMessages.length;
+        setLoadingStatus(statusMessages[messageIndex]);
+      }, 1500);
+
       await completeProfile(formData);
+
+      clearInterval(statusInterval);
+      setLoadingStatus('');
       setShowSuccessModal(true);
       // Auto redirect after 3 seconds
       setTimeout(() => {
         navigate('/dashboard');
       }, 3000);
     } catch (err) {
+      setLoadingStatus('');
       setError(err.response?.data?.message || 'Failed to complete profile. Please try again.');
     } finally {
       setLoading(false);
@@ -797,6 +817,106 @@ const CompleteProfile = () => {
           </div>
         </form>
       </div>
+
+      {/* Loading Overlay */}
+      {loading && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.7)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9998,
+          animation: 'fadeIn 0.3s ease'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '20px',
+            padding: '40px 50px',
+            textAlign: 'center',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3)',
+            maxWidth: '400px'
+          }}>
+            {/* Spinner */}
+            <div style={{
+              width: '70px',
+              height: '70px',
+              border: '4px solid #e5e7eb',
+              borderTop: '4px solid #5db9de',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite',
+              margin: '0 auto 24px'
+            }}></div>
+            <style>
+              {`
+                @keyframes spin {
+                  0% { transform: rotate(0deg); }
+                  100% { transform: rotate(360deg); }
+                }
+              `}
+            </style>
+
+            <h3 style={{
+              fontSize: '20px',
+              fontWeight: '700',
+              color: '#1f2937',
+              marginBottom: '12px'
+            }}>
+              Setting Up Your CRM
+            </h3>
+
+            <p style={{
+              fontSize: '15px',
+              color: '#5db9de',
+              fontWeight: '600',
+              marginBottom: '8px',
+              minHeight: '24px'
+            }}>
+              {loadingStatus}
+            </p>
+
+            <p style={{
+              fontSize: '13px',
+              color: '#9ca3af',
+              margin: 0
+            }}>
+              Please wait, this will only take a moment...
+            </p>
+
+            {/* Progress dots */}
+            <div style={{
+              display: 'flex',
+              justifyContent: 'center',
+              gap: '8px',
+              marginTop: '20px'
+            }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: '#5db9de',
+                  animation: `pulse 1.5s ease-in-out infinite`,
+                  animationDelay: `${i * 0.2}s`
+                }}></div>
+              ))}
+            </div>
+            <style>
+              {`
+                @keyframes pulse {
+                  0%, 100% { opacity: 0.3; transform: scale(1); }
+                  50% { opacity: 1; transform: scale(1.2); }
+                }
+              `}
+            </style>
+          </div>
+        </div>
+      )}
 
       {/* Success Modal */}
       {showSuccessModal && (

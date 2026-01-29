@@ -32,31 +32,22 @@ const login = async (req, res) => {
       return errorResponse(res, 400, 'Please provide email and password');
     }
 
-    console.log('🔐 Login attempt for:', email);
-
     // Find user
     const user = await User.findOne({ email }).populate('roles').populate('tenant');
 
     if (!user) {
-      console.log('❌ User not found:', email);
       return errorResponse(res, 401, 'Invalid credentials');
     }
-
-    console.log('✅ User found:', user.email, '| Type:', user.userType);
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
 
     if (!isPasswordValid) {
-      console.log('❌ Invalid password for:', email);
       return errorResponse(res, 401, 'Invalid credentials');
     }
 
-    console.log('✅ Password valid for:', email);
-
     // Check if user is active
     if (!user.isActive) {
-      console.log('❌ User inactive:', email);
       return errorResponse(res, 401, 'Account is deactivated');
     }
 
@@ -84,14 +75,11 @@ const login = async (req, res) => {
       user._id
     );
 
-    console.log('✅ Login successful for:', email);
-
     successResponse(res, 200, 'Login successful', {
       token,
       user: userResponse
     });
   } catch (error) {
-    console.error('Login error:', error);
     errorResponse(res, 500, 'Server error during login');
   }
 };
@@ -115,7 +103,6 @@ const registerTenant = async (req, res) => {
       resellerId
     } = req.body;
 
-    console.log('📝 Registration attempt:', { organizationName, adminEmail, resellerId });
 
     // Validation
     if (!organizationName || !slug || !contactEmail || !adminFirstName || !adminLastName || !adminEmail || !adminPassword) {
@@ -140,9 +127,6 @@ const registerTenant = async (req, res) => {
     const SubscriptionPlan = require('../models/SubscriptionPlan');
     const freePlan = await SubscriptionPlan.findOne({ name: 'Free', isActive: true });
     
-    if (!freePlan) {
-      console.log('⚠️ Free plan not found, using defaults');
-    }
 
     // Calculate trial end date
     const trialEndDate = new Date();
@@ -194,26 +178,20 @@ const registerTenant = async (req, res) => {
       isActive: true
     });
 
-    console.log('✅ Tenant created:', tenant.organizationName, tenant._id);
-
     // ============================================
     // 🚀 RESELLER INTEGRATION
     // ============================================
     if (resellerId) {
       try {
         const reseller = await Reseller.findById(resellerId);
-        
+
         if (reseller && reseller.status === 'approved') {
           tenant.reseller = reseller._id;
           tenant.commissionRate = reseller.commissionRate;
           await tenant.save();
-          
-          console.log(`✅ Tenant ${organizationName} linked to reseller ${reseller.firstName} ${reseller.lastName}`);
-        } else {
-          console.log('⚠️ Reseller not found or not approved:', resellerId);
         }
       } catch (resellerError) {
-        console.error('Reseller linking error:', resellerError);
+        // Silently fail - reseller linking is non-critical
       }
     }
 
@@ -250,7 +228,6 @@ const registerTenant = async (req, res) => {
       isActive: true
     });
 
-    console.log(`✅ Created tenant admin role for ${organizationName}`);
 
     // ============================================
     // 🔧 FIX: CREATE ADMIN USER WITH PROPER PASSWORD HANDLING
@@ -270,21 +247,14 @@ const registerTenant = async (req, res) => {
     
     await adminUser.save();
 
-    console.log('✅ Admin user created:', adminUser.email);
-    console.log('🔐 Password hash exists:', adminUser.password ? 'YES' : 'NO');
-    console.log('🔐 Password length:', adminUser.password?.length);
-
     // Verify password works immediately after creation
     const passwordVerify = await adminUser.comparePassword(adminPassword);
-    console.log('🔐 Password verification test:', passwordVerify ? 'PASS ✅' : 'FAIL ❌');
 
     if (!passwordVerify) {
-      console.error('❌ CRITICAL: Password verification failed after user creation!');
       // Try to fix by rehashing
       const salt = await bcrypt.genSalt(10);
       adminUser.password = await bcrypt.hash(adminPassword, salt);
       await adminUser.save({ validateBeforeSave: false });
-      console.log('🔧 Password manually rehashed');
     }
 
     await adminUser.populate('roles');
@@ -292,7 +262,6 @@ const registerTenant = async (req, res) => {
     // ============================================
     // 🎯 SEED STANDARD FIELDS FOR ALL ENTITIES
     // ============================================
-    console.log('📋 Creating standard fields for Lead, Contact, Account, Product...');
     await seedStandardFields(tenant._id, adminUser._id);
 
     // Generate token
@@ -301,8 +270,6 @@ const registerTenant = async (req, res) => {
     // Remove password from response
     const userResponse = adminUser.toObject();
     delete userResponse.password;
-
-    console.log('✅ Registration complete for:', adminEmail);
 
     successResponse(res, 201, 'Registration successful! Your 15-day free trial has started.', {
       token,
@@ -320,7 +287,6 @@ const registerTenant = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Tenant registration error:', error);
     errorResponse(res, 500, 'Server error during registration');
   }
 };
@@ -395,15 +361,11 @@ const forgotPassword = async (req, res) => {
 
     try {
       await sendPasswordResetOTP(user.email, otp, `${user.firstName} ${user.lastName}`);
-      console.log('✅ OTP sent to:', user.email);
-      console.log('🔢 OTP (for testing):', otp);
-
       successResponse(res, 200, 'OTP sent to your email', {
         message: 'Please check your email for the OTP code.',
         email: user.email
       });
     } catch (emailError) {
-      console.error('❌ OTP email failed:', emailError);
       user.resetPasswordOTP = undefined;
       user.resetPasswordOTPExpire = undefined;
       await user.save();

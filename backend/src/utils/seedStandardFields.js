@@ -126,51 +126,46 @@ const getStandardFields = (entityType) => {
 };
 
 /**
- * Seed standard fields for a tenant
+ * Seed standard fields for a tenant - OPTIMIZED with bulk insert
  * Called automatically during tenant registration
  */
 const seedStandardFields = async (tenantId, userId) => {
   try {
-    console.log(`📋 Seeding standard fields for tenant ${tenantId}...`);
-
     const entityTypes = ['Lead', 'Contact', 'Account', 'Product'];
-    let totalCreated = 0;
+
+    // Build all field documents at once
+    const allFieldDocs = [];
 
     for (const entityType of entityTypes) {
       const fields = getStandardFields(entityType);
 
       for (const fieldConfig of fields) {
-        // Check if field already exists
-        const existing = await FieldDefinition.findOne({
+        allFieldDocs.push({
+          ...fieldConfig,
           tenant: tenantId,
           entityType,
-          fieldName: fieldConfig.fieldName
+          isStandardField: true,
+          isActive: true,
+          showInDetail: true,
+          showInCreate: true,
+          showInEdit: true,
+          createdBy: userId
         });
-
-        if (!existing) {
-          await FieldDefinition.create({
-            ...fieldConfig,
-            tenant: tenantId,
-            entityType,
-            isStandardField: true,
-            isActive: true,
-            showInDetail: true,
-            showInCreate: true,
-            showInEdit: true,
-            createdBy: userId
-          });
-          totalCreated++;
-        }
       }
-
-      console.log(`  ✅ ${entityType}: ${fields.length} fields`);
     }
 
-    console.log(`✅ Created ${totalCreated} standard field definitions`);
-    return { success: true, created: totalCreated };
+    // Single bulk insert operation (instead of 100+ individual queries)
+    if (allFieldDocs.length > 0) {
+      await FieldDefinition.insertMany(allFieldDocs, { ordered: false });
+    }
+
+    return { success: true, created: allFieldDocs.length };
 
   } catch (error) {
-    console.error('❌ Error seeding standard fields:', error);
+    // Handle duplicate key errors gracefully (fields may already exist)
+    if (error.code === 11000) {
+      return { success: true, created: 0, note: 'Fields already exist' };
+    }
     return { success: false, error: error.message };
   }
 };

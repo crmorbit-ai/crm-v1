@@ -769,6 +769,109 @@ const uploadCandidatesFile = async (req, res) => {
         // 🔥 FULLY DYNAMIC MAPPING - All Excel columns are saved directly at root level
         const systemFields = ['tenant', 'status', 'movedToLeadsAt', 'movedBy', 'movedToTenant', 'leadId', 'importedBy', 'importedAt', 'dataSource', 'isActive', '_id', '__v', 'createdAt', 'updatedAt'];
 
+        // 🔧 Field name normalization mapping - converts common CSV headers to standard field names
+        const fieldNameMapping = {
+          // Name fields
+          'first name': 'firstName',
+          'firstname': 'firstName',
+          'first_name': 'firstName',
+          'fname': 'firstName',
+          'last name': 'lastName',
+          'lastname': 'lastName',
+          'last_name': 'lastName',
+          'lname': 'lastName',
+          'full name': 'fullName',
+          'fullname': 'fullName',
+          'name': 'fullName',
+
+          // Contact fields
+          'email': 'email',
+          'e-mail': 'email',
+          'email address': 'email',
+          'emailaddress': 'email',
+          'phone': 'phone',
+          'phone number': 'phone',
+          'phonenumber': 'phone',
+          'mobile': 'phone',
+          'mobile number': 'phone',
+          'contact': 'phone',
+          'contact number': 'phone',
+
+          // Company fields
+          'company': 'company',
+          'company name': 'company',
+          'companyname': 'company',
+          'organization': 'company',
+          'organisation': 'company',
+          'org': 'company',
+
+          // Job fields
+          'job title': 'jobTitle',
+          'jobtitle': 'jobTitle',
+          'job_title': 'jobTitle',
+          'title': 'jobTitle',
+          'designation': 'jobTitle',
+          'position': 'jobTitle',
+          'role': 'jobTitle',
+
+          // Address fields
+          'city': 'city',
+          'state': 'state',
+          'country': 'country',
+          'address': 'address',
+          'street': 'street',
+          'zip': 'zip',
+          'zipcode': 'zip',
+          'zip code': 'zip',
+          'pincode': 'zip',
+          'pin code': 'zip',
+
+          // Business fields
+          'website': 'website',
+          'web': 'website',
+          'url': 'website',
+          'industry': 'industry',
+          'sector': 'industry',
+          'revenue': 'annualRevenue',
+          'annual revenue': 'annualRevenue',
+          'employees': 'numberOfEmployees',
+          'no of employees': 'numberOfEmployees',
+          'number of employees': 'numberOfEmployees',
+
+          // Other common fields
+          'description': 'description',
+          'notes': 'notes',
+          'comments': 'notes',
+          'source': 'leadSource',
+          'lead source': 'leadSource',
+          'status': 'leadStatus',
+          'lead status': 'leadStatus',
+          'rating': 'rating'
+        };
+
+        // Function to normalize field name
+        const normalizeFieldName = (csvColumn) => {
+          const lowerColumn = csvColumn.toLowerCase().trim();
+
+          // Check if we have a direct mapping
+          if (fieldNameMapping[lowerColumn]) {
+            return fieldNameMapping[lowerColumn];
+          }
+
+          // If no mapping found, convert to camelCase
+          // "First Name" -> "firstName", "COMPANY NAME" -> "companyName"
+          return csvColumn
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special chars
+            .split(/\s+/) // Split by whitespace
+            .map((word, index) => {
+              if (index === 0) return word.toLowerCase();
+              return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+            })
+            .join('');
+        };
+
         // Map CSV/Excel columns to model fields - ALL columns become database fields
         const candidates = rawData.map((row, index) => {
           const candidate = {};
@@ -783,8 +886,8 @@ const uploadCandidatesFile = async (req, res) => {
             // Skip system fields that shouldn't come from Excel
             if (systemFields.includes(csvColumn)) return;
 
-            // Clean column name (remove extra spaces, special characters)
-            const cleanColumnName = csvColumn.trim();
+            // 🔧 Normalize field name to camelCase standard
+            const cleanColumnName = normalizeFieldName(csvColumn);
 
             // Smart type detection and conversion
             // Check if value looks like a number
@@ -818,8 +921,37 @@ const uploadCandidatesFile = async (req, res) => {
           return candidate;
         });
 
+        // 🔧 Post-process: Handle fullName split into firstName/lastName
+        const processedCandidates = candidates.map(candidate => {
+          // If fullName exists but firstName/lastName don't, split fullName
+          if (candidate.fullName && !candidate.firstName && !candidate.lastName) {
+            const nameParts = candidate.fullName.trim().split(/\s+/);
+            if (nameParts.length >= 2) {
+              candidate.firstName = nameParts[0];
+              candidate.lastName = nameParts.slice(1).join(' ');
+            } else if (nameParts.length === 1) {
+              candidate.firstName = nameParts[0];
+              candidate.lastName = '';
+            }
+          }
+
+          // If name exists (mapped from 'Name' column), treat as fullName
+          if (candidate.name && !candidate.firstName && !candidate.lastName) {
+            const nameParts = candidate.name.trim().split(/\s+/);
+            if (nameParts.length >= 2) {
+              candidate.firstName = nameParts[0];
+              candidate.lastName = nameParts.slice(1).join(' ');
+            } else if (nameParts.length === 1) {
+              candidate.firstName = nameParts[0];
+              candidate.lastName = '';
+            }
+          }
+
+          return candidate;
+        });
+
         // Accept all rows - no strict validation
-        const validCandidates = candidates;
+        const validCandidates = processedCandidates;
 
         console.log(`✅ Processing ${validCandidates.length} candidates from Excel file`);
         console.log(`📋 Sample candidate data (first record):`, JSON.stringify(validCandidates[0], null, 2));

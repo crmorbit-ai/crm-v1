@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
-import '../../styles/crm.css';
+import { cn } from '../../lib/utils';
 
 const DashboardLayout = ({ children, title, actionButton }) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
-  // Handle window resize
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
-      // Auto-close sidebar when switching to desktop
       if (!mobile) {
         setSidebarOpen(false);
       }
@@ -22,23 +20,18 @@ const DashboardLayout = ({ children, title, actionButton }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Close sidebar when clicking outside on mobile
   const handleOverlayClick = () => {
     if (isMobile && sidebarOpen) {
       setSidebarOpen(false);
     }
   };
 
-  const toggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen);
-  };
-
   return (
-    <div className="crm-layout">
+    <div className="min-h-screen bg-background">
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
         <div
-          className="mobile-overlay"
+          className="fixed inset-0 bg-black/50 z-40 animate-in fade-in"
           onClick={handleOverlayClick}
         />
       )}
@@ -49,16 +42,16 @@ const DashboardLayout = ({ children, title, actionButton }) => {
         isMobile={isMobile}
       />
 
-      <div className="crm-main">
+      <div className={cn("flex flex-col min-h-screen", !isMobile && "ml-64")}>
         <Header
           title={title}
           actionButton={actionButton}
-          onMenuClick={toggleSidebar}
+          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
           isMobile={isMobile}
         />
-        <div className="crm-content">
+        <main className="flex-1 p-4 md:p-6 bg-muted/30">
           {children}
-        </div>
+        </main>
       </div>
     </div>
   );

@@ -260,32 +260,8 @@ const Contacts = () => {
   const canUpdateContact = hasPermission('contact_management', 'update');
   const canDeleteContact = hasPermission('contact_management', 'delete');
 
-  const actionButton = (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '8px', background: 'white', borderRadius: '8px', padding: '4px', border: '2px solid #e5e7eb' }}>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('table')}
-          style={{ padding: '6px 12px' }}
-        >
-          ☰ Table
-        </button>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('grid')}
-          style={{ padding: '6px 12px' }}
-        >
-          ⊞ Grid
-        </button>
-      </div>
-      {canCreateContact && (
-        <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Contact</button>
-      )}
-    </div>
-  );
-
   return (
-    <DashboardLayout title="Contacts" actionButton={actionButton}>
+    <DashboardLayout title="Contacts">
       {success && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>✓ {success}</div>}
       {error && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>⚠ {error}</div>}
 
@@ -316,16 +292,35 @@ const Contacts = () => {
       {/* Filters */}
       <div className="crm-card" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>
-            🔍 Search & Filter
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
             <input type="text" name="search" placeholder="Search contacts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
             <select name="account" className="crm-form-select" value={filters.account} onChange={handleFilterChange}>
               <option value="">All Accounts</option>
               {accounts.map(account => <option key={account._id} value={account._id}>{account.accountName}</option>)}
             </select>
             <input type="text" name="title" placeholder="Filter by title..." className="crm-form-input" value={filters.title} onChange={handleFilterChange} />
+          </div>
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
+                onClick={() => setViewMode('table')}
+              >
+                Table
+              </button>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
+                onClick={() => setViewMode('grid')}
+              >
+                Grid
+              </button>
+            </div>
+            <div style={{ marginLeft: 'auto' }}>
+              {canCreateContact && (
+                <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Contact</button>
+              )}
+            </div>
           </div>
         </div>
       </div>

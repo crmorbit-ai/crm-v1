@@ -1,4 +1,5 @@
 const Invoice = require('../models/Invoice');
+const fs = require('fs');
 
 exports.createInvoice = async (req, res) => {
   try {
@@ -297,6 +298,12 @@ exports.downloadInvoicePDF = async (req, res) => {
     }
 
     res.download(pdfResult.filePath, pdfResult.fileName, (err) => {
+      // Delete file after download (whether successful or not)
+      fs.unlink(pdfResult.filePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting PDF file:', unlinkErr);
+        }
+      });
       if (err) {
         console.error('Error downloading PDF:', err);
       }

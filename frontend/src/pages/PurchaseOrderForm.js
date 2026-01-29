@@ -376,7 +376,7 @@ const PurchaseOrderForm = () => {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
             PO Information
           </h2>
@@ -453,7 +453,7 @@ const PurchaseOrderForm = () => {
           </div>
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
             Customer Information
           </h2>
@@ -540,7 +540,7 @@ const PurchaseOrderForm = () => {
           </div>
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
             PO Details
           </h2>
@@ -571,7 +571,7 @@ const PurchaseOrderForm = () => {
           </div>
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Items</h2>
             <button type="button" className="btn-secondary" onClick={addItem}>
@@ -756,7 +756,7 @@ const PurchaseOrderForm = () => {
           )}
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
             Terms & Conditions
           </h2>

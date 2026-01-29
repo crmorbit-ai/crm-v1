@@ -5,6 +5,7 @@ const { logActivity } = require('../middleware/activityLogger');
 const { generateQuotationPDF } = require('../services/pdfService');
 const emailService = require('../services/emailService');
 const path = require('path');
+const fs = require('fs');
 
 exports.createQuotation = async (req, res) => {
   try {
@@ -379,6 +380,12 @@ exports.downloadQuotationPDF = async (req, res) => {
     }
 
     res.download(pdfResult.filePath, pdfResult.fileName, (err) => {
+      // Delete file after download (whether successful or not)
+      fs.unlink(pdfResult.filePath, (unlinkErr) => {
+        if (unlinkErr) {
+          console.error('Error deleting PDF file:', unlinkErr);
+        }
+      });
       if (err) {
         console.error('Error downloading PDF:', err);
       }

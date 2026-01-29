@@ -204,8 +204,8 @@ const RFIForm = () => {
       )}
 
       <form onSubmit={handleSubmit}>
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
-          <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
+          <h2 style={{ marginBottom: '20px', marginTop: 0, fontSize: '18px', fontWeight: '600' }}>
             Customer Information
           </h2>
 
@@ -291,8 +291,8 @@ const RFIForm = () => {
           </div>
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
-          <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
+          <h2 style={{ marginBottom: '20px', marginTop: 0, fontSize: '18px', fontWeight: '600' }}>
             RFI Details
           </h2>
 
@@ -351,9 +351,9 @@ const RFIForm = () => {
           </div>
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600' }}>Requirements</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: '600', margin: 0 }}>Requirements</h2>
             <button type="button" className="btn-secondary" onClick={addRequirement}>
               + Add Requirement
             </button>
@@ -423,8 +423,8 @@ const RFIForm = () => {
           )}
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '24px' }}>
-          <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>
+        <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
+          <h2 style={{ marginBottom: '20px', marginTop: 0, fontSize: '18px', fontWeight: '600' }}>
             Additional Notes
           </h2>
           <textarea

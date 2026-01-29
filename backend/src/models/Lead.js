@@ -12,7 +12,7 @@ const leadSchema = new mongoose.Schema({
 
   source: {
     type: String,
-    default: 'Data Center'
+    default: 'Website'
   },
 
   rating: {

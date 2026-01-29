@@ -34,22 +34,15 @@ const ResellerLogin = () => {
       });
 
       const data = await response.json();
-      console.log('🔍 Login Response:', data); // DEBUG
 
       if (data.success) {
-        console.log('✅ Token:', data.data.token); // DEBUG
-        console.log('✅ Reseller:', data.data.reseller); // DEBUG
-        
         localStorage.setItem('token', data.data.token);
         localStorage.setItem('user', JSON.stringify(data.data.reseller));
-        
-        console.log('✅ Navigating to dashboard...'); // DEBUG
         navigate('/reseller/dashboard');
       } else {
         setError(data.message || 'Login failed');
       }
     } catch (err) {
-      console.error('❌ Login Error:', err); // DEBUG
       setError('Failed to login. Please try again.');
     } finally {
       setLoading(false);

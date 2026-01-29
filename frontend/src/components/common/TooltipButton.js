@@ -1,5 +1,12 @@
 import React from 'react';
-import '../../styles/crm.css';
+import { Button } from '../ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '../ui/tooltip';
+import { cn } from '../../lib/utils';
 
 const TooltipButton = ({
   onClick,
@@ -8,33 +15,47 @@ const TooltipButton = ({
   disabled = false,
   tooltipText = "You don't have access",
   type = "button",
+  variant = "default",
+  size = "default",
   ...props
 }) => {
   if (disabled) {
     return (
-      <div className="crm-tooltip">
-        <button
-          type={type}
-          className={`${className} disabled`}
-          disabled={true}
-          {...props}
-        >
-          {children}
-        </button>
-        <span className="crm-tooltip-text">{tooltipText}</span>
-      </div>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span tabIndex={0}>
+              <Button
+                type={type}
+                variant={variant}
+                size={size}
+                className={cn(className, "pointer-events-none")}
+                disabled={true}
+                {...props}
+              >
+                {children}
+              </Button>
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{tooltipText}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
   return (
-    <button
+    <Button
       type={type}
       onClick={onClick}
+      variant={variant}
+      size={size}
       className={className}
       {...props}
     >
       {children}
-    </button>
+    </Button>
   );
 };
 

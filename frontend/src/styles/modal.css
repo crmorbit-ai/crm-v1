@@ -1,66 +1,33 @@
+/* Modal styles are now handled by shadcn Dialog component */
+/* This file is kept for backward compatibility */
+/* New modals should use the Dialog component from components/ui/dialog.jsx */
+
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000;
-  animation: fadeIn 0.2s ease;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  z-index: 50;
 }
 
 .modal-content {
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  background: hsl(var(--background));
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   max-height: 90vh;
   overflow-y: auto;
-  animation: slideUp 0.3s ease;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-.modal-small {
-  width: 90%;
-  max-width: 400px;
-}
-
-.modal-medium {
-  width: 90%;
-  max-width: 600px;
-}
-
-.modal-large {
-  width: 90%;
-  max-width: 900px;
-}
+.modal-small { width: 90%; max-width: 400px; }
+.modal-medium { width: 90%; max-width: 600px; }
+.modal-large { width: 90%; max-width: 900px; }
 
 .modal-header {
-  padding: 20px;
-  border-bottom: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid hsl(var(--border));
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -68,127 +35,37 @@
 
 .modal-header h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 1.125rem;
   font-weight: 600;
 }
 
 .modal-close {
   background: none;
   border: none;
-  font-size: 28px;
+  font-size: 1.5rem;
   cursor: pointer;
-  color: #999;
+  color: hsl(var(--muted-foreground));
   padding: 0;
-  width: 30px;
-  height: 30px;
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  border-radius: 0.25rem;
+  transition: all 0.2s;
 }
 
 .modal-close:hover {
-  background-color: var(--bg-color);
-  color: var(--text-color);
+  background-color: hsl(var(--accent));
+  color: hsl(var(--foreground));
 }
 
-.modal-body {
-  padding: 20px;
-}
+.modal-body { padding: 1.5rem; }
 
 .modal-footer {
-  padding: 20px;
-  border-top: 1px solid var(--border-color);
+  padding: 1rem 1.5rem;
+  border-top: 1px solid hsl(var(--border));
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-}
-
-/* Responsive Modal Styles */
-@media (max-width: 768px) {
-  .modal-overlay {
-    align-items: flex-end;
-    padding: 0;
-  }
-
-  .modal-content {
-    width: 100%;
-    max-width: 100%;
-    max-height: 90vh;
-    border-radius: 16px 16px 0 0;
-    animation: slideUpMobile 0.3s ease;
-  }
-
-  @keyframes slideUpMobile {
-    from {
-      transform: translateY(100%);
-      opacity: 1;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
-  }
-
-  .modal-small,
-  .modal-medium,
-  .modal-large {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .modal-header {
-    padding: 16px;
-    position: sticky;
-    top: 0;
-    background: white;
-    z-index: 10;
-    border-radius: 16px 16px 0 0;
-  }
-
-  .modal-header h2 {
-    font-size: 16px;
-  }
-
-  .modal-body {
-    padding: 16px;
-  }
-
-  .modal-footer {
-    padding: 16px;
-    flex-direction: column;
-    gap: 8px;
-    position: sticky;
-    bottom: 0;
-    background: white;
-    border-top: 1px solid #e5e7eb;
-  }
-
-  .modal-footer button {
-    width: 100%;
-  }
-}
-
-@media (max-width: 480px) {
-  .modal-header {
-    padding: 12px 16px;
-  }
-
-  .modal-header h2 {
-    font-size: 15px;
-  }
-
-  .modal-body {
-    padding: 12px 16px;
-  }
-
-  .modal-footer {
-    padding: 12px 16px;
-  }
-
-  .modal-close {
-    width: 36px;
-    height: 36px;
-  }
+  gap: 0.5rem;
 }

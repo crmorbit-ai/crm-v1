@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import quotationService from '../services/quotationService';
+import invoiceService from '../services/invoiceService';
 import { productItemService } from '../services/productItemService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import '../styles/crm.css';
 
-const QuotationForm = () => {
+const InvoiceForm = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const isEdit = Boolean(id);
+  const isEdit = Boolean(id) && id !== 'new';
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -24,9 +24,9 @@ const QuotationForm = () => {
     title: '',
     description: '',
     items: [],
-    quotationDate: new Date().toISOString().split('T')[0],
-    expiryDate: '',
-    terms: 'Payment due within 30 days. Prices are subject to change without notice.',
+    invoiceDate: new Date().toISOString().split('T')[0],
+    dueDate: '',
+    terms: 'Payment due within 30 days.',
     notes: ''
   });
 
@@ -34,13 +34,13 @@ const QuotationForm = () => {
     fetchProducts();
     fetchCustomers();
     if (isEdit) {
-      fetchQuotation();
+      fetchInvoice();
     } else {
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 30);
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + 30);
       setFormData(prev => ({
         ...prev,
-        expiryDate: expiryDate.toISOString().split('T')[0]
+        dueDate: dueDate.toISOString().split('T')[0]
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -51,25 +51,14 @@ const QuotationForm = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerType]);
 
-  useEffect(() => {
-    fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const fetchProducts = async () => {
     try {
       const response = await productItemService.getProductItems();
-      // API returns: { success: true, message: '...', data: { products: [...], pagination: {...} } }
       if (response && response.data && Array.isArray(response.data.products)) {
-        console.log(`Fetched ${response.data.products.length} products`);
         setProducts(response.data.products);
-      } else {
-        console.log('No products found');
-        setProducts([]);
       }
     } catch (err) {
       console.error('Failed to fetch products:', err);
-      setProducts([]);
     }
   };
 
@@ -90,7 +79,6 @@ const QuotationForm = () => {
 
       const data = await response.json();
 
-      // The API returns: { success: true, message: '...', data: { leads/contacts/accounts: [...], pagination: {...} } }
       let customerList = [];
       if (data && data.data) {
         if (customerType === 'Lead' && Array.isArray(data.data.leads)) {
@@ -102,7 +90,6 @@ const QuotationForm = () => {
         }
       }
 
-      console.log(`Fetched ${customerList.length} ${customerType}s`);
       setCustomers(customerList);
     } catch (err) {
       console.error('Failed to fetch customers:', err);
@@ -114,9 +101,7 @@ const QuotationForm = () => {
     const customer = customers.find(c => c._id === customerId);
     if (customer) {
       let customerName = '';
-      if (customerType === 'Lead') {
-        customerName = `${customer.firstName} ${customer.lastName}`;
-      } else if (customerType === 'Contact') {
+      if (customerType === 'Lead' || customerType === 'Contact') {
         customerName = `${customer.firstName} ${customer.lastName}`;
       } else if (customerType === 'Account') {
         customerName = customer.accountName;
@@ -134,18 +119,18 @@ const QuotationForm = () => {
     }
   };
 
-  const fetchQuotation = async () => {
+  const fetchInvoice = async () => {
     try {
       setLoading(true);
-      const response = await quotationService.getQuotation(id);
-      const quotation = response.data;
+      const response = await invoiceService.getInvoice(id);
+      const invoice = response.data;
       setFormData({
-        ...quotation,
-        quotationDate: new Date(quotation.quotationDate).toISOString().split('T')[0],
-        expiryDate: new Date(quotation.expiryDate).toISOString().split('T')[0]
+        ...invoice,
+        invoiceDate: new Date(invoice.invoiceDate).toISOString().split('T')[0],
+        dueDate: new Date(invoice.dueDate).toISOString().split('T')[0]
       });
     } catch (err) {
-      setError(err.message || 'Failed to fetch quotation');
+      setError(err.message || 'Failed to fetch invoice');
     } finally {
       setLoading(false);
     }
@@ -247,14 +232,20 @@ const QuotationForm = () => {
       };
 
       if (isEdit) {
-        await quotationService.updateQuotation(id, data);
+        await invoiceService.updateInvoice(id, data);
+        alert('Invoice updated successfully!');
       } else {
-        await quotationService.createQuotation(data);
+        const response = await invoiceService.createInvoice(data);
+        alert('Invoice created successfully!');
+        if (response.data && response.data._id) {
+          navigate(`/invoices/${response.data._id}`);
+          return;
+        }
       }
 
-      navigate('/quotations');
+      navigate('/invoices');
     } catch (err) {
-      setError(err.message || 'Failed to save quotation');
+      setError(err.message || 'Failed to save invoice');
     } finally {
       setLoading(false);
     }
@@ -270,14 +261,22 @@ const QuotationForm = () => {
 
   const totals = calculateTotals();
 
+  if (loading && isEdit) {
+    return (
+      <DashboardLayout title={isEdit ? 'Edit Invoice' : 'New Invoice'}>
+        <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+      </DashboardLayout>
+    );
+  }
+
   return (
-    <DashboardLayout title={isEdit ? 'Edit Quotation' : 'New Quotation'}>
+    <DashboardLayout title={isEdit ? 'Edit Invoice' : 'New Invoice'}>
       <div className="page-header">
         <div>
-          <h1>💰 {isEdit ? 'Edit Quotation' : 'Create New Quotation'}</h1>
-          <p className="page-subtitle">Create price quotations for customers</p>
+          <h1>🧾 {isEdit ? 'Edit Invoice' : 'Create New Invoice'}</h1>
+          <p className="page-subtitle">Create invoices for customers</p>
         </div>
-        <button className="btn-secondary" onClick={() => navigate('/quotations')}>
+        <button className="btn-secondary" onClick={() => navigate('/invoices')}>
           Cancel
         </button>
       </div>
@@ -307,7 +306,7 @@ const QuotationForm = () => {
                 cursor: 'pointer'
               }}
             >
-              📋 Lead
+              Lead
             </button>
             <button
               type="button"
@@ -322,7 +321,7 @@ const QuotationForm = () => {
                 cursor: 'pointer'
               }}
             >
-              👤 Contact
+              Contact
             </button>
             <button
               type="button"
@@ -337,7 +336,7 @@ const QuotationForm = () => {
                 cursor: 'pointer'
               }}
             >
-              🏢 Account
+              Account
             </button>
           </div>
 
@@ -421,7 +420,7 @@ const QuotationForm = () => {
         </div>
 
         <div className="crm-card" style={{ marginBottom: '20px', padding: '24px' }}>
-          <h3 style={{ marginBottom: '20px', marginTop: 0 }}>Quotation Details</h3>
+          <h3 style={{ marginBottom: '20px', marginTop: 0 }}>Invoice Details</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
             <div className="crm-form-group">
               <label className="crm-form-label">Title *</label>
@@ -432,26 +431,26 @@ const QuotationForm = () => {
                 onChange={handleChange}
                 required
                 className="crm-form-input"
-                placeholder="e.g., Website Development Quote"
+                placeholder="e.g., Website Development Invoice"
               />
             </div>
             <div className="crm-form-group">
-              <label className="crm-form-label">Quotation Date *</label>
+              <label className="crm-form-label">Invoice Date *</label>
               <input
                 type="date"
-                name="quotationDate"
-                value={formData.quotationDate}
+                name="invoiceDate"
+                value={formData.invoiceDate}
                 onChange={handleChange}
                 required
                 className="crm-form-input"
               />
             </div>
             <div className="crm-form-group">
-              <label className="crm-form-label">Expiry Date *</label>
+              <label className="crm-form-label">Due Date *</label>
               <input
                 type="date"
-                name="expiryDate"
-                value={formData.expiryDate}
+                name="dueDate"
+                value={formData.dueDate}
                 onChange={handleChange}
                 required
                 className="crm-form-input"
@@ -644,13 +643,13 @@ const QuotationForm = () => {
         <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
           <button
             type="button"
-            onClick={() => navigate('/quotations')}
+            onClick={() => navigate('/invoices')}
             className="btn-secondary"
           >
             Cancel
           </button>
           <button type="submit" className="btn-primary" disabled={loading}>
-            {loading ? 'Saving...' : (isEdit ? 'Update Quotation' : 'Create Quotation')}
+            {loading ? 'Saving...' : (isEdit ? 'Update Invoice' : 'Create Invoice')}
           </button>
         </div>
       </form>
@@ -658,4 +657,4 @@ const QuotationForm = () => {
   );
 };
 
-export default QuotationForm;
+export default InvoiceForm;

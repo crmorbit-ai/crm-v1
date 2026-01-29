@@ -1,50 +1,34 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import '../../styles/crm.css';
+import { cn } from '../../lib/utils';
+import { Button } from '../ui/button';
+import { ScrollArea } from '../ui/scroll-area';
+import {
+  ChevronDown,
+  ChevronRight,
+  X,
+} from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose, isMobile }) => {
   const location = useLocation();
   const { hasPermission, isSaasOwner } = useAuth();
 
-  // State for managing dropdown sections with localStorage persistence
   const [openSections, setOpenSections] = useState(() => {
     const saved = localStorage.getItem('sidebarOpenSections');
     if (saved) {
       try {
         return JSON.parse(saved);
       } catch (e) {
-        return {
-          taskManagement: false,
-          roleManagement: false,
-          leadManagement: false,
-          salesFinance: false,
-          product: false,
-          accountManagement: false,
-          support: false,
-          customization: false
-        };
+        return {};
       }
     }
-    return {
-      taskManagement: false,
-      roleManagement: false,
-      leadManagement: false,
-      salesFinance: false,
-      product: false,
-      accountManagement: false,
-      support: false,
-      customization: false
-    };
+    return {};
   });
 
   const toggleSection = (section) => {
     setOpenSections(prev => {
-      const newState = {
-        ...prev,
-        [section]: !prev[section]
-      };
-      // Save to localStorage
+      const newState = { ...prev, [section]: !prev[section] };
       localStorage.setItem('sidebarOpenSections', JSON.stringify(newState));
       return newState;
     });
@@ -54,24 +38,20 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
     return location.pathname === path || location.pathname.startsWith(path + '/');
   };
 
-  // Close sidebar on mobile when navigating
   const handleNavClick = () => {
     if (isMobile && onClose) {
       onClose();
     }
   };
 
-  const NavItem = ({ to, icon, label, permission }) => {
+  const NavItem = ({ to, label, permission }) => {
     const hasAccess = permission ? hasPermission(permission, 'read') : true;
     const active = isActive(to);
 
     if (!hasAccess) {
       return (
-        <div className="crm-tooltip">
-          <div className={`nav-item disabled`}>
-            {label}
-          </div>
-          <span className="crm-tooltip-text">You don't have access</span>
+        <div className="px-3 py-2 text-sm text-white/50 cursor-not-allowed">
+          {label}
         </div>
       );
     }
@@ -79,330 +59,155 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
     return (
       <Link
         to={to}
-        className={`nav-item ${active ? 'active' : ''}`}
         onClick={handleNavClick}
+        className={cn(
+          "block px-3 py-2 text-sm rounded-md transition-all duration-200",
+          active
+            ? "bg-yellow-400 text-gray-900 font-semibold shadow-lg"
+            : "text-white/90 hover:bg-white/10 hover:text-white"
+        )}
       >
         {label}
       </Link>
     );
   };
 
-  // Determine sidebar class based on mobile state
-  const sidebarClass = `crm-sidebar ${isMobile ? (isOpen ? 'mobile-open' : 'mobile-closed') : ''}`;
+  const NavSection = ({ title, section, children }) => (
+    <div className="mb-1">
+      <button
+        onClick={() => toggleSection(section)}
+        className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 rounded-md transition-colors"
+      >
+        <span>{title}</span>
+        {openSections[section] ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
+        )}
+      </button>
+      {openSections[section] && (
+        <div className="ml-2 mt-1 space-y-1">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+
+  // Sidebar styles with original gradient
+  const sidebarStyle = {
+    background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #131d21 50%, #95b5ef 75%, #2a5298 100%)',
+    backgroundSize: '400% 400%',
+    animation: 'gradientShift 15s ease infinite',
+  };
 
   return (
-    <div className={sidebarClass}>
-      {/* Mobile Close Button */}
-      {isMobile && (
-        <button
-          className="sidebar-close-btn"
-          onClick={onClose}
-          aria-label="Close menu"
-        >
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      )}
+    <>
+      {/* Gradient animation keyframes */}
+      <style>{`
+        @keyframes gradientShift {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+      `}</style>
 
-      <div className="sidebar-logo">
-        <img
-          src="/logo.png"
-          alt="UFS CRM"
-          style={{
-            width: '95%',
-            maxWidth: '240px',
-            height: 'auto',
-            display: 'block',
-            margin: '0 auto'
-          }}
-        />
+      <div
+        style={sidebarStyle}
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-300 shadow-2xl",
+          isMobile && !isOpen && "-translate-x-full",
+          isMobile && isOpen && "translate-x-0"
+        )}
+      >
+        {/* Logo */}
+        <div className="h-16 flex items-center justify-between px-4 bg-white border-b border-blue-300/30">
+          <img
+            src="/logo.png"
+            alt="CRM"
+            className="h-10 w-auto object-contain"
+          />
+          {isMobile && (
+            <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-700">
+              <X className="h-5 w-5" />
+            </Button>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <ScrollArea className="flex-1 px-3 py-4">
+          <nav className="space-y-1">
+            {/* Dashboard */}
+            <NavItem to="/dashboard" label="Dashboard" />
+
+            <div className="my-3 border-t border-white/20" />
+
+            {/* Lead Management */}
+            <NavSection title="Lead Management" section="leadManagement">
+              <NavItem to="/data-center" label="Customers" />
+              <NavItem to="/leads" label="Leads" permission="lead_management" />
+              <NavItem to="/contacts" label="Contacts" permission="contact_management" />
+              <NavItem to="/accounts" label="Accounts" permission="account_management" />
+              <NavItem to="/opportunities" label="Opportunities" permission="opportunity_management" />
+            </NavSection>
+
+            {/* Sales & Finance */}
+            <NavSection title="Sales & Finance" section="salesFinance">
+              <NavItem to="/rfi" label="RFI" />
+              <NavItem to="/quotations" label="Quotations" />
+              <NavItem to="/purchase-orders" label="Purchase Orders" />
+              <NavItem to="/invoices" label="Invoices" />
+            </NavSection>
+
+            {/* Task Management */}
+            <NavSection title="Task Management" section="taskManagement">
+              <NavItem to="/tasks" label="Tasks" />
+              <NavItem to="/meetings" label="Meetings" />
+              <NavItem to="/calls" label="Calls" />
+              <NavItem to="/emails" label="Email Inbox" />
+            </NavSection>
+
+            {/* Product */}
+            <NavSection title="Product" section="product">
+              <NavItem to="/products-management" label="Product" permission="product_management" />
+              <NavItem to="/products" label="Product Marketplace" />
+            </NavSection>
+
+            {/* Account Management */}
+            <NavSection title="Account Management" section="accountManagement">
+              <NavItem to="/subscription" label="Subscription & Billing" />
+            </NavSection>
+
+            {/* Role Management */}
+            <NavSection title="Role Management" section="roleManagement">
+              <NavItem to="/settings/users" label="Users" permission="user_management" />
+              <NavItem to="/settings/roles" label="Roles" permission="role_management" />
+              <NavItem to="/settings/groups" label="Groups" permission="group_management" />
+              <NavItem to="/activity-logs" label="Audit Logs" />
+            </NavSection>
+
+            {/* Support */}
+            <NavSection title="Support" section="support">
+              {isSaasOwner() ? (
+                <NavItem to="/support-admin" label="Support Dashboard" />
+              ) : (
+                <NavItem to="/support" label="My Tickets" />
+              )}
+            </NavSection>
+
+            {/* Customization */}
+            <NavSection title="Customization" section="customization">
+              <NavItem to="/admin/field-builder" label="Field Builder" permission="field_management" />
+            </NavSection>
+          </nav>
+        </ScrollArea>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-white/20 text-center">
+          <p className="text-xs text-white/70">© 2024 CRM Platform</p>
+          <p className="text-xs text-white/70 mt-1">Version 1.0.0</p>
+        </div>
       </div>
-
-      <nav className="sidebar-nav">
-        {/* 1. Dashboard - Single Item */}
-        <Link
-          to="/dashboard"
-          className={`nav-item ${isActive('/dashboard') ? 'active' : ''}`}
-          onClick={handleNavClick}
-        >
-          Dashboard
-        </Link>
-
-        {/* 2. Lead Management - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('leadManagement')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Lead Management</span>
-          <span style={{ float: 'right' }}>{openSections.leadManagement ? '▼' : '▶'}</span>
-        </div>
-        {openSections.leadManagement && (
-          <>
-            <Link
-              to="/data-center"
-              className={`nav-item ${isActive('/data-center') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Customers
-            </Link>
-            <NavItem
-              to="/leads"
-              icon="📋"
-              label="Leads"
-              permission="lead_management"
-            />
-            <NavItem
-              to="/contacts"
-              icon="👤"
-              label="Contacts"
-              permission="contact_management"
-            />
-            <NavItem
-              to="/accounts"
-              icon="🏢"
-              label="Accounts"
-              permission="account_management"
-            />
-            <NavItem
-              to="/opportunities"
-              icon="💰"
-              label="Opportunities"
-              permission="opportunity_management"
-            />
-          </>
-        )}
-
-        {/* 3. Sales & Finance - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('salesFinance')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Sales & Finance</span>
-          <span style={{ float: 'right' }}>{openSections.salesFinance ? '▼' : '▶'}</span>
-        </div>
-        {openSections.salesFinance && (
-          <>
-            <Link
-              to="/rfi"
-              className={`nav-item ${isActive('/rfi') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              RFI
-            </Link>
-            <Link
-              to="/quotations"
-              className={`nav-item ${isActive('/quotations') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Quotations
-            </Link>
-            <Link
-              to="/purchase-orders"
-              className={`nav-item ${isActive('/purchase-orders') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Purchase Orders
-            </Link>
-            <Link
-              to="/invoices"
-              className={`nav-item ${isActive('/invoices') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Invoices
-            </Link>
-          </>
-        )}
-
-        {/* 4. Task Management - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('taskManagement')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Task Management</span>
-          <span style={{ float: 'right' }}>{openSections.taskManagement ? '▼' : '▶'}</span>
-        </div>
-        {openSections.taskManagement && (
-          <>
-            <Link
-              to="/tasks"
-              className={`nav-item ${isActive('/tasks') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Tasks
-            </Link>
-            <Link
-              to="/meetings"
-              className={`nav-item ${isActive('/meetings') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Meetings
-            </Link>
-            <Link
-              to="/calls"
-              className={`nav-item ${isActive('/calls') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Calls
-            </Link>
-            <Link
-              to="/emails"
-              className={`nav-item ${isActive('/emails') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Email Inbox
-            </Link>
-          </>
-        )}
-
-        {/* 5. Product - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('product')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Product</span>
-          <span style={{ float: 'right' }}>{openSections.product ? '▼' : '▶'}</span>
-        </div>
-        {openSections.product && (
-          <>
-            <NavItem
-              to="/products-management"
-              icon="📦"
-              label="Product"
-              permission="product_management"
-            />
-            <Link
-              to="/products"
-              className={`nav-item ${isActive('/products') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Product Marketplace
-            </Link>
-          </>
-        )}
-
-        {/* 6. Account Management - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('accountManagement')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Account Management</span>
-          <span style={{ float: 'right' }}>{openSections.accountManagement ? '▼' : '▶'}</span>
-        </div>
-        {openSections.accountManagement && (
-          <>
-            <Link
-              to="/subscription"
-              className={`nav-item ${isActive('/subscription') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Subscription & Billing
-            </Link>
-          </>
-        )}
-
-        {/* 7. Role Management - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('roleManagement')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Role Management</span>
-          <span style={{ float: 'right' }}>{openSections.roleManagement ? '▼' : '▶'}</span>
-        </div>
-        {openSections.roleManagement && (
-          <>
-            <NavItem
-              to="/settings/users"
-              icon="👥"
-              label="Users"
-              permission="user_management"
-            />
-            <NavItem
-              to="/settings/roles"
-              icon="🎭"
-              label="Roles"
-              permission="role_management"
-            />
-            <NavItem
-              to="/settings/groups"
-              icon="👪"
-              label="Groups"
-              permission="group_management"
-            />
-            <Link
-              to="/activity-logs"
-              className={`nav-item ${isActive('/activity-logs') ? 'active' : ''}`}
-              onClick={handleNavClick}
-            >
-              Audit Logs
-            </Link>
-          </>
-        )}
-
-        {/* 8. Support - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('support')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Support</span>
-          <span style={{ float: 'right' }}>{openSections.support ? '▼' : '▶'}</span>
-        </div>
-        {openSections.support && (
-          <>
-            {isSaasOwner() ? (
-              <Link
-                to="/support-admin"
-                className={`nav-item ${isActive('/support-admin') ? 'active' : ''}`}
-                onClick={handleNavClick}
-              >
-                Support Dashboard
-              </Link>
-            ) : (
-              <Link
-                to="/support"
-                className={`nav-item ${isActive('/support') ? 'active' : ''}`}
-                onClick={handleNavClick}
-              >
-                My Tickets
-              </Link>
-            )}
-          </>
-        )}
-
-        {/* 9. Customization - Dropdown */}
-        <div
-          className="nav-section-title clickable"
-          onClick={() => toggleSection('customization')}
-          style={{ cursor: 'pointer', userSelect: 'none', padding: '10px 16px', marginTop: '4px' }}
-        >
-          <span>Customization</span>
-          <span style={{ float: 'right' }}>{openSections.customization ? '▼' : '▶'}</span>
-        </div>
-        {openSections.customization && (
-          <>
-            <NavItem
-              to="/admin/field-builder"
-              icon="🎨"
-              label="Field Builder"
-              permission="field_management"
-            />
-          </>
-        )}
-      </nav>
-
-      <div className="sidebar-footer">
-        <div>© 2024 CRM Platform</div>
-        <div style={{ marginTop: '4px', fontSize: '11px' }}>Version 1.0.0</div>
-      </div>
-    </div>
+    </>
   );
 };
 

@@ -264,32 +264,8 @@ const Accounts = () => {
     return icons[type] || '📊';
   };
 
-  const actionButton = (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <div style={{ display: 'flex', gap: '8px', background: 'white', borderRadius: '8px', padding: '4px', border: '2px solid #e5e7eb' }}>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('table')}
-          style={{ padding: '6px 12px' }}
-        >
-          ☰ Table
-        </button>
-        <button
-          className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
-          onClick={() => setViewMode('grid')}
-          style={{ padding: '6px 12px' }}
-        >
-          ⊞ Grid
-        </button>
-      </div>
-      {canCreateAccount && (
-        <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Account</button>
-      )}
-    </div>
-  );
-
   return (
-    <DashboardLayout title="Accounts" actionButton={actionButton}>
+    <DashboardLayout title="Accounts">
       {success && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>✓ {success}</div>}
       {error && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>⚠ {error}</div>}
 
@@ -318,8 +294,7 @@ const Accounts = () => {
 
       <div className="crm-card" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>🔍 Search & Filter</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px', marginBottom: '16px' }}>
             <input type="text" name="search" placeholder="Search accounts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
             <select name="accountType" className="crm-form-select" value={filters.accountType} onChange={handleFilterChange}>
               <option value="">All Types</option>
@@ -338,6 +313,28 @@ const Accounts = () => {
               <option value="Retail">Retail</option>
               <option value="Other">Other</option>
             </select>
+          </div>
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
+                onClick={() => setViewMode('table')}
+              >
+                Table
+              </button>
+              <button
+                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
+                onClick={() => setViewMode('grid')}
+              >
+                Grid
+              </button>
+            </div>
+            <div style={{ marginLeft: 'auto' }}>
+              {canCreateAccount && (
+                <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Account</button>
+              )}
+            </div>
           </div>
         </div>
       </div>

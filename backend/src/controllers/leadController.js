@@ -908,10 +908,41 @@ const bulkUploadLeads = async (req, res) => {
 
         const customFields = {};
 
+        // Helper function to find value in row with case-insensitive matching
+        const findValueInRow = (row, field) => {
+          // Direct matches
+          if (row[field.label] !== undefined) return row[field.label];
+          if (row[field.fieldName] !== undefined) return row[field.fieldName];
+
+          // Case-insensitive search
+          const lowerLabel = field.label.toLowerCase();
+          const lowerFieldName = field.fieldName.toLowerCase();
+
+          for (const key of Object.keys(row)) {
+            const lowerKey = key.toLowerCase().trim();
+            if (lowerKey === lowerLabel || lowerKey === lowerFieldName) {
+              return row[key];
+            }
+            // Also check without spaces (e.g., "firstname" matches "First Name")
+            if (lowerKey.replace(/\s+/g, '') === lowerLabel.replace(/\s+/g, '')) {
+              return row[key];
+            }
+            if (lowerKey.replace(/\s+/g, '') === lowerFieldName.replace(/\s+/g, '')) {
+              return row[key];
+            }
+          }
+
+          // Try camelCase to space conversion
+          const spacedFieldName = field.fieldName.replace(/([A-Z])/g, ' $1').trim();
+          if (row[spacedFieldName] !== undefined) return row[spacedFieldName];
+
+          return undefined;
+        };
+
         // Process each field definition
         fieldDefinitions.forEach(field => {
-          // Try to get value from CSV using field label or fieldName
-          const value = row[field.label] || row[field.fieldName] || row[field.fieldName.replace(/([A-Z])/g, ' $1').trim()];
+          // Try to get value from CSV using flexible matching
+          const value = findValueInRow(row, field);
 
           if (value !== undefined && value !== null && value !== '') {
             // Convert value based on field type
