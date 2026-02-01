@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
-import Modal from '../components/common/Modal';
 import { API_URL } from '../config/api.config';
 import '../styles/crm.css';
 
@@ -13,7 +12,7 @@ const Meetings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -137,7 +136,7 @@ const Meetings = () => {
       const data = await response.json();
       if (data.success) {
         setSuccess('Meeting created and invitations sent!');
-        setShowCreateModal(false);
+        setShowCreateForm(false);
         resetForm();
         loadMeetings();
         setTimeout(() => setSuccess(''), 3000);
@@ -162,16 +161,111 @@ const Meetings = () => {
   };
 
   return (
-    <DashboardLayout
-      title="Meetings"
-      actionButton={
-        <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateModal(true)}>
-          + Create Meeting
-        </button>
-      }
-    >
+    <DashboardLayout title="Meetings">
       {success && <div className="alert-success">{success}</div>}
       {error && <div className="alert-error">{error}</div>}
+
+      {/* Action Bar */}
+      <div className="crm-card" style={{ marginBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Meetings</h3>
+          <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateForm(true)}>+ Create Meeting</button>
+        </div>
+      </div>
+
+      {/* Inline Create Meeting Form */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Create New Meeting</h3>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreate}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Title *</label>
+                  <input type="text" className="crm-form-input" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>From *</label>
+                  <input type="datetime-local" className="crm-form-input" value={formData.from} onChange={(e) => setFormData({ ...formData, from: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>To *</label>
+                  <input type="datetime-local" className="crm-form-input" value={formData.to} onChange={(e) => setFormData({ ...formData, to: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Location</label>
+                  <input type="text" className="crm-form-input" value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Meeting Type</label>
+                  <select className="crm-form-select" value={formData.meetingType} onChange={(e) => setFormData({ ...formData, meetingType: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="Online">Online</option>
+                    <option value="In-Person">In-Person</option>
+                    <option value="Phone Call">Phone Call</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                    <input type="checkbox" checked={formData.isIndependent} onChange={(e) => setFormData({ ...formData, isIndependent: e.target.checked, relatedTo: e.target.checked ? '' : 'Lead', relatedToId: '' })} />
+                    Independent Meeting (not linked to any Lead/Contact)
+                  </label>
+                </div>
+
+                {formData.isIndependent ? (
+                  <div style={{ gridColumn: 'span 4' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Participant Email(s) *</label>
+                    <input type="text" className="crm-form-input" placeholder="email1@example.com, email2@example.com" value={formData.participants} onChange={(e) => setFormData({ ...formData, participants: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                    <small style={{ color: '#6B7280', fontSize: '11px' }}>Enter one or more email addresses separated by commas</small>
+                  </div>
+                ) : (
+                  <>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Related To *</label>
+                      <select className="crm-form-select" value={formData.relatedTo} onChange={(e) => { setFormData({ ...formData, relatedTo: e.target.value, relatedToId: '' }); setEntitySearch(''); setSelectedEntity(null); setEntityResults([]); }} required style={{ padding: '8px 10px', fontSize: '13px' }}>
+                        <option value="">Select Type</option>
+                        <option value="Lead">Lead</option>
+                        <option value="Contact">Contact</option>
+                        <option value="Account">Account</option>
+                        <option value="Opportunity">Opportunity</option>
+                      </select>
+                    </div>
+                    <div style={{ gridColumn: 'span 3', position: 'relative' }}>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Search {formData.relatedTo || 'Entity'} *</label>
+                      <input type="text" className="crm-form-input" value={entitySearch} onChange={(e) => setEntitySearch(e.target.value)} placeholder={`Type to search ${formData.relatedTo || 'entity'}...`} disabled={!formData.relatedTo} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                      {loadingEntities && <span style={{ position: 'absolute', right: '12px', top: '28px', fontSize: '11px', color: '#6B7280' }}>Searching...</span>}
+                      {entityResults.length > 0 && (
+                        <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, maxHeight: '150px', overflowY: 'auto', background: 'white', border: '1px solid #E5E7EB', borderRadius: '6px', marginTop: '4px', zIndex: 1000, boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
+                          {entityResults.map((entity) => {
+                            const displayName = entity.companyName || `${entity.firstName || ''} ${entity.lastName || ''}`.trim() || entity.name || entity.title;
+                            return (
+                              <div key={entity._id} onClick={() => handleEntitySelect(entity)} style={{ padding: '10px 12px', cursor: 'pointer', borderBottom: '1px solid #F3F4F6', fontSize: '13px' }} onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'} onMouseLeave={(e) => e.currentTarget.style.background = 'white'}>
+                                {displayName}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {selectedEntity && <small style={{ color: '#10B981', fontSize: '11px' }}>Selected</small>}
+                    </div>
+                  </>
+                )}
+
+                <div style={{ gridColumn: 'span 4' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <textarea className="crm-form-input" rows="2" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Create & Send Invites</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -198,7 +292,7 @@ const Meetings = () => {
             <tbody>
               {meetings.map(meeting => (
                 <tr key={meeting._id}>
-                  <td 
+                  <td
                     style={{ fontWeight: '500', color: '#3B82F6', cursor: 'pointer' }}
                     onClick={() => navigate(`/meetings/${meeting._id}`)}
                   >
@@ -219,17 +313,17 @@ const Meetings = () => {
                   <td><span className="status-badge">{meeting.status}</span></td>
                   <td onClick={e => e.stopPropagation()}>
                     {meeting.meetingLink && (
-                      <a 
-                        href={meeting.meetingLink} 
-                        target="_blank" 
+                      <a
+                        href={meeting.meetingLink}
+                        target="_blank"
                         rel="noopener noreferrer"
                         className="crm-btn crm-btn-sm crm-btn-success"
                         style={{ marginRight: '8px' }}
                       >
-                        🎥 Join
+                        Join
                       </a>
                     )}
-                    <button 
+                    <button
                       className="crm-btn crm-btn-sm crm-btn-primary"
                       onClick={() => navigate(`/meetings/${meeting._id}`)}
                     >
@@ -242,196 +336,6 @@ const Meetings = () => {
           </table>
         )}
       </div>
-
-      <Modal isOpen={showCreateModal} onClose={() => {
-        setShowCreateModal(false);
-        resetForm();
-      }} title="Create Meeting">
-        <form onSubmit={handleCreate}>
-          <div className="crm-form-group">
-            <label>Title *</label>
-            <input type="text" className="crm-form-input" value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
-          </div>
-          <div className="form-row">
-            <div className="crm-form-group">
-              <label>From *</label>
-              <input type="datetime-local" className="crm-form-input" value={formData.from}
-                onChange={(e) => setFormData({ ...formData, from: e.target.value })} required />
-            </div>
-            <div className="crm-form-group">
-              <label>To *</label>
-              <input type="datetime-local" className="crm-form-input" value={formData.to}
-                onChange={(e) => setFormData({ ...formData, to: e.target.value })} required />
-            </div>
-          </div>
-          <div className="crm-form-group">
-            <label>Location</label>
-            <input type="text" className="crm-form-input" value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
-          </div>
-          <div className="crm-form-group">
-            <label>Meeting Type</label>
-            <select className="crm-form-select" value={formData.meetingType}
-              onChange={(e) => setFormData({ ...formData, meetingType: e.target.value })}>
-              <option value="Online">Online</option>
-              <option value="In-Person">In-Person</option>
-              <option value="Phone Call">Phone Call</option>
-            </select>
-          </div>
-
-          {/* Meeting Type Toggle */}
-          <div className="crm-form-group">
-            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                checked={formData.isIndependent}
-                onChange={(e) => setFormData({
-                  ...formData,
-                  isIndependent: e.target.checked,
-                  relatedTo: e.target.checked ? '' : 'Lead',
-                  relatedToId: e.target.checked ? '' : formData.relatedToId
-                })}
-              />
-              <span>Independent Meeting (not linked to any Lead/Contact)</span>
-            </label>
-          </div>
-
-          {/* Conditional Fields */}
-          {formData.isIndependent ? (
-            <div className="crm-form-group">
-              <label>Participant Email(s) *</label>
-              <input
-                type="text"
-                className="crm-form-input"
-                placeholder="email1@example.com, email2@example.com"
-                value={formData.participants}
-                onChange={(e) => setFormData({ ...formData, participants: e.target.value })}
-                required
-              />
-              <small style={{ color: '#6B7280', fontSize: '12px' }}>
-                Enter one or more email addresses separated by commas
-              </small>
-            </div>
-          ) : (
-            <>
-              <div className="crm-form-group">
-                <label>Related To *</label>
-                <select className="crm-form-select" value={formData.relatedTo}
-                  onChange={(e) => {
-                    setFormData({ ...formData, relatedTo: e.target.value, relatedToId: '' });
-                    setEntitySearch('');
-                    setSelectedEntity(null);
-                    setEntityResults([]);
-                  }} required>
-                  <option value="">Select Type</option>
-                  <option value="Lead">Lead</option>
-                  <option value="Contact">Contact</option>
-                  <option value="Account">Account</option>
-                  <option value="Opportunity">Opportunity</option>
-                </select>
-              </div>
-              <div className="crm-form-group" style={{ position: 'relative' }}>
-                <label>Search {formData.relatedTo || 'Entity'} *</label>
-                <input
-                  type="text"
-                  className="crm-form-input"
-                  value={entitySearch}
-                  onChange={(e) => setEntitySearch(e.target.value)}
-                  placeholder={`Type to search ${formData.relatedTo || 'entity'}...`}
-                  disabled={!formData.relatedTo}
-                  required
-                />
-                {loadingEntities && (
-                  <div style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '36px',
-                    fontSize: '12px',
-                    color: '#6B7280'
-                  }}>
-                    Searching...
-                  </div>
-                )}
-                {entityResults.length > 0 && (
-                  <div style={{
-                    position: 'absolute',
-                    top: '100%',
-                    left: 0,
-                    right: 0,
-                    maxHeight: '200px',
-                    overflowY: 'auto',
-                    background: 'white',
-                    border: '1px solid #E5E7EB',
-                    borderRadius: '6px',
-                    marginTop: '4px',
-                    zIndex: 1000,
-                    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)'
-                  }}>
-                    {entityResults.map((entity) => {
-                      const displayName = entity.companyName ||
-                                         `${entity.firstName || ''} ${entity.lastName || ''}`.trim() ||
-                                         entity.name || entity.title;
-                      const subInfo = entity.email || entity.phone || '';
-                      return (
-                        <div
-                          key={entity._id}
-                          onClick={() => handleEntitySelect(entity)}
-                          style={{
-                            padding: '12px',
-                            cursor: 'pointer',
-                            borderBottom: '1px solid #F3F4F6',
-                            transition: 'background 0.2s'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
-                        >
-                          <div style={{ fontWeight: '500', fontSize: '14px', color: '#111827' }}>
-                            {displayName}
-                          </div>
-                          {subInfo && (
-                            <div style={{ fontSize: '12px', color: '#6B7280', marginTop: '2px' }}>
-                              {subInfo}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {formData.relatedTo && entitySearch.length > 0 && entitySearch.length < 2 && (
-                  <small style={{ color: '#6B7280', fontSize: '11px' }}>
-                    Type at least 2 characters to search
-                  </small>
-                )}
-                {selectedEntity && (
-                  <small style={{ color: '#10B981', fontSize: '11px', display: 'block', marginTop: '4px' }}>
-                    ✓ Selected
-                  </small>
-                )}
-              </div>
-            </>
-          )}
-
-          <div className="crm-form-group">
-            <label>Description</label>
-            <textarea
-              className="crm-form-textarea"
-              rows="3"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => {
-              setShowCreateModal(false);
-              resetForm();
-            }}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Create & Send Invites</button>
-          </div>
-        </form>
-      </Modal>
     </DashboardLayout>
   );
 };

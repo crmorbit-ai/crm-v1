@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
-import Modal from '../components/common/Modal';
 import { API_URL } from '../config/api.config';
 import '../styles/crm.css';
 
@@ -15,8 +14,8 @@ const MeetingDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -70,7 +69,7 @@ const MeetingDetail = () => {
       const data = await response.json();
       if (data.success) {
         setSuccess('Meeting updated!');
-        setShowEditModal(false);
+        setShowEditForm(false);
         loadMeeting();
         setTimeout(() => setSuccess(''), 3000);
       }
@@ -119,8 +118,80 @@ const MeetingDetail = () => {
 
   return (
     <DashboardLayout title="Meeting Details">
-      {success && <div className="alert-success">{success}</div>}
-      {error && <div className="alert-error">{error}</div>}
+      {success && <div style={{ padding: '16px', background: '#DCFCE7', color: '#166534', borderRadius: '8px', marginBottom: '20px' }}>{success}</div>}
+      {error && <div style={{ padding: '16px', background: '#FEE2E2', color: '#991B1B', borderRadius: '8px', marginBottom: '20px' }}>{error}</div>}
+
+      {/* Inline Edit Form */}
+      {showEditForm && (
+        <div className="crm-card" style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#1e3c72' }}>Edit Meeting</h3>
+            <button onClick={() => setShowEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <form onSubmit={handleUpdate}>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Title *</label>
+                  <input type="text" className="crm-form-input" value={formData.title}
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>From *</label>
+                  <input type="datetime-local" className="crm-form-input" value={formData.from}
+                    onChange={(e) => setFormData({ ...formData, from: e.target.value })} required />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>To *</label>
+                  <input type="datetime-local" className="crm-form-input" value={formData.to}
+                    onChange={(e) => setFormData({ ...formData, to: e.target.value })} required />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Location</label>
+                  <input type="text" className="crm-form-input" value={formData.location}
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Meeting Type</label>
+                  <select className="crm-form-select" value={formData.meetingType}
+                    onChange={(e) => setFormData({ ...formData, meetingType: e.target.value })}>
+                    <option value="Online">Online</option>
+                    <option value="In-Person">In-Person</option>
+                    <option value="Phone">Phone</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginTop: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Description</label>
+                <textarea className="crm-form-textarea" rows="3" value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ width: '100%' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px 20px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+              <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowEditForm(false)}>Cancel</button>
+              <button type="submit" className="crm-btn crm-btn-primary">Update Meeting</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Inline Delete Confirmation */}
+      {showDeleteConfirm && (
+        <div className="crm-card" style={{ marginBottom: '20px', border: '2px solid #FCA5A5' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid #e5e7eb', background: '#FEF2F2' }}>
+            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#DC2626' }}>Delete Meeting</h3>
+            <button onClick={() => setShowDeleteConfirm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <p style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#374151' }}>Are you sure you want to delete this meeting?</p>
+            <p style={{ margin: 0, fontWeight: '600', fontSize: '16px', color: '#111827' }}>{meeting.title}</p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', padding: '16px 20px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <button className="crm-btn crm-btn-secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+            <button className="crm-btn crm-btn-danger" onClick={handleDelete}>Delete Meeting</button>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
       <div className="crm-card" style={{ marginBottom: '20px' }}>
@@ -128,10 +199,10 @@ const MeetingDetail = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                <div style={{ 
-                  width: '48px', 
-                  height: '48px', 
-                  borderRadius: '8px', 
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '8px',
                   background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                   display: 'flex',
                   alignItems: 'center',
@@ -139,7 +210,7 @@ const MeetingDetail = () => {
                   color: 'white',
                   fontSize: '20px'
                 }}>
-                  📅
+                  M
                 </div>
                 <div>
                   <h1 style={{ fontSize: '24px', fontWeight: '700', margin: 0 }}>{meeting.title}</h1>
@@ -154,11 +225,11 @@ const MeetingDetail = () => {
               <button className="crm-btn crm-btn-secondary" onClick={() => navigate('/meetings')}>
                 ← Back
               </button>
-              <button className="crm-btn crm-btn-primary" onClick={() => setShowEditModal(true)}>
-                ✏️ Edit
+              <button className="crm-btn crm-btn-primary" onClick={() => { setShowDeleteConfirm(false); setShowEditForm(true); }}>
+                Edit
               </button>
-              <button className="crm-btn crm-btn-danger" onClick={() => setShowDeleteModal(true)}>
-                🗑️ Delete
+              <button className="crm-btn crm-btn-danger" onClick={() => { setShowEditForm(false); setShowDeleteConfirm(true); }}>
+                Delete
               </button>
             </div>
           </div>
@@ -168,9 +239,9 @@ const MeetingDetail = () => {
             <div>
               <p style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>From</p>
               <p style={{ fontSize: '14px', fontWeight: '500' }}>
-                {new Date(meeting.from).toLocaleString('en-GB', { 
-                  day: '2-digit', 
-                  month: 'short', 
+                {new Date(meeting.from).toLocaleString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
                   year: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit'
@@ -180,9 +251,9 @@ const MeetingDetail = () => {
             <div>
               <p style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>To</p>
               <p style={{ fontSize: '14px', fontWeight: '500' }}>
-                {new Date(meeting.to).toLocaleString('en-GB', { 
-                  day: '2-digit', 
-                  month: 'short', 
+                {new Date(meeting.to).toLocaleString('en-GB', {
+                  day: '2-digit',
+                  month: 'short',
                   year: 'numeric',
                   hour: '2-digit',
                   minute: '2-digit'
@@ -203,16 +274,16 @@ const MeetingDetail = () => {
 
           {/* Join Meeting Card */}
           {meeting.meetingLink && (
-            <div style={{ 
+            <div style={{
               marginTop: '24px',
-              padding: '24px', 
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+              padding: '24px',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               borderRadius: '12px',
               color: 'white',
               boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
-                <div style={{ fontSize: '32px' }}>🎥</div>
+                <div style={{ fontSize: '32px' }}>V</div>
                 <div>
                   <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '4px' }}>
                     Join Video Meeting
@@ -222,9 +293,9 @@ const MeetingDetail = () => {
                   </div>
                 </div>
               </div>
-              <a 
-                href={meeting.meetingLink} 
-                target="_blank" 
+              <a
+                href={meeting.meetingLink}
+                target="_blank"
                 rel="noopener noreferrer"
                 style={{
                   display: 'inline-block',
@@ -241,7 +312,7 @@ const MeetingDetail = () => {
                 onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.05)'}
                 onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
               >
-                🚀 Join Now
+                Join Now
               </a>
               <div style={{ fontSize: '12px', marginTop: '16px', opacity: 0.8, fontFamily: 'monospace' }}>
                 Meeting ID: {meeting.meetingId}
@@ -433,50 +504,6 @@ const MeetingDetail = () => {
           </div>
         </div>
       </div>
-
-      {/* Edit Modal */}
-      <Modal isOpen={showEditModal} onClose={() => setShowEditModal(false)} title="Edit Meeting">
-        <form onSubmit={handleUpdate}>
-          <div className="crm-form-group">
-            <label>Title *</label>
-            <input type="text" className="crm-form-input" value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
-          </div>
-          <div className="form-row">
-            <div className="crm-form-group">
-              <label>From *</label>
-              <input type="datetime-local" className="crm-form-input" value={formData.from}
-                onChange={(e) => setFormData({ ...formData, from: e.target.value })} required />
-            </div>
-            <div className="crm-form-group">
-              <label>To *</label>
-              <input type="datetime-local" className="crm-form-input" value={formData.to}
-                onChange={(e) => setFormData({ ...formData, to: e.target.value })} required />
-            </div>
-          </div>
-          <div className="crm-form-group">
-            <label>Location</label>
-            <input type="text" className="crm-form-input" value={formData.location}
-              onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Update</button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Modal */}
-      <Modal isOpen={showDeleteModal} onClose={() => setShowDeleteModal(false)} title="Delete Meeting">
-        <div>
-          <p>Are you sure you want to delete this meeting?</p>
-          <p style={{ fontWeight: '600', marginTop: '10px' }}>{meeting.title}</p>
-          <div className="modal-footer">
-            <button className="crm-btn crm-btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-            <button className="crm-btn crm-btn-danger" onClick={handleDelete}>Delete</button>
-          </div>
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 };

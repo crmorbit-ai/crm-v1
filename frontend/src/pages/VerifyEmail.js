@@ -86,11 +86,11 @@ const VerifyEmail = () => {
     try {
       const response = await verifyEmail(email, otpCode);
 
-      // Check if profile completion is required
+      // Use window.location for full page reload to ensure auth state is loaded
       if (response.requiresProfileCompletion) {
-        navigate('/complete-profile');
+        window.location.href = '/complete-profile';
       } else {
-        navigate('/dashboard');
+        window.location.href = '/dashboard';
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid or expired OTP. Please try again.');

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { taskService } from '../services/taskService';
-import Modal from '../components/common/Modal';
 import '../styles/crm.css';
 
 const Tasks = () => {
@@ -9,7 +8,7 @@ const Tasks = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -56,7 +55,7 @@ const Tasks = () => {
         relatedToId: '000000000000000000000000'
       });
       setSuccess('Task created!');
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       setFormData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
@@ -112,16 +111,57 @@ const Tasks = () => {
   };
 
   return (
-    <DashboardLayout
-      title="Tasks - Kanban View"
-      actionButton={
-        <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateModal(true)}>
-          + New Task
-        </button>
-      }
-    >
+    <DashboardLayout title="Tasks - Kanban View">
       {success && <div className="alert-success">{success}</div>}
       {error && <div className="alert-error">{error}</div>}
+
+      {/* Action Bar */}
+      <div className="crm-card" style={{ marginBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Tasks - Kanban View</h3>
+          <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateForm(true)}>+ New Task</button>
+        </div>
+      </div>
+
+      {/* Inline Create Task Form */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Create New Task</h3>
+            <button onClick={() => setShowCreateForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreate}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Subject *</label>
+                  <input type="text" className="crm-form-input" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Due Date *</label>
+                  <input type="date" className="crm-form-input" value={formData.dueDate} onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Priority</label>
+                  <select className="crm-form-select" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="High">High</option>
+                    <option value="Normal">Normal</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+                <div style={{ gridColumn: 'span 4' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <textarea className="crm-form-input" rows="2" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => setShowCreateForm(false)}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Create Task</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>
@@ -262,16 +302,16 @@ const Tasks = () => {
                         }}>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1 }}>
                             <span style={{ fontSize: '10px', color: '#9CA3AF' }}>
-                              📅 {formatDate(task.dueDate)}
+                              {formatDate(task.dueDate)}
                             </span>
                             {task.createdBy && (
                               <div style={{ fontSize: '10px' }}>
                                 <div style={{ fontWeight: '600', color: '#1e3c72' }}>
-                                  👤 {task.createdBy.firstName} {task.createdBy.lastName}
+                                  {task.createdBy.firstName} {task.createdBy.lastName}
                                 </div>
                                 {task.createdBy.groups && task.createdBy.groups.length > 0 && (
                                   <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
-                                    📁 {task.createdBy.groups[0].name}
+                                    {task.createdBy.groups[0].name}
                                   </div>
                                 )}
                               </div>
@@ -300,58 +340,6 @@ const Tasks = () => {
           })}
         </div>
       )}
-
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Create Task">
-        <form onSubmit={handleCreate}>
-          <div className="crm-form-group">
-            <label>Subject *</label>
-            <input
-              type="text"
-              className="crm-form-input"
-              value={formData.subject}
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-              required
-            />
-          </div>
-          <div className="crm-form-group">
-            <label>Due Date *</label>
-            <input
-              type="date"
-              className="crm-form-input"
-              value={formData.dueDate}
-              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-              required
-            />
-          </div>
-          <div className="crm-form-group">
-            <label>Priority</label>
-            <select
-              className="crm-form-select"
-              value={formData.priority}
-              onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-            >
-              <option value="High">High</option>
-              <option value="Normal">Normal</option>
-              <option value="Low">Low</option>
-            </select>
-          </div>
-          <div className="crm-form-group">
-            <label>Description</label>
-            <textarea
-              className="crm-form-textarea"
-              rows="3"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-            />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowCreateModal(false)}>
-              Cancel
-            </button>
-            <button type="submit" className="crm-btn crm-btn-primary">Create</button>
-          </div>
-        </form>
-      </Modal>
     </DashboardLayout>
   );
 };

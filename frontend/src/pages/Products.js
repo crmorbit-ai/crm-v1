@@ -5,7 +5,6 @@ import { productItemService } from '../services/productItemService';
 import { productCategoryService } from '../services/productCategoryService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import { useAuth } from '../context/AuthContext';
-import Modal from '../components/common/Modal';
 import TooltipButton from '../components/common/TooltipButton';
 import DynamicField from '../components/DynamicField';
 import '../styles/crm.css';
@@ -41,13 +40,10 @@ const Products = () => {
     categories: 0
   });
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateCategoryForm, setShowCreateCategoryForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-
-  // Modal navigation - track which modal opened which
-  const [modalStack, setModalStack] = useState([]);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -215,7 +211,7 @@ const Products = () => {
         await productItemService.createProduct(productData);
         setSuccess('Product created successfully!');
       }
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       resetForm();
       loadProducts();
       setTimeout(() => setSuccess(''), 3000);
@@ -236,12 +232,13 @@ const Products = () => {
       imageUrl: product.imageUrl || '',
       isActive: product.isActive !== false
     });
-    setShowCreateModal(true);
+    setShowCreateForm(true);
+    setShowCreateCategoryForm(false);
   };
 
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
-    
+
     try {
       setError('');
       await productItemService.deleteProduct(productId);
@@ -253,27 +250,11 @@ const Products = () => {
     }
   };
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
     resetForm();
     setEditingProduct(null);
-    setShowCreateModal(true);
-    setModalStack(['createProduct']);
-  };
-
-  const openCreateCategoryModal = () => {
-    // Close parent modal and open this one
-    setShowCreateModal(false);
-    setShowCreateCategoryModal(true);
-    setModalStack(['createProduct', 'createCategory']);
-  };
-
-  const closeCreateCategoryModal = () => {
-    setShowCreateCategoryModal(false);
-    setNewCategoryName('');
-    setError('');
-    // Reopen parent modal
-    setShowCreateModal(true);
-    setModalStack(['createProduct']);
+    setShowCreateForm(true);
+    setShowCreateCategoryForm(false);
   };
 
   const handleCreateCategory = async (e) => {
@@ -287,12 +268,7 @@ const Products = () => {
       await productCategoryService.createCategory({ name: newCategoryName, isActive: true });
       setSuccess('Category created successfully!');
       setNewCategoryName('');
-
-      // Close this modal and reopen parent
-      setShowCreateCategoryModal(false);
-      setShowCreateModal(true);
-      setModalStack(['createProduct']);
-
+      setShowCreateCategoryForm(false);
       await loadCategories();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -343,12 +319,12 @@ const Products = () => {
     <DashboardLayout title="Products Management">
       {success && (
         <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>
-          ✓ {success}
+          {success}
         </div>
       )}
       {error && (
         <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>
-          ⚠ {error}
+          {error}
         </div>
       )}
 
@@ -378,7 +354,7 @@ const Products = () => {
       <div className="crm-card" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '20px' }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>
-            🔍 Search & Filter
+            Search & Filter
           </h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
             <input
@@ -420,20 +396,20 @@ const Products = () => {
                 onClick={() => setViewMode('table')}
                 style={{ padding: '6px 12px' }}
               >
-                ☰ Table
+                Table
               </button>
               <button
                 className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`}
                 onClick={() => setViewMode('grid')}
                 style={{ padding: '6px 12px' }}
               >
-                ⊞ Grid
+                Grid
               </button>
             </div>
             {canCreateProduct && (
               <TooltipButton
                 className="crm-btn crm-btn-primary"
-                onClick={openCreateModal}
+                onClick={openCreateForm}
                 disabled={!canCreateProduct}
                 tooltipText="You don't have permission to create products"
               >
@@ -443,6 +419,115 @@ const Products = () => {
           </div>
         </div>
       </div>
+
+      {/* Inline Create/Edit Product Form */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>{editingProduct ? 'Edit Product' : 'Create New Product'}</h3>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreateProduct}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Product Name *</label>
+                  <input type="text" name="name" className="crm-form-input" value={formData.name} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Article Number / SKU *</label>
+                  <input type="text" name="articleNumber" className="crm-form-input" value={formData.articleNumber} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Category *</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <select name="category" className="crm-form-select" value={formData.category} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px', flex: 1 }}>
+                      <option value="">Select Category</option>
+                      {categories.map(cat => (
+                        <option key={cat._id} value={cat.name}>{cat.name}</option>
+                      ))}
+                    </select>
+                    {canManageCategories && (
+                      <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowCreateCategoryForm(true)} style={{ padding: '8px 12px' }}>+</button>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Price *</label>
+                  <input type="number" name="price" className="crm-form-input" value={formData.price} onChange={handleChange} required min="0" step="0.01" style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Stock Quantity</label>
+                  <input type="number" name="stock" className="crm-form-input" value={formData.stock} onChange={handleChange} min="0" style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Image URL</label>
+                  <input type="url" name="imageUrl" className="crm-form-input" value={formData.imageUrl} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                    <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} />
+                    Active Product
+                  </label>
+                </div>
+                <div style={{ gridColumn: 'span 4' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <textarea name="description" className="crm-form-input" value={formData.description} onChange={handleChange} rows="2" style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical' }} />
+                </div>
+              </div>
+
+              {/* Dynamic Custom Fields */}
+              {(() => {
+                const standardFieldNames = ['name', 'articleNumber', 'category', 'price', 'stock', 'description', 'imageUrl', 'isActive'];
+                const customFields = fieldDefinitions.filter(field => !standardFieldNames.includes(field.fieldName));
+                if (customFields.length === 0) return null;
+
+                return (
+                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+                    <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Custom Fields</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                      {customFields.map(field => (
+                        <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 4' } : {}}>
+                          {renderDynamicField(field)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">{editingProduct ? 'Update Product' : 'Create Product'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Create Category Form */}
+      {showCreateCategoryForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Create New Category</h3>
+            <button onClick={() => { setShowCreateCategoryForm(false); setNewCategoryName(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreateCategory}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', alignItems: 'end' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Category Name *</label>
+                  <input type="text" className="crm-form-input" value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} required placeholder="e.g., Software, Hardware, Services" style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateCategoryForm(false); setNewCategoryName(''); }}>Cancel</button>
+                  <button type="submit" className="crm-btn crm-btn-primary">Create Category</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -468,7 +553,7 @@ const Products = () => {
               Create your first product to get started!
             </p>
             {canCreateProduct && (
-              <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>
+              <button className="crm-btn crm-btn-primary" onClick={openCreateForm}>
                 + Create First Product
               </button>
             )}
@@ -491,19 +576,9 @@ const Products = () => {
                       overflow: 'hidden',
                       boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-8px)';
-                      e.currentTarget.style.boxShadow = '0 12px 32px rgba(74, 144, 226, 0.2)';
-                      e.currentTarget.style.borderColor = '#4A90E2';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.05)';
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                    }}
                   >
                     <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #4A90E2 0%, #2c5364 100%)' }}></div>
-                    
+
                     {product.imageUrl ? (
                       <div style={{ width: '100%', height: '180px', borderRadius: '12px', overflow: 'hidden', marginBottom: '16px' }}>
                         <img src={product.imageUrl} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -528,13 +603,9 @@ const Products = () => {
                         {product.category}
                       </span>
                       {product.isActive ? (
-                        <span style={{ padding: '4px 12px', background: '#DCFCE7', color: '#166534', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>
-                          Active
-                        </span>
+                        <span style={{ padding: '4px 12px', background: '#DCFCE7', color: '#166534', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>Active</span>
                       ) : (
-                        <span style={{ padding: '4px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>
-                          Inactive
-                        </span>
+                        <span style={{ padding: '4px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: '6px', fontSize: '12px', fontWeight: '700' }}>Inactive</span>
                       )}
                     </div>
 
@@ -553,29 +624,12 @@ const Products = () => {
                       </div>
                     </div>
 
-                    {product.description && (
-                      <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px', lineHeight: '1.6' }}>
-                        {product.description.length > 100 ? `${product.description.substring(0, 100)}...` : product.description}
-                      </p>
-                    )}
-
                     <div style={{ display: 'flex', gap: '8px' }}>
-                      <button
-                        className="crm-btn crm-btn-secondary"
-                        onClick={() => handleProductClick(product._id)}
-                        style={{ flex: 1, fontSize: '13px' }}
-                      >
+                      <button className="crm-btn crm-btn-secondary" onClick={() => handleProductClick(product._id)} style={{ flex: 1, fontSize: '13px' }}>
                         View Details
                       </button>
                       {canEditProduct && (
-                        <button
-                          className="crm-btn crm-btn-primary"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditProduct(product);
-                          }}
-                          style={{ flex: 1, fontSize: '13px' }}
-                        >
+                        <button className="crm-btn crm-btn-primary" onClick={(e) => { e.stopPropagation(); handleEditProduct(product); }} style={{ flex: 1, fontSize: '13px' }}>
                           Edit
                         </button>
                       )}
@@ -588,144 +642,53 @@ const Products = () => {
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                   <thead>
                     <tr style={{ background: 'transparent' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Product
-                      </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Category
-                      </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Price
-                      </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Stock
-                      </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Enquiries
-                      </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Status
-                      </th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Actions
-                      </th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Price</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stock</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {products.map((product) => (
-                      <tr
-                        key={product._id}
-                        id={`product-${product._id}`}
-                        style={{
-                          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          borderRadius: '12px',
-                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                          border: '2px solid #e5e7eb'
-                        }}
-                        onClick={(e) => {
-                          if (e.target.tagName !== 'BUTTON') {
-                            handleProductClick(product._id);
-                          }
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 144, 226, 0.15)';
-                          e.currentTarget.style.borderColor = '#4A90E2';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                        }}
-                      >
+                      <tr key={product._id} id={`product-${product._id}`} style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', cursor: 'pointer', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)', border: '2px solid #e5e7eb' }} onClick={(e) => { if (e.target.tagName !== 'BUTTON') handleProductClick(product._id); }}>
                         <td style={{ padding: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                             {product.imageUrl ? (
-                              <img
-                                src={product.imageUrl}
-                                alt={product.name}
-                                style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }}
-                              />
+                              <img src={product.imageUrl} alt={product.name} style={{ width: '48px', height: '48px', borderRadius: '8px', objectFit: 'cover' }} />
                             ) : (
-                              <div style={{
-                                width: '48px',
-                                height: '48px',
-                                borderRadius: '8px',
-                                background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '24px'
-                              }}>
-                                📦
-                              </div>
+                              <div style={{ width: '48px', height: '48px', borderRadius: '8px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>📦</div>
                             )}
                             <div>
-                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '4px' }}>
-                                {product.name}
-                              </div>
-                              <div style={{ fontSize: '13px', color: '#64748b' }}>
-                                SKU: {product.articleNumber}
-                              </div>
+                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '4px' }}>{product.name}</div>
+                              <div style={{ fontSize: '13px', color: '#64748b' }}>SKU: {product.articleNumber}</div>
                             </div>
                           </div>
                         </td>
                         <td style={{ padding: '16px' }}>
-                          <span style={{ padding: '6px 12px', background: '#E0F2FE', color: '#0369A1', borderRadius: '6px', fontSize: '13px', fontWeight: '700' }}>
-                            {product.category}
-                          </span>
+                          <span style={{ padding: '6px 12px', background: '#E0F2FE', color: '#0369A1', borderRadius: '6px', fontSize: '13px', fontWeight: '700' }}>{product.category}</span>
                         </td>
                         <td style={{ padding: '16px' }}>
-                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#1e3c72' }}>
-                            ${Number(product.price).toFixed(2)}
-                          </span>
+                          <span style={{ fontSize: '16px', fontWeight: '800', color: '#1e3c72' }}>${Number(product.price).toFixed(2)}</span>
                         </td>
                         <td style={{ padding: '16px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: '700', color: product.stock < 10 ? '#DC2626' : '#059669' }}>
-                            {product.stock}
-                          </span>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <span style={{ fontSize: '15px', fontWeight: '700', color: '#4A90E2' }}>
-                            {product.enquiryCount || 0}
-                          </span>
+                          <span style={{ fontSize: '15px', fontWeight: '700', color: product.stock < 10 ? '#DC2626' : '#059669' }}>{product.stock}</span>
                         </td>
                         <td style={{ padding: '16px' }}>
                           {product.isActive ? (
-                            <span style={{ padding: '6px 12px', background: '#DCFCE7', color: '#166534', borderRadius: '6px', fontSize: '13px', fontWeight: '700' }}>
-                              Active
-                            </span>
+                            <span style={{ padding: '6px 12px', background: '#DCFCE7', color: '#166534', borderRadius: '6px', fontSize: '13px', fontWeight: '700' }}>Active</span>
                           ) : (
-                            <span style={{ padding: '6px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: '700' }}>
-                              Inactive
-                            </span>
+                            <span style={{ padding: '6px 12px', background: '#FEE2E2', color: '#991B1B', borderRadius: '6px', fontSize: '13px', fontWeight: '700' }}>Inactive</span>
                           )}
                         </td>
                         <td style={{ padding: '16px' }}>
                           <div style={{ display: 'flex', gap: '8px' }}>
                             {canEditProduct && (
-                              <button
-                                className="crm-btn crm-btn-sm crm-btn-primary"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditProduct(product);
-                                }}
-                              >
-                                Edit
-                              </button>
+                              <button className="crm-btn crm-btn-sm crm-btn-primary" onClick={(e) => { e.stopPropagation(); handleEditProduct(product); }}>Edit</button>
                             )}
                             {canDeleteProduct && (
-                              <button
-                                className="crm-btn crm-btn-sm crm-btn-danger"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteProduct(product._id);
-                                }}
-                              >
-                                Delete
-                              </button>
+                              <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product._id); }}>Delete</button>
                             )}
                           </div>
                         </td>
@@ -738,288 +701,14 @@ const Products = () => {
 
             {pagination.pages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderTop: '2px solid #f1f5f9' }}>
-                <button
-                  className="crm-btn crm-btn-secondary"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                  disabled={pagination.page === 1}
-                >
-                  ← Previous
-                </button>
-                <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>
-                  Page {pagination.page} of {pagination.pages}
-                </span>
-                <button
-                  className="crm-btn crm-btn-secondary"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page === pagination.pages}
-                >
-                  Next →
-                </button>
+                <button className="crm-btn crm-btn-secondary" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>Previous</button>
+                <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>Page {pagination.page} of {pagination.pages}</span>
+                <button className="crm-btn crm-btn-secondary" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>Next</button>
               </div>
             )}
           </>
         )}
       </div>
-
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          resetForm();
-          setError('');
-        }}
-        title={editingProduct ? 'Edit Product' : 'Create Product'}
-        size="large"
-      >
-        <form onSubmit={handleCreateProduct}>
-          {/* Basic Information Section */}
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Basic Information
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                  Product Name *
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  className="crm-form-input"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter product name"
-                />
-              </div>
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                  Article Number / SKU *
-                </label>
-                <input
-                  type="text"
-                  name="articleNumber"
-                  className="crm-form-input"
-                  value={formData.articleNumber}
-                  onChange={handleChange}
-                  required
-                  placeholder="e.g., PROD-001"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Category Selection */}
-          <div className="form-group" style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-              Category *
-            </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <select
-                name="category"
-                className="crm-form-select"
-                value={formData.category}
-                onChange={handleChange}
-                required
-                style={{ flex: 1 }}
-              >
-                <option value="">Select Category</option>
-                {categories.map(cat => (
-                  <option key={cat._id} value={cat.name}>{cat.name}</option>
-                ))}
-              </select>
-              {canManageCategories && (
-                <button
-                  type="button"
-                  className="crm-btn crm-btn-secondary"
-                  onClick={openCreateCategoryModal}
-                  title="Create New Category"
-                >
-                  +
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Pricing & Inventory Section */}
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Pricing & Inventory
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                  Price *
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  className="crm-form-input"
-                  value={formData.price}
-                  onChange={handleChange}
-                  required
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                />
-              </div>
-              <div className="form-group">
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                  Stock Quantity
-                </label>
-                <input
-                  type="number"
-                  name="stock"
-                  className="crm-form-input"
-                  value={formData.stock}
-                  onChange={handleChange}
-                  min="0"
-                  placeholder="0"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Description Section */}
-          <div style={{ marginBottom: '24px' }}>
-            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Additional Details
-            </h4>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                Description
-              </label>
-              <textarea
-                name="description"
-                className="crm-form-input"
-                value={formData.description}
-                onChange={handleChange}
-                rows="3"
-                placeholder="Enter product description"
-                style={{ resize: 'vertical' }}
-              />
-            </div>
-            <div className="form-group" style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                Image URL
-              </label>
-              <input
-                type="url"
-                name="imageUrl"
-                className="crm-form-input"
-                value={formData.imageUrl}
-                onChange={handleChange}
-                placeholder="https://example.com/image.jpg"
-              />
-            </div>
-            <div className="form-group">
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  checked={formData.isActive}
-                  onChange={handleChange}
-                />
-                <span style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>Active Product</span>
-              </label>
-            </div>
-          </div>
-
-          {/* Dynamic Form Sections - Only Custom Fields (excluding standard fields) */}
-          {(() => {
-            // Standard fields already rendered above - exclude them from dynamic rendering
-            const standardFieldNames = ['name', 'articleNumber', 'category', 'price', 'stock', 'description', 'imageUrl', 'isActive'];
-            const customFields = fieldDefinitions.filter(field => !standardFieldNames.includes(field.fieldName));
-
-            if (customFields.length === 0) return null;
-
-            const groupedFields = groupFieldsBySection(customFields);
-            const sectionOrder = ['Custom Fields', 'Additional Information', 'Other'];
-
-            return sectionOrder.map(sectionName => {
-              const sectionFields = groupedFields[sectionName];
-              if (!sectionFields || sectionFields.length === 0) return null;
-
-              return (
-                <div key={sectionName} style={{ marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {sectionName}
-                  </h4>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {sectionFields.map((field) => {
-                      const isFullWidth = field.fieldType === 'textarea';
-
-                      return (
-                        <div key={field._id} style={isFullWidth ? { gridColumn: 'span 2' } : {}}>
-                          {renderDynamicField(field)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            });
-          })()}
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
-            <button
-              type="button"
-              className="crm-btn crm-btn-secondary"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="crm-btn crm-btn-primary">
-              {editingProduct ? 'Update Product' : 'Create Product'}
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Create Category Modal */}
-      {showCreateCategoryModal && (
-        <Modal
-          isOpen={showCreateCategoryModal}
-          onClose={closeCreateCategoryModal}
-          title="Create New Category"
-          size="small"
-        >
-          <form onSubmit={handleCreateCategory}>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                Category Name *
-              </label>
-              <input
-                type="text"
-                className="crm-form-input"
-                value={newCategoryName}
-                onChange={(e) => setNewCategoryName(e.target.value)}
-                required
-                placeholder="e.g., Software, Hardware, Services"
-                autoFocus
-              />
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
-              <button
-                type="button"
-                className="crm-btn crm-btn-secondary"
-                onClick={closeCreateCategoryModal}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="crm-btn crm-btn-primary">
-                Create Category
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
     </DashboardLayout>
   );
 };

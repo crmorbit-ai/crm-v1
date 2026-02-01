@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { productCategoryService } from '../services/productCategoryService';
 import { useAuth } from '../context/AuthContext';
-import Modal from '../components/common/Modal';
 import TooltipButton from '../components/common/TooltipButton';
 import '../styles/crm.css';
 
@@ -33,7 +32,7 @@ const ProductCategories = () => {
     inactive: 0
   });
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -91,7 +90,7 @@ const ProductCategories = () => {
         await productCategoryService.createCategory(formData);
         setSuccess('Category created successfully!');
       }
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       resetForm();
       loadCategories();
       setTimeout(() => setSuccess(''), 3000);
@@ -107,7 +106,7 @@ const ProductCategories = () => {
       description: category.description || '',
       isActive: category.isActive !== false
     });
-    setShowCreateModal(true);
+    setShowCreateForm(true);
   };
 
   const handleDeleteCategory = async (categoryId, productCount) => {
@@ -130,10 +129,10 @@ const ProductCategories = () => {
     }
   };
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
     resetForm();
     setEditingCategory(null);
-    setShowCreateModal(true);
+    setShowCreateForm(true);
   };
 
   const resetForm = () => {
@@ -163,37 +162,29 @@ const ProductCategories = () => {
   const canEditCategory = hasPermission('product_management', 'update');
   const canDeleteCategory = hasPermission('product_management', 'delete');
 
-  const actionButton = (
-    <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-      <button
-        className="crm-btn crm-btn-secondary"
-        onClick={() => navigate('/products-management')}
-      >
-        ← Back to Products
-      </button>
-      <TooltipButton
-        className="crm-btn crm-btn-primary"
-        onClick={openCreateModal}
-        disabled={!canCreateCategory}
-        tooltipText="You don't have permission to create categories"
-      >
-        + New Category
-      </TooltipButton>
-    </div>
-  );
-
   return (
-    <DashboardLayout title="Product Categories" actionButton={actionButton}>
+    <DashboardLayout title="Product Categories">
       {success && (
         <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>
-          ✓ {success}
+          {success}
         </div>
       )}
       {error && (
         <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>
-          ⚠ {error}
+          {error}
         </div>
       )}
+
+      {/* Action Bar */}
+      <div className="crm-card" style={{ marginBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Product Categories</h3>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <button className="crm-btn crm-btn-secondary" onClick={() => navigate('/products-management')}>Back to Products</button>
+            <TooltipButton className="crm-btn crm-btn-primary" onClick={openCreateForm} disabled={!canCreateCategory} tooltipText="You don't have permission to create categories">+ New Category</TooltipButton>
+          </div>
+        </div>
+      </div>
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -215,24 +206,10 @@ const ProductCategories = () => {
 
       <div className="crm-card" style={{ marginBottom: '24px' }}>
         <div style={{ padding: '20px' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>
-            🔍 Search & Filter
-          </h3>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Search & Filter</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '16px' }}>
-            <input
-              type="text"
-              name="search"
-              placeholder="Search categories..."
-              className="crm-form-input"
-              value={filters.search}
-              onChange={handleFilterChange}
-            />
-            <select
-              name="isActive"
-              className="crm-form-select"
-              value={filters.isActive}
-              onChange={handleFilterChange}
-            >
+            <input type="text" name="search" placeholder="Search categories..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
+            <select name="isActive" className="crm-form-select" value={filters.isActive} onChange={handleFilterChange}>
               <option value="">All Status</option>
               <option value="true">Active</option>
               <option value="false">Inactive</option>
@@ -240,6 +217,40 @@ const ProductCategories = () => {
           </div>
         </div>
       </div>
+
+      {/* Inline Create/Edit Category Form */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>{editingCategory ? 'Edit Category' : 'Create New Category'}</h3>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreateCategory}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Category Name *</label>
+                  <input type="text" name="name" className="crm-form-input" value={formData.name} onChange={handleChange} required placeholder="e.g., Electronics, Software" style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <input type="text" name="description" className="crm-form-input" value={formData.description} onChange={handleChange} placeholder="Brief description..." style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
+                    <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} />
+                    Active (visible for product selection)
+                  </label>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">{editingCategory ? 'Update Category' : 'Create Category'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -249,23 +260,15 @@ const ProductCategories = () => {
         {loading ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
             <div className="spinner" style={{ margin: '0 auto' }}></div>
-            <p style={{ marginTop: '16px', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>
-              Loading categories...
-            </p>
+            <p style={{ marginTop: '16px', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>Loading categories...</p>
           </div>
         ) : categories.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
             <div style={{ fontSize: '64px', marginBottom: '16px' }}>📂</div>
-            <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>
-              No categories found
-            </p>
-            <p style={{ color: '#64748b', marginBottom: '24px' }}>
-              Create your first category to organize products!
-            </p>
+            <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No categories found</p>
+            <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first category to organize products!</p>
             {canCreateCategory && (
-              <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>
-                + Create First Category
-              </button>
+              <button className="crm-btn crm-btn-primary" onClick={openCreateForm}>+ Create First Category</button>
             )}
           </div>
         ) : (
@@ -274,126 +277,49 @@ const ProductCategories = () => {
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                 <thead>
                   <tr style={{ background: 'transparent' }}>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Category Name
-                    </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Description
-                    </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Products
-                    </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Status
-                    </th>
-                    <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      Actions
-                    </th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category Name</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Products</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {categories.map((category) => (
-                    <tr
-                      key={category._id}
-                      style={{
-                        background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                        transition: 'all 0.2s ease',
-                        borderRadius: '12px',
-                        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                        border: '2px solid #e5e7eb'
-                      }}
-                      onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = 'translateY(-2px)';
-                        e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 144, 226, 0.15)';
-                        e.currentTarget.style.borderColor = '#4A90E2';
-                      }}
-                      onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = 'translateY(0)';
-                        e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
-                        e.currentTarget.style.borderColor = '#e5e7eb';
-                      }}
-                    >
+                    <tr key={category._id} style={{ background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)', borderRadius: '12px', boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)', border: '2px solid #e5e7eb' }}>
                       <td style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                          <div style={{
-                            width: '48px',
-                            height: '48px',
-                            borderRadius: '12px',
-                            background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontSize: '24px',
-                            color: 'white',
-                            fontWeight: '800',
-                            boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                          }}>
-                            📂
-                          </div>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: 'white', fontWeight: '800', boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)' }}>📂</div>
                           <div>
-                            <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '2px' }}>
-                              {category.name}
-                            </div>
-                            <div style={{ fontSize: '12px', color: '#94A3B8' }}>
-                              Created {new Date(category.createdAt).toLocaleDateString()}
-                            </div>
+                            <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '2px' }}>{category.name}</div>
+                            <div style={{ fontSize: '12px', color: '#94A3B8' }}>Created {new Date(category.createdAt).toLocaleDateString()}</div>
                           </div>
                         </div>
                       </td>
                       <td style={{ padding: '16px' }}>
                         <div style={{ fontSize: '14px', color: '#475569', lineHeight: '1.5', maxWidth: '400px' }}>
-                          {category.description || (
-                            <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>No description</span>
-                          )}
+                          {category.description || <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>No description</span>}
                         </div>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'center' }}>
-                        <div style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          minWidth: '48px',
-                          height: '32px',
-                          padding: '0 12px',
-                          background: category.productCount > 0 ? '#DBEAFE' : '#F1F5F9',
-                          color: category.productCount > 0 ? '#1E40AF' : '#64748B',
-                          borderRadius: '8px',
-                          fontSize: '14px',
-                          fontWeight: '700'
-                        }}>
+                        <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: '48px', height: '32px', padding: '0 12px', background: category.productCount > 0 ? '#DBEAFE' : '#F1F5F9', color: category.productCount > 0 ? '#1E40AF' : '#64748B', borderRadius: '8px', fontSize: '14px', fontWeight: '700' }}>
                           {category.productCount || 0}
                         </div>
                       </td>
                       <td style={{ padding: '16px', textAlign: 'center' }}>
                         {category.isActive ? (
-                          <span style={{ padding: '6px 16px', background: '#DCFCE7', color: '#166534', borderRadius: '8px', fontSize: '13px', fontWeight: '700', display: 'inline-block' }}>
-                            ✓ Active
-                          </span>
+                          <span style={{ padding: '6px 16px', background: '#DCFCE7', color: '#166534', borderRadius: '8px', fontSize: '13px', fontWeight: '700', display: 'inline-block' }}>Active</span>
                         ) : (
-                          <span style={{ padding: '6px 16px', background: '#FEE2E2', color: '#991B1B', borderRadius: '8px', fontSize: '13px', fontWeight: '700', display: 'inline-block' }}>
-                            ✗ Inactive
-                          </span>
+                          <span style={{ padding: '6px 16px', background: '#FEE2E2', color: '#991B1B', borderRadius: '8px', fontSize: '13px', fontWeight: '700', display: 'inline-block' }}>Inactive</span>
                         )}
                       </td>
                       <td style={{ padding: '16px' }}>
                         <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                           {canEditCategory && (
-                            <button
-                              className="crm-btn crm-btn-sm crm-btn-primary"
-                              onClick={() => handleEditCategory(category)}
-                              style={{ minWidth: '70px' }}
-                            >
-                              ✏️ Edit
-                            </button>
+                            <button className="crm-btn crm-btn-sm crm-btn-primary" onClick={() => handleEditCategory(category)} style={{ minWidth: '70px' }}>Edit</button>
                           )}
                           {canDeleteCategory && (
-                            <button
-                              className="crm-btn crm-btn-sm crm-btn-danger"
-                              onClick={() => handleDeleteCategory(category._id, category.productCount)}
-                              style={{ minWidth: '70px' }}
-                            >
-                              🗑️ Delete
-                            </button>
+                            <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={() => handleDeleteCategory(category._id, category.productCount)} style={{ minWidth: '70px' }}>Delete</button>
                           )}
                         </div>
                       </td>
@@ -405,102 +331,14 @@ const ProductCategories = () => {
 
             {pagination.pages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '24px', borderTop: '2px solid #f1f5f9' }}>
-                <button
-                  className="crm-btn crm-btn-secondary"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                  disabled={pagination.page === 1}
-                >
-                  ← Previous
-                </button>
-                <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>
-                  Page {pagination.page} of {pagination.pages}
-                </span>
-                <button
-                  className="crm-btn crm-btn-secondary"
-                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                  disabled={pagination.page === pagination.pages}
-                >
-                  Next →
-                </button>
+                <button className="crm-btn crm-btn-secondary" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>Previous</button>
+                <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>Page {pagination.page} of {pagination.pages}</span>
+                <button className="crm-btn crm-btn-secondary" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>Next</button>
               </div>
             )}
           </>
         )}
       </div>
-
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          resetForm();
-          setError('');
-        }}
-        title={editingCategory ? 'Edit Category' : 'Create Category'}
-        size="medium"
-      >
-        <form onSubmit={handleCreateCategory}>
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-              Category Name *
-            </label>
-            <input
-              type="text"
-              name="name"
-              className="crm-form-input"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              placeholder="e.g., Electronics, Software, Services"
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
-              Description
-            </label>
-            <textarea
-              name="description"
-              className="crm-form-input"
-              value={formData.description}
-              onChange={handleChange}
-              rows="4"
-              placeholder="Brief description of this category..."
-            />
-          </div>
-
-          <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}>
-              <input
-                type="checkbox"
-                name="isActive"
-                checked={formData.isActive}
-                onChange={handleChange}
-                style={{ width: '20px', height: '20px', cursor: 'pointer' }}
-              />
-              <span style={{ fontSize: '14px', fontWeight: '600', color: '#374151' }}>
-                Active (visible for product selection)
-              </span>
-            </label>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', paddingTop: '20px', borderTop: '1px solid #E5E7EB' }}>
-            <button
-              type="button"
-              className="crm-btn crm-btn-secondary"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="crm-btn crm-btn-primary">
-              {editingCategory ? 'Update Category' : 'Create Category'}
-            </button>
-          </div>
-        </form>
-      </Modal>
     </DashboardLayout>
   );
 };

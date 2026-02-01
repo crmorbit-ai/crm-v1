@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
 import { subscriptionService } from '../services/subscriptionService';
-import Modal from '../components/common/Modal';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import '../styles/crm.css';
 
@@ -221,16 +220,196 @@ const Users = () => {
   const canDeleteUser = hasPermission('user_management', 'delete');
 
   return (
-    <DashboardLayout
-      title="User Management"
-      actionButton={canCreateUser ? (
-        <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>
-          + New User
-        </button>
-      ) : null}
-    >
+    <DashboardLayout title="User Management">
       {success && <div className="alert alert-success">{success}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+
+      {/* Action Bar */}
+      <div className="crm-card" style={{ marginBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>User Management</h3>
+          {canCreateUser && (
+            <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New User</button>
+          )}
+        </div>
+      </div>
+
+      {/* Inline Create User Form */}
+      {showCreateModal && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Create New User</h3>
+            <button onClick={() => { setShowCreateModal(false); resetForm(); setError(''); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            {/* Subscription Info */}
+            {loadingSubscription ? (
+              <div style={{ padding: '12px', background: '#f3f4f6', borderRadius: '8px', marginBottom: '16px', textAlign: 'center', fontSize: '13px', color: '#666' }}>Loading subscription info...</div>
+            ) : subscriptionInfo && (
+              <div style={{ padding: '12px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '8px', marginBottom: '16px', color: 'white' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px' }}>
+                  <span>Plan: {subscriptionInfo.subscription?.planName || 'Free'}</span>
+                  <span>Users: {subscriptionInfo.usage?.users || 0} / {subscriptionInfo.subscription?.plan?.limits?.users === -1 ? '∞' : subscriptionInfo.subscription?.plan?.limits?.users || 5}</span>
+                </div>
+              </div>
+            )}
+            <form onSubmit={handleCreateUser}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>First Name *</label>
+                  <input type="text" name="firstName" className="crm-form-input" value={formData.firstName} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Last Name *</label>
+                  <input type="text" name="lastName" className="crm-form-input" value={formData.lastName} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Email *</label>
+                  <input type="email" name="email" className="crm-form-input" value={formData.email} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Password *</label>
+                  <input type="password" name="password" className="crm-form-input" value={formData.password} onChange={handleChange} required minLength={6} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>User Type *</label>
+                  <select name="userType" className="crm-form-select" value={formData.userType} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="TENANT_USER">Tenant User</option>
+                    <option value="TENANT_MANAGER">Tenant Manager</option>
+                    {user?.userType === 'TENANT_ADMIN' && <option value="TENANT_ADMIN">Tenant Admin</option>}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Phone</label>
+                  <input type="tel" name="phone" className="crm-form-input" value={formData.phone} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Assign Roles</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', maxHeight: '60px', overflowY: 'auto', padding: '4px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                    {allRoles.length === 0 ? <span style={{ fontSize: '12px', color: '#999' }}>No roles available</span> : allRoles.map(role => (
+                      <label key={role._id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={formData.roles.includes(role._id)} onChange={() => handleRoleToggle(role._id)} />
+                        {role.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateModal(false); resetForm(); setError(''); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Create User</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Edit User Form */}
+      {showEditModal && selectedUser && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Edit User: {selectedUser.firstName} {selectedUser.lastName}</h3>
+            <button onClick={() => { setShowEditModal(false); setSelectedUser(null); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleUpdateUser}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>First Name *</label>
+                  <input type="text" name="firstName" className="crm-form-input" value={formData.firstName} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Last Name *</label>
+                  <input type="text" name="lastName" className="crm-form-input" value={formData.lastName} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Phone</label>
+                  <input type="tel" name="phone" className="crm-form-input" value={formData.phone} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>User Type *</label>
+                  <select name="userType" className="crm-form-select" value={formData.userType} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="TENANT_USER">Tenant User</option>
+                    <option value="TENANT_MANAGER">Tenant Manager</option>
+                    {user?.userType === 'TENANT_ADMIN' && <option value="TENANT_ADMIN">Tenant Admin</option>}
+                  </select>
+                </div>
+                <div style={{ gridColumn: 'span 4' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Assign Roles</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', padding: '8px', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                    {allRoles.length === 0 ? <span style={{ fontSize: '12px', color: '#999' }}>No roles available</span> : allRoles.map(role => (
+                      <label key={role._id} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px', cursor: 'pointer' }}>
+                        <input type="checkbox" checked={formData.roles.includes(role._id)} onChange={() => handleRoleToggle(role._id)} />
+                        {role.name}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowEditModal(false); setSelectedUser(null); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Update User</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Delete Confirmation */}
+      {showDeleteModal && selectedUser && (
+        <div className="crm-card" style={{ marginBottom: '16px', border: '2px solid #FCA5A5' }}>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: '0 0 4px 0', color: '#991B1B' }}>Delete User: {selectedUser.firstName} {selectedUser.lastName}</h4>
+                <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>{selectedUser.email} - This action cannot be undone.</p>
+              </div>
+              <button className="crm-btn crm-btn-outline" onClick={() => { setShowDeleteModal(false); setSelectedUser(null); }}>Cancel</button>
+              <button className="crm-btn crm-btn-danger" onClick={handleDeleteUser}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Permissions View */}
+      {showPermissionsModal && selectedUser && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Permissions - {selectedUser.firstName} {selectedUser.lastName}</h3>
+            <button onClick={() => { setShowPermissionsModal(false); setSelectedUser(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px', maxHeight: '400px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', gap: '16px', marginBottom: '16px', flexWrap: 'wrap' }}>
+              <span style={{ fontSize: '13px' }}><strong>Email:</strong> {selectedUser.email}</span>
+              <span className="badge badge-info">{selectedUser.userType?.replace(/_/g, ' ')}</span>
+              <span className={`badge ${selectedUser.isActive ? 'badge-success' : 'badge-danger'}`}>{selectedUser.isActive ? 'Active' : 'Inactive'}</span>
+            </div>
+            <h4 style={{ fontSize: '14px', marginBottom: '12px' }}>Assigned Roles ({selectedUser.roles?.length || 0})</h4>
+            {selectedUser.roles?.length > 0 ? (
+              <div style={{ display: 'grid', gap: '8px' }}>
+                {selectedUser.roles.map(role => (
+                  <div key={role._id} style={{ padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <strong>{role.name}</strong>
+                      <span className={`badge ${role.roleType === 'system' ? 'badge-info' : 'badge-warning'}`}>{role.roleType}</span>
+                    </div>
+                    {role.permissions?.length > 0 && (
+                      <div style={{ fontSize: '12px', color: '#666' }}>
+                        {role.permissions.map((perm, idx) => (
+                          <span key={idx} style={{ display: 'inline-block', marginRight: '8px' }}>
+                            {perm.feature.replace(/_/g, ' ')}: {perm.actions.join(', ')}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : <p style={{ color: '#999', fontSize: '13px' }}>No roles assigned</p>}
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -343,606 +522,6 @@ const Users = () => {
             )}
       </div>
 
-      {/* Create User Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          resetForm();
-          setError('');
-          setSuccess('');
-        }}
-        title="Create New User"
-      >
-        <form onSubmit={handleCreateUser}>
-          {/* Subscription Info Banner */}
-          {loadingSubscription ? (
-            <div style={{
-              padding: '15px',
-              background: 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              textAlign: 'center'
-            }}>
-              <div className="spinner" style={{ width: '20px', height: '20px', margin: '0 auto' }}></div>
-              <p style={{ marginTop: '8px', fontSize: '13px', color: '#666' }}>Loading subscription info...</p>
-            </div>
-          ) : subscriptionInfo ? (
-            <div style={{
-              padding: '15px',
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              borderRadius: '8px',
-              marginBottom: '20px',
-              color: 'white'
-            }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>Current Plan</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
-                    {subscriptionInfo.subscription?.planName
-                      ? `${subscriptionInfo.subscription.planName} Plan`
-                      : subscriptionInfo.subscription?.plan?.displayName
-                      || subscriptionInfo.subscription?.plan?.name
-                      || 'Free Plan'}
-                  </div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>Users</div>
-                  <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
-                    {subscriptionInfo.usage?.users || 0} / {
-                      (() => {
-                        const limit = subscriptionInfo.subscription?.plan?.limits?.users;
-                        if (limit === -1) return '∞';
-                        if (limit) return limit;
-                        // Fallback based on plan name
-                        const planName = subscriptionInfo.subscription?.planName?.toLowerCase();
-                        if (planName === 'basic') return 10;
-                        if (planName === 'professional') return 25;
-                        if (planName === 'enterprise') return '∞';
-                        return 5; // Free plan default
-                      })()
-                    }
-                  </div>
-                </div>
-              </div>
-              {(() => {
-                const limit = subscriptionInfo.subscription?.plan?.limits?.users;
-                const userLimit = limit !== undefined ? limit :
-                  (() => {
-                    const planName = subscriptionInfo.subscription?.planName?.toLowerCase();
-                    if (planName === 'basic') return 10;
-                    if (planName === 'professional') return 25;
-                    if (planName === 'enterprise') return -1;
-                    return 5;
-                  })();
-                const currentUsers = subscriptionInfo.usage?.users || 0;
-
-                return userLimit !== -1 ? (
-                  <div style={{
-                    marginTop: '10px',
-                    fontSize: '12px',
-                    opacity: 0.9,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}>
-                    <span>💡</span>
-                    <span>
-                      {userLimit - currentUsers} users remaining
-                    </span>
-                  </div>
-                ) : null;
-              })()}
-            </div>
-          ) : null}
-
-          {/* Error/Success Messages inside Modal */}
-          {error && (
-            <div style={{
-              padding: '12px 15px',
-              background: '#fee',
-              border: '1px solid #fcc',
-              borderRadius: '6px',
-              marginBottom: '15px',
-              color: '#c33',
-              fontSize: '14px'
-            }}>
-              ❌ {error}
-            </div>
-          )}
-          {success && (
-            <div style={{
-              padding: '12px 15px',
-              background: '#efe',
-              border: '1px solid #cfc',
-              borderRadius: '6px',
-              marginBottom: '15px',
-              color: '#3c3',
-              fontSize: '14px'
-            }}>
-              ✅ {success}
-            </div>
-          )}
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">First Name *</label>
-              <input
-                type="text"
-                name="firstName"
-                className="form-input"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Last Name *</label>
-              <input
-                type="text"
-                name="lastName"
-                className="form-input"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Email *</label>
-            <input
-              type="email"
-              name="email"
-              className="form-input"
-              value={formData.email}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Password *</label>
-            <input
-              type="password"
-              name="password"
-              className="form-input"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              minLength={6}
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">User Type *</label>
-              <select
-                name="userType"
-                className="form-input"
-                value={formData.userType}
-                onChange={handleChange}
-                required
-              >
-                <option value="TENANT_USER">Tenant User</option>
-                <option value="TENANT_MANAGER">Tenant Manager</option>
-                {user?.userType === 'TENANT_ADMIN' && (
-                  <option value="TENANT_ADMIN">Tenant Admin</option>
-                )}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input
-                type="tel"
-                name="phone"
-                className="form-input"
-                value={formData.phone}
-                onChange={handleChange}
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Assign Roles</label>
-            <div className="roles-selection">
-              {allRoles.length === 0 ? (
-                <p style={{ color: '#999', fontSize: '13px' }}>No roles available. Create roles first.</p>
-              ) : (
-                <div className="role-checkboxes">
-                  {allRoles.map(role => (
-                    <label key={role._id} className="role-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={formData.roles.includes(role._id)}
-                        onChange={() => handleRoleToggle(role._id)}
-                      />
-                      <div className="role-info">
-                        <strong>{role.name}</strong>
-                        {role.description && <span>{role.description}</span>}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Create User
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Edit User Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedUser(null);
-          resetForm();
-          setError('');
-        }}
-        title="Edit User"
-      >
-        <form onSubmit={handleUpdateUser}>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">First Name *</label>
-              <input
-                type="text"
-                name="firstName"
-                className="form-input"
-                value={formData.firstName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Last Name *</label>
-              <input
-                type="text"
-                name="lastName"
-                className="form-input"
-                value={formData.lastName}
-                onChange={handleChange}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Phone</label>
-            <input
-              type="tel"
-              name="phone"
-              className="form-input"
-              value={formData.phone}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">User Type *</label>
-            <select
-              name="userType"
-              className="form-input"
-              value={formData.userType}
-              onChange={handleChange}
-              required
-            >
-              <option value="TENANT_USER">Tenant User</option>
-              <option value="TENANT_MANAGER">Tenant Manager</option>
-              {user?.userType === 'TENANT_ADMIN' && (
-                <option value="TENANT_ADMIN">Tenant Admin</option>
-              )}
-            </select>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Assign Roles</label>
-            <div className="roles-selection">
-              {allRoles.length === 0 ? (
-                <p style={{ color: '#999', fontSize: '13px' }}>No roles available. Create roles first.</p>
-              ) : (
-                <div className="role-checkboxes">
-                  {allRoles.map(role => (
-                    <label key={role._id} className="role-checkbox">
-                      <input
-                        type="checkbox"
-                        checked={formData.roles.includes(role._id)}
-                        onChange={() => handleRoleToggle(role._id)}
-                      />
-                      <div className="role-info">
-                        <strong>{role.name}</strong>
-                        {role.description && <span>{role.description}</span>}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                setShowEditModal(false);
-                setSelectedUser(null);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Update User
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setSelectedUser(null);
-        }}
-        title="Delete User"
-        size="small"
-      >
-        <div>
-          <p>Are you sure you want to delete this user?</p>
-          <p style={{ marginTop: '10px' }}>
-            <strong>{selectedUser?.firstName} {selectedUser?.lastName}</strong><br />
-            <span style={{ color: '#666' }}>{selectedUser?.email}</span>
-          </p>
-          <p style={{ marginTop: '15px', color: 'var(--error-color)', fontSize: '14px' }}>
-            This action cannot be undone.
-          </p>
-
-          <div className="modal-footer">
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                setShowDeleteModal(false);
-                setSelectedUser(null);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={handleDeleteUser}
-            >
-              Delete User
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* View Permissions Modal */}
-      <Modal
-        isOpen={showPermissionsModal}
-        onClose={() => {
-          setShowPermissionsModal(false);
-          setSelectedUser(null);
-        }}
-        title={`Permissions - ${selectedUser?.firstName} ${selectedUser?.lastName}`}
-        size="large"
-      >
-        <div className="permissions-view">
-          <div className="user-summary">
-            <div className="summary-item">
-              <span className="label">Email:</span>
-              <span className="value">{selectedUser?.email}</span>
-            </div>
-            <div className="summary-item">
-              <span className="label">User Type:</span>
-              <span className="value badge badge-info">{selectedUser?.userType?.replace(/_/g, ' ')}</span>
-            </div>
-            <div className="summary-item">
-              <span className="label">Status:</span>
-              <span className={`value badge ${selectedUser?.isActive ? 'badge-success' : 'badge-danger'}`}>
-                {selectedUser?.isActive ? 'Active' : 'Inactive'}
-              </span>
-            </div>
-          </div>
-
-          <div className="permissions-section">
-            <h3>Assigned Roles ({selectedUser?.roles?.length || 0})</h3>
-            {selectedUser?.roles?.length > 0 ? (
-              <div className="roles-list">
-                {selectedUser.roles.map(role => (
-                  <div key={role._id} className="role-card">
-                    <div className="role-header">
-                      <strong>{role.name}</strong>
-                      <span className={`badge ${role.roleType === 'system' ? 'badge-info' : 'badge-warning'}`}>
-                        {role.roleType}
-                      </span>
-                    </div>
-                    {role.description && (
-                      <p className="role-description">{role.description}</p>
-                    )}
-                    <div className="role-permissions">
-                      <strong>Permissions:</strong>
-                      {role.permissions?.length > 0 ? (
-                        <ul className="permission-list">
-                          {role.permissions.map((perm, idx) => (
-                            <li key={idx}>
-                              <span className="feature-name">{perm.feature.replace(/_/g, ' ')}:</span>
-                              <div className="actions-list">
-                                {perm.actions.map((action, aidx) => (
-                                  <span key={aidx} className="action-badge">{action}</span>
-                                ))}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p style={{ color: '#999', fontSize: '13px', margin: '5px 0' }}>No permissions defined</p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-roles">
-                <p>This user has no roles assigned.</p>
-                <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
-                  Assign roles to grant permissions. Users without roles have no access.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="permissions-section">
-            <h3>Permissions from Groups ({selectedUser?.groups?.length || 0})</h3>
-            {selectedUser?.groups && selectedUser.groups.length > 0 ? (
-              <div className="roles-list">
-                {selectedUser.groups.map(group => (
-                  <div key={group._id} className="role-card" style={{ borderLeft: '3px solid var(--secondary-color)' }}>
-                    <div className="role-header">
-                      <div>
-                        <strong style={{ color: 'var(--secondary-color)' }}>Group: {group.name}</strong>
-                        <p style={{ fontSize: '12px', color: '#666', margin: '5px 0 0 0' }}>
-                          Members of this group inherit these permissions:
-                        </p>
-                      </div>
-                      <span className="badge badge-info">{group.roles?.length || 0} role(s)</span>
-                    </div>
-                    {group.roles && group.roles.length > 0 ? (
-                      group.roles.map(role => (
-                        <div key={role._id} style={{ marginLeft: '15px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--border-color)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <strong style={{ fontSize: '14px' }}>{role.name}</strong>
-                            <span className={`badge ${role.roleType === 'system' ? 'badge-info' : 'badge-warning'}`} style={{ fontSize: '11px' }}>
-                              {role.roleType}
-                            </span>
-                          </div>
-                          {role.description && (
-                            <p style={{ fontSize: '12px', color: '#666', margin: '5px 0 10px 0' }}>{role.description}</p>
-                          )}
-                          <div className="role-permissions">
-                            {role.permissions?.length > 0 ? (
-                              <ul className="permission-list">
-                                {role.permissions.map((perm, idx) => (
-                                  <li key={idx}>
-                                    <span className="feature-name">{perm.feature.replace(/_/g, ' ')}:</span>
-                                    <div className="actions-list">
-                                      {perm.actions.map((action, aidx) => (
-                                        <span key={aidx} className="action-badge" style={{ backgroundColor: '#ffe3f2' }}>{action}</span>
-                                      ))}
-                                    </div>
-                                  </li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p style={{ color: '#999', fontSize: '12px', margin: '5px 0' }}>No permissions defined</p>
-                            )}
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p style={{ color: '#999', fontSize: '13px', margin: '10px 0 0 15px' }}>No roles assigned to this group</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="no-roles">
-                <p>This user is not a member of any groups.</p>
-                <p style={{ fontSize: '13px', color: '#666', marginTop: '5px' }}>
-                  Add user to groups to grant permissions through group roles.
-                </p>
-              </div>
-            )}
-          </div>
-
-          <div className="permissions-guide">
-            <h3>Permission Guide</h3>
-            <div className="guide-grid">
-              <div className="guide-item">
-                <strong>create</strong>
-                <span>Can create new records</span>
-              </div>
-              <div className="guide-item">
-                <strong>read</strong>
-                <span>Can view and list records</span>
-              </div>
-              <div className="guide-item">
-                <strong>update</strong>
-                <span>Can edit existing records</span>
-              </div>
-              <div className="guide-item">
-                <strong>delete</strong>
-                <span>Can remove records</span>
-              </div>
-              <div className="guide-item">
-                <strong>manage</strong>
-                <span>Full access (all actions)</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="features-guide">
-            <h3>Available Features</h3>
-            <div className="feature-descriptions">
-              <div className="feature-desc">
-                <strong>user_management</strong>
-                <p>Control over user accounts - create employees, edit profiles, delete users, assign roles</p>
-              </div>
-              <div className="feature-desc">
-                <strong>role_management</strong>
-                <p>Manage custom roles - define permissions, create roles, edit role settings</p>
-              </div>
-              <div className="feature-desc">
-                <strong>group_management</strong>
-                <p>Organize users - create groups, add/remove members, assign group roles</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                setShowPermissionsModal(false);
-                setSelectedUser(null);
-              }}
-            >
-              Close
-            </button>
-            {canUpdateUser && (
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setShowPermissionsModal(false);
-                  openEditModal(selectedUser);
-                }}
-              >
-                Edit User
-              </button>
-            )}
-          </div>
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 };

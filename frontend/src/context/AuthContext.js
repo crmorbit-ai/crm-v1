@@ -26,8 +26,8 @@ export const AuthProvider = ({ children }) => {
 
   const loadUser = async () => {
     try {
-      const userData = await authService.getMe();
-      setUser(userData);
+      const response = await authService.getMe();
+      setUser(response.data);
     } catch (error) {
       console.error('Load user error:', error);
       logout();
@@ -38,18 +38,20 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const response = await authService.login(email, password);
-    setToken(response.token);
-    setUser(response.user);
-    localStorage.setItem('token', response.token);
-    return response;
+    const { token, user } = response.data;
+    setToken(token);
+    setUser(user);
+    localStorage.setItem('token', token);
+    return response.data;
   };
 
   const registerTenant = async (formData) => {
     const response = await authService.registerTenant(formData);
-    setToken(response.token);
-    setUser(response.user);
-    localStorage.setItem('token', response.token);
-    return response;
+    const { token, user } = response.data;
+    setToken(token);
+    setUser(user);
+    localStorage.setItem('token', token);
+    return response.data;
   };
 
   // NEW: Two-step registration methods
@@ -61,10 +63,11 @@ export const AuthProvider = ({ children }) => {
 
   const verifyEmail = async (email, otp) => {
     const response = await authService.verifyEmail(email, otp);
-    setToken(response.token);
-    setUser(response.user);
-    localStorage.setItem('token', response.token);
-    return response;
+    const { token, user, requiresProfileCompletion } = response.data;
+    setToken(token);
+    setUser(user);
+    localStorage.setItem('token', token);
+    return { token, user, requiresProfileCompletion };
   };
 
   const resendOTP = async (email) => {
@@ -74,8 +77,8 @@ export const AuthProvider = ({ children }) => {
 
   const completeProfile = async (profileData) => {
     const response = await authService.completeProfile(profileData);
-    setUser(response); // Update user with tenant info
-    return response;
+    setUser(response.data); // Update user with tenant info
+    return response.data;
   };
 
   const logout = () => {

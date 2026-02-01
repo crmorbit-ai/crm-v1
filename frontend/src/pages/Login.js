@@ -36,10 +36,14 @@ const Login = () => {
     setError('');
 
     try {
-      await login(formData.email, formData.password);
+      const response = await login(formData.email, formData.password);
+      // Use window.location for full page reload to ensure auth state is loaded
+      const defaultRoute = response.user?.userType === 'SAAS_OWNER' || response.user?.userType === 'SAAS_ADMIN'
+        ? '/saas/dashboard'
+        : '/dashboard';
+      window.location.href = defaultRoute;
     } catch (err) {
       setError(err.response?.data?.message || 'Invalid email or password');
-    } finally {
       setLoading(false);
     }
   };
@@ -51,7 +55,7 @@ const Login = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, rgb(226 164 204) 0%, rgb(250, 245, 255) 25%, rgb(235 218 226) 50%, var(--bg-color) 75%)',
+      background: 'linear-gradient(135deg, rgb(226 164 204) 0%, rgb(250, 245, 255) 25%, rgb(235 218 226) 50%, rgb(255 255 255) 75%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

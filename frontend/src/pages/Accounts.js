@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { accountService } from '../services/accountService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
-import Modal from '../components/common/Modal';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
 import '../styles/crm.css';
@@ -19,9 +18,9 @@ const Accounts = () => {
 
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [filters, setFilters] = useState({ search: '', accountType: '', industry: '' });
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedAccount, setSelectedAccount] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -31,17 +30,11 @@ const Accounts = () => {
     shippingCountry: '', shippingZipCode: '', description: ''
   });
 
-  // Dynamic field definitions
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const [stats, setStats] = useState({
-    total: 0,
-    customers: 0,
-    prospects: 0,
-    partners: 0
-  });
+  const [stats, setStats] = useState({ total: 0, customers: 0, prospects: 0, partners: 0 });
 
   useEffect(() => {
     loadAccounts();
@@ -52,25 +45,16 @@ const Accounts = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await accountService.getAccounts({
-        page: pagination.page, limit: pagination.limit, ...filters
-      });
+      const response = await accountService.getAccounts({ page: pagination.page, limit: pagination.limit, ...filters });
       if (response.success && response.data) {
         const accountsData = response.data.accounts || [];
         setAccounts(accountsData);
-        setPagination(prev => ({
-          ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0
-        }));
+        setPagination(prev => ({ ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0 }));
 
         const customers = accountsData.filter(a => a.accountType === 'Customer').length;
         const prospects = accountsData.filter(a => a.accountType === 'Prospect').length;
         const partners = accountsData.filter(a => a.accountType === 'Partner').length;
-        setStats({
-          total: response.data.pagination?.total || 0,
-          customers,
-          prospects,
-          partners
-        });
+        setStats({ total: response.data.pagination?.total || 0, customers, prospects, partners });
       } else {
         setError(response.message || 'Failed to load accounts');
       }
@@ -86,9 +70,7 @@ const Accounts = () => {
     try {
       const response = await fieldDefinitionService.getFieldDefinitions('Account', false);
       if (response && Array.isArray(response)) {
-        const createFields = response
-          .filter(field => field.isActive && field.showInCreate)
-          .sort((a, b) => a.displayOrder - b.displayOrder);
+        const createFields = response.filter(field => field.isActive && field.showInCreate).sort((a, b) => a.displayOrder - b.displayOrder);
         setFieldDefinitions(createFields);
       }
     } catch (err) {
@@ -96,64 +78,51 @@ const Accounts = () => {
     }
   };
 
-  // Group fields by section
   const groupFieldsBySection = (fields) => {
     const grouped = {};
     fields.forEach(field => {
       const section = field.section || 'Additional Information';
-      if (!grouped[section]) {
-        grouped[section] = [];
-      }
+      if (!grouped[section]) grouped[section] = [];
       grouped[section].push(field);
     });
     return grouped;
   };
 
-  // Handle dynamic field value change
   const handleFieldChange = (fieldName, value) => {
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-    setFieldErrors(prev => ({
-      ...prev,
-      [fieldName]: null
-    }));
+    setFieldValues(prev => ({ ...prev, [fieldName]: value }));
+    setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
   };
 
-  // Render dynamic field
-  const renderDynamicField = (field) => {
-    return (
-      <DynamicField
-        fieldDefinition={field}
-        value={fieldValues[field.fieldName] || ''}
-        onChange={handleFieldChange}
-        error={fieldErrors[field.fieldName]}
-      />
-    );
+  const renderDynamicField = (field) => (
+    <DynamicField
+      fieldDefinition={field}
+      value={fieldValues[field.fieldName] || ''}
+      onChange={handleFieldChange}
+      error={fieldErrors[field.fieldName]}
+    />
+  );
+
+  const closeAllForms = () => {
+    setShowCreateForm(false);
+    setShowEditForm(false);
+    setShowDeleteConfirm(false);
   };
 
   const handleCreateAccount = async (e) => {
     e.preventDefault();
     try {
       setError('');
-
-      // Separate standard fields from custom fields
       const standardFields = {};
       const customFields = {};
 
       fieldDefinitions.forEach(field => {
         const value = fieldValues[field.fieldName];
         if (value !== undefined && value !== null && value !== '') {
-          if (field.isStandardField) {
-            standardFields[field.fieldName] = value;
-          } else {
-            customFields[field.fieldName] = value;
-          }
+          if (field.isStandardField) standardFields[field.fieldName] = value;
+          else customFields[field.fieldName] = value;
         }
       });
 
-      // Combine standard fields with form data and custom fields
       const accountData = {
         ...formData,
         ...standardFields,
@@ -162,7 +131,7 @@ const Accounts = () => {
 
       await accountService.createAccount(accountData);
       setSuccess('Account created successfully!');
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       resetForm();
       loadAccounts();
       setTimeout(() => setSuccess(''), 3000);
@@ -177,7 +146,7 @@ const Accounts = () => {
       setError('');
       await accountService.updateAccount(selectedAccount._id, formData);
       setSuccess('Account updated successfully!');
-      setShowEditModal(false);
+      setShowEditForm(false);
       setSelectedAccount(null);
       resetForm();
       loadAccounts();
@@ -192,7 +161,7 @@ const Accounts = () => {
       setError('');
       await accountService.deleteAccount(selectedAccount._id);
       setSuccess('Account deleted successfully!');
-      setShowDeleteModal(false);
+      setShowDeleteConfirm(false);
       setSelectedAccount(null);
       loadAccounts();
       setTimeout(() => setSuccess(''), 3000);
@@ -201,13 +170,15 @@ const Accounts = () => {
     }
   };
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
+    closeAllForms();
     resetForm();
-    setShowCreateModal(true);
+    setShowCreateForm(true);
   };
 
-  const openEditModal = (e, account) => {
+  const openEditForm = (e, account) => {
     e.stopPropagation();
+    closeAllForms();
     setSelectedAccount(account);
     setFormData({
       accountName: account.accountName || '', accountType: account.accountType || 'Customer',
@@ -220,13 +191,14 @@ const Accounts = () => {
       shippingCountry: account.shippingAddress?.country || '', shippingZipCode: account.shippingAddress?.zipCode || '',
       description: account.description || ''
     });
-    setShowEditModal(true);
+    setShowEditForm(true);
   };
 
-  const openDeleteModal = (e, account) => {
+  const openDeleteConfirm = (e, account) => {
     e.stopPropagation();
+    closeAllForms();
     setSelectedAccount(account);
-    setShowDeleteModal(true);
+    setShowDeleteConfirm(true);
   };
 
   const resetForm = () => {
@@ -254,20 +226,14 @@ const Accounts = () => {
   const canDeleteAccount = hasPermission('account_management', 'delete');
 
   const getAccountTypeIcon = (type) => {
-    const icons = {
-      'Customer': '👤',
-      'Prospect': '🎯',
-      'Partner': '🤝',
-      'Vendor': '🏪',
-      'Competitor': '⚔️'
-    };
-    return icons[type] || '📊';
+    const icons = { 'Customer': 'C', 'Prospect': 'P', 'Partner': 'Pr', 'Vendor': 'V', 'Competitor': 'Co' };
+    return icons[type] || 'A';
   };
 
   return (
     <DashboardLayout title="Accounts">
-      {success && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>✓ {success}</div>}
-      {error && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>⚠ {error}</div>}
+      {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
+      {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -314,30 +280,135 @@ const Accounts = () => {
               <option value="Other">Other</option>
             </select>
           </div>
-          {/* Action Buttons */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
-                onClick={() => setViewMode('table')}
-              >
-                Table
-              </button>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
-                onClick={() => setViewMode('grid')}
-              >
-                Grid
-              </button>
+              <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
+              <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
             </div>
             <div style={{ marginLeft: 'auto' }}>
-              {canCreateAccount && (
-                <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Account</button>
-              )}
+              {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={openCreateForm}>+ New Account</button>}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Inline Create Account Form - Compact */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Create New Account</h3>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <div style={{ padding: '10px' }}>
+            <form onSubmit={handleCreateAccount}>
+              {(() => {
+                const groupedFields = groupFieldsBySection(fieldDefinitions);
+                const sectionOrder = ['Basic Information', 'Business Information', 'Address Information', 'Additional Information'];
+
+                return sectionOrder.map(sectionName => {
+                  const sectionFields = groupedFields[sectionName];
+                  if (!sectionFields || sectionFields.length === 0) return null;
+
+                  return (
+                    <div key={sectionName} style={{ marginBottom: '8px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                        {sectionFields.map((field) => (
+                          <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
+                            {renderDynamicField(field)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Create Account</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Edit Account Form - Compact */}
+      {showEditForm && selectedAccount && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Edit Account</h3>
+            <button onClick={() => { setShowEditForm(false); setSelectedAccount(null); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <form onSubmit={handleUpdateAccount}>
+            <div style={{ padding: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Account Name *</label>
+                  <input type="text" name="accountName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.accountName} onChange={handleChange} required />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Account Type</label>
+                  <select name="accountType" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.accountType} onChange={handleChange}>
+                    <option value="Customer">Customer</option>
+                    <option value="Prospect">Prospect</option>
+                    <option value="Partner">Partner</option>
+                    <option value="Vendor">Vendor</option>
+                    <option value="Competitor">Competitor</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Industry</label>
+                  <select name="industry" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.industry} onChange={handleChange}>
+                    <option value="">Select</option>
+                    <option value="Technology">Technology</option>
+                    <option value="Healthcare">Healthcare</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Manufacturing">Manufacturing</option>
+                    <option value="Retail">Retail</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label>
+                  <input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.phone} onChange={handleChange} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Website</label>
+                  <input type="url" name="website" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.website} onChange={handleChange} />
+                </div>
+              </div>
+              <div style={{ marginTop: '8px', gridColumn: 'span 3' }}>
+                <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Description</label>
+                <textarea name="description" className="crm-form-textarea" rows="2" style={{ width: '100%', padding: '4px 6px', fontSize: '11px' }} value={formData.description} onChange={handleChange} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', padding: '6px 10px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+              <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowEditForm(false); setSelectedAccount(null); resetForm(); }}>Cancel</button>
+              <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Update Account</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Inline Delete Confirmation - Compact */}
+      {showDeleteConfirm && selectedAccount && (
+        <div className="crm-card" style={{ marginBottom: '10px', border: '2px solid #FCA5A5' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#FEF2F2' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#DC2626' }}>Delete Account</h3>
+            <button onClick={() => { setShowDeleteConfirm(false); setSelectedAccount(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <div style={{ padding: '10px' }}>
+            <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#374151' }}>Are you sure you want to delete this account?</p>
+            <p style={{ margin: '0 0 2px 0', fontWeight: '600', fontSize: '13px', color: '#111827' }}>{selectedAccount?.accountName}</p>
+            <p style={{ margin: 0, fontSize: '11px', color: '#6B7280' }}>Account #{selectedAccount?.accountNumber}</p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', padding: '6px 10px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <button className="crm-btn crm-btn-secondary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowDeleteConfirm(false); setSelectedAccount(null); }}>Cancel</button>
+            <button className="crm-btn crm-btn-danger crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={handleDeleteAccount}>Delete</button>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -351,103 +422,40 @@ const Accounts = () => {
           </div>
         ) : accounts.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>📊</div>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>A</div>
             <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No accounts found</p>
             <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first account to get started!</p>
-            {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ Create First Account</button>}
+            {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={openCreateForm}>+ Create First Account</button>}
           </div>
         ) : (
           <>
             {viewMode === 'grid' ? (
               <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
                 {accounts.map((account) => (
-                  <div
-                    key={account._id}
-                    onClick={() => navigate(`/accounts/${account._id}`)}
-                    style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                      borderRadius: '16px',
-                      padding: '24px',
-                      cursor: 'pointer',
-                      border: '2px solid #e5e7eb',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      position: 'relative',
-                      overflow: 'hidden',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-8px)';
-                      e.currentTarget.style.boxShadow = '0 12px 32px rgba(74, 144, 226, 0.2)';
-                      e.currentTarget.style.borderColor = '#4A90E2';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.05)';
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                    }}
-                  >
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #4A90E2 0%, #2c5364 100%)' }}></div>
+                  <div key={account._id} onClick={() => navigate(`/accounts/${account._id}`)} style={{ background: '#ffffff', borderRadius: '16px', padding: '24px', cursor: 'pointer', border: '2px solid #e5e7eb', transition: 'all 0.3s ease' }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = '#4A90E2'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = '#e5e7eb'; }}>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
-                      <div style={{
-                        width: '56px',
-                        height: '56px',
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '28px',
-                        flexShrink: 0,
-                        boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                      }}>
+                      <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '800', color: 'white' }}>
                         {getAccountTypeIcon(account.accountType)}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800', color: '#1e3c72', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {account.accountName}
-                        </h3>
-                        <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', marginBottom: '4px' }}>
-                          #{account.accountNumber}
-                        </div>
+                        <h3 style={{ margin: '0 0 8px 0', fontSize: '18px', fontWeight: '800', color: '#1e3c72', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.accountName}</h3>
+                        <div style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>#{account.accountNumber}</div>
                       </div>
                     </div>
                     <div style={{ marginBottom: '16px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <span className={`status-badge ${(account.accountType || 'customer').toLowerCase()}`}>
-                        {account.accountType || 'Customer'}
-                      </span>
-                      {account.industry && (
-                        <span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', background: '#f1f5f9', color: '#475569' }}>
-                          {account.industry}
-                        </span>
-                      )}
+                      <span className={`status-badge ${(account.accountType || 'customer').toLowerCase()}`}>{account.accountType || 'Customer'}</span>
+                      {account.industry && <span style={{ padding: '4px 12px', borderRadius: '12px', fontSize: '12px', fontWeight: '600', background: '#f1f5f9', color: '#475569' }}>{account.industry}</span>}
                     </div>
                     <div style={{ marginBottom: '16px', color: '#64748b', fontSize: '14px' }}>
-                      {account.phone && (
-                        <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>📞</span>
-                          <span>{account.phone}</span>
-                        </div>
-                      )}
-                      {account.website && (
-                        <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>🌐</span>
-                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</span>
-                        </div>
-                      )}
-                      {account.owner && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>👨‍💼</span>
-                          <span>{account.owner.firstName || ''} {account.owner.lastName || ''}</span>
-                        </div>
-                      )}
+                      {account.phone && <div style={{ marginBottom: '6px' }}>{account.phone}</div>}
+                      {account.website && <div style={{ marginBottom: '6px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</div>}
+                      {account.owner && <div>{account.owner.firstName || ''} {account.owner.lastName || ''}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', borderTop: '2px solid #f1f5f9' }} onClick={(e) => e.stopPropagation()}>
-                      {canUpdateAccount && (
-                        <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditModal(e, account)} style={{ flex: 1 }}>✏️ Edit</button>
-                      )}
-                      {canDeleteAccount && (
-                        <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteModal(e, account)} style={{ flex: 1 }}>🗑️ Delete</button>
-                      )}
+                      {canUpdateAccount && <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditForm(e, account)} style={{ flex: 1 }}>Edit</button>}
+                      {canDeleteAccount && <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteConfirm(e, account)} style={{ flex: 1 }}>Delete</button>}
                     </div>
                   </div>
                 ))}
@@ -456,103 +464,42 @@ const Accounts = () => {
               <div style={{ overflowX: 'auto', padding: '0' }}>
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                   <thead>
-                    <tr style={{ background: 'transparent' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Industry</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Owner</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
+                    <tr>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Account</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Type</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Industry</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Contact</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Owner</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {accounts.map((account) => (
-                      <tr
-                        key={account._id}
-                        onClick={(e) => { if (e.target.tagName !== 'BUTTON') navigate(`/accounts/${account._id}`); }}
-                        style={{
-                          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          borderRadius: '12px',
-                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                          border: '2px solid #e5e7eb'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 144, 226, 0.15)';
-                          e.currentTarget.style.borderColor = '#4A90E2';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                        }}
-                      >
+                      <tr key={account._id} onClick={(e) => { if (e.target.tagName !== 'BUTTON') navigate(`/accounts/${account._id}`); }} style={{ background: '#ffffff', cursor: 'pointer', border: '2px solid #e5e7eb', borderRadius: '12px' }}>
                         <td style={{ padding: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '48px',
-                              height: '48px',
-                              borderRadius: '12px',
-                              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '24px',
-                              boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                            }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', fontWeight: '800', color: 'white' }}>
                               {getAccountTypeIcon(account.accountType)}
                             </div>
                             <div>
-                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '4px' }}>
-                                {account.accountName}
-                              </div>
-                              <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>
-                                #{account.accountNumber}
-                              </div>
+                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>{account.accountName}</div>
+                              <div style={{ fontSize: '12px', color: '#94a3b8', fontWeight: '600' }}>#{account.accountNumber}</div>
                             </div>
                           </div>
                         </td>
                         <td style={{ padding: '16px' }}>
-                          <span className={`status-badge ${(account.accountType || 'customer').toLowerCase()}`}>
-                            {account.accountType || 'Customer'}
-                          </span>
+                          <span className={`status-badge ${(account.accountType || 'customer').toLowerCase()}`}>{account.accountType || 'Customer'}</span>
                         </td>
+                        <td style={{ padding: '16px', fontWeight: '600', color: '#475569', fontSize: '14px' }}>{account.industry || '-'}</td>
                         <td style={{ padding: '16px' }}>
-                          <div style={{ fontWeight: '600', color: '#475569', fontSize: '14px' }}>
-                            {account.industry || '-'}
-                          </div>
+                          <div style={{ fontSize: '13px', color: '#475569' }}>{account.phone || '-'}</div>
+                          {account.website && <div style={{ fontSize: '13px', color: '#475569', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</div>}
                         </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            {account.phone && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', fontWeight: '600' }}>
-                                <span>📞</span>
-                                <span>{account.phone}</span>
-                              </div>
-                            )}
-                            {account.website && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569' }}>
-                                <span>🌐</span>
-                                <span style={{ maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ fontWeight: '600', color: '#475569', fontSize: '14px' }}>
-                            {account.owner ? `${account.owner.firstName || ''} ${account.owner.lastName || ''}` : '-'}
-                          </div>
-                        </td>
+                        <td style={{ padding: '16px', fontWeight: '600', color: '#475569', fontSize: '14px' }}>{account.owner ? `${account.owner.firstName || ''} ${account.owner.lastName || ''}` : '-'}</td>
                         <td style={{ padding: '16px' }} onClick={(e) => e.stopPropagation()}>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            {canUpdateAccount && (
-                              <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditModal(e, account)}>Edit</button>
-                            )}
-                            {canDeleteAccount && (
-                              <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteModal(e, account)}>Delete</button>
-                            )}
+                            {canUpdateAccount && <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditForm(e, account)}>Edit</button>}
+                            {canDeleteAccount && <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteConfirm(e, account)}>Delete</button>}
                           </div>
                         </td>
                       </tr>
@@ -572,112 +519,6 @@ const Accounts = () => {
           </>
         )}
       </div>
-
-      <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); resetForm(); setError(''); }} title="Create New Account" size="large">
-        <form onSubmit={handleCreateAccount}>
-          {/* Dynamic Form Sections - Rendered from Field Definitions */}
-          {(() => {
-            const groupedFields = groupFieldsBySection(fieldDefinitions);
-            const sectionOrder = ['Basic Information', 'Business Information', 'Address Information', 'Additional Information'];
-
-            return sectionOrder.map(sectionName => {
-              const sectionFields = groupedFields[sectionName];
-              if (!sectionFields || sectionFields.length === 0) return null;
-
-              return (
-                <div key={sectionName} style={{ marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {sectionName}
-                  </h4>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {sectionFields.map((field) => {
-                      const isFullWidth = field.fieldType === 'textarea';
-
-                      return (
-                        <div key={field._id} style={isFullWidth ? { gridColumn: 'span 2' } : {}}>
-                          {renderDynamicField(field)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            });
-          })()}
-
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateModal(false); resetForm(); setError(''); }}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Create Account</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setSelectedAccount(null); resetForm(); setError(''); }} title="Edit Account" size="large">
-        <form onSubmit={handleUpdateAccount}>
-          <div className="form-group">
-            <label className="form-label">Account Name *</label>
-            <input type="text" name="accountName" className="crm-form-input" value={formData.accountName} onChange={handleChange} required />
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Account Type</label>
-              <select name="accountType" className="crm-form-select" value={formData.accountType} onChange={handleChange}>
-                <option value="Customer">Customer</option>
-                <option value="Prospect">Prospect</option>
-                <option value="Partner">Partner</option>
-                <option value="Vendor">Vendor</option>
-                <option value="Competitor">Competitor</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Industry</label>
-              <select name="industry" className="crm-form-select" value={formData.industry} onChange={handleChange}>
-                <option value="">Select Industry</option>
-                <option value="Technology">Technology</option>
-                <option value="Healthcare">Healthcare</option>
-                <option value="Finance">Finance</option>
-                <option value="Manufacturing">Manufacturing</option>
-                <option value="Retail">Retail</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label className="form-label">Phone</label>
-              <input type="tel" name="phone" className="crm-form-input" value={formData.phone} onChange={handleChange} />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Website</label>
-              <input type="url" name="website" className="crm-form-input" value={formData.website} onChange={handleChange} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Description</label>
-            <textarea name="description" className="crm-form-textarea" rows="3" value={formData.description} onChange={handleChange} />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowEditModal(false); setSelectedAccount(null); resetForm(); setError(''); }}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Update Account</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal isOpen={showDeleteModal} onClose={() => { setShowDeleteModal(false); setSelectedAccount(null); }} title="Delete Account" size="small">
-        <div>
-          <p>Are you sure you want to delete this account?</p>
-          <p style={{ marginTop: '10px' }}>
-            <strong>{selectedAccount?.accountName}</strong><br />
-            <span style={{ color: '#666' }}>Account #{selectedAccount?.accountNumber}</span>
-          </p>
-          <p style={{ marginTop: '15px', color: 'var(--error-color)', fontSize: '14px' }}>This action cannot be undone.</p>
-          <div className="modal-footer">
-            <button className="crm-btn crm-btn-outline" onClick={() => { setShowDeleteModal(false); setSelectedAccount(null); }}>Cancel</button>
-            <button className="crm-btn crm-btn-danger" onClick={handleDeleteAccount}>Delete Account</button>
-          </div>
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 };

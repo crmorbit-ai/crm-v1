@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
-import Modal from '../components/common/Modal';
 import '../styles/crm.css';
 import { API_URL } from '../config/api.config';
 
@@ -13,7 +12,7 @@ const Calls = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // Related records for dropdown
   const [relatedRecords, setRelatedRecords] = useState([]);
@@ -37,10 +36,10 @@ const Calls = () => {
 
   // Load related records when relatedTo type changes
   useEffect(() => {
-    if (showCreateModal && formData.relatedTo) {
+    if (showCreateForm && formData.relatedTo) {
       loadRelatedRecords(formData.relatedTo);
     }
-  }, [showCreateModal, formData.relatedTo]);
+  }, [showCreateForm, formData.relatedTo]);
 
   const loadRelatedRecords = async (type) => {
     try {
@@ -111,7 +110,7 @@ const Calls = () => {
       const data = await response.json();
       if (data.success) {
         setSuccess('Call logged!');
-        setShowCreateModal(false);
+        setShowCreateForm(false);
         setFormData({ subject: '', callStartTime: '', callDuration: '', callType: 'Outbound', callPurpose: 'Follow-up', callResult: 'Completed', relatedTo: 'Lead', relatedToId: '', description: '' });
         setRelatedRecords([]);
         loadCalls();
@@ -135,16 +134,92 @@ const Calls = () => {
   };
 
   return (
-    <DashboardLayout
-      title="Calls"
-      actionButton={
-        <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateModal(true)}>
-          + Log Call
-        </button>
-      }
-    >
+    <DashboardLayout title="Calls">
       {success && <div className="alert-success">{success}</div>}
       {error && <div className="alert-error">{error}</div>}
+
+      {/* Action Bar */}
+      <div className="crm-card" style={{ marginBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Calls</h3>
+          <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateForm(true)}>+ Log Call</button>
+        </div>
+      </div>
+
+      {/* Inline Create Call Form */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Log New Call</h3>
+            <button onClick={() => setShowCreateForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreate}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                <div style={{ gridColumn: 'span 2' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Subject *</label>
+                  <input type="text" className="crm-form-input" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Call Time *</label>
+                  <input type="datetime-local" className="crm-form-input" value={formData.callStartTime} onChange={(e) => setFormData({ ...formData, callStartTime: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Duration (min)</label>
+                  <input type="number" className="crm-form-input" value={formData.callDuration} onChange={(e) => setFormData({ ...formData, callDuration: e.target.value })} min="0" style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Call Type</label>
+                  <select className="crm-form-select" value={formData.callType} onChange={(e) => setFormData({ ...formData, callType: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="Outbound">Outbound</option>
+                    <option value="Inbound">Inbound</option>
+                    <option value="Missed">Missed</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Call Result</label>
+                  <select className="crm-form-select" value={formData.callResult} onChange={(e) => setFormData({ ...formData, callResult: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="Interested">Interested</option>
+                    <option value="Not Interested">Not Interested</option>
+                    <option value="No Answer">No Answer</option>
+                    <option value="Call Back Later">Call Back Later</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Related To *</label>
+                  <select className="crm-form-select" value={formData.relatedTo} onChange={(e) => setFormData({ ...formData, relatedTo: e.target.value, relatedToId: '' })} required style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="Lead">Lead</option>
+                    <option value="Contact">Contact</option>
+                    <option value="Account">Account</option>
+                    <option value="Opportunity">Opportunity</option>
+                    <option value="Deal">Deal</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Select {formData.relatedTo} *</label>
+                  <select className="crm-form-select" value={formData.relatedToId} onChange={(e) => setFormData({ ...formData, relatedToId: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }}>
+                    <option value="">-- Select {formData.relatedTo} --</option>
+                    {loadingRecords ? (
+                      <option disabled>Loading...</option>
+                    ) : relatedRecords.map(record => (
+                      <option key={record._id} value={record._id}>{getRecordDisplayName(record)}</option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ gridColumn: 'span 4' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <textarea className="crm-form-input" rows="2" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => setShowCreateForm(false)}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Log Call</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -208,84 +283,6 @@ const Calls = () => {
           </table>
         )}
       </div>
-
-      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="Log Call">
-        <form onSubmit={handleCreate}>
-          <div className="crm-form-group">
-            <label>Subject *</label>
-            <input type="text" className="crm-form-input" value={formData.subject} 
-              onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required />
-          </div>
-          <div className="form-row">
-            <div className="crm-form-group">
-              <label>Call Time *</label>
-              <input type="datetime-local" className="crm-form-input" value={formData.callStartTime}
-                onChange={(e) => setFormData({ ...formData, callStartTime: e.target.value })} required />
-            </div>
-            <div className="crm-form-group">
-              <label>Duration (min)</label>
-              <input type="number" className="crm-form-input" value={formData.callDuration}
-                onChange={(e) => setFormData({ ...formData, callDuration: e.target.value })} min="0" />
-            </div>
-          </div>
-          <div className="crm-form-group">
-            <label>Call Type</label>
-            <select className="crm-form-select" value={formData.callType}
-              onChange={(e) => setFormData({ ...formData, callType: e.target.value })}>
-              <option value="Outbound">Outbound</option>
-              <option value="Inbound">Inbound</option>
-              <option value="Missed">Missed</option>
-            </select>
-          </div>
-          <div className="crm-form-group">
-            <label>Call Result</label>
-            <select className="crm-form-select" value={formData.callResult}
-              onChange={(e) => setFormData({ ...formData, callResult: e.target.value })}>
-              <option value="Interested">Interested</option>
-              <option value="Not Interested">Not Interested</option>
-              <option value="No Answer">No Answer</option>
-              <option value="Call Back Later">Call Back Later</option>
-              <option value="Completed">Completed</option>
-            </select>
-          </div>
-          <div className="form-row">
-            <div className="crm-form-group">
-              <label>Related To *</label>
-              <select className="crm-form-select" value={formData.relatedTo}
-                onChange={(e) => setFormData({ ...formData, relatedTo: e.target.value, relatedToId: '' })} required>
-                <option value="Lead">Lead</option>
-                <option value="Contact">Contact</option>
-                <option value="Account">Account</option>
-                <option value="Opportunity">Opportunity</option>
-                <option value="Deal">Deal</option>
-              </select>
-            </div>
-            <div className="crm-form-group">
-              <label>Select {formData.relatedTo} *</label>
-              <select className="crm-form-select" value={formData.relatedToId}
-                onChange={(e) => setFormData({ ...formData, relatedToId: e.target.value })} required>
-                <option value="">-- Select {formData.relatedTo} --</option>
-                {loadingRecords ? (
-                  <option disabled>Loading...</option>
-                ) : relatedRecords.map(record => (
-                  <option key={record._id} value={record._id}>
-                    {getRecordDisplayName(record)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div className="crm-form-group">
-            <label>Description</label>
-            <textarea className="crm-form-textarea" rows="3" value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })} />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-secondary" onClick={() => setShowCreateModal(false)}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Log Call</button>
-          </div>
-        </form>
-      </Modal>
     </DashboardLayout>
   );
 };

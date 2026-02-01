@@ -8,7 +8,6 @@ import { verificationService, debounce } from '../services/verificationService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import { groupService } from '../services/groupService';
 import { useAuth } from '../context/AuthContext';
-import Modal from '../components/common/Modal';
 import TooltipButton from '../components/common/TooltipButton';
 import DynamicField from '../components/DynamicField';
 import BulkUploadForm from '../components/BulkUploadForm';
@@ -19,7 +18,6 @@ import { Badge } from '../components/ui/badge';
 import { Alert, AlertDescription } from '../components/ui/alert';
 import { Label } from '../components/ui/label';
 import { Checkbox } from '../components/ui/checkbox';
-// Using native select for filters (Radix Select doesn't allow empty string values)
 import {
   Table,
   TableBody,
@@ -66,7 +64,7 @@ const Leads = () => {
 
   const [groups, setGroups] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState([]);
-  const [showAssignGroupModal, setShowAssignGroupModal] = useState(false);
+  const [showAssignGroupForm, setShowAssignGroupForm] = useState(false);
   const [selectedGroupForAssignment, setSelectedGroupForAssignment] = useState(null);
   const [groupMembers, setGroupMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
@@ -74,12 +72,11 @@ const Leads = () => {
 
   const [stats, setStats] = useState({ total: 0, new: 0, qualified: 0, contacted: 0 });
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [showCreateCategoryModal, setShowCreateCategoryModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showBulkUploadForm, setShowBulkUploadForm] = useState(false);
+  const [showAddProductForm, setShowAddProductForm] = useState(false);
+  const [showCreateCategoryForm, setShowCreateCategoryForm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [modalStack, setModalStack] = useState([]);
 
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
@@ -243,6 +240,14 @@ const Leads = () => {
   const debouncedEmailVerify = useCallback(debounce((email) => verifyEmail(email), 2000), []);
   const debouncedPhoneVerify = useCallback(debounce((phone) => verifyPhone(phone), 2000), []);
 
+  const closeAllForms = () => {
+    setShowCreateForm(false);
+    setShowBulkUploadForm(false);
+    setShowAddProductForm(false);
+    setShowCreateCategoryForm(false);
+    setShowAssignGroupForm(false);
+  };
+
   const handleCreateLead = async (e) => {
     e.preventDefault();
     try {
@@ -267,7 +272,7 @@ const Leads = () => {
 
       await leadService.createLead(leadData);
       setSuccess('Lead created successfully!');
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       resetForm();
       loadLeads();
       setTimeout(() => setSuccess(''), 3000);
@@ -282,9 +287,9 @@ const Leads = () => {
       if (response?.success && response.data) {
         setSuccess('Product created successfully!');
         setFormData(prev => ({ ...prev, product: response.data._id }));
-        setShowAddProductModal(false);
+        setShowAddProductForm(false);
         resetProductForm();
-        setShowCreateModal(true);
+        setShowCreateForm(true);
         await loadProducts();
         setTimeout(() => setSuccess(''), 3000);
       }
@@ -298,8 +303,8 @@ const Leads = () => {
       await productCategoryService.createCategory({ name: newCategoryName, isActive: true });
       setSuccess('Category created successfully!');
       setNewCategoryName('');
-      setShowCreateCategoryModal(false);
-      setShowAddProductModal(true);
+      setShowCreateCategoryForm(false);
+      setShowAddProductForm(true);
       await loadCategories();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { setError(err.response?.data?.message || 'Failed to create category'); }
@@ -327,7 +332,7 @@ const Leads = () => {
       if (response?.success) {
         setSuccess(`${selectedLeads.length} leads assigned successfully!`);
         setSelectedLeads([]);
-        setShowAssignGroupModal(false);
+        setShowAssignGroupForm(false);
         setSelectedGroupForAssignment(null);
         setGroupMembers([]);
         setSelectedMembers([]);
@@ -467,7 +472,6 @@ const Leads = () => {
       {/* Filters */}
       <div className="crm-card mb-6">
         <div className="p-4">
-          {/* Search Bar */}
           <div className="mb-4">
             <Input
               placeholder="Search leads..."
@@ -477,13 +481,8 @@ const Leads = () => {
             />
           </div>
 
-          {/* Filter Dropdowns - 3 per row */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <select
-              className="crm-form-select"
-              value={filters.leadStatus}
-              onChange={(e) => handleFilterChange('leadStatus', e.target.value)}
-            >
+            <select className="crm-form-select" value={filters.leadStatus} onChange={(e) => handleFilterChange('leadStatus', e.target.value)}>
               <option value="">All Statuses</option>
               <option value="New">New</option>
               <option value="Contacted">Contacted</option>
@@ -491,11 +490,7 @@ const Leads = () => {
               <option value="Unqualified">Unqualified</option>
               <option value="Lost">Lost</option>
             </select>
-            <select
-              className="crm-form-select"
-              value={filters.leadSource}
-              onChange={(e) => handleFilterChange('leadSource', e.target.value)}
-            >
+            <select className="crm-form-select" value={filters.leadSource} onChange={(e) => handleFilterChange('leadSource', e.target.value)}>
               <option value="">All Sources</option>
               <option value="Website">Website</option>
               <option value="Referral">Referral</option>
@@ -503,11 +498,7 @@ const Leads = () => {
               <option value="Cold Call">Cold Call</option>
               <option value="Social Media">Social Media</option>
             </select>
-            <select
-              className="crm-form-select"
-              value={filters.rating}
-              onChange={(e) => handleFilterChange('rating', e.target.value)}
-            >
+            <select className="crm-form-select" value={filters.rating} onChange={(e) => handleFilterChange('rating', e.target.value)}>
               <option value="">All Ratings</option>
               <option value="Hot">Hot</option>
               <option value="Warm">Warm</option>
@@ -515,35 +506,233 @@ const Leads = () => {
             </select>
           </div>
 
-          {/* Action Buttons */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
-                onClick={() => setViewMode('table')}
-              >
-                Table
-              </button>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
-                onClick={() => setViewMode('grid')}
-              >
-                Grid
-              </button>
+              <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
+              <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
             </div>
 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginLeft: 'auto' }}>
               {selectedLeads.length > 0 && (
-                <button className="crm-btn crm-btn-secondary" onClick={() => setShowAssignGroupModal(true)}>
+                <button className="crm-btn crm-btn-secondary" onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}>
                   Assign {selectedLeads.length} to Group
                 </button>
               )}
-              {canImportLeads && <button className="crm-btn crm-btn-outline" onClick={() => setShowBulkUploadModal(true)}>Bulk Upload</button>}
-              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateModal(true); }}>+ New Lead</button>}
+              {canImportLeads && <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>Bulk Upload</button>}
+              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Lead</button>}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Inline Create Lead Form - Compact */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Create New Lead</h3>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <div style={{ padding: '10px' }}>
+            <form onSubmit={handleCreateLead}>
+              {(() => {
+                const groupedFields = groupFieldsBySection(fieldDefinitions);
+                const sectionOrder = ['Basic Information', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information', 'Lead Details', 'Lead Classification'];
+
+                return sectionOrder.map(sectionName => {
+                  const sectionFields = groupedFields[sectionName];
+                  if (!sectionFields?.length) return null;
+
+                  return (
+                    <div key={sectionName} style={{ marginBottom: '8px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                        {sectionName === 'Basic Information' && (
+                          <div>
+                            <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '2px' }}>Lead Owner</label>
+                            <input type="text" value={`${user?.firstName} ${user?.lastName}`} disabled style={{ width: '100%', padding: '4px 6px', fontSize: '11px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', color: '#6b7280' }} />
+                          </div>
+                        )}
+                        {sectionFields.map((field) => (
+                          <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
+                            {renderDynamicField(field)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+
+              <div style={{ marginBottom: '8px' }}>
+                <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Information</h4>
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1, maxWidth: '200px' }}>
+                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '2px' }}>Product (Optional)</label>
+                    <select name="product" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.product} onChange={handleChange}>
+                      <option value="">-None-</option>
+                      {products.map(product => (
+                        <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {canManageProducts && (
+                    <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 8px', fontSize: '10px' }} onClick={() => { setShowCreateForm(false); setShowAddProductForm(true); }}>
+                      + Add Product
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Save Lead</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Add Product Form - Compact */}
+      {showAddProductForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Add New Product</h3>
+            <button onClick={() => { setShowAddProductForm(false); setShowCreateForm(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <form onSubmit={handleCreateProductFromLead}>
+            <div style={{ padding: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Product Name *</label>
+                  <input type="text" name="name" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={productFormData.name} onChange={handleProductFormChange} required placeholder="CRM Software" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Article Number *</label>
+                  <input type="text" name="articleNumber" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={productFormData.articleNumber} onChange={handleProductFormChange} required placeholder="CRM-001" />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Category *</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <select name="category" className="crm-form-select" style={{ flex: 1, padding: '4px 6px', fontSize: '11px' }} value={productFormData.category} onChange={handleProductFormChange} required>
+                      <option value="">Select</option>
+                      {categories.map(cat => <option key={cat._id} value={cat.name}>{cat.name}</option>)}
+                    </select>
+                    <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 8px', fontSize: '11px' }} onClick={() => { setShowAddProductForm(false); setShowCreateCategoryForm(true); }}>+</button>
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Price *</label>
+                  <input type="number" name="price" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={productFormData.price} onChange={handleProductFormChange} required min="0" step="0.01" placeholder="0.00" />
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', padding: '6px 10px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+              <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowAddProductForm(false); setShowCreateForm(true); }}>Cancel</button>
+              <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Create & Select</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Inline Create Category Form - Compact */}
+      {showCreateCategoryForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Create New Category</h3>
+            <button onClick={() => { setShowCreateCategoryForm(false); setShowAddProductForm(true); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <form onSubmit={handleCreateCategory}>
+            <div style={{ padding: '10px' }}>
+              <div style={{ maxWidth: '250px' }}>
+                <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Category Name *</label>
+                <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} required placeholder="Software, Hardware" />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', padding: '6px 10px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+              <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowCreateCategoryForm(false); setShowAddProductForm(true); }}>Cancel</button>
+              <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Create</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Inline Bulk Upload Form - Compact */}
+      {showBulkUploadForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Bulk Upload Leads</h3>
+            <button onClick={() => setShowBulkUploadForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <div style={{ padding: '10px' }}>
+            <BulkUploadForm onClose={() => setShowBulkUploadForm(false)} onSuccess={loadLeads} />
+          </div>
+        </div>
+      )}
+
+      {/* Inline Assign Group Form - Compact */}
+      {showAssignGroupForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Assign Leads to Group</h3>
+            <button onClick={() => { setShowAssignGroupForm(false); setSelectedGroupForAssignment(null); setGroupMembers([]); setSelectedMembers([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <div style={{ padding: '10px' }}>
+            <p style={{ fontSize: '11px', color: '#6B7280', marginBottom: '8px' }}>Assigning {selectedLeads.length} selected lead{selectedLeads.length > 1 ? 's' : ''}</p>
+
+            {!selectedGroupForAssignment ? (
+              <div>
+                <h4 style={{ fontSize: '11px', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Step 1: Select Group</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                  {groups.map((group) => (
+                    <button key={group._id} className="crm-btn crm-btn-outline crm-btn-sm" style={{ justifyContent: 'flex-start', textAlign: 'left', padding: '6px 8px', fontSize: '11px' }} onClick={() => handleGroupSelection(group._id)}>
+                      {group.name}
+                      {group.category && <Badge variant="secondary" className="ml-1" style={{ fontSize: '9px' }}>{group.category}</Badge>}
+                    </button>
+                  ))}
+                </div>
+                {groups.length === 0 && <p style={{ textAlign: 'center', color: '#6B7280', padding: '12px', fontSize: '11px' }}>No groups available.</p>}
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <h4 style={{ fontSize: '11px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Step 2: Select Members</h4>
+                  <button className="crm-btn crm-btn-sm crm-btn-outline" style={{ padding: '3px 8px', fontSize: '10px' }} onClick={() => { setSelectedGroupForAssignment(null); setGroupMembers([]); setSelectedMembers([]); }}>
+                    ← Back
+                  </button>
+                </div>
+
+                {groupMembers.length > 0 ? (
+                  <>
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '6px' }}>
+                      <button className="crm-btn crm-btn-sm crm-btn-outline" style={{ padding: '3px 8px', fontSize: '10px' }} onClick={() => setSelectedMembers(groupMembers.map(m => m._id))}>Select All</button>
+                      <button className="crm-btn crm-btn-sm crm-btn-outline" style={{ padding: '3px 8px', fontSize: '10px' }} onClick={() => setSelectedMembers([])}>Deselect All</button>
+                    </div>
+                    <div style={{ maxHeight: '150px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '4px' }}>
+                      {groupMembers.map((member) => (
+                        <label key={member._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '6px 8px', borderRadius: '4px', cursor: 'pointer', border: selectedMembers.includes(member._id) ? '1px solid #3B82F6' : '1px solid transparent', background: selectedMembers.includes(member._id) ? '#EFF6FF' : 'transparent', marginBottom: '4px' }}>
+                          <Checkbox checked={selectedMembers.includes(member._id)} onCheckedChange={(checked) => {
+                            setSelectedMembers(checked ? [...selectedMembers, member._id] : selectedMembers.filter(id => id !== member._id));
+                          }} />
+                          <div>
+                            <p style={{ fontWeight: '500', fontSize: '11px', margin: 0 }}>{member.firstName} {member.lastName}</p>
+                            <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{member.email}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+                      <span style={{ fontSize: '11px', color: '#6B7280' }}>{selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected</span>
+                      <button className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={handleBulkAssignToGroup} disabled={selectedMembers.length === 0}>Assign</button>
+                    </div>
+                  </>
+                ) : (
+                  <p style={{ textAlign: 'center', color: '#6B7280', padding: '20px', fontSize: '11px' }}>No members in this group.</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Lead List */}
       <div className="crm-card">
@@ -560,10 +749,10 @@ const Leads = () => {
             </div>
           ) : leads.length === 0 ? (
             <div style={{ padding: '60px', textAlign: 'center' }}>
-              <div style={{ fontSize: '64px', marginBottom: '16px' }}>🎯</div>
+              <div style={{ fontSize: '64px', marginBottom: '16px' }}>T</div>
               <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No leads found</p>
               <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first lead to get started!</p>
-              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateModal(true); }}>+ Create First Lead</button>}
+              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateForm(true); }}>+ Create First Lead</button>}
             </div>
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -578,12 +767,7 @@ const Leads = () => {
                       <p className="text-sm text-gray-500 font-semibold truncate">{lead.jobTitle} {lead.company && `at ${lead.company}`}</p>
                     </div>
                     {canDeleteLead && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                        onClick={(e) => handleDeleteLead(e, lead._id)}
-                      >
+                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDeleteLead(e, lead._id)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -638,12 +822,7 @@ const Leads = () => {
                     ))}
                     {canDeleteLead && (
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50"
-                          onClick={(e) => handleDeleteLead(e, lead._id)}
-                        >
+                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDeleteLead(e, lead._id)}>
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </TableCell>
@@ -668,187 +847,6 @@ const Leads = () => {
           )}
         </div>
       </div>
-
-      {/* Create Lead Modal */}
-      <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); resetForm(); }} title="Create Lead" size="large">
-        <form onSubmit={handleCreateLead} className="space-y-6">
-          {(() => {
-            const groupedFields = groupFieldsBySection(fieldDefinitions);
-            const sectionOrder = ['Basic Information', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information', 'Lead Details', 'Lead Classification'];
-
-            return sectionOrder.map(sectionName => {
-              const sectionFields = groupedFields[sectionName];
-              if (!sectionFields?.length) return null;
-
-              return (
-                <div key={sectionName}>
-                  <h4 className="text-sm font-semibold text-foreground mb-4 pb-2 border-b">{sectionName}</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {sectionName === 'Basic Information' && (
-                      <div className="md:col-span-2">
-                        <Label>Lead Owner</Label>
-                        <Input value={`${user?.firstName} ${user?.lastName}`} disabled className="bg-muted" />
-                      </div>
-                    )}
-                    {sectionFields.map((field) => (
-                      <div key={field._id} className={field.fieldType === 'textarea' ? 'md:col-span-2' : ''}>
-                        {renderDynamicField(field)}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            });
-          })()}
-
-          {/* Product Selection */}
-          <div>
-            <h4 className="text-sm font-semibold text-foreground mb-4 pb-2 border-b">Product Information</h4>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Label>Product (Optional)</Label>
-                <select name="product" className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={formData.product} onChange={handleChange}>
-                  <option value="">-None-</option>
-                  {products.map(product => (
-                    <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
-                  ))}
-                </select>
-              </div>
-              {canManageProducts && (
-                <Button type="button" variant="outline" className="mt-6" onClick={() => { setShowCreateModal(false); setShowAddProductModal(true); }}>
-                  <Plus className="h-4 w-4 mr-1" />Add
-                </Button>
-              )}
-            </div>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => { setShowCreateModal(false); resetForm(); }}>Cancel</Button>
-            <Button type="submit">Save</Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Add Product Modal */}
-      <Modal isOpen={showAddProductModal} onClose={() => { setShowAddProductModal(false); setShowCreateModal(true); }} title="Add New Product" size="medium">
-        <form onSubmit={handleCreateProductFromLead} className="space-y-4">
-          <div>
-            <Label>Product Name *</Label>
-            <Input name="name" value={productFormData.name} onChange={handleProductFormChange} required placeholder="e.g., CRM Software License" />
-          </div>
-          <div>
-            <Label>Article Number *</Label>
-            <Input name="articleNumber" value={productFormData.articleNumber} onChange={handleProductFormChange} required placeholder="e.g., CRM-001" />
-          </div>
-          <div>
-            <Label>Category *</Label>
-            <div className="flex gap-2">
-              <select name="category" className="flex-1 h-10 rounded-md border border-input bg-background px-3 py-2 text-sm" value={productFormData.category} onChange={handleProductFormChange} required>
-                <option value="">Select Category</option>
-                {categories.map(cat => <option key={cat._id} value={cat.name}>{cat.name}</option>)}
-              </select>
-              <Button type="button" variant="outline" onClick={() => { setShowAddProductModal(false); setShowCreateCategoryModal(true); }}><Plus className="h-4 w-4" /></Button>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label>Price *</Label>
-              <Input name="price" type="number" value={productFormData.price} onChange={handleProductFormChange} required min="0" step="0.01" placeholder="0.00" />
-            </div>
-            <div>
-              <Label>Stock</Label>
-              <Input name="stock" type="number" value={productFormData.stock} onChange={handleProductFormChange} min="0" placeholder="0" />
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => { setShowAddProductModal(false); setShowCreateModal(true); }}>Cancel</Button>
-            <Button type="submit">Create & Select</Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Create Category Modal */}
-      <Modal isOpen={showCreateCategoryModal} onClose={() => { setShowCreateCategoryModal(false); setShowAddProductModal(true); }} title="Create New Category" size="small">
-        <form onSubmit={handleCreateCategory} className="space-y-4">
-          <div>
-            <Label>Category Name *</Label>
-            <Input value={newCategoryName} onChange={(e) => setNewCategoryName(e.target.value)} required placeholder="e.g., Software, Hardware" />
-          </div>
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button type="button" variant="outline" onClick={() => { setShowCreateCategoryModal(false); setShowAddProductModal(true); }}>Cancel</Button>
-            <Button type="submit">Create</Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Bulk Upload Modal */}
-      {showBulkUploadModal && (
-        <Modal isOpen={showBulkUploadModal} onClose={() => setShowBulkUploadModal(false)} title="Bulk Upload Leads" size="large">
-          <BulkUploadForm onClose={() => setShowBulkUploadModal(false)} onSuccess={loadLeads} />
-        </Modal>
-      )}
-
-      {/* Assign Group Modal */}
-      <Modal
-        isOpen={showAssignGroupModal}
-        onClose={() => { setShowAssignGroupModal(false); setSelectedGroupForAssignment(null); setGroupMembers([]); setSelectedMembers([]); }}
-        title="Assign Leads to Group"
-        size="medium"
-      >
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground">Assigning {selectedLeads.length} selected lead{selectedLeads.length > 1 ? 's' : ''}</p>
-
-          {!selectedGroupForAssignment ? (
-            <div className="space-y-2">
-              <h4 className="text-sm font-semibold">Step 1: Select Group</h4>
-              {groups.map((group) => (
-                <Button key={group._id} variant="outline" className="w-full justify-start" onClick={() => handleGroupSelection(group._id)}>
-                  {group.name}
-                  {group.category && <Badge variant="secondary" className="ml-2">{group.category}</Badge>}
-                </Button>
-              ))}
-              {groups.length === 0 && <p className="text-center text-muted-foreground py-4">No groups available.</p>}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">Step 2: Select Members</h4>
-                <Button variant="ghost" size="sm" onClick={() => { setSelectedGroupForAssignment(null); setGroupMembers([]); setSelectedMembers([]); }}>
-                  <ChevronLeft className="h-4 w-4 mr-1" />Back
-                </Button>
-              </div>
-
-              {groupMembers.length > 0 ? (
-                <>
-                  <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setSelectedMembers(groupMembers.map(m => m._id))}>Select All</Button>
-                    <Button variant="outline" size="sm" onClick={() => setSelectedMembers([])}>Deselect All</Button>
-                  </div>
-                  <div className="max-h-64 overflow-y-auto space-y-2 border rounded-md p-2">
-                    {groupMembers.map((member) => (
-                      <label key={member._id} className={`flex items-center gap-3 p-3 rounded-md cursor-pointer border ${selectedMembers.includes(member._id) ? 'bg-primary/5 border-primary' : 'hover:bg-muted'}`}>
-                        <Checkbox checked={selectedMembers.includes(member._id)} onCheckedChange={(checked) => {
-                          setSelectedMembers(checked ? [...selectedMembers, member._id] : selectedMembers.filter(id => id !== member._id));
-                        }} />
-                        <div className="flex-1">
-                          <p className="font-medium text-sm">{member.firstName} {member.lastName}</p>
-                          <p className="text-xs text-muted-foreground">{member.email}</p>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-between pt-4 border-t">
-                    <span className="text-sm text-muted-foreground">{selectedMembers.length} member{selectedMembers.length !== 1 ? 's' : ''} selected</span>
-                    <Button onClick={handleBulkAssignToGroup} disabled={selectedMembers.length === 0}>Assign</Button>
-                  </div>
-                </>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No members in this group.</p>
-              )}
-            </div>
-          )}
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 };

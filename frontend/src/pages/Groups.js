@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { groupService } from '../services/groupService';
 import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
-import Modal from '../components/common/Modal';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import '../styles/crm.css';
 
@@ -24,12 +23,12 @@ const Groups = () => {
     pages: 0
   });
 
-  // Modals
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showMembersModal, setShowMembersModal] = useState(false);
-  const [showRolesModal, setShowRolesModal] = useState(false);
+  // Inline forms
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showMembersForm, setShowMembersForm] = useState(false);
+  const [showRolesForm, setShowRolesForm] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState(null);
 
   // Form data
@@ -96,7 +95,7 @@ const Groups = () => {
       setError('');
       await groupService.createGroup(formData);
       setSuccess('Group created successfully!');
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       resetForm();
       loadGroups();
       setTimeout(() => setSuccess(''), 3000);
@@ -111,7 +110,7 @@ const Groups = () => {
       setError('');
       await groupService.updateGroup(selectedGroup._id, formData);
       setSuccess('Group updated successfully!');
-      setShowEditModal(false);
+      setShowEditForm(false);
       setSelectedGroup(null);
       resetForm();
       loadGroups();
@@ -126,7 +125,7 @@ const Groups = () => {
       setError('');
       await groupService.deleteGroup(selectedGroup._id);
       setSuccess('Group deleted successfully!');
-      setShowDeleteModal(false);
+      setShowDeleteConfirm(false);
       setSelectedGroup(null);
       loadGroups();
       setTimeout(() => setSuccess(''), 3000);
@@ -157,7 +156,7 @@ const Groups = () => {
       }
 
       setSuccess('Group members updated successfully!');
-      setShowMembersModal(false);
+      setShowMembersForm(false);
       setSelectedGroup(null);
       setSelectedMembers([]);
       loadGroups();
@@ -189,7 +188,7 @@ const Groups = () => {
       }
 
       setSuccess('Group roles updated successfully!');
-      setShowRolesModal(false);
+      setShowRolesForm(false);
       setSelectedGroup(null);
       setSelectedRoles([]);
       loadGroups();
@@ -199,31 +198,47 @@ const Groups = () => {
     }
   };
 
-  const openEditModal = (group) => {
+  const closeAllForms = () => {
+    setShowCreateForm(false);
+    setShowEditForm(false);
+    setShowDeleteConfirm(false);
+    setShowMembersForm(false);
+    setShowRolesForm(false);
+    setSelectedGroup(null);
+    setSelectedMembers([]);
+    setSelectedRoles([]);
+    resetForm();
+  };
+
+  const openEditForm = (group) => {
+    closeAllForms();
     setSelectedGroup(group);
     setFormData({
       name: group.name,
       slug: group.slug,
       description: group.description || ''
     });
-    setShowEditModal(true);
+    setShowEditForm(true);
   };
 
-  const openDeleteModal = (group) => {
+  const openDeleteConfirm = (group) => {
+    closeAllForms();
     setSelectedGroup(group);
-    setShowDeleteModal(true);
+    setShowDeleteConfirm(true);
   };
 
-  const openMembersModal = (group) => {
+  const openMembersForm = (group) => {
+    closeAllForms();
     setSelectedGroup(group);
     setSelectedMembers(group.members.map(m => m._id));
-    setShowMembersModal(true);
+    setShowMembersForm(true);
   };
 
-  const openRolesModal = (group) => {
+  const openRolesForm = (group) => {
+    closeAllForms();
     setSelectedGroup(group);
     setSelectedRoles(group.roles?.map(r => r._id) || []);
-    setShowRolesModal(true);
+    setShowRolesForm(true);
   };
 
   const resetForm = () => {
@@ -277,16 +292,164 @@ const Groups = () => {
   const canManageGroup = hasPermission('group_management', 'manage');
 
   return (
-    <DashboardLayout
-      title="Group Management"
-      actionButton={canCreateGroup ? (
-        <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateModal(true)}>
-          + New Group
-        </button>
-      ) : null}
-    >
+    <DashboardLayout title="Group Management">
       {success && <div className="alert alert-success">{success}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+
+      {/* Action Bar */}
+      <div className="crm-card" style={{ marginBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Group Management</h3>
+          {canCreateGroup && (
+            <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); setShowCreateForm(true); }}>+ New Group</button>
+          )}
+        </div>
+      </div>
+
+      {/* Inline Create Group Form */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Create New Group</h3>
+            <button onClick={closeAllForms} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreateGroup}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Group Name *</label>
+                  <input type="text" name="name" className="crm-form-input" placeholder="e.g., Engineering Team" value={formData.name} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Slug *</label>
+                  <input type="text" name="slug" className="crm-form-input" placeholder="engineering-team" value={formData.slug} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <input type="text" name="description" className="crm-form-input" placeholder="Group description..." value={formData.description} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={closeAllForms}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Create Group</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Edit Group Form */}
+      {showEditForm && selectedGroup && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Edit Group: {selectedGroup.name}</h3>
+            <button onClick={closeAllForms} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleUpdateGroup}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Group Name *</label>
+                  <input type="text" name="name" className="crm-form-input" value={formData.name} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <input type="text" name="description" className="crm-form-input" value={formData.description} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={closeAllForms}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Update Group</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Manage Members Form */}
+      {showMembersForm && selectedGroup && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Manage Members - {selectedGroup.name}</h3>
+            <button onClick={closeAllForms} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <p style={{ marginBottom: '12px', color: '#666', fontSize: '13px' }}>Select users to add or remove from this group:</p>
+            <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '8px' }}>
+              {allUsers.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#999', padding: '20px', fontSize: '13px' }}>No users available</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                  {allUsers.map(u => (
+                    <label key={u._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: selectedMembers.includes(u._id) ? '#dbeafe' : '#f9fafb', borderRadius: '6px', cursor: 'pointer', border: '1px solid #e5e7eb' }}>
+                      <input type="checkbox" checked={selectedMembers.includes(u._id)} onChange={() => handleMemberToggle(u._id)} />
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '500' }}>{u.firstName} {u.lastName}</div>
+                        <div style={{ fontSize: '11px', color: '#666' }}>{u.email}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+              <button type="button" className="crm-btn crm-btn-outline" onClick={closeAllForms}>Cancel</button>
+              <button type="button" className="crm-btn crm-btn-primary" onClick={handleUpdateMembers}>Update Members ({selectedMembers.length})</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Manage Roles Form */}
+      {showRolesForm && selectedGroup && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Manage Roles - {selectedGroup.name}</h3>
+            <button onClick={closeAllForms} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <p style={{ marginBottom: '12px', color: '#666', fontSize: '13px' }}>Select roles to assign to this group. All group members will inherit these permissions:</p>
+            <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '8px' }}>
+              {allRoles.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#999', padding: '20px', fontSize: '13px' }}>No roles available</p>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+                  {allRoles.map(role => (
+                    <label key={role._id} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', background: selectedRoles.includes(role._id) ? '#dbeafe' : '#f9fafb', borderRadius: '6px', cursor: 'pointer', border: '1px solid #e5e7eb' }}>
+                      <input type="checkbox" checked={selectedRoles.includes(role._id)} onChange={() => handleRoleToggle(role._id)} />
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '500' }}>{role.name}</div>
+                        {role.description && <div style={{ fontSize: '11px', color: '#666' }}>{role.description}</div>}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+              <button type="button" className="crm-btn crm-btn-outline" onClick={closeAllForms}>Cancel</button>
+              <button type="button" className="crm-btn crm-btn-primary" onClick={handleUpdateRoles}>Update Roles ({selectedRoles.length})</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Delete Confirmation */}
+      {showDeleteConfirm && selectedGroup && (
+        <div className="crm-card" style={{ marginBottom: '16px', border: '2px solid #FCA5A5' }}>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: '0 0 4px 0', color: '#991B1B' }}>Delete Group: {selectedGroup.name}</h4>
+                <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>Members: {selectedGroup.members?.length || 0}. This action cannot be undone.</p>
+              </div>
+              <button className="crm-btn crm-btn-outline" onClick={closeAllForms}>Cancel</button>
+              <button className="crm-btn crm-btn-danger" onClick={handleDeleteGroup}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -351,13 +514,13 @@ const Groups = () => {
                                 <>
                                   <button
                                     className="crm-btn crm-btn-sm crm-btn-primary"
-                                    onClick={() => openMembersModal(group)}
+                                    onClick={() => openMembersForm(group)}
                                   >
                                     Members
                                   </button>
                                   <button
                                     className="crm-btn crm-btn-sm crm-btn-primary"
-                                    onClick={() => openRolesModal(group)}
+                                    onClick={() => openRolesForm(group)}
                                   >
                                     Roles
                                   </button>
@@ -366,7 +529,7 @@ const Groups = () => {
                               {canUpdateGroup && (
                                 <button
                                   className="crm-btn crm-btn-sm crm-btn-secondary"
-                                  onClick={() => openEditModal(group)}
+                                  onClick={() => openEditForm(group)}
                                 >
                                   Edit
                                 </button>
@@ -374,7 +537,7 @@ const Groups = () => {
                               {canDeleteGroup && (
                                 <button
                                   className="crm-btn crm-btn-sm crm-btn-danger"
-                                  onClick={() => openDeleteModal(group)}
+                                  onClick={() => openDeleteConfirm(group)}
                                 >
                                   Delete
                                 </button>
@@ -412,291 +575,6 @@ const Groups = () => {
               </>
             )}
       </div>
-
-      {/* Create Group Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          resetForm();
-          setError('');
-        }}
-        title="Create New Group"
-      >
-        <form onSubmit={handleCreateGroup}>
-          <div className="form-group">
-            <label className="form-label">Group Name *</label>
-            <input
-              type="text"
-              name="name"
-              className="form-input"
-              placeholder="e.g., Engineering Team"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Slug *</label>
-            <input
-              type="text"
-              name="slug"
-              className="form-input"
-              placeholder="engineering-team"
-              value={formData.slug}
-              onChange={handleChange}
-              required
-            />
-            <small className="form-hint">Auto-generated from name.</small>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Description</label>
-            <textarea
-              name="description"
-              className="form-input"
-              rows="3"
-              placeholder="Describe this group's purpose..."
-              value={formData.description}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Create Group
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Edit Group Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedGroup(null);
-          resetForm();
-          setError('');
-        }}
-        title="Edit Group"
-      >
-        <form onSubmit={handleUpdateGroup}>
-          <div className="form-group">
-            <label className="form-label">Group Name *</label>
-            <input
-              type="text"
-              name="name"
-              className="form-input"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Description</label>
-            <textarea
-              name="description"
-              className="form-input"
-              rows="3"
-              value={formData.description}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                setShowEditModal(false);
-                setSelectedGroup(null);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Update Group
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Manage Members Modal */}
-      <Modal
-        isOpen={showMembersModal}
-        onClose={() => {
-          setShowMembersModal(false);
-          setSelectedGroup(null);
-          setSelectedMembers([]);
-        }}
-        title={`Manage Members - ${selectedGroup?.name}`}
-        size="medium"
-      >
-        <div>
-          <p style={{ marginBottom: '15px', color: '#666' }}>
-            Select users to add or remove from this group:
-          </p>
-
-          <div className="members-list">
-            {allUsers.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                No users available
-              </p>
-            ) : (
-              allUsers.map(u => (
-                <label key={u._id} className="member-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedMembers.includes(u._id)}
-                    onChange={() => handleMemberToggle(u._id)}
-                  />
-                  <div className="member-info">
-                    <strong>{u.firstName} {u.lastName}</strong>
-                    <span>{u.email}</span>
-                  </div>
-                </label>
-              ))
-            )}
-          </div>
-
-          <div className="modal-footer">
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                setShowMembersModal(false);
-                setSelectedGroup(null);
-                setSelectedMembers([]);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleUpdateMembers}
-            >
-              Update Members ({selectedMembers.length})
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Manage Roles Modal */}
-      <Modal
-        isOpen={showRolesModal}
-        onClose={() => {
-          setShowRolesModal(false);
-          setSelectedGroup(null);
-          setSelectedRoles([]);
-        }}
-        title={`Manage Roles - ${selectedGroup?.name}`}
-        size="medium"
-      >
-        <div>
-          <p style={{ marginBottom: '15px', color: '#666' }}>
-            Select roles to assign to this group. All group members will inherit these permissions:
-          </p>
-
-          <div className="role-checkboxes">
-            {allRoles.length === 0 ? (
-              <p style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
-                No roles available
-              </p>
-            ) : (
-              allRoles.map(role => (
-                <label key={role._id} className="role-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedRoles.includes(role._id)}
-                    onChange={() => handleRoleToggle(role._id)}
-                  />
-                  <div className="role-info">
-                    <strong>{role.name}</strong>
-                    {role.description && <span>{role.description}</span>}
-                  </div>
-                </label>
-              ))
-            )}
-          </div>
-
-          <div className="modal-footer">
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                setShowRolesModal(false);
-                setSelectedGroup(null);
-                setSelectedRoles([]);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-primary"
-              onClick={handleUpdateRoles}
-            >
-              Update Roles ({selectedRoles.length})
-            </button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setSelectedGroup(null);
-        }}
-        title="Delete Group"
-        size="small"
-      >
-        <div>
-          <p>Are you sure you want to delete this group?</p>
-          <p style={{ marginTop: '10px' }}>
-            <strong>{selectedGroup?.name}</strong><br />
-            <span style={{ color: '#666' }}>{selectedGroup?.description}</span>
-          </p>
-          <p style={{ marginTop: '10px', fontSize: '14px', color: '#666' }}>
-            Members: {selectedGroup?.members?.length || 0}
-          </p>
-          <p style={{ marginTop: '15px', color: 'var(--error-color)', fontSize: '14px' }}>
-            This action cannot be undone. Members will be removed from this group.
-          </p>
-
-          <div className="modal-footer">
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                setShowDeleteModal(false);
-                setSelectedGroup(null);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={handleDeleteGroup}
-            >
-              Delete Group
-            </button>
-          </div>
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 };

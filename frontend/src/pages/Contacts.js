@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import { contactService } from '../services/contactService';
 import { accountService } from '../services/accountService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
-import Modal from '../components/common/Modal';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
 import '../styles/crm.css';
@@ -21,9 +20,9 @@ const Contacts = () => {
 
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [filters, setFilters] = useState({ search: '', account: '', title: '' });
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedContact, setSelectedContact] = useState(null);
 
   const [formData, setFormData] = useState({
@@ -32,17 +31,11 @@ const Contacts = () => {
     mailingCountry: '', mailingZipCode: '', description: ''
   });
 
-  // Dynamic field definitions
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
 
-  const [stats, setStats] = useState({
-    total: 0,
-    primary: 0,
-    withAccount: 0,
-    recent: 0
-  });
+  const [stats, setStats] = useState({ total: 0, primary: 0, withAccount: 0, recent: 0 });
 
   useEffect(() => {
     loadContacts();
@@ -54,25 +47,15 @@ const Contacts = () => {
     try {
       setLoading(true);
       setError('');
-      const response = await contactService.getContacts({
-        page: pagination.page, limit: pagination.limit, ...filters
-      });
+      const response = await contactService.getContacts({ page: pagination.page, limit: pagination.limit, ...filters });
       if (response.success && response.data) {
         const contactsData = response.data.contacts || [];
         setContacts(contactsData);
-        setPagination(prev => ({
-          ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0
-        }));
+        setPagination(prev => ({ ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0 }));
 
-        // Calculate stats
         const primary = contactsData.filter(c => c.isPrimary).length;
         const withAccount = contactsData.filter(c => c.account).length;
-        setStats({
-          total: response.data.pagination?.total || 0,
-          primary,
-          withAccount,
-          recent: contactsData.length
-        });
+        setStats({ total: response.data.pagination?.total || 0, primary, withAccount, recent: contactsData.length });
       }
     } catch (err) {
       console.error('Load contacts error:', err);
@@ -95,9 +78,7 @@ const Contacts = () => {
     try {
       const response = await fieldDefinitionService.getFieldDefinitions('Contact', false);
       if (response && Array.isArray(response)) {
-        const createFields = response
-          .filter(field => field.isActive && field.showInCreate)
-          .sort((a, b) => a.displayOrder - b.displayOrder);
+        const createFields = response.filter(field => field.isActive && field.showInCreate).sort((a, b) => a.displayOrder - b.displayOrder);
         setFieldDefinitions(createFields);
       }
     } catch (err) {
@@ -105,73 +86,60 @@ const Contacts = () => {
     }
   };
 
-  // Group fields by section
   const groupFieldsBySection = (fields) => {
     const grouped = {};
     fields.forEach(field => {
       const section = field.section || 'Additional Information';
-      if (!grouped[section]) {
-        grouped[section] = [];
-      }
+      if (!grouped[section]) grouped[section] = [];
       grouped[section].push(field);
     });
     return grouped;
   };
 
-  // Handle dynamic field value change
   const handleFieldChange = (fieldName, value) => {
-    setFieldValues(prev => ({
-      ...prev,
-      [fieldName]: value
-    }));
-    setFieldErrors(prev => ({
-      ...prev,
-      [fieldName]: null
-    }));
+    setFieldValues(prev => ({ ...prev, [fieldName]: value }));
+    setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
   };
 
-  // Render dynamic field
-  const renderDynamicField = (field) => {
-    return (
-      <DynamicField
-        fieldDefinition={field}
-        value={fieldValues[field.fieldName] || ''}
-        onChange={handleFieldChange}
-        error={fieldErrors[field.fieldName]}
-      />
-    );
+  const renderDynamicField = (field) => (
+    <DynamicField
+      fieldDefinition={field}
+      value={fieldValues[field.fieldName] || ''}
+      onChange={handleFieldChange}
+      error={fieldErrors[field.fieldName]}
+    />
+  );
+
+  const closeAllForms = () => {
+    setShowCreateForm(false);
+    setShowEditForm(false);
+    setShowDeleteConfirm(false);
   };
 
   const handleCreateContact = async (e) => {
     e.preventDefault();
     try {
       setError('');
-
-      // Separate standard fields from custom fields
       const standardFields = {};
       const customFields = {};
 
       fieldDefinitions.forEach(field => {
         const value = fieldValues[field.fieldName];
         if (value !== undefined && value !== null && value !== '') {
-          if (field.isStandardField) {
-            standardFields[field.fieldName] = value;
-          } else {
-            customFields[field.fieldName] = value;
-          }
+          if (field.isStandardField) standardFields[field.fieldName] = value;
+          else customFields[field.fieldName] = value;
         }
       });
 
-      // Combine standard fields with form data and custom fields
       const contactData = {
-        ...formData,  // Existing form data (account, etc.)
-        ...standardFields,  // Standard fields from field definitions
+        ...formData,
+        ...standardFields,
         customFields: Object.keys(customFields).length > 0 ? customFields : undefined
       };
 
       await contactService.createContact(contactData);
       setSuccess('Contact created successfully!');
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       resetForm();
       loadContacts();
       setTimeout(() => setSuccess(''), 3000);
@@ -186,7 +154,7 @@ const Contacts = () => {
       setError('');
       await contactService.updateContact(selectedContact._id, formData);
       setSuccess('Contact updated successfully!');
-      setShowEditModal(false);
+      setShowEditForm(false);
       setSelectedContact(null);
       resetForm();
       loadContacts();
@@ -201,7 +169,7 @@ const Contacts = () => {
       setError('');
       await contactService.deleteContact(selectedContact._id);
       setSuccess('Contact deleted successfully!');
-      setShowDeleteModal(false);
+      setShowDeleteConfirm(false);
       setSelectedContact(null);
       loadContacts();
       setTimeout(() => setSuccess(''), 3000);
@@ -210,13 +178,15 @@ const Contacts = () => {
     }
   };
 
-  const openCreateModal = () => {
+  const openCreateForm = () => {
+    closeAllForms();
     resetForm();
-    setShowCreateModal(true);
+    setShowCreateForm(true);
   };
 
-  const openEditModal = (e, contact) => {
+  const openEditForm = (e, contact) => {
     e.stopPropagation();
+    closeAllForms();
     setSelectedContact(contact);
     setFormData({
       firstName: contact.firstName || '', lastName: contact.lastName || '', email: contact.email || '',
@@ -227,13 +197,14 @@ const Contacts = () => {
       mailingState: contact.mailingAddress?.state || '', mailingCountry: contact.mailingAddress?.country || '',
       mailingZipCode: contact.mailingAddress?.zipCode || '', description: contact.description || ''
     });
-    setShowEditModal(true);
+    setShowEditForm(true);
   };
 
-  const openDeleteModal = (e, contact) => {
+  const openDeleteConfirm = (e, contact) => {
     e.stopPropagation();
+    closeAllForms();
     setSelectedContact(contact);
-    setShowDeleteModal(true);
+    setShowDeleteConfirm(true);
   };
 
   const resetForm = () => {
@@ -262,8 +233,8 @@ const Contacts = () => {
 
   return (
     <DashboardLayout title="Contacts">
-      {success && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>✓ {success}</div>}
-      {error && <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #FEE2E2 0%, #FECACA 100%)', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600', boxShadow: '0 4px 15px rgba(239, 68, 68, 0.2)' }}>⚠ {error}</div>}
+      {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
+      {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
       {/* Statistics Cards */}
       <div className="stats-grid">
@@ -300,30 +271,132 @@ const Contacts = () => {
             </select>
             <input type="text" name="title" placeholder="Filter by title..." className="crm-form-input" value={filters.title} onChange={handleFilterChange} />
           </div>
-          {/* Action Buttons */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
             <div style={{ display: 'flex', gap: '8px' }}>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
-                onClick={() => setViewMode('table')}
-              >
-                Table
-              </button>
-              <button
-                className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`}
-                onClick={() => setViewMode('grid')}
-              >
-                Grid
-              </button>
+              <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
+              <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
             </div>
             <div style={{ marginLeft: 'auto' }}>
-              {canCreateContact && (
-                <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ New Contact</button>
-              )}
+              {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={openCreateForm}>+ New Contact</button>}
             </div>
           </div>
         </div>
       </div>
+
+      {/* Inline Create Contact Form - Compact */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Create New Contact</h3>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <div style={{ padding: '10px' }}>
+            <form onSubmit={handleCreateContact}>
+              <div style={{ marginBottom: '8px' }}>
+                <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '2px' }}>Account *</label>
+                <select name="account" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px', maxWidth: '200px' }} value={formData.account} onChange={handleChange} required>
+                  <option value="">Select Account</option>
+                  {accounts.map(account => <option key={account._id} value={account._id}>{account.accountName}</option>)}
+                </select>
+              </div>
+
+              {(() => {
+                const groupedFields = groupFieldsBySection(fieldDefinitions);
+                const sectionOrder = ['Basic Information', 'Contact Information', 'Address Information', 'Additional Information'];
+
+                return sectionOrder.map(sectionName => {
+                  const sectionFields = groupedFields[sectionName];
+                  if (!sectionFields || sectionFields.length === 0) return null;
+
+                  return (
+                    <div key={sectionName} style={{ marginBottom: '8px' }}>
+                      <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                        {sectionFields.map((field) => (
+                          <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
+                            {renderDynamicField(field)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                });
+              })()}
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Create Contact</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Edit Contact Form - Compact */}
+      {showEditForm && selectedContact && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Edit Contact</h3>
+            <button onClick={() => { setShowEditForm(false); setSelectedContact(null); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <form onSubmit={handleUpdateContact}>
+            <div style={{ padding: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>First Name *</label>
+                  <input type="text" name="firstName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.firstName || ''} onChange={handleChange} required />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Last Name *</label>
+                  <input type="text" name="lastName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.lastName || ''} onChange={handleChange} required />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email *</label>
+                  <input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.email || ''} onChange={handleChange} required />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label>
+                  <input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.phone || ''} onChange={handleChange} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Department</label>
+                  <input type="text" name="department" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.department || ''} onChange={handleChange} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Title</label>
+                  <input type="text" name="title" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.title || ''} onChange={handleChange} />
+                </div>
+              </div>
+              <div style={{ marginTop: '8px', gridColumn: 'span 3' }}>
+                <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Description</label>
+                <textarea name="description" className="crm-form-textarea" rows="2" style={{ width: '100%', padding: '4px 6px', fontSize: '11px' }} value={formData.description || ''} onChange={handleChange} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', padding: '6px 10px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+              <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowEditForm(false); setSelectedContact(null); resetForm(); }}>Cancel</button>
+              <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Update Contact</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Inline Delete Confirmation - Compact */}
+      {showDeleteConfirm && selectedContact && (
+        <div className="crm-card" style={{ marginBottom: '10px', border: '2px solid #FCA5A5' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#FEF2F2' }}>
+            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#DC2626' }}>Delete Contact</h3>
+            <button onClick={() => { setShowDeleteConfirm(false); setSelectedContact(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+          </div>
+          <div style={{ padding: '10px' }}>
+            <p style={{ margin: '0 0 4px 0', fontSize: '12px', color: '#374151' }}>Are you sure you want to delete this contact?</p>
+            <p style={{ margin: 0, fontWeight: '600', fontSize: '13px', color: '#111827' }}>{selectedContact?.firstName} {selectedContact?.lastName}</p>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', padding: '6px 10px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
+            <button className="crm-btn crm-btn-secondary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowDeleteConfirm(false); setSelectedContact(null); }}>Cancel</button>
+            <button className="crm-btn crm-btn-danger crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={handleDeleteContact}>Delete</button>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -337,10 +410,10 @@ const Contacts = () => {
           </div>
         ) : contacts.length === 0 ? (
           <div style={{ padding: '60px', textAlign: 'center' }}>
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>👥</div>
+            <div style={{ fontSize: '64px', marginBottom: '16px' }}>C</div>
             <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No contacts found</p>
             <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first contact to get started!</p>
-            {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={openCreateModal}>+ Create First Contact</button>}
+            {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={openCreateForm}>+ Create First Contact</button>}
           </div>
         ) : (
           <>
@@ -351,81 +424,34 @@ const Contacts = () => {
                     key={contact._id}
                     onClick={() => navigate(`/contacts/${contact._id}`)}
                     style={{
-                      background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+                      background: '#ffffff',
                       borderRadius: '16px',
                       padding: '24px',
                       cursor: 'pointer',
                       border: '2px solid #e5e7eb',
-                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)'
+                      transition: 'all 0.3s ease'
                     }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'translateY(-8px)';
-                      e.currentTarget.style.boxShadow = '0 12px 32px rgba(74, 144, 226, 0.2)';
-                      e.currentTarget.style.borderColor = '#4A90E2';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'translateY(0)';
-                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.05)';
-                      e.currentTarget.style.borderColor = '#e5e7eb';
-                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.borderColor = '#4A90E2'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.borderColor = '#e5e7eb'; }}
                   >
-                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '4px', background: 'linear-gradient(90deg, #4A90E2 0%, #2c5364 100%)' }}></div>
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '16px' }}>
-                      <div style={{
-                        width: '56px',
-                        height: '56px',
-                        borderRadius: '12px',
-                        background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '24px',
-                        fontWeight: '800',
-                        color: 'white',
-                        boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                      }}>
+                      <div style={{ width: '56px', height: '56px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', fontWeight: '800', color: 'white' }}>
                         {contact.firstName?.[0]}{contact.lastName?.[0]}
                       </div>
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>
-                          {contact.firstName} {contact.lastName}
-                        </h3>
-                        <p style={{ margin: '0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>
-                          {contact.title || 'No title'}
-                        </p>
+                        <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '800', color: '#1e3c72' }}>{contact.firstName} {contact.lastName}</h3>
+                        <p style={{ margin: '0', fontSize: '13px', color: '#64748b', fontWeight: '600' }}>{contact.title || 'No title'}</p>
                       </div>
                     </div>
-                    {contact.isPrimary && (
-                      <div style={{ marginBottom: '12px' }}>
-                        <span className="status-badge hot">⭐ Primary Contact</span>
-                      </div>
-                    )}
+                    {contact.isPrimary && <div style={{ marginBottom: '12px' }}><span className="status-badge hot">Primary Contact</span></div>}
                     <div style={{ marginBottom: '16px', color: '#64748b', fontSize: '14px' }}>
-                      <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>📧</span>
-                        <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.email}</span>
-                      </div>
-                      {(contact.phone || contact.mobile) && (
-                        <div style={{ marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>📞</span>
-                          <span>{contact.phone || contact.mobile}</span>
-                        </div>
-                      )}
-                      {contact.account && (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span>🏢</span>
-                          <span>{contact.account.accountName}</span>
-                        </div>
-                      )}
+                      <div style={{ marginBottom: '6px' }}>{contact.email}</div>
+                      {(contact.phone || contact.mobile) && <div style={{ marginBottom: '6px' }}>{contact.phone || contact.mobile}</div>}
+                      {contact.account && <div>{contact.account.accountName}</div>}
                     </div>
                     <div style={{ display: 'flex', gap: '8px', paddingTop: '16px', borderTop: '2px solid #f1f5f9' }} onClick={(e) => e.stopPropagation()}>
-                      {canUpdateContact && (
-                        <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditModal(e, contact)} style={{ flex: 1 }}>✏️ Edit</button>
-                      )}
-                      {canDeleteContact && (
-                        <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteModal(e, contact)} style={{ flex: 1 }}>🗑️ Delete</button>
-                      )}
+                      {canUpdateContact && <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditForm(e, contact)} style={{ flex: 1 }}>Edit</button>}
+                      {canDeleteContact && <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteConfirm(e, contact)} style={{ flex: 1 }}>Delete</button>}
                     </div>
                   </div>
                 ))}
@@ -434,101 +460,38 @@ const Contacts = () => {
               <div style={{ overflowX: 'auto', padding: '0' }}>
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 8px' }}>
                   <thead>
-                    <tr style={{ background: 'transparent' }}>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Contact Info</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Title</th>
-                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Actions</th>
+                    <tr>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Name</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Account</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Contact Info</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Title</th>
+                      <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {contacts.map((contact) => (
-                      <tr
-                        key={contact._id}
-                        onClick={(e) => { if (e.target.tagName !== 'BUTTON') navigate(`/contacts/${contact._id}`); }}
-                        style={{
-                          background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
-                          cursor: 'pointer',
-                          transition: 'all 0.2s ease',
-                          borderRadius: '12px',
-                          boxShadow: '0 2px 4px rgba(0, 0, 0, 0.05)',
-                          border: '2px solid #e5e7eb'
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.transform = 'translateY(-2px)';
-                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(74, 144, 226, 0.15)';
-                          e.currentTarget.style.borderColor = '#4A90E2';
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.transform = 'translateY(0)';
-                          e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.05)';
-                          e.currentTarget.style.borderColor = '#e5e7eb';
-                        }}
-                      >
+                      <tr key={contact._id} onClick={(e) => { if (e.target.tagName !== 'BUTTON') navigate(`/contacts/${contact._id}`); }} style={{ background: '#ffffff', cursor: 'pointer', border: '2px solid #e5e7eb', borderRadius: '12px' }}>
                         <td style={{ padding: '16px' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div style={{
-                              width: '48px',
-                              height: '48px',
-                              borderRadius: '12px',
-                              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              fontSize: '18px',
-                              fontWeight: '800',
-                              color: 'white',
-                              boxShadow: '0 4px 12px rgba(74, 144, 226, 0.3)'
-                            }}>
+                            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '800', color: 'white' }}>
                               {contact.firstName?.[0]}{contact.lastName?.[0]}
                             </div>
                             <div>
-                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px', marginBottom: '4px' }}>
-                                {contact.firstName} {contact.lastName}
-                                {contact.isPrimary && <span style={{ marginLeft: '8px' }}>⭐</span>}
-                              </div>
-                              {contact.department && (
-                                <div style={{ fontSize: '13px', color: '#64748b' }}>{contact.department}</div>
-                              )}
+                              <div style={{ fontWeight: '700', color: '#1e3c72', fontSize: '15px' }}>{contact.firstName} {contact.lastName}{contact.isPrimary && ' *'}</div>
+                              {contact.department && <div style={{ fontSize: '13px', color: '#64748b' }}>{contact.department}</div>}
                             </div>
                           </div>
                         </td>
+                        <td style={{ padding: '16px' }}>{contact.account ? <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{contact.account.accountName}</div> : '-'}</td>
                         <td style={{ padding: '16px' }}>
-                          {contact.account ? (
-                            <div>
-                              <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{contact.account.accountName}</div>
-                              <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>{contact.account.accountNumber}</div>
-                            </div>
-                          ) : '-'}
+                          <div style={{ fontSize: '13px', color: '#475569' }}>{contact.email}</div>
+                          {(contact.phone || contact.mobile) && <div style={{ fontSize: '13px', color: '#475569', fontWeight: '600' }}>{contact.phone || contact.mobile}</div>}
                         </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569' }}>
-                              <span>📧</span>
-                              <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{contact.email}</span>
-                            </div>
-                            {(contact.phone || contact.mobile) && (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', fontWeight: '600' }}>
-                                <span>📞</span>
-                                <span>{contact.phone || contact.mobile}</span>
-                              </div>
-                            )}
-                          </div>
-                        </td>
-                        <td style={{ padding: '16px' }}>
-                          <div style={{ fontWeight: '600', color: '#475569', fontSize: '14px' }}>
-                            {contact.title || '-'}
-                          </div>
-                        </td>
+                        <td style={{ padding: '16px', fontWeight: '600', color: '#475569', fontSize: '14px' }}>{contact.title || '-'}</td>
                         <td style={{ padding: '16px' }} onClick={(e) => e.stopPropagation()}>
                           <div style={{ display: 'flex', gap: '8px' }}>
-                            {canUpdateContact && (
-                              <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditModal(e, contact)}>Edit</button>
-                            )}
-                            {canDeleteContact && (
-                              <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteModal(e, contact)}>Delete</button>
-                            )}
+                            {canUpdateContact && <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={(e) => openEditForm(e, contact)}>Edit</button>}
+                            {canDeleteContact && <button className="crm-btn crm-btn-sm crm-btn-danger" onClick={(e) => openDeleteConfirm(e, contact)}>Delete</button>}
                           </div>
                         </td>
                       </tr>
@@ -548,107 +511,6 @@ const Contacts = () => {
           </>
         )}
       </div>
-
-      <Modal isOpen={showCreateModal} onClose={() => { setShowCreateModal(false); resetForm(); setError(''); }} title="Create New Contact" size="large">
-        <form onSubmit={handleCreateContact}>
-          {/* Account Selection - Always at top */}
-          <div className="form-group" style={{ marginBottom: '24px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-              Account *
-            </label>
-            <select name="account" className="crm-form-select" value={formData.account} onChange={handleChange} required>
-              <option value="">Select Account</option>
-              {accounts.map(account => <option key={account._id} value={account._id}>{account.accountName}</option>)}
-            </select>
-          </div>
-
-          {/* Dynamic Form Sections - Rendered from Field Definitions */}
-          {(() => {
-            const groupedFields = groupFieldsBySection(fieldDefinitions);
-            const sectionOrder = ['Basic Information', 'Contact Information', 'Address Information', 'Additional Information'];
-
-            return sectionOrder.map(sectionName => {
-              const sectionFields = groupedFields[sectionName];
-              if (!sectionFields || sectionFields.length === 0) return null;
-
-              return (
-                <div key={sectionName} style={{ marginBottom: '24px' }}>
-                  <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#111827', marginBottom: '16px', paddingBottom: '8px', borderBottom: '2px solid #E5E7EB', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    {sectionName}
-                  </h4>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {sectionFields.map((field) => {
-                      const isFullWidth = field.fieldType === 'textarea';
-
-                      return (
-                        <div key={field._id} style={isFullWidth ? { gridColumn: 'span 2' } : {}}>
-                          {renderDynamicField(field)}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            });
-          })()}
-
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-outline" onClick={() => setShowCreateModal(false)}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Create Contact</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal isOpen={showEditModal} onClose={() => { setShowEditModal(false); setSelectedContact(null); resetForm(); }} title="Edit Contact" size="large">
-        <form onSubmit={handleUpdateContact}>
-          <div className="form-row">
-            <div className="form-group">
-              <label>First Name *</label>
-              <input type="text" name="firstName" className="crm-form-input" value={formData.firstName || ''} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Last Name *</label>
-              <input type="text" name="lastName" className="crm-form-input" value={formData.lastName || ''} onChange={handleChange} required />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Email *</label>
-              <input type="email" name="email" className="crm-form-input" value={formData.email || ''} onChange={handleChange} required />
-            </div>
-            <div className="form-group">
-              <label>Phone</label>
-              <input type="tel" name="phone" className="crm-form-input" value={formData.phone || ''} onChange={handleChange} />
-            </div>
-          </div>
-          <div className="form-row">
-            <div className="form-group">
-              <label>Department</label>
-              <input type="text" name="department" className="crm-form-input" value={formData.department || ''} onChange={handleChange} />
-            </div>
-          </div>
-          <div className="form-group">
-            <label>Description</label>
-            <textarea name="description" className="crm-form-textarea" rows="3" value={formData.description || ''} onChange={handleChange} />
-          </div>
-          <div className="modal-footer">
-            <button type="button" className="crm-btn crm-btn-outline" onClick={() => setShowEditModal(false)}>Cancel</button>
-            <button type="submit" className="crm-btn crm-btn-primary">Update Contact</button>
-          </div>
-        </form>
-      </Modal>
-
-      <Modal isOpen={showDeleteModal} onClose={() => { setShowDeleteModal(false); setSelectedContact(null); }} title="Delete Contact" size="small">
-        <div>
-          <p>Delete this contact?</p>
-          <p style={{ fontWeight: '600', marginTop: '10px' }}>{selectedContact?.firstName} {selectedContact?.lastName}</p>
-          <div className="modal-footer">
-            <button className="crm-btn crm-btn-outline" onClick={() => setShowDeleteModal(false)}>Cancel</button>
-            <button className="crm-btn crm-btn-danger" onClick={handleDeleteContact}>Delete</button>
-          </div>
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 };

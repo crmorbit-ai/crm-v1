@@ -1,34 +1,35 @@
 import api from './api';
 
+// Note: api.js interceptor already returns response.data, so we return directly
+
 export const authService = {
   login: async (email, password) => {
     const response = await api.post('/auth/login', { email, password });
-    return response.data;
+    return response;
   },
 
   registerTenant: async (formData) => {
     const response = await api.post('/auth/register-tenant', formData);
-    return response.data;
+    return response;
   },
 
-  // NEW: Two-step registration with email verification
+  // Two-step registration with email verification
   registerStep1: async (formData) => {
     const response = await api.post('/auth/register-step1', formData);
-    return response.data;
+    return response;
   },
 
   verifyEmail: async (email, otp) => {
     const response = await api.post('/auth/verify-email', { email, otp });
-    return response.data;
+    return response;
   },
 
   resendOTP: async (email) => {
     const response = await api.post('/auth/resend-otp', { email });
-    return response.data;
+    return response;
   },
 
   completeProfile: async (profileData) => {
-    // Create FormData for multipart/form-data (logo upload)
     const formData = new FormData();
 
     Object.keys(profileData).forEach(key => {
@@ -37,20 +38,13 @@ export const authService = {
       }
     });
 
-    // Log FormData contents for debugging
-    console.log('📤 Sending profile data:');
-    for (let [key, value] of formData.entries()) {
-      console.log(`  ${key}:`, value);
-    }
-
-    // Don't manually set Content-Type - axios will set it automatically with boundary
     const response = await api.post('/auth/complete-profile', formData);
-    return response.data;
+    return response;
   },
 
   getMe: async () => {
     const response = await api.get('/auth/me');
-    return response.data;
+    return response;
   },
 
   logout: async () => {
@@ -60,5 +54,11 @@ export const authService = {
       console.error('Logout error:', error);
     }
     localStorage.removeItem('token');
+  },
+
+  // Register method (alias for registerStep1)
+  register: async (formData) => {
+    const response = await api.post('/auth/register-step1', formData);
+    return response;
   }
 };

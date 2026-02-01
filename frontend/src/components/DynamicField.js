@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * DynamicField Component
- * Renders form fields dynamically based on field definition
+ * Renders form fields dynamically based on field definition - Compact version
  */
 const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = false }) => {
   const {
@@ -26,7 +26,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
     onChange(fieldName, selectedOptions);
   };
 
-  // Common input props
+  // Compact input styling
   const inputProps = {
     id: fieldName,
     name: fieldName,
@@ -35,9 +35,10 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
     disabled,
     required: isRequired,
     placeholder: placeholder || '',
-    className: `w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+    className: `w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
       error ? 'border-red-500' : 'border-gray-300'
-    } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`
+    } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`,
+    style: { fontSize: '11px', padding: '4px 6px' }
   };
 
   const renderField = () => {
@@ -60,7 +61,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
         return (
           <textarea
             {...inputProps}
-            rows={4}
+            rows={2}
             maxLength={validations?.maxLength}
             minLength={validations?.minLength}
           />
@@ -105,11 +106,11 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
               checked={value || false}
               onChange={handleChange}
               disabled={disabled}
-              className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
+              className={`h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
                 disabled ? 'bg-gray-100 cursor-not-allowed' : ''
               }`}
             />
-            <label htmlFor={fieldName} className="ml-2 block text-sm text-gray-700">
+            <label htmlFor={fieldName} className="ml-1 block text-xs text-gray-700" style={{ fontSize: '10px' }}>
               {placeholder || label}
             </label>
           </div>
@@ -121,7 +122,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
             {...inputProps}
             value={value || ''}
           >
-            <option value="">-- Select {label} --</option>
+            <option value="">-- Select --</option>
             {options && options.map((option, index) => (
               <option key={index} value={option.value}>
                 {option.label}
@@ -132,7 +133,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
 
       case 'radio':
         return (
-          <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
             {options && options.map((option, index) => (
               <div key={index} className="flex items-center">
                 <input
@@ -144,13 +145,14 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
                   onChange={handleChange}
                   disabled={disabled}
                   required={isRequired}
-                  className={`h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 ${
+                  className={`h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 ${
                     disabled ? 'bg-gray-100 cursor-not-allowed' : ''
                   }`}
                 />
                 <label
                   htmlFor={`${fieldName}_${option.value}`}
-                  className="ml-2 block text-sm text-gray-700"
+                  className="ml-1 text-xs text-gray-700"
+                  style={{ fontSize: '10px' }}
                 >
                   {option.label}
                 </label>
@@ -166,10 +168,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
             multiple
             onChange={handleMultiSelectChange}
             value={value || []}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-              error ? 'border-red-500' : 'border-gray-300'
-            } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-            size={Math.min(options?.length || 4, 6)}
+            size={Math.min(options?.length || 3, 4)}
           >
             {options && options.map((option, index) => (
               <option key={index} value={option.value}>
@@ -190,26 +189,26 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
   };
 
   return (
-    <div className="mb-4">
-      {/* Label - Don't show for checkbox as it has inline label */}
+    <div style={{ marginBottom: '2px' }}>
+      {/* Label - Compact */}
       {fieldType !== 'checkbox' && (
-        <label htmlFor={fieldName} className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={fieldName} className="block font-semibold text-gray-700" style={{ fontSize: '10px', marginBottom: '2px' }}>
           {label}
-          {isRequired && <span className="text-red-500 ml-1">*</span>}
+          {isRequired && <span className="text-red-500 ml-0.5">*</span>}
         </label>
       )}
 
       {/* Field */}
       {renderField()}
 
-      {/* Help Text */}
+      {/* Help Text - Compact */}
       {helpText && !error && (
-        <p className="mt-1 text-xs text-gray-500">{helpText}</p>
+        <p className="text-gray-500" style={{ fontSize: '9px', marginTop: '1px' }}>{helpText}</p>
       )}
 
-      {/* Error Message */}
+      {/* Error Message - Compact */}
       {error && (
-        <p className="mt-1 text-xs text-red-500">{error}</p>
+        <p className="text-red-500" style={{ fontSize: '9px', marginTop: '1px' }}>{error}</p>
       )}
     </div>
   );

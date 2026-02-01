@@ -15,8 +15,6 @@ const Register = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -53,7 +51,7 @@ const Register = () => {
     setLoading(true);
 
     try {
-      const response = await authService.register({
+      const response = await authService.registerStep1({
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
@@ -77,7 +75,7 @@ const Register = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, rgb(226 164 204) 0%, rgb(250, 245, 255) 25%, rgb(235 218 226) 50%, var(--bg-color) 75%)',
+      background: 'linear-gradient(135deg, rgb(226 164 204) 0%, rgb(250, 245, 255) 25%, rgb(235 218 226) 50%, rgb(255 255 255) 75%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',

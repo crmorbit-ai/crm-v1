@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { roleService } from '../services/roleService';
-import Modal from '../components/common/Modal';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import '../styles/crm.css';
 
@@ -36,10 +35,10 @@ const Roles = () => {
     pages: 0
   });
 
-  // Modals
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  // Inline forms
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedRole, setSelectedRole] = useState(null);
 
   // Form data
@@ -81,7 +80,7 @@ const Roles = () => {
       setError('');
       await roleService.createRole(formData);
       setSuccess('Role created successfully!');
-      setShowCreateModal(false);
+      setShowCreateForm(false);
       resetForm();
       loadRoles();
       setTimeout(() => setSuccess(''), 3000);
@@ -96,7 +95,7 @@ const Roles = () => {
       setError('');
       await roleService.updateRole(selectedRole._id, formData);
       setSuccess('Role updated successfully!');
-      setShowEditModal(false);
+      setShowEditForm(false);
       setSelectedRole(null);
       resetForm();
       loadRoles();
@@ -111,7 +110,7 @@ const Roles = () => {
       setError('');
       await roleService.deleteRole(selectedRole._id);
       setSuccess('Role deleted successfully!');
-      setShowDeleteModal(false);
+      setShowDeleteConfirm(false);
       setSelectedRole(null);
       loadRoles();
       setTimeout(() => setSuccess(''), 3000);
@@ -120,7 +119,7 @@ const Roles = () => {
     }
   };
 
-  const openEditModal = (role) => {
+  const openEditForm = (role) => {
     setSelectedRole(role);
     setFormData({
       name: role.name,
@@ -128,12 +127,16 @@ const Roles = () => {
       description: role.description || '',
       permissions: role.permissions || []
     });
-    setShowEditModal(true);
+    setShowEditForm(true);
+    setShowCreateForm(false);
+    setShowDeleteConfirm(false);
   };
 
-  const openDeleteModal = (role) => {
+  const openDeleteConfirm = (role) => {
     setSelectedRole(role);
-    setShowDeleteModal(true);
+    setShowDeleteConfirm(true);
+    setShowCreateForm(false);
+    setShowEditForm(false);
   };
 
   const resetForm = () => {
@@ -201,16 +204,136 @@ const Roles = () => {
   const canDeleteRole = hasPermission('role_management', 'delete');
 
   return (
-    <DashboardLayout
-      title="Role Management"
-      actionButton={canCreateRole ? (
-        <button className="crm-btn crm-btn-primary" onClick={() => setShowCreateModal(true)}>
-          + New Role
-        </button>
-      ) : null}
-    >
+    <DashboardLayout title="Role Management">
       {success && <div className="alert alert-success">{success}</div>}
       {error && <div className="alert alert-error">{error}</div>}
+
+      {/* Action Bar */}
+      <div className="crm-card" style={{ marginBottom: '16px' }}>
+        <div style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Role Management</h3>
+          {canCreateRole && (
+            <button className="crm-btn crm-btn-primary" onClick={() => { setShowCreateForm(true); setShowEditForm(false); setShowDeleteConfirm(false); resetForm(); }}>+ New Role</button>
+          )}
+        </div>
+      </div>
+
+      {/* Inline Create Role Form */}
+      {showCreateForm && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Create New Role</h3>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleCreateRole}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Role Name *</label>
+                  <input type="text" name="name" className="crm-form-input" placeholder="e.g., Project Manager" value={formData.name} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Slug *</label>
+                  <input type="text" name="slug" className="crm-form-input" placeholder="project-manager" value={formData.slug} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <input type="text" name="description" className="crm-form-input" placeholder="Role description..." value={formData.description} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>Permissions</label>
+                <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
+                  {AVAILABLE_FEATURES.map(feature => (
+                    <div key={feature.slug} style={{ marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid #f3f4f6' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>{feature.name}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {AVAILABLE_ACTIONS.map(action => (
+                          <label key={action} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer', padding: '2px 6px', background: hasPermissionChecked(feature.slug, action) ? '#dbeafe' : '#f9fafb', borderRadius: '4px', border: '1px solid #e5e7eb' }}>
+                            <input type="checkbox" checked={hasPermissionChecked(feature.slug, action)} onChange={() => handlePermissionToggle(feature.slug, action)} style={{ width: '12px', height: '12px' }} />
+                            {action}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Create Role</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Edit Role Form */}
+      {showEditForm && selectedRole && (
+        <div className="crm-card" style={{ marginBottom: '16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Edit Role: {selectedRole.name}</h3>
+            <button onClick={() => { setShowEditForm(false); setSelectedRole(null); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
+          </div>
+          <div style={{ padding: '16px' }}>
+            <form onSubmit={handleUpdateRole}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Role Name *</label>
+                  <input type="text" name="name" className="crm-form-input" value={formData.name} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
+                  <input type="text" name="description" className="crm-form-input" value={formData.description} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '8px' }}>Permissions</label>
+                <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e5e7eb', borderRadius: '6px', padding: '12px' }}>
+                  {AVAILABLE_FEATURES.map(feature => (
+                    <div key={feature.slug} style={{ marginBottom: '10px', paddingBottom: '10px', borderBottom: '1px solid #f3f4f6' }}>
+                      <div style={{ fontSize: '13px', fontWeight: '600', marginBottom: '6px', color: '#374151' }}>{feature.name}</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                        {AVAILABLE_ACTIONS.map(action => (
+                          <label key={action} style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer', padding: '2px 6px', background: hasPermissionChecked(feature.slug, action) ? '#dbeafe' : '#f9fafb', borderRadius: '4px', border: '1px solid #e5e7eb' }}>
+                            <input type="checkbox" checked={hasPermissionChecked(feature.slug, action)} onChange={() => handlePermissionToggle(feature.slug, action)} style={{ width: '12px', height: '12px' }} />
+                            {action}
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowEditForm(false); setSelectedRole(null); resetForm(); }}>Cancel</button>
+                <button type="submit" className="crm-btn crm-btn-primary">Update Role</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Inline Delete Confirmation */}
+      {showDeleteConfirm && selectedRole && (
+        <div className="crm-card" style={{ marginBottom: '16px', border: '2px solid #FCA5A5' }}>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '24px' }}>⚠️</span>
+              <div style={{ flex: 1 }}>
+                <h4 style={{ margin: '0 0 4px 0', color: '#991B1B' }}>Delete Role: {selectedRole.name}</h4>
+                <p style={{ margin: 0, fontSize: '13px', color: '#666' }}>Users assigned to this role will lose their permissions. This action cannot be undone.</p>
+              </div>
+              <button className="crm-btn crm-btn-outline" onClick={() => { setShowDeleteConfirm(false); setSelectedRole(null); }}>Cancel</button>
+              <button className="crm-btn crm-btn-danger" onClick={handleDeleteRole}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -274,7 +397,7 @@ const Roles = () => {
                               {canUpdateRole && role.roleType !== 'system' && (
                                 <button
                                   className="crm-btn crm-btn-sm crm-btn-secondary"
-                                  onClick={() => openEditModal(role)}
+                                  onClick={() => openEditForm(role)}
                                 >
                                   Edit
                                 </button>
@@ -282,7 +405,7 @@ const Roles = () => {
                               {canDeleteRole && role.roleType !== 'system' && (
                                 <button
                                   className="crm-btn crm-btn-sm crm-btn-danger"
-                                  onClick={() => openDeleteModal(role)}
+                                  onClick={() => openDeleteConfirm(role)}
                                 >
                                   Delete
                                 </button>
@@ -323,218 +446,6 @@ const Roles = () => {
               </>
             )}
       </div>
-
-      {/* Create Role Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          resetForm();
-          setError('');
-        }}
-        title="Create New Role"
-        size="large"
-      >
-        <form onSubmit={handleCreateRole}>
-          <div className="form-group">
-            <label className="form-label">Role Name *</label>
-            <input
-              type="text"
-              name="name"
-              className="form-input"
-              placeholder="e.g., Project Manager"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Slug *</label>
-            <input
-              type="text"
-              name="slug"
-              className="form-input"
-              placeholder="project-manager"
-              value={formData.slug}
-              onChange={handleChange}
-              required
-            />
-            <small className="form-hint">Auto-generated from name. Used for internal reference.</small>
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Description</label>
-            <textarea
-              name="description"
-              className="form-input"
-              rows="3"
-              placeholder="Describe this role's responsibilities..."
-              value={formData.description}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Permissions</label>
-            <div className="permissions-grid">
-              {AVAILABLE_FEATURES.map(feature => (
-                <div key={feature.slug} className="permission-group">
-                  <h4>{feature.name}</h4>
-                  <div className="permission-actions">
-                    {AVAILABLE_ACTIONS.map(action => (
-                      <label key={action} className="permission-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={hasPermissionChecked(feature.slug, action)}
-                          onChange={() => handlePermissionToggle(feature.slug, action)}
-                        />
-                        <span>{action}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Create Role
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Edit Role Modal */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          setSelectedRole(null);
-          resetForm();
-          setError('');
-        }}
-        title="Edit Role"
-        size="large"
-      >
-        <form onSubmit={handleUpdateRole}>
-          <div className="form-group">
-            <label className="form-label">Role Name *</label>
-            <input
-              type="text"
-              name="name"
-              className="form-input"
-              value={formData.name}
-              onChange={handleChange}
-              required
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Description</label>
-            <textarea
-              name="description"
-              className="form-input"
-              rows="3"
-              value={formData.description}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Permissions</label>
-            <div className="permissions-grid">
-              {AVAILABLE_FEATURES.map(feature => (
-                <div key={feature.slug} className="permission-group">
-                  <h4>{feature.name}</h4>
-                  <div className="permission-actions">
-                    {AVAILABLE_ACTIONS.map(action => (
-                      <label key={action} className="permission-checkbox">
-                        <input
-                          type="checkbox"
-                          checked={hasPermissionChecked(feature.slug, action)}
-                          onChange={() => handlePermissionToggle(feature.slug, action)}
-                        />
-                        <span>{action}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="modal-footer">
-            <button
-              type="button"
-              className="btn btn-outline"
-              onClick={() => {
-                setShowEditModal(false);
-                setSelectedRole(null);
-                resetForm();
-                setError('');
-              }}
-            >
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-              Update Role
-            </button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Delete Confirmation Modal */}
-      <Modal
-        isOpen={showDeleteModal}
-        onClose={() => {
-          setShowDeleteModal(false);
-          setSelectedRole(null);
-        }}
-        title="Delete Role"
-        size="small"
-      >
-        <div>
-          <p>Are you sure you want to delete this role?</p>
-          <p style={{ marginTop: '10px' }}>
-            <strong>{selectedRole?.name}</strong><br />
-            <span style={{ color: '#666' }}>{selectedRole?.description}</span>
-          </p>
-          <p style={{ marginTop: '15px', color: 'var(--error-color)', fontSize: '14px' }}>
-            This action cannot be undone. Users assigned to this role will lose their permissions.
-          </p>
-
-          <div className="modal-footer">
-            <button
-              className="btn btn-outline"
-              onClick={() => {
-                setShowDeleteModal(false);
-                setSelectedRole(null);
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              className="btn btn-danger"
-              onClick={handleDeleteRole}
-            >
-              Delete Role
-            </button>
-          </div>
-        </div>
-      </Modal>
     </DashboardLayout>
   );
 };
