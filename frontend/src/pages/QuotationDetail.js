@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import quotationService from '../services/quotationService';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import { API_URL, getAuthHeaders } from '../config/api.config';
 import '../styles/crm.css';
 
 const QuotationDetail = () => {
@@ -31,10 +32,8 @@ const QuotationDetail = () => {
   const handleDownloadPDF = async () => {
     try {
       setActionLoading(true);
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api/quotations/${id}/download-pdf`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      const response = await fetch(`${API_URL}/quotations/${id}/download-pdf`, {
+        headers: getAuthHeaders()
       });
 
       if (!response.ok) throw new Error('Failed to download PDF');

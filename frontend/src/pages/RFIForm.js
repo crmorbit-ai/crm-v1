@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import rfiService from '../services/rfiService';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import { API_URL, getAuthHeaders } from '../config/api.config';
 import '../styles/crm.css';
 
 const RFIForm = () => {
@@ -50,10 +51,8 @@ const RFIForm = () => {
       const endpoint = customerType === 'Lead' ? '/leads' :
                       customerType === 'Contact' ? '/contacts' : '/accounts';
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:4000'}/api${endpoint}?limit=1000`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
+      const response = await fetch(`${API_URL}${endpoint}?limit=1000`, {
+        headers: getAuthHeaders()
       });
 
       if (!response.ok) {

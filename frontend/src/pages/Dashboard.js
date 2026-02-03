@@ -22,15 +22,33 @@ import {
   UserCircle,
 } from 'lucide-react';
 
+const STATS_CACHE_KEY = 'dashboard_stats_cache';
+const STATS_CACHE_EXPIRY = 'dashboard_stats_expiry';
+const CACHE_DURATION = 2 * 60 * 1000; // 2 minutes
+
 const Dashboard = () => {
   const { user } = useAuth();
-  const [stats, setStats] = useState({
+
+  // Try to get cached stats for instant display
+  const getCachedStats = () => {
+    try {
+      const cached = localStorage.getItem(STATS_CACHE_KEY);
+      const expiry = localStorage.getItem(STATS_CACHE_EXPIRY);
+      if (cached && expiry && Date.now() < parseInt(expiry)) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {}
+    return null;
+  };
+
+  const cachedStats = getCachedStats();
+  const [stats, setStats] = useState(cachedStats || {
     leads: null,
     accounts: null,
     contacts: null,
     opportunities: null
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedStats);
 
   useEffect(() => {
     loadStats();
@@ -38,7 +56,11 @@ const Dashboard = () => {
 
   const loadStats = async () => {
     try {
-      setLoading(true);
+      // Only show loading if no cached data
+      if (!getCachedStats()) {
+        setLoading(true);
+      }
+
       const [leadStats, accountStats, contactStats, opportunityStats] = await Promise.all([
         leadService.getLeadStats().catch(() => ({ data: null })),
         accountService.getAccountStats().catch(() => ({ data: null })),
@@ -46,12 +68,20 @@ const Dashboard = () => {
         opportunityService.getOpportunityStats().catch(() => ({ data: null }))
       ]);
 
-      setStats({
+      const newStats = {
         leads: leadStats.data,
         accounts: accountStats.data,
         contacts: contactStats.data,
         opportunities: opportunityStats.data
-      });
+      };
+
+      setStats(newStats);
+
+      // Cache the stats
+      try {
+        localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(newStats));
+        localStorage.setItem(STATS_CACHE_EXPIRY, String(Date.now() + CACHE_DURATION));
+      } catch (e) {}
     } catch (error) {
       console.error('Failed to load stats:', error);
     } finally {
@@ -67,6 +97,23 @@ const Dashboard = () => {
       maximumFractionDigits: 0
     }).format(amount);
   };
+
+  // Skeleton loader for stat cards
+  const SkeletonStatCard = () => (
+    <div
+      className="relative overflow-hidden rounded-lg border border-gray-200 p-4"
+      style={{ background: 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)' }}
+    >
+      <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
+      <div className="flex items-center gap-3">
+        <div className="h-12 w-12 rounded-lg bg-gray-200 animate-pulse" />
+        <div className="flex-1">
+          <div className="h-6 w-16 bg-gray-200 rounded animate-pulse mb-2" />
+          <div className="h-3 w-20 bg-gray-200 rounded animate-pulse" />
+        </div>
+      </div>
+    </div>
+  );
 
   // Stat card with original gradient styling
   const StatCard = ({ title, value, subtitle, icon: Icon, trend }) => (
@@ -93,7 +140,7 @@ const Dashboard = () => {
         )}
         <div className="flex-1">
           <p className="text-2xl font-extrabold text-gray-800 leading-none">
-            {loading ? '...' : value}
+            {value}
           </p>
           <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
             {title}
@@ -128,36 +175,54 @@ const Dashboard = () => {
 
       {/* Main Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <StatCard
-          title="Total Leads"
-          value={stats?.leads?.total || 0}
-          subtitle={`${stats?.leads?.newThisMonth || 0} new this month`}
-          icon={Target}
-          trend="up"
-        />
-        <StatCard
-          title="Accounts"
-          value={stats?.accounts?.total || 0}
-          subtitle={`${stats?.accounts?.newThisMonth || 0} new this month`}
-          icon={Building2}
-        />
-        <StatCard
-          title="Contacts"
-          value={stats?.contacts?.total || 0}
-          subtitle={`${stats?.contacts?.newThisMonth || 0} new this month`}
-          icon={Contact}
-        />
-        <StatCard
-          title="Total Pipeline"
-          value={formatCurrency(stats?.opportunities?.totalValue || 0)}
-          subtitle={`${stats?.opportunities?.total || 0} opportunities`}
-          icon={DollarSign}
-          trend="up"
-        />
+        {loading ? (
+          <>
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+            <SkeletonStatCard />
+          </>
+        ) : (
+          <>
+            <StatCard
+              title="Total Leads"
+              value={stats?.leads?.total || 0}
+              subtitle={`${stats?.leads?.newThisMonth || 0} new this month`}
+              icon={Target}
+              trend="up"
+            />
+            <StatCard
+              title="Accounts"
+              value={stats?.accounts?.total || 0}
+              subtitle={`${stats?.accounts?.newThisMonth || 0} new this month`}
+              icon={Building2}
+            />
+            <StatCard
+              title="Contacts"
+              value={stats?.contacts?.total || 0}
+              subtitle={`${stats?.contacts?.newThisMonth || 0} new this month`}
+              icon={Contact}
+            />
+            <StatCard
+              title="Total Pipeline"
+              value={formatCurrency(stats?.opportunities?.totalValue || 0)}
+              subtitle={`${stats?.opportunities?.total || 0} opportunities`}
+              icon={DollarSign}
+              trend="up"
+            />
+          </>
+        )}
       </div>
 
       {/* Opportunity Stats */}
-      {stats.opportunities && (
+      {loading ? (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+          <SkeletonStatCard />
+        </div>
+      ) : stats.opportunities && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <StatCard
             title="Weighted Pipeline"

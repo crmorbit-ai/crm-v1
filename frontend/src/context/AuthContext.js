@@ -3,6 +3,11 @@ import { authService } from '../services/authService';
 
 const AuthContext = createContext();
 
+// Cache keys
+const USER_CACHE_KEY = 'cached_user';
+const CACHE_EXPIRY_KEY = 'user_cache_expiry';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -12,9 +17,38 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Try to get cached user for instant display
+  const getCachedUser = () => {
+    try {
+      const cached = localStorage.getItem(USER_CACHE_KEY);
+      const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+      if (cached && expiry && Date.now() < parseInt(expiry)) {
+        return JSON.parse(cached);
+      }
+    } catch (e) {
+      console.error('Cache read error:', e);
+    }
+    return null;
+  };
+
+  const [user, setUser] = useState(getCachedUser());
+  const [loading, setLoading] = useState(!getCachedUser() && !!localStorage.getItem('token'));
   const [token, setToken] = useState(localStorage.getItem('token'));
+
+  // Cache user data
+  const cacheUser = (userData) => {
+    try {
+      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(userData));
+      localStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + CACHE_DURATION));
+    } catch (e) {
+      console.error('Cache write error:', e);
+    }
+  };
+
+  const clearUserCache = () => {
+    localStorage.removeItem(USER_CACHE_KEY);
+    localStorage.removeItem(CACHE_EXPIRY_KEY);
+  };
 
   useEffect(() => {
     if (token) {
@@ -28,6 +62,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await authService.getMe();
       setUser(response.data);
+      cacheUser(response.data); // Cache for future
     } catch (error) {
       console.error('Load user error:', error);
       logout();
@@ -42,6 +77,7 @@ export const AuthProvider = ({ children }) => {
     setToken(token);
     setUser(user);
     localStorage.setItem('token', token);
+    cacheUser(user); // Cache user for instant load
     return response.data;
   };
 
@@ -85,6 +121,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
+    clearUserCache();
   };
 
   const hasPermission = (feature, action) => {

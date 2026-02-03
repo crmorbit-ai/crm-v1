@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../config/api.config';
+import { leadService } from '../services/leadService';
+import { accountService } from '../services/accountService';
+import { contactService } from '../services/contactService';
+import { opportunityService } from '../services/opportunityService';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -37,6 +42,28 @@ const Login = () => {
 
     try {
       const response = await login(formData.email, formData.password);
+
+      // Prefetch dashboard data in background to warm up backend
+      // This runs while redirect is happening
+      Promise.all([
+        leadService.getLeadStats().catch(() => null),
+        accountService.getAccountStats().catch(() => null),
+        contactService.getContactStats().catch(() => null),
+        opportunityService.getOpportunityStats().catch(() => null)
+      ]).then((results) => {
+        // Cache results for instant dashboard load
+        const stats = {
+          leads: results[0]?.data || null,
+          accounts: results[1]?.data || null,
+          contacts: results[2]?.data || null,
+          opportunities: results[3]?.data || null
+        };
+        try {
+          localStorage.setItem('dashboard_stats_cache', JSON.stringify(stats));
+          localStorage.setItem('dashboard_stats_expiry', String(Date.now() + 120000));
+        } catch (e) {}
+      });
+
       // Use window.location for full page reload to ensure auth state is loaded
       const defaultRoute = response.user?.userType === 'SAAS_OWNER' || response.user?.userType === 'SAAS_ADMIN'
         ? '/saas/dashboard'
@@ -49,7 +76,7 @@ const Login = () => {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/auth/google`;
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   return (

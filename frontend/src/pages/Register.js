@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
+import { API_URL } from '../config/api.config';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -69,7 +70,7 @@ const Register = () => {
   };
 
   const handleGoogleSignup = () => {
-    window.location.href = `${process.env.REACT_APP_API_URL || 'http://localhost:5001'}/api/auth/google`;
+    window.location.href = `${API_URL}/auth/google`;
   };
 
   return (

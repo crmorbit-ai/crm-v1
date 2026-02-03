@@ -306,8 +306,8 @@ const DataCenter = () => {
           <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>{uploading ? 'Uploading...' : 'Upload CSV'}</button>
           <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={handleExport}>Export {selectedCandidates.length > 0 ? `(${selectedCandidates.length})` : ''}</button>
           <div className="view-toggle">
-            <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`} onClick={() => setViewMode('table')} style={{ padding: '6px 12px', minWidth: 'auto' }}>T</button>
-            <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`} onClick={() => setViewMode('grid')} style={{ padding: '6px 12px', minWidth: 'auto' }}>G</button>
+            <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-secondary'}`} onClick={() => setViewMode('table')}>Table</button>
+            <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-secondary'}`} onClick={() => setViewMode('grid')}>Grid</button>
           </div>
         </div>
 

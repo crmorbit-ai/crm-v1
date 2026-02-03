@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { contactService } from '../services/contactService';
+import { taskService } from '../services/taskService';
+import { noteService } from '../services/noteService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
@@ -20,14 +22,106 @@ const ContactDetail = () => {
   // Inline forms
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showNoteForm, setShowNoteForm] = useState(false);
 
   // Form data
   const [formData, setFormData] = useState({});
+  const [taskData, setTaskData] = useState({
+    subject: '',
+    dueDate: '',
+    status: 'Not Started',
+    priority: 'Normal',
+    description: ''
+  });
+  const [noteData, setNoteData] = useState({
+    title: '',
+    content: ''
+  });
+  const [tasks, setTasks] = useState([]);
+  const [notes, setNotes] = useState([]);
 
   useEffect(() => {
     loadContact();
     loadFieldDefinitions();
+    loadTasks();
+    loadNotes();
   }, [id]);
+
+  const loadTasks = async () => {
+    try {
+      const response = await taskService.getTasks({
+        relatedTo: 'Contact',
+        relatedToId: id,
+        limit: 100
+      });
+      if (response?.success) {
+        setTasks(response.data.tasks || []);
+      }
+    } catch (err) {
+      console.error('Load tasks error:', err);
+    }
+  };
+
+  const loadNotes = async () => {
+    try {
+      const response = await noteService.getNotes({
+        relatedTo: 'Contact',
+        relatedToId: id,
+        limit: 100
+      });
+      if (response?.success) {
+        setNotes(response.data?.notes || []);
+      }
+    } catch (err) {
+      console.error('Load notes error:', err);
+    }
+  };
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      await taskService.createTask({
+        ...taskData,
+        relatedTo: 'Contact',
+        relatedToId: id
+      });
+      setSuccess('Task created successfully!');
+      setShowTaskForm(false);
+      setTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+      loadTasks();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to create task');
+    }
+  };
+
+  const handleCreateNote = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      await noteService.createNote({
+        ...noteData,
+        relatedTo: 'Contact',
+        relatedToId: id
+      });
+      setSuccess('Note created successfully!');
+      setShowNoteForm(false);
+      setNoteData({ title: '', content: '' });
+      loadNotes();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Failed to create note');
+    }
+  };
+
+  const closeAllForms = () => {
+    setShowEditForm(false);
+    setShowDeleteConfirm(false);
+    setShowTaskForm(false);
+    setShowNoteForm(false);
+  };
 
   const loadContact = async () => {
     try {
@@ -134,7 +228,6 @@ const ContactDetail = () => {
 
   const { relatedData = {} } = contact;
   const opportunities = relatedData.opportunities?.data || [];
-  const tasks = relatedData.tasks?.data || [];
 
   return (
     <DashboardLayout title={`${contact.firstName} ${contact.lastName}`}>
@@ -402,11 +495,46 @@ const ContactDetail = () => {
                   )}
                 </div>
 
-                <div>
+                <div style={{ marginBottom: '24px' }}>
                   <div style={{display:'flex',justifyContent:'space-between',marginBottom:'12px'}}>
-                    <h5 style={{fontSize:'14px',fontWeight:'600'}}>Tasks ({relatedData.tasks?.total || 0})</h5>
-                    <button className="crm-btn crm-btn-sm crm-btn-primary">+ New Task</button>
+                    <h5 style={{fontSize:'14px',fontWeight:'600'}}>Tasks ({tasks.length})</h5>
+                    <button className="crm-btn crm-btn-sm crm-btn-primary" onClick={() => { closeAllForms(); setShowTaskForm(true); }}>+ New Task</button>
                   </div>
+
+                  {/* Inline Task Form */}
+                  {showTaskForm && (
+                    <div style={{ marginBottom: '16px', padding: '16px', background: '#F0FDF4', borderRadius: '8px', border: '1px solid #86EFAC' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h5 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#166534' }}>Create Task</h5>
+                        <button onClick={() => setShowTaskForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
+                      </div>
+                      <form onSubmit={handleCreateTask}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                          <div style={{ gridColumn: 'span 2' }}>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Subject *</label>
+                            <input type="text" className="crm-form-input" value={taskData.subject} onChange={(e) => setTaskData({ ...taskData, subject: e.target.value })} required />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Due Date *</label>
+                            <input type="date" className="crm-form-input" value={taskData.dueDate} onChange={(e) => setTaskData({ ...taskData, dueDate: e.target.value })} required />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Priority</label>
+                            <select className="crm-form-select" value={taskData.priority} onChange={(e) => setTaskData({ ...taskData, priority: e.target.value })}>
+                              <option value="High">High</option>
+                              <option value="Normal">Normal</option>
+                              <option value="Low">Low</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setShowTaskForm(false)}>Cancel</button>
+                          <button type="submit" className="crm-btn crm-btn-success crm-btn-sm">Create Task</button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
                   {tasks.length > 0 ? (
                     <div style={{border:'1px solid #E5E7EB',borderRadius:'8px',overflow:'hidden'}}>
                       <table className="crm-table" style={{margin:0}}>
@@ -425,6 +553,51 @@ const ContactDetail = () => {
                     </div>
                   ) : (
                     <div style={{border:'1px solid #E5E7EB',borderRadius:'8px',padding:'20px',textAlign:'center',color:'#666'}}>No tasks found</div>
+                  )}
+                </div>
+
+                <div>
+                  <div style={{display:'flex',justifyContent:'space-between',marginBottom:'12px'}}>
+                    <h5 style={{fontSize:'14px',fontWeight:'600'}}>Notes ({notes.length})</h5>
+                    <button className="crm-btn crm-btn-sm crm-btn-primary" onClick={() => { closeAllForms(); setShowNoteForm(true); }}>+ Add Note</button>
+                  </div>
+
+                  {/* Inline Note Form */}
+                  {showNoteForm && (
+                    <div style={{ marginBottom: '16px', padding: '16px', background: '#FDF4FF', borderRadius: '8px', border: '1px solid #E879F9' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                        <h5 style={{ margin: 0, fontSize: '14px', fontWeight: '600', color: '#86198F' }}>Add Note</h5>
+                        <button onClick={() => setShowNoteForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
+                      </div>
+                      <form onSubmit={handleCreateNote}>
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Title *</label>
+                          <input type="text" className="crm-form-input" value={noteData.title} onChange={(e) => setNoteData({ ...noteData, title: e.target.value })} required />
+                        </div>
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Content *</label>
+                          <textarea className="crm-form-textarea" rows="3" style={{ width: '100%' }} value={noteData.content} onChange={(e) => setNoteData({ ...noteData, content: e.target.value })} required />
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                          <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setShowNoteForm(false)}>Cancel</button>
+                          <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ background: '#A855F7' }}>Add Note</button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {notes.length > 0 ? (
+                    <div>
+                      {notes.map(note => (
+                        <div key={note._id} style={{ border: '1px solid #E5E7EB', borderRadius: '8px', padding: '16px', marginBottom: '12px' }}>
+                          <div style={{ fontWeight: '600', marginBottom: '8px' }}>{note.title}</div>
+                          <div style={{ color: '#666', fontSize: '14px' }}>{note.content}</div>
+                          <div style={{ marginTop: '8px', fontSize: '12px', color: '#999' }}>{new Date(note.createdAt).toLocaleString()}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{border:'1px solid #E5E7EB',borderRadius:'8px',padding:'20px',textAlign:'center',color:'#666'}}>No notes found</div>
                   )}
                 </div>
               </div>
