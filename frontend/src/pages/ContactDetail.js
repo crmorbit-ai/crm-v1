@@ -607,49 +607,54 @@ const ContactDetail = () => {
                 const groupedFields = groupFieldsBySection(customFieldDefinitions);
                 const sections = Object.keys(groupedFields);
 
-                return sections.map(sectionName => (
-                  <div key={sectionName} style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
-                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px', color: '#374151' }}>{sectionName}</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                      {groupedFields[sectionName].map((field) => {
-                        const value = contact.customFields[field.fieldName];
-                        if (!value) return null;
+                // Helper function to render custom field value
+                const renderFieldValue = (field, value) => {
+                  if (!value) return null;
+                  let displayValue = value;
 
-                        let displayValue = value;
+                  if (field.fieldType === 'currency') {
+                    displayValue = `₹${Number(value).toLocaleString()}`;
+                  } else if (field.fieldType === 'percentage') {
+                    displayValue = `${value}%`;
+                  } else if (field.fieldType === 'date') {
+                    displayValue = new Date(value).toLocaleDateString();
+                  } else if (field.fieldType === 'datetime') {
+                    displayValue = new Date(value).toLocaleString();
+                  } else if (field.fieldType === 'checkbox') {
+                    displayValue = value ? 'Yes' : 'No';
+                  } else if (field.fieldType === 'multi_select' && Array.isArray(value)) {
+                    const selectedOptions = field.options?.filter(opt => value.includes(opt.value)) || [];
+                    displayValue = selectedOptions.map(opt => opt.label).join(', ');
+                  } else if (['dropdown', 'radio'].includes(field.fieldType)) {
+                    const selectedOption = field.options?.find(opt => opt.value === value);
+                    displayValue = selectedOption ? selectedOption.label : value;
+                  }
 
-                        // Format value based on field type
-                        if (field.fieldType === 'currency') {
-                          displayValue = `${Number(value).toLocaleString()}`;
-                        } else if (field.fieldType === 'percentage') {
-                          displayValue = `${value}%`;
-                        } else if (field.fieldType === 'date') {
-                          displayValue = new Date(value).toLocaleDateString();
-                        } else if (field.fieldType === 'datetime') {
-                          displayValue = new Date(value).toLocaleString();
-                        } else if (field.fieldType === 'checkbox') {
-                          displayValue = value ? 'Yes' : 'No';
-                        } else if (field.fieldType === 'multi_select' && Array.isArray(value)) {
-                          const selectedOptions = field.options.filter(opt => value.includes(opt.value));
-                          displayValue = selectedOptions.map(opt => opt.label).join(', ');
-                        } else if (['dropdown', 'radio'].includes(field.fieldType)) {
-                          const selectedOption = field.options.find(opt => opt.value === value);
-                          displayValue = selectedOption ? selectedOption.label : value;
-                        }
-
-                        return (
-                          <div key={field._id}>
-                            <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>
-                              {field.label}
-                            </label>
-                            <p style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>
-                              {displayValue || 'Not provided'}
-                            </p>
-                          </div>
-                        );
-                      })}
+                  return (
+                    <div key={field._id}>
+                      <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>{field.label}</label>
+                      <p style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>{displayValue || 'Not provided'}</p>
                     </div>
-                  </div>
-                ));
+                  );
+                };
+
+                return sections.map(sectionName => {
+                  // Check if any field in this section has a value
+                  const fieldsWithValues = groupedFields[sectionName].filter(field => contact.customFields[field.fieldName]);
+                  if (fieldsWithValues.length === 0) return null;
+
+                  return (
+                    <div key={sectionName} style={{ marginTop: '24px', paddingTop: '24px', borderTop: '1px solid #E5E7EB' }}>
+                      <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '16px', color: '#1e3c72', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ width: '4px', height: '16px', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', borderRadius: '2px' }}></span>
+                        {sectionName}
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', background: '#F9FAFB', padding: '16px', borderRadius: '8px' }}>
+                        {fieldsWithValues.map((field) => renderFieldValue(field, contact.customFields[field.fieldName]))}
+                      </div>
+                    </div>
+                  );
+                });
               })()}
             </div>
           )}

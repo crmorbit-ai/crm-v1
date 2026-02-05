@@ -21,6 +21,13 @@ const DataCenter = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState('table');
 
+  // Split View Panel State
+  const [selectedCandidateId, setSelectedCandidateId] = useState(null);
+  const [selectedCandidateData, setSelectedCandidateData] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [showDetailMoveForm, setShowDetailMoveForm] = useState(false);
+  const [detailMoveForm, setDetailMoveForm] = useState({ leadStatus: 'New', leadSource: 'Customer', rating: 'Warm' });
+
   const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
   const [showBulkWhatsAppModal, setShowBulkWhatsAppModal] = useState(false);
   const [showBulkSMSModal, setShowBulkSMSModal] = useState(false);
@@ -272,6 +279,112 @@ const DataCenter = () => {
     return colors[availability] || 'secondary';
   };
 
+  // === Split View Functions ===
+  const handleCandidateClick = async (candidateId) => {
+    if (selectedCandidateId === candidateId) return;
+    setSelectedCandidateId(candidateId);
+    setLoadingDetail(true);
+    setShowDetailMoveForm(false);
+
+    try {
+      const response = await dataCenterService.getCandidate(candidateId);
+      setSelectedCandidateData(response.data);
+    } catch (err) {
+      console.error('Error loading candidate details:', err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const closeSidePanel = () => {
+    setSelectedCandidateId(null);
+    setSelectedCandidateData(null);
+    setShowDetailMoveForm(false);
+  };
+
+  const handleDetailMoveToLead = async () => {
+    try {
+      const data = { candidateIds: [selectedCandidateId], ...detailMoveForm };
+      await dataCenterService.moveToLeads(data);
+      alert('Successfully moved to Leads!');
+      setShowDetailMoveForm(false);
+      closeSidePanel();
+      loadCandidates();
+    } catch (error) {
+      console.error('Error moving to lead:', error);
+      alert('Failed to move to leads');
+    }
+  };
+
+  // Helper functions for detail panel
+  const hasValue = (value) => {
+    if (value === null || value === undefined || value === '') return false;
+    if (Array.isArray(value) && value.length === 0) return false;
+    if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) return false;
+    return true;
+  };
+
+  const isIdLikeValue = (value) => {
+    if (!value || typeof value !== 'string') return false;
+    if (/^[a-f0-9]{24}$/i.test(value)) return true;
+    if (/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(value)) return true;
+    if (/^\d{10,}$/.test(value)) return true;
+    return false;
+  };
+
+  const formatDetailValue = (key, value) => {
+    if (!hasValue(value)) return null;
+    if (Array.isArray(value)) return value.join(', ');
+    if (key.toLowerCase().includes('date') || key.toLowerCase().includes('at')) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) return date.toLocaleDateString('en-IN', { year: 'numeric', month: 'short', day: 'numeric' });
+    }
+    if (key.toLowerCase().includes('ctc') || key.toLowerCase().includes('salary')) {
+      const num = Number(value);
+      if (!isNaN(num)) return `₹${num.toLocaleString('en-IN')}`;
+    }
+    if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+    return String(value);
+  };
+
+  const excludeFields = ['_id', 'id', 'ID', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource', 'customFields', 'tenantId', 'userId', 'candidateId', 'objectId', 'ObjectId'];
+
+  const getDisplayFields = (candidate) => {
+    if (!candidate) return [];
+    const fields = [];
+    Object.keys(candidate).forEach(key => {
+      if (excludeFields.includes(key)) return;
+      if (key.toLowerCase().includes('id') && key.toLowerCase() !== 'paid') return;
+      const value = candidate[key];
+      if (!hasValue(value)) return;
+      if (typeof value === 'object' && !Array.isArray(value)) return;
+      if (typeof value === 'string' && isIdLikeValue(value)) return;
+      fields.push({ key, label: formatFieldName(key), value: formatDetailValue(key, value) });
+    });
+    return fields;
+  };
+
+  const getDetailName = (candidate) => {
+    if (!candidate) return 'Customer';
+    if (candidate.firstName || candidate.lastName) return `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim();
+    const nameFields = ['name', 'Name', 'fullName', 'customerName', 'companyName', 'company', 'title'];
+    for (const field of nameFields) {
+      if (candidate[field] && String(candidate[field]).trim() && !isIdLikeValue(String(candidate[field]).trim())) {
+        return String(candidate[field]).trim();
+      }
+    }
+    if (candidate.email) return candidate.email;
+    return 'Customer';
+  };
+
+  const getDetailInitials = (candidate) => {
+    const name = getDetailName(candidate);
+    if (!name || name === 'Customer') return 'CU';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2 && parts[0] && parts[1]) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+    return name.substring(0, 2).toUpperCase();
+  };
+
   const formatFieldName = (fieldName) => fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
 
   const getFieldValue = (candidate, fieldName) => {
@@ -289,6 +402,11 @@ const DataCenter = () => {
 
   return (
     <DashboardLayout title="Customer Database">
+      {/* Split View Container */}
+      <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
+        {/* Left Side - Data List */}
+        <div style={{ flex: selectedCandidateId ? '0 0 55%' : '1 1 100%', minWidth: 0, overflow: 'auto' }}>
+
       {/* Statistics Cards */}
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-label">Total Candidates</div><div className="stat-value">{stats.total}</div><div className="stat-change">Complete database</div></div>
@@ -439,7 +557,7 @@ const DataCenter = () => {
             {viewMode === 'grid' ? (
               <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
                 {candidates.map(candidate => (
-                  <div key={candidate._id} style={{ background: '#fff', borderRadius: '8px', padding: '12px', border: selectedCandidates.includes(candidate._id) ? '2px solid #4A90E2' : '1px solid #e5e7eb', cursor: 'pointer' }}>
+                  <div key={candidate._id} onClick={() => handleCandidateClick(candidate._id)} style={{ background: '#fff', borderRadius: '8px', padding: '12px', border: selectedCandidateId === candidate._id ? '2px solid #1e3c72' : selectedCandidates.includes(candidate._id) ? '2px solid #4A90E2' : '1px solid #e5e7eb', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} style={{ width: '16px', height: '16px' }} />
                       <div style={{ flex: 1 }}>
@@ -456,7 +574,7 @@ const DataCenter = () => {
                       {candidate.phone && <div style={{ marginBottom: '2px' }}>{candidate.phone}</div>}
                       <div>{candidate.totalExperience} yrs exp</div>
                     </div>
-                    <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => navigate(`/data-center/${candidate._id}`)} style={{ width: '100%', marginTop: '8px', fontSize: '11px', padding: '4px' }}>View Profile</button>
+                    <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => handleCandidateClick(candidate._id)} style={{ width: '100%', marginTop: '8px', fontSize: '11px', padding: '4px' }}>View Profile</button>
                   </div>
                 ))}
               </div>
@@ -475,7 +593,7 @@ const DataCenter = () => {
                   </thead>
                   <tbody>
                     {candidates.map(candidate => (
-                      <tr key={candidate._id} onClick={(e) => { if (e.target.type !== 'checkbox') navigate(`/data-center/${candidate._id}`); }} style={{ background: selectedCandidates.includes(candidate._id) ? '#EFF6FF' : '#fff', cursor: 'pointer', border: '1px solid #e5e7eb' }}>
+                      <tr key={candidate._id} onClick={(e) => { if (e.target.type !== 'checkbox') handleCandidateClick(candidate._id); }} style={{ background: selectedCandidateId === candidate._id ? '#E0F2FE' : selectedCandidates.includes(candidate._id) ? '#EFF6FF' : '#fff', cursor: 'pointer', border: '1px solid #e5e7eb' }}>
                         <td style={{ padding: '8px' }}>
                           <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} onClick={(e) => e.stopPropagation()} style={{ width: '16px', height: '16px' }} />
                         </td>
@@ -499,6 +617,111 @@ const DataCenter = () => {
               </div>
             )}
           </>
+        )}
+      </div>
+        </div>
+        {/* End Left Side */}
+
+        {/* Right Side - Candidate Detail Panel */}
+        {selectedCandidateId && (
+          <div style={{ flex: '0 0 45%', background: 'white', borderLeft: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Panel Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: '#1e3c72', fontSize: '15px', fontWeight: '600' }}>Customer Details</h3>
+              <button onClick={closeSidePanel} style={{ background: 'rgba(30,60,114,0.1)', border: 'none', borderRadius: '6px', padding: '6px 8px', color: '#1e3c72', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+            </div>
+
+            {/* Panel Content */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {loadingDetail ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+                  <div className="spinner"></div>
+                </div>
+              ) : selectedCandidateData ? (
+                <div>
+                  {/* Candidate Header */}
+                  <div style={{ padding: '20px', borderBottom: '1px solid #e0e0e0' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '20px', fontWeight: 'bold' }}>
+                        {getDetailInitials(selectedCandidateData)}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0', color: '#1e3c72' }}>{getDetailName(selectedCandidateData)}</h2>
+                        {selectedCandidateData.email && <p style={{ color: '#666', fontSize: '13px', margin: 0 }}>{selectedCandidateData.email}</p>}
+                        {selectedCandidateData.phone && <p style={{ color: '#666', fontSize: '12px', margin: '2px 0 0 0' }}>{selectedCandidateData.phone}</p>}
+                      </div>
+                    </div>
+                    {/* Status Badge */}
+                    {selectedCandidateData.status && (
+                      <span style={{ display: 'inline-block', padding: '4px 10px', background: selectedCandidateData.status === 'Moved to Leads' ? '#DCFCE7' : '#E0E7FF', color: selectedCandidateData.status === 'Moved to Leads' ? '#166534' : '#3730A3', borderRadius: '6px', fontSize: '11px', fontWeight: '600' }}>{selectedCandidateData.status}</span>
+                    )}
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '11px', padding: '6px 12px' }} onClick={() => setShowDetailMoveForm(true)} disabled={selectedCandidateData.status === 'Moved to Leads'}>Move to Leads</button>
+                    </div>
+                  </div>
+
+                  {/* Move to Leads Form */}
+                  {showDetailMoveForm && (
+                    <div style={{ margin: '12px', padding: '12px', background: '#F0FDF4', borderRadius: '8px', border: '1px solid #86EFAC' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#166534' }}>Move to Leads</h5>
+                        <button onClick={() => setShowDetailMoveForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Status</label>
+                          <select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMoveForm.leadStatus} onChange={(e) => setDetailMoveForm({ ...detailMoveForm, leadStatus: e.target.value })}>
+                            <option value="New">New</option>
+                            <option value="Contacted">Contacted</option>
+                            <option value="Qualified">Qualified</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Source</label>
+                          <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMoveForm.leadSource} onChange={(e) => setDetailMoveForm({ ...detailMoveForm, leadSource: e.target.value })} />
+                        </div>
+                        <div>
+                          <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Rating</label>
+                          <select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMoveForm.rating} onChange={(e) => setDetailMoveForm({ ...detailMoveForm, rating: e.target.value })}>
+                            <option value="Hot">Hot</option>
+                            <option value="Warm">Warm</option>
+                            <option value="Cold">Cold</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                        <button className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '4px 8px' }} onClick={() => setShowDetailMoveForm(false)}>Cancel</button>
+                        <button className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '10px', padding: '4px 8px' }} onClick={handleDetailMoveToLead}>Confirm</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* All Information */}
+                  <div style={{ padding: '16px' }}>
+                    <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#64748b', marginBottom: '12px', textTransform: 'uppercase' }}>All Information</h4>
+                    {(() => {
+                      const displayFields = getDisplayFields(selectedCandidateData);
+                      return displayFields.length === 0 ? (
+                        <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '6px' }}>No data available</p>
+                      ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                          {displayFields.map((field, index) => (
+                            <div key={index} style={{ padding: '10px', background: '#f9fafb', borderRadius: '6px' }}>
+                              <p style={{ fontSize: '10px', color: '#64748b', fontWeight: '600', marginBottom: '2px', textTransform: 'uppercase' }}>{field.label}</p>
+                              <p style={{ fontSize: '13px', fontWeight: '500', color: '#1e3c72', margin: 0, wordBreak: 'break-word' }}>{field.value}</p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>Failed to load details</div>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </DashboardLayout>

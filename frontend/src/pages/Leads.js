@@ -2,12 +2,15 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { leadService } from '../services/leadService';
+import { taskService } from '../services/taskService';
+import { noteService } from '../services/noteService';
 import { productItemService } from '../services/productItemService';
 import { productCategoryService } from '../services/productCategoryService';
 import { verificationService, debounce } from '../services/verificationService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import { groupService } from '../services/groupService';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../config/api.config';
 import TooltipButton from '../components/common/TooltipButton';
 import DynamicField from '../components/DynamicField';
 import BulkUploadForm from '../components/BulkUploadForm';
@@ -43,6 +46,19 @@ import {
   Globe,
   Users,
   Trash2,
+  X,
+  Building2,
+  Briefcase,
+  Calendar,
+  Star,
+  ArrowRight,
+  Edit,
+  ExternalLink,
+  FileText,
+  MessageSquare,
+  PhoneCall,
+  Clock,
+  MapPin,
 } from 'lucide-react';
 
 const Leads = () => {
@@ -71,6 +87,36 @@ const Leads = () => {
   const [displayColumns, setDisplayColumns] = useState([]);
 
   const [stats, setStats] = useState({ total: 0, new: 0, qualified: 0, contacted: 0 });
+
+  // Side Panel State
+  const [selectedLeadId, setSelectedLeadId] = useState(null);
+  const [selectedLeadData, setSelectedLeadData] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [detailActiveTab, setDetailActiveTab] = useState('overview');
+
+  // Detail Panel - Related Data
+  const [detailTasks, setDetailTasks] = useState([]);
+  const [detailMeetings, setDetailMeetings] = useState([]);
+  const [detailCalls, setDetailCalls] = useState([]);
+  const [detailNotes, setDetailNotes] = useState([]);
+  const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
+
+  // Detail Panel Forms
+  const [showDetailEditForm, setShowDetailEditForm] = useState(false);
+  const [showDetailDeleteConfirm, setShowDetailDeleteConfirm] = useState(false);
+  const [showDetailConvertForm, setShowDetailConvertForm] = useState(false);
+  const [showDetailTaskForm, setShowDetailTaskForm] = useState(false);
+  const [showDetailMeetingForm, setShowDetailMeetingForm] = useState(false);
+  const [showDetailCallForm, setShowDetailCallForm] = useState(false);
+  const [showDetailNoteForm, setShowDetailNoteForm] = useState(false);
+
+  // Detail Panel Form Data
+  const [detailEditData, setDetailEditData] = useState({});
+  const [detailTaskData, setDetailTaskData] = useState({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+  const [detailMeetingData, setDetailMeetingData] = useState({ title: '', from: '', to: '', location: '', meetingType: 'Online', description: '' });
+  const [detailCallData, setDetailCallData] = useState({ subject: '', callStartTime: '', callDuration: '', callType: 'Outbound', callPurpose: 'Follow-up', callResult: 'Completed', description: '' });
+  const [detailNoteData, setDetailNoteData] = useState({ title: '', content: '' });
+  const [detailConversionData, setDetailConversionData] = useState({ createAccount: true, createContact: true, createOpportunity: false, accountName: '', opportunityName: '', opportunityAmount: '', closeDate: '' });
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showBulkUploadForm, setShowBulkUploadForm] = useState(false);
@@ -377,7 +423,288 @@ const Leads = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  const handleLeadClick = (leadId) => navigate(`/leads/${leadId}`);
+  // Load lead details in side panel
+  const handleLeadClick = async (leadId) => {
+    if (selectedLeadId === leadId) return;
+
+    setSelectedLeadId(leadId);
+    setLoadingDetail(true);
+    setDetailActiveTab('overview');
+    closeDetailForms();
+
+    try {
+      const response = await leadService.getLead(leadId);
+      if (response?.success) {
+        setSelectedLeadData(response.data);
+        setDetailConversionData(prev => ({
+          ...prev,
+          accountName: response.data.company || `${response.data.firstName} ${response.data.lastName}`,
+          opportunityName: `${response.data.company || response.data.firstName + ' ' + response.data.lastName} - Opportunity`
+        }));
+        // Load related data
+        loadDetailTasks(leadId);
+        loadDetailMeetings(leadId);
+        loadDetailCalls(leadId);
+        loadDetailNotes(leadId);
+        loadDetailCustomFields();
+      }
+    } catch (err) {
+      console.error('Error loading lead details:', err);
+    } finally {
+      setLoadingDetail(false);
+    }
+  };
+
+  const loadDetailTasks = async (leadId) => {
+    try {
+      const response = await taskService.getTasks({ relatedTo: 'Lead', relatedToId: leadId, limit: 100 });
+      if (response?.success) setDetailTasks(response.data.tasks || []);
+    } catch (err) { console.error('Load tasks error:', err); }
+  };
+
+  const loadDetailMeetings = async (leadId) => {
+    try {
+      const response = await fetch(`${API_URL}/meetings?relatedTo=Lead&relatedToId=${leadId}&limit=100`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await response.json();
+      if (data.success) setDetailMeetings(data.data.meetings || []);
+    } catch (err) { console.error('Load meetings error:', err); }
+  };
+
+  const loadDetailCalls = async (leadId) => {
+    try {
+      const response = await fetch(`${API_URL}/calls?relatedTo=Lead&relatedToId=${leadId}&limit=100`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      const data = await response.json();
+      if (data.success) setDetailCalls(data.data.calls || []);
+    } catch (err) { console.error('Load calls error:', err); }
+  };
+
+  const loadDetailNotes = async (leadId) => {
+    try {
+      const response = await noteService.getNotes({ relatedTo: 'Lead', relatedToId: leadId, limit: 100 });
+      if (response?.success) setDetailNotes(response.data?.notes || []);
+    } catch (err) { console.error('Load notes error:', err); }
+  };
+
+  const loadDetailCustomFields = async () => {
+    try {
+      const response = await fieldDefinitionService.getFieldDefinitions('Lead', false);
+      if (response && Array.isArray(response)) {
+        const activeFields = response.filter(field => field.isActive && field.showInDetail).sort((a, b) => a.displayOrder - b.displayOrder);
+        setCustomFieldDefinitions(activeFields);
+      }
+    } catch (err) { console.error('Load custom fields error:', err); }
+  };
+
+  const closeDetailForms = () => {
+    setShowDetailEditForm(false);
+    setShowDetailDeleteConfirm(false);
+    setShowDetailConvertForm(false);
+    setShowDetailTaskForm(false);
+    setShowDetailMeetingForm(false);
+    setShowDetailCallForm(false);
+    setShowDetailNoteForm(false);
+  };
+
+  const closeSidePanel = () => {
+    setSelectedLeadId(null);
+    setSelectedLeadData(null);
+    setDetailTasks([]);
+    setDetailMeetings([]);
+    setDetailCalls([]);
+    setDetailNotes([]);
+    closeDetailForms();
+  };
+
+  // Detail Panel - Create Task
+  const handleDetailCreateTask = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      await taskService.createTask({ ...detailTaskData, relatedTo: 'Lead', relatedToId: selectedLeadId });
+      setSuccess('Task created successfully!');
+      setShowDetailTaskForm(false);
+      setDetailTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+      loadDetailTasks(selectedLeadId);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) { setError(err.message || 'Failed to create task'); }
+  };
+
+  // Detail Panel - Create Meeting
+  const handleDetailCreateMeeting = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      const response = await fetch(`${API_URL}/meetings`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...detailMeetingData, relatedTo: 'Lead', relatedToId: selectedLeadId })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccess('Meeting created successfully!');
+        setShowDetailMeetingForm(false);
+        setDetailMeetingData({ title: '', from: '', to: '', location: '', meetingType: 'Online', description: '' });
+        loadDetailMeetings(selectedLeadId);
+        setTimeout(() => setSuccess(''), 3000);
+      } else { setError(data.message || 'Failed to create meeting'); }
+    } catch (err) { setError('Failed to create meeting'); }
+  };
+
+  // Detail Panel - Create Call
+  const handleDetailCreateCall = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      const response = await fetch(`${API_URL}/calls`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...detailCallData, relatedTo: 'Lead', relatedToId: selectedLeadId })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSuccess('Call logged successfully!');
+        setShowDetailCallForm(false);
+        setDetailCallData({ subject: '', callStartTime: '', callDuration: '', callType: 'Outbound', callPurpose: 'Follow-up', callResult: 'Completed', description: '' });
+        loadDetailCalls(selectedLeadId);
+        setTimeout(() => setSuccess(''), 3000);
+      } else { setError(data.message || 'Failed to log call'); }
+    } catch (err) { setError('Failed to log call'); }
+  };
+
+  // Detail Panel - Create Note
+  const handleDetailCreateNote = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      await noteService.createNote({ ...detailNoteData, relatedTo: 'Lead', relatedToId: selectedLeadId });
+      setSuccess('Note created successfully!');
+      setShowDetailNoteForm(false);
+      setDetailNoteData({ title: '', content: '' });
+      loadDetailNotes(selectedLeadId);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) { setError(err.message || 'Failed to create note'); }
+  };
+
+  // Detail Panel - Edit Lead
+  const openDetailEditForm = () => {
+    if (!selectedLeadData) return;
+    setDetailEditData({
+      firstName: selectedLeadData.firstName,
+      lastName: selectedLeadData.lastName,
+      email: selectedLeadData.email,
+      phone: selectedLeadData.phone || '',
+      company: selectedLeadData.company || '',
+      jobTitle: selectedLeadData.jobTitle || '',
+      leadSource: selectedLeadData.leadSource,
+      leadStatus: selectedLeadData.leadStatus,
+      rating: selectedLeadData.rating,
+      industry: selectedLeadData.industry || '',
+      website: selectedLeadData.website || '',
+      description: selectedLeadData.description || '',
+      product: selectedLeadData.product?._id || '',
+      productDetails: {
+        quantity: selectedLeadData.productDetails?.quantity || 1,
+        requirements: selectedLeadData.productDetails?.requirements || '',
+        estimatedBudget: selectedLeadData.productDetails?.estimatedBudget || '',
+        priority: selectedLeadData.productDetails?.priority || '',
+        notes: selectedLeadData.productDetails?.notes || ''
+      }
+    });
+    closeDetailForms();
+    setShowDetailEditForm(true);
+  };
+
+  const handleDetailUpdateLead = async (e) => {
+    e.preventDefault();
+    try {
+      setError('');
+      await leadService.updateLead(selectedLeadId, detailEditData);
+      setSuccess('Lead updated successfully!');
+      setShowDetailEditForm(false);
+      const response = await leadService.getLead(selectedLeadId);
+      if (response?.success) setSelectedLeadData(response.data);
+      loadLeads();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) { setError(err.message || 'Failed to update lead'); }
+  };
+
+  const handleDetailEditChange = (e) => {
+    const { name, value } = e.target;
+    if (name.startsWith('productDetails.')) {
+      const fieldName = name.split('.')[1];
+      setDetailEditData(prev => ({ ...prev, productDetails: { ...prev.productDetails, [fieldName]: value } }));
+      return;
+    }
+    setDetailEditData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Detail Panel - Delete Lead
+  const handleDetailDeleteLead = async () => {
+    try {
+      setError('');
+      await leadService.deleteLead(selectedLeadId);
+      setSuccess('Lead deleted successfully!');
+      closeSidePanel();
+      loadLeads();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) { setError(err.message || 'Failed to delete lead'); }
+  };
+
+  // Detail Panel - Convert Lead
+  const handleDetailConversionChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setDetailConversionData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  };
+
+  const handleDetailConvertLead = async (e) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const payload = {
+        createAccount: detailConversionData.createAccount,
+        createContact: detailConversionData.createContact,
+        createOpportunity: detailConversionData.createOpportunity,
+        accountData: detailConversionData.createAccount ? {
+          accountName: detailConversionData.accountName,
+          accountType: 'Customer',
+          industry: selectedLeadData.industry,
+          website: selectedLeadData.website,
+          phone: selectedLeadData.phone,
+          email: selectedLeadData.email
+        } : {},
+        contactData: detailConversionData.createContact ? {
+          firstName: selectedLeadData.firstName,
+          lastName: selectedLeadData.lastName,
+          email: selectedLeadData.email,
+          phone: selectedLeadData.phone,
+          jobTitle: selectedLeadData.jobTitle
+        } : {},
+        opportunityData: detailConversionData.createOpportunity ? {
+          opportunityName: detailConversionData.opportunityName,
+          amount: parseFloat(detailConversionData.opportunityAmount),
+          closeDate: detailConversionData.closeDate,
+          stage: 'Qualification',
+          probability: 50,
+          type: 'New Business',
+          leadSource: selectedLeadData.leadSource
+        } : {}
+      };
+      const response = await leadService.convertLead(selectedLeadId, payload);
+      if (response.success) {
+        setSuccess('Lead converted successfully!');
+        setShowDetailConvertForm(false);
+        closeSidePanel();
+        loadLeads();
+      } else { setError(response.message || 'Failed to convert lead'); }
+    } catch (err) { setError(err.message || 'Failed to convert lead'); }
+  };
+
+  const canUpdateLead = hasPermission('lead_management', 'update');
+  const canConvertLead = hasPermission('lead_management', 'convert');
 
   const canCreateLead = hasPermission('lead_management', 'create');
   const canImportLeads = hasPermission('lead_management', 'import');
@@ -436,6 +763,15 @@ const Leads = () => {
     <DashboardLayout title="Leads">
       {success && <Alert variant="success" className="mb-4"><AlertDescription>{success}</AlertDescription></Alert>}
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
+
+      {/* Split View Container */}
+      <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 150px)', overflow: 'hidden' }}>
+        {/* Left Side - Lead List */}
+        <div style={{
+          flex: selectedLeadId ? '0 0 55%' : '1 1 100%',
+          minWidth: 0,
+          overflow: 'auto'
+        }}>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -757,7 +1093,11 @@ const Leads = () => {
           ) : viewMode === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {leads.map((lead) => (
-                <div key={lead._id} className="grid-card" onClick={() => handleLeadClick(lead._id)}>
+                <div
+                  key={lead._id}
+                  className={`grid-card ${selectedLeadId === lead._id ? 'ring-2 ring-purple-500 bg-purple-50' : ''}`}
+                  onClick={() => handleLeadClick(lead._id)}
+                >
                   <div className="flex items-start gap-4 mb-4">
                     <div className="avatar">
                       {lead.firstName?.[0]}{lead.lastName?.[0]}
@@ -802,7 +1142,11 @@ const Leads = () => {
               </TableHeader>
               <TableBody>
                 {leads.map((lead) => (
-                  <TableRow key={lead._id} className="cursor-pointer hover:bg-muted/50" onClick={() => handleLeadClick(lead._id)}>
+                  <TableRow
+                    key={lead._id}
+                    className={`cursor-pointer hover:bg-muted/50 ${selectedLeadId === lead._id ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''}`}
+                    onClick={() => handleLeadClick(lead._id)}
+                  >
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedLeads.includes(lead._id)}
@@ -847,6 +1191,441 @@ const Leads = () => {
           )}
         </div>
       </div>
+
+        </div>
+        {/* End Left Side */}
+
+        {/* Right Side - Lead Detail Panel */}
+        {selectedLeadId && (
+          <div style={{ flex: '0 0 45%', background: 'white', borderLeft: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Panel Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, color: '#1e3c72', fontSize: '15px', fontWeight: '600' }}>Lead Details</h3>
+              <button onClick={closeSidePanel} style={{ background: 'rgba(30,60,114,0.1)', border: 'none', borderRadius: '6px', padding: '4px', color: '#1e3c72', cursor: 'pointer' }}>
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Panel Content */}
+            <div style={{ flex: 1, overflowY: 'auto' }}>
+              {loadingDetail ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '200px' }}>
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+                </div>
+              ) : selectedLeadData ? (
+                <div>
+                  {/* Lead Header Card */}
+                  <div style={{ padding: '16px', borderBottom: '1px solid #e5e7eb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                      <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e3c72', fontSize: '20px', fontWeight: 'bold' }}>
+                        {selectedLeadData.firstName?.charAt(0) || ''}{selectedLeadData.lastName?.charAt(0) || ''}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h2 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0', color: '#1e3c72' }}>
+                          {selectedLeadData.firstName} {selectedLeadData.lastName}
+                        </h2>
+                        {selectedLeadData.jobTitle && (
+                          <p style={{ color: '#666', fontSize: '13px', margin: 0 }}>
+                            {selectedLeadData.jobTitle} {selectedLeadData.company && `at ${selectedLeadData.company}`}
+                          </p>
+                        )}
+                        <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                          <Badge variant={getStatusBadgeVariant(selectedLeadData.leadStatus)}>{selectedLeadData.leadStatus || 'New'}</Badge>
+                          {selectedLeadData.rating && <Badge variant="outline"><Star className="h-3 w-3 mr-1" />{selectedLeadData.rating}</Badge>}
+                          {selectedLeadData.isConverted && <Badge variant="success">Converted</Badge>}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {canUpdateLead && <button className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={openDetailEditForm}><Edit className="h-3 w-3 mr-1" />Edit</button>}
+                      {!selectedLeadData.isConverted && canConvertLead && <button className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => { closeDetailForms(); setShowDetailConvertForm(true); }}>Convert</button>}
+                      {canDeleteLead && <button className="crm-btn crm-btn-danger crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => { closeDetailForms(); setShowDetailDeleteConfirm(true); }}>Delete</button>}
+                      {selectedLeadData.phone && <button className="crm-btn crm-btn-outline crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => window.location.href = `tel:${selectedLeadData.phone}`}><Phone className="h-3 w-3 mr-1" />Call</button>}
+                    </div>
+                  </div>
+
+                  {/* Inline Edit Form */}
+                  {showDetailEditForm && (
+                    <div style={{ margin: '12px', padding: '12px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #93C5FD' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#1E40AF' }}>Edit Lead</h5>
+                        <button onClick={() => setShowDetailEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
+                      </div>
+                      <form onSubmit={handleDetailUpdateLead}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>First Name *</label><input type="text" name="firstName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.firstName || ''} onChange={handleDetailEditChange} required /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Last Name *</label><input type="text" name="lastName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.lastName || ''} onChange={handleDetailEditChange} required /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email *</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} required /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Company</label><input type="text" name="company" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.company || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Job Title</label><input type="text" name="jobTitle" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.jobTitle || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Status</label><select name="leadStatus" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.leadStatus || 'New'} onChange={handleDetailEditChange}><option value="New">New</option><option value="Contacted">Contacted</option><option value="Qualified">Qualified</option><option value="Unqualified">Unqualified</option><option value="Lost">Lost</option></select></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Rating</label><select name="rating" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.rating || 'Warm'} onChange={handleDetailEditChange}><option value="Hot">Hot</option><option value="Warm">Warm</option><option value="Cold">Cold</option></select></div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                          <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailEditForm(false)}>Cancel</button>
+                          <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }}>Update</button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Inline Delete Confirm */}
+                  {showDetailDeleteConfirm && (
+                    <div style={{ margin: '12px', padding: '12px', background: '#FEF2F2', borderRadius: '8px', border: '1px solid #FCA5A5' }}>
+                      <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#991B1B' }}>Are you sure you want to delete <strong>{selectedLeadData.firstName} {selectedLeadData.lastName}</strong>?</p>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                        <button className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailDeleteConfirm(false)}>Cancel</button>
+                        <button className="crm-btn crm-btn-danger crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={handleDetailDeleteLead}>Delete</button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Inline Convert Form */}
+                  {showDetailConvertForm && (
+                    <div style={{ margin: '12px', padding: '12px', background: '#DCFCE7', borderRadius: '8px', border: '1px solid #86EFAC' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#166534' }}>Convert Lead</h5>
+                        <button onClick={() => setShowDetailConvertForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
+                      </div>
+                      <form onSubmit={handleDetailConvertLead}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}><input type="checkbox" name="createAccount" checked={detailConversionData.createAccount} onChange={handleDetailConversionChange} /><span>Create Account</span></label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}><input type="checkbox" name="createContact" checked={detailConversionData.createContact} onChange={handleDetailConversionChange} /><span>Create Contact</span></label>
+                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px' }}><input type="checkbox" name="createOpportunity" checked={detailConversionData.createOpportunity} onChange={handleDetailConversionChange} disabled={!detailConversionData.createAccount} /><span>Create Opportunity</span></label>
+                        </div>
+                        {detailConversionData.createAccount && (
+                          <div style={{ marginBottom: '8px' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Account Name *</label><input type="text" name="accountName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailConversionData.accountName} onChange={handleDetailConversionChange} required /></div>
+                        )}
+                        {detailConversionData.createOpportunity && detailConversionData.createAccount && (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                            <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Opportunity Name *</label><input type="text" name="opportunityName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailConversionData.opportunityName} onChange={handleDetailConversionChange} required /></div>
+                            <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Amount *</label><input type="number" name="opportunityAmount" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailConversionData.opportunityAmount} onChange={handleDetailConversionChange} required /></div>
+                          </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                          <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailConvertForm(false)}>Cancel</button>
+                          <button type="submit" className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }}>Convert</button>
+                        </div>
+                      </form>
+                    </div>
+                  )}
+
+                  {/* Tabs */}
+                  <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
+                    <button onClick={() => setDetailActiveTab('overview')} style={{ flex: 1, padding: '10px', fontSize: '12px', fontWeight: '600', border: 'none', background: detailActiveTab === 'overview' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'overview' ? '2px solid #1e3c72' : '2px solid transparent', color: detailActiveTab === 'overview' ? '#1e3c72' : '#64748b', cursor: 'pointer' }}>Overview</button>
+                    <button onClick={() => setDetailActiveTab('activities')} style={{ flex: 1, padding: '10px', fontSize: '12px', fontWeight: '600', border: 'none', background: detailActiveTab === 'activities' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'activities' ? '2px solid #1e3c72' : '2px solid transparent', color: detailActiveTab === 'activities' ? '#1e3c72' : '#64748b', cursor: 'pointer' }}>Activities</button>
+                    <button onClick={() => setDetailActiveTab('notes')} style={{ flex: 1, padding: '10px', fontSize: '12px', fontWeight: '600', border: 'none', background: detailActiveTab === 'notes' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'notes' ? '2px solid #1e3c72' : '2px solid transparent', color: detailActiveTab === 'notes' ? '#1e3c72' : '#64748b', cursor: 'pointer' }}>Notes ({detailNotes.length})</button>
+                  </div>
+
+                  {/* Tab Content */}
+                  <div style={{ padding: '16px' }}>
+                    {/* Overview Tab */}
+                    {detailActiveTab === 'overview' && (
+                      <div>
+                        {/* Contact Info */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Contact Information</h4>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            {selectedLeadData.email && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Mail className="h-4 w-4 text-blue-500" /><a href={`mailto:${selectedLeadData.email}`} style={{ color: '#3B82F6' }}>{selectedLeadData.email}</a></div>}
+                            {selectedLeadData.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Phone className="h-4 w-4 text-green-500" /><a href={`tel:${selectedLeadData.phone}`} style={{ color: '#059669' }}>{selectedLeadData.phone}</a></div>}
+                            {selectedLeadData.website && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Globe className="h-4 w-4 text-purple-500" /><a href={selectedLeadData.website} target="_blank" rel="noopener noreferrer" style={{ color: '#7C3AED' }}>{selectedLeadData.website}</a></div>}
+                          </div>
+                        </div>
+
+                        {/* Company Info */}
+                        {(selectedLeadData.company || selectedLeadData.industry) && (
+                          <div style={{ marginBottom: '16px' }}>
+                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Company Information</h4>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {selectedLeadData.company && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Building2 className="h-4 w-4 text-gray-500" />{selectedLeadData.company}</div>}
+                              {selectedLeadData.industry && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Briefcase className="h-4 w-4 text-gray-500" />{selectedLeadData.industry}</div>}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Lead Details */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Lead Details</h4>
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f9fafb', padding: '12px', borderRadius: '8px' }}>
+                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Source</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.leadSource || '-'}</p></div>
+                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Rating</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.rating || '-'}</p></div>
+                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Created</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.createdAt ? new Date(selectedLeadData.createdAt).toLocaleDateString() : '-'}</p></div>
+                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Status</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.leadStatus || 'New'}</p></div>
+                          </div>
+                        </div>
+
+                        {/* Product Info */}
+                        {selectedLeadData.product && (
+                          <div style={{ marginBottom: '16px', padding: '12px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#1E40AF', marginBottom: '10px', textTransform: 'uppercase' }}>Product Information</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Product</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>{selectedLeadData.product.name}</p></div>
+                              <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Article #</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>{selectedLeadData.product.articleNumber}</p></div>
+                              {selectedLeadData.productDetails?.quantity && <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Quantity</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>{selectedLeadData.productDetails.quantity}</p></div>}
+                              {selectedLeadData.productDetails?.estimatedBudget && <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Budget</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: '#059669' }}>₹{Number(selectedLeadData.productDetails.estimatedBudget).toLocaleString()}</p></div>}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Description */}
+                        {selectedLeadData.description && (
+                          <div style={{ marginBottom: '16px' }}>
+                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Description</h4>
+                            <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5', margin: 0, background: '#f9fafb', padding: '10px', borderRadius: '6px' }}>{selectedLeadData.description}</p>
+                          </div>
+                        )}
+
+                        {/* Custom Fields */}
+                        {customFieldDefinitions.length > 0 && selectedLeadData.customFields && Object.keys(selectedLeadData.customFields).length > 0 && (() => {
+                          const groupedFields = {};
+                          customFieldDefinitions.forEach(field => {
+                            const section = field.section || 'Additional Information';
+                            if (!groupedFields[section]) groupedFields[section] = [];
+                            groupedFields[section].push(field);
+                          });
+
+                          return Object.keys(groupedFields).map(sectionName => {
+                            const fieldsWithValues = groupedFields[sectionName].filter(field => selectedLeadData.customFields[field.fieldName]);
+                            if (fieldsWithValues.length === 0) return null;
+
+                            return (
+                              <div key={sectionName} style={{ marginBottom: '16px' }}>
+                                <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3c72', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ width: '3px', height: '12px', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', borderRadius: '2px' }}></span>
+                                  {sectionName}
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#f9fafb', padding: '10px', borderRadius: '6px' }}>
+                                  {fieldsWithValues.map(field => {
+                                    let value = selectedLeadData.customFields[field.fieldName];
+                                    if (field.fieldType === 'currency') value = `₹${Number(value).toLocaleString()}`;
+                                    else if (field.fieldType === 'date') value = new Date(value).toLocaleDateString();
+                                    else if (field.fieldType === 'checkbox') value = value ? 'Yes' : 'No';
+                                    return (
+                                      <div key={field._id}>
+                                        <p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>{field.label}</p>
+                                        <p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{value}</p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    )}
+
+                    {/* Activities Tab */}
+                    {detailActiveTab === 'activities' && (
+                      <div>
+                        {/* Add Activity Buttons */}
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                          <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => { closeDetailForms(); setShowDetailTaskForm(true); }}>+ Task</button>
+                          <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => { closeDetailForms(); setShowDetailMeetingForm(true); }}>+ Meeting</button>
+                          <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => { closeDetailForms(); setShowDetailCallForm(true); }}>+ Call</button>
+                        </div>
+
+                        {/* Task Form */}
+                        {showDetailTaskForm && (
+                          <div style={{ marginBottom: '12px', padding: '10px', background: '#F0FDF4', borderRadius: '6px', border: '1px solid #86EFAC' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#166534' }}>Create Task</h5>
+                              <button onClick={() => setShowDetailTaskForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#64748b' }}>✕</button>
+                            </div>
+                            <form onSubmit={handleDetailCreateTask}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                                <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.subject} onChange={(e) => setDetailTaskData({ ...detailTaskData, subject: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date *</label><input type="date" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Priority</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.priority} onChange={(e) => setDetailTaskData({ ...detailTaskData, priority: e.target.value })}><option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option></select></div>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailTaskForm(false)}>Cancel</button>
+                                <button type="submit" className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }}>Create</button>
+                              </div>
+                            </form>
+                          </div>
+                        )}
+
+                        {/* Meeting Form */}
+                        {showDetailMeetingForm && (
+                          <div style={{ marginBottom: '12px', padding: '10px', background: '#EFF6FF', borderRadius: '6px', border: '1px solid #93C5FD' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#1E40AF' }}>Create Meeting</h5>
+                              <button onClick={() => setShowDetailMeetingForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#64748b' }}>✕</button>
+                            </div>
+                            <form onSubmit={handleDetailCreateMeeting}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                                <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Title *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.title} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, title: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>From *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.from} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, from: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>To *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.to} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, to: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Location</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.location} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, location: e.target.value })} /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Type</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.meetingType} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, meetingType: e.target.value })}><option value="Online">Online</option><option value="In-Person">In-Person</option></select></div>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailMeetingForm(false)}>Cancel</button>
+                                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }}>Create</button>
+                              </div>
+                            </form>
+                          </div>
+                        )}
+
+                        {/* Call Form */}
+                        {showDetailCallForm && (
+                          <div style={{ marginBottom: '12px', padding: '10px', background: '#FEF3C7', borderRadius: '6px', border: '1px solid #FCD34D' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#92400E' }}>Log Call</h5>
+                              <button onClick={() => setShowDetailCallForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#64748b' }}>✕</button>
+                            </div>
+                            <form onSubmit={handleDetailCreateCall}>
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
+                                <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.subject} onChange={(e) => setDetailCallData({ ...detailCallData, subject: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Call Time *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callStartTime} onChange={(e) => setDetailCallData({ ...detailCallData, callStartTime: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Duration (min)</label><input type="number" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callDuration} onChange={(e) => setDetailCallData({ ...detailCallData, callDuration: e.target.value })} min="0" /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Type</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callType} onChange={(e) => setDetailCallData({ ...detailCallData, callType: e.target.value })}><option value="Outbound">Outbound</option><option value="Inbound">Inbound</option><option value="Missed">Missed</option></select></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Result</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callResult} onChange={(e) => setDetailCallData({ ...detailCallData, callResult: e.target.value })}><option value="Interested">Interested</option><option value="Not Interested">Not Interested</option><option value="No Answer">No Answer</option><option value="Call Back Later">Callback</option><option value="Completed">Completed</option></select></div>
+                              </div>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailCallForm(false)}>Cancel</button>
+                                <button type="submit" className="crm-btn crm-btn-warning crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px', background: '#F59E0B', color: 'white' }}>Log Call</button>
+                              </div>
+                            </form>
+                          </div>
+                        )}
+
+                        {/* Open Activities */}
+                        <div style={{ marginBottom: '16px' }}>
+                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Open Activities ({detailTasks.filter(t => t.status !== 'Completed').length + detailMeetings.filter(m => m.status === 'Scheduled').length})</h4>
+                          {detailTasks.filter(t => t.status !== 'Completed').length === 0 && detailMeetings.filter(m => m.status === 'Scheduled').length === 0 && detailCalls.filter(c => c.callResult !== 'Completed').length === 0 ? (
+                            <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '16px', background: '#f9fafb', borderRadius: '6px' }}>No open activities</p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {detailTasks.filter(t => t.status !== 'Completed').map(task => (
+                                <div key={task._id} style={{ padding: '10px', background: '#F0FDF4', borderRadius: '6px', border: '1px solid #BBF7D0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                    <CheckCircle2 className="h-3 w-3 text-green-600" />
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#166534' }}>Task</span>
+                                    <span style={{ fontSize: '10px', background: task.priority === 'High' ? '#FEE2E2' : '#E0E7FF', color: task.priority === 'High' ? '#991B1B' : '#3730A3', padding: '1px 6px', borderRadius: '4px' }}>{task.priority}</span>
+                                  </div>
+                                  <p style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 4px 0' }}>{task.subject}</p>
+                                  <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>Due: {new Date(task.dueDate).toLocaleDateString()}</p>
+                                </div>
+                              ))}
+                              {detailMeetings.filter(m => m.status === 'Scheduled').map(meeting => (
+                                <div key={meeting._id} style={{ padding: '10px', background: '#EFF6FF', borderRadius: '6px', border: '1px solid #BFDBFE' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                    <Calendar className="h-3 w-3 text-blue-600" />
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#1E40AF' }}>Meeting</span>
+                                  </div>
+                                  <p style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 4px 0' }}>{meeting.title}</p>
+                                  <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{new Date(meeting.from).toLocaleString()}</p>
+                                </div>
+                              ))}
+                              {detailCalls.filter(c => c.callResult !== 'Completed').map(call => (
+                                <div key={call._id} style={{ padding: '10px', background: '#FEF3C7', borderRadius: '6px', border: '1px solid #FCD34D' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                    <PhoneCall className="h-3 w-3 text-yellow-600" />
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#92400E' }}>Call</span>
+                                    <span style={{ fontSize: '10px', background: '#FEE2E2', color: '#991B1B', padding: '1px 6px', borderRadius: '4px' }}>{call.callResult}</span>
+                                  </div>
+                                  <p style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 4px 0' }}>{call.subject}</p>
+                                  <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>{new Date(call.callStartTime).toLocaleString()}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Closed Activities */}
+                        <div>
+                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Closed Activities ({detailTasks.filter(t => t.status === 'Completed').length + detailMeetings.filter(m => m.status === 'Completed').length})</h4>
+                          {detailTasks.filter(t => t.status === 'Completed').length === 0 && detailMeetings.filter(m => m.status === 'Completed').length === 0 ? (
+                            <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '16px', background: '#f9fafb', borderRadius: '6px' }}>No closed activities</p>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              {detailTasks.filter(t => t.status === 'Completed').map(task => (
+                                <div key={task._id} style={{ padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                    <CheckCircle2 className="h-3 w-3 text-gray-500" />
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>Task</span>
+                                    <span style={{ fontSize: '10px', background: '#DCFCE7', color: '#166534', padding: '1px 6px', borderRadius: '4px' }}>Completed</span>
+                                  </div>
+                                  <p style={{ fontSize: '12px', fontWeight: '600', margin: 0, color: '#64748b' }}>{task.subject}</p>
+                                </div>
+                              ))}
+                              {detailMeetings.filter(m => m.status === 'Completed').map(meeting => (
+                                <div key={meeting._id} style={{ padding: '10px', background: '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                    <Calendar className="h-3 w-3 text-gray-500" />
+                                    <span style={{ fontSize: '11px', fontWeight: '700', color: '#64748b' }}>Meeting</span>
+                                    <span style={{ fontSize: '10px', background: '#DCFCE7', color: '#166534', padding: '1px 6px', borderRadius: '4px' }}>Completed</span>
+                                  </div>
+                                  <p style={{ fontSize: '12px', fontWeight: '600', margin: 0, color: '#64748b' }}>{meeting.title}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Notes Tab */}
+                    {detailActiveTab === 'notes' && (
+                      <div>
+                        <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px', marginBottom: '12px' }} onClick={() => { closeDetailForms(); setShowDetailNoteForm(true); }}>+ Add Note</button>
+
+                        {/* Note Form */}
+                        {showDetailNoteForm && (
+                          <div style={{ marginBottom: '12px', padding: '10px', background: '#FDF4FF', borderRadius: '6px', border: '1px solid #E879F9' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#86198F' }}>Add Note</h5>
+                              <button onClick={() => setShowDetailNoteForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#64748b' }}>✕</button>
+                            </div>
+                            <form onSubmit={handleDetailCreateNote}>
+                              <div style={{ marginBottom: '8px' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Title *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailNoteData.title} onChange={(e) => setDetailNoteData({ ...detailNoteData, title: e.target.value })} required /></div>
+                              <div style={{ marginBottom: '8px' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Content *</label><textarea className="crm-form-textarea" rows="3" style={{ width: '100%', padding: '4px 6px', fontSize: '11px' }} value={detailNoteData.content} onChange={(e) => setDetailNoteData({ ...detailNoteData, content: e.target.value })} required /></div>
+                              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                                <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailNoteForm(false)}>Cancel</button>
+                                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px', background: '#A855F7' }}>Add Note</button>
+                              </div>
+                            </form>
+                          </div>
+                        )}
+
+                        {/* Notes List */}
+                        {detailNotes.length === 0 ? (
+                          <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '6px' }}>No notes found</p>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                            {detailNotes.map(note => (
+                              <div key={note._id} style={{ padding: '12px', background: '#FDF4FF', borderRadius: '8px', border: '1px solid #F5D0FE' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                                  <FileText className="h-4 w-4 text-purple-600" />
+                                  <span style={{ fontSize: '13px', fontWeight: '600', color: '#86198F' }}>{note.title}</span>
+                                </div>
+                                <p style={{ fontSize: '12px', color: '#374151', lineHeight: '1.5', margin: '0 0 8px 0' }}>{note.content}</p>
+                                <p style={{ fontSize: '10px', color: '#9CA3AF', margin: 0 }}>{new Date(note.createdAt).toLocaleString()}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ textAlign: 'center', color: '#666', padding: '40px' }}>Failed to load lead details</div>
+              )}
+            </div>
+          </div>
+        )}
+        {/* End Right Side */}
+
+      </div>
+      {/* End Split View Container */}
+
     </DashboardLayout>
   );
 };
