@@ -80,7 +80,7 @@ class EmailTrackingService {
 
       const emailMessage = await EmailMessage.create(emailData);
 
-      console.log(`📧 Email tracked: ${messageId} (${emailType})`);
+      // Silent - email tracked successfully
       return emailMessage;
 
     } catch (error) {
@@ -119,7 +119,6 @@ class EmailTrackingService {
       });
 
       if (existing) {
-        console.log(`⚠️ Email already tracked: ${messageId}`);
         return existing;
       }
 
@@ -130,8 +129,7 @@ class EmailTrackingService {
       const isRelevantEmail = await this.isRelevantEmail(fromEmail, inReplyTo, references, tenantId);
 
       if (!isRelevantEmail) {
-        console.log(`🚫 Skipping irrelevant email from ${fromEmail} - not part of CRM conversations`);
-        return null;
+        return null; // Silent skip - not relevant to CRM
       }
 
       // Determine threadId and related entity
@@ -189,7 +187,6 @@ class EmailTrackingService {
 
       const emailMessage = await EmailMessage.create(emailData);
 
-      console.log(`📬 Received email tracked: ${messageId}`);
       return emailMessage;
 
     } catch (error) {
@@ -295,7 +292,6 @@ class EmailTrackingService {
         });
 
         if (parentEmail) {
-          console.log(`✅ Relevant: Reply to CRM-sent email (${inReplyTo})`);
           return true;
         }
       }
@@ -309,7 +305,6 @@ class EmailTrackingService {
         });
 
         if (threadEmail) {
-          console.log(`✅ Relevant: Part of CRM conversation thread`);
           return true;
         }
       }
@@ -325,12 +320,10 @@ class EmailTrackingService {
       });
 
       if (sentToThisPerson) {
-        console.log(`✅ Relevant: From someone we've emailed before (${fromEmail})`);
         return true;
       }
 
-      // Not relevant - likely spam, social media notification, newsletter, etc.
-      console.log(`❌ Not relevant: ${fromEmail} - no prior CRM communication`);
+      // Not relevant - skip silently
       return false;
 
     } catch (error) {

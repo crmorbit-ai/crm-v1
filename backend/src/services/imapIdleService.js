@@ -16,7 +16,6 @@ class ImapIdleService {
     try {
       // Check if already connected
       if (this.connections.has(userId.toString())) {
-        console.log(`⚠️ IDLE already running for user ${smtpUser}`);
         return;
       }
 
@@ -53,7 +52,6 @@ class ImapIdleService {
       imap.connect();
 
     } catch (error) {
-      console.error(`❌ Failed to start IDLE for user ${userId}:`, error.message);
       this.scheduleReconnect(userId, tenantId, smtpHost, smtpUser, smtpPassword);
     }
   }
@@ -68,7 +66,6 @@ class ImapIdleService {
       // Open INBOX in read-write mode
       imap.openBox('INBOX', false, (err, box) => {
         if (err) {
-          console.error(`❌ Failed to open INBOX for ${smtpUser}:`, err.message);
           this.handleDisconnect(userId, tenantId, smtpHost, smtpUser, smtpPassword);
           return;
         }
@@ -77,34 +74,31 @@ class ImapIdleService {
 
         // Start IDLE mode
         imap.on('mail', (numNewMsgs) => {
-          console.log(`\n🔔 NEW EMAIL ALERT for ${smtpUser}! (${numNewMsgs} new messages)`);
+          // Silent processing - no console spam
           this.handleNewMail(imap, userId, tenantId, smtpUser);
         });
 
-        // Handle expunge (email deleted)
+        // Handle expunge (email deleted) - silent
         imap.on('expunge', (seqno) => {
-          console.log(`🗑️ Email deleted (seqno: ${seqno}) for ${smtpUser}`);
+          // Silent
         });
 
-        // Handle update (flags changed)
+        // Handle update (flags changed) - silent
         imap.on('update', (seqno, info) => {
-          console.log(`🔄 Email updated (seqno: ${seqno}) for ${smtpUser}`);
+          // Silent
         });
       });
     });
 
     imap.once('error', (err) => {
-      console.error(`❌ IMAP error for ${smtpUser}:`, err.message);
       this.handleDisconnect(userId, tenantId, smtpHost, smtpUser, smtpPassword);
     });
 
     imap.once('end', () => {
-      console.log(`🔌 IMAP connection ended for ${smtpUser}`);
       this.handleDisconnect(userId, tenantId, smtpHost, smtpUser, smtpPassword);
     });
 
     imap.once('close', (hadError) => {
-      console.log(`🔌 IMAP connection closed for ${smtpUser} ${hadError ? '(with error)' : ''}`);
       this.handleDisconnect(userId, tenantId, smtpHost, smtpUser, smtpPassword);
     });
   }
@@ -117,16 +111,14 @@ class ImapIdleService {
       // Search for UNSEEN emails
       imap.search(['UNSEEN'], async (err, results) => {
         if (err) {
-          console.error(`❌ Search error for ${smtpUser}:`, err.message);
           return;
         }
 
         if (results.length === 0) {
-          console.log(`📭 No unseen emails for ${smtpUser}`);
           return;
         }
 
-        console.log(`📧 Fetching ${results.length} new email(s) for ${smtpUser}...`);
+        // Silent processing
 
         const fetch = imap.fetch(results, {
           bodies: '',
@@ -145,10 +137,7 @@ class ImapIdleService {
               try {
                 const parsed = await simpleParser(buffer);
 
-                console.log(`\n📨 Processing new email:`);
-                console.log(`   Subject: ${parsed.subject}`);
-                console.log(`   From: ${parsed.from?.text}`);
-                console.log(`   To: ${parsed.to?.text}`);
+                // Silent processing - logs disabled
 
                 // Clean headers
                 const cleanHeaders = {};
@@ -189,8 +178,6 @@ class ImapIdleService {
                   userId
                 });
 
-                console.log(`   ✅ Email tracked successfully!`);
-
                 // Emit real-time event to frontend via Socket.io
                 if (global.io) {
                   global.io.to(`tenant-${tenantId}`).emit('new-email', {
@@ -201,27 +188,26 @@ class ImapIdleService {
                       subject: parsed.subject
                     }
                   });
-                  console.log(`   📡 Real-time notification sent to tenant-${tenantId}!`);
                 }
 
               } catch (error) {
-                console.error(`   ❌ Error processing email:`, error.message);
+                // Silent error - email processing failed
               }
             });
           });
         });
 
         fetch.once('error', (err) => {
-          console.error(`❌ Fetch error for ${smtpUser}:`, err.message);
+          // Silent fetch error
         });
 
         fetch.once('end', () => {
-          console.log(`✅ Finished processing new emails for ${smtpUser}\n`);
+          // Silent - finished processing
         });
       });
 
     } catch (error) {
-      console.error(`❌ Error handling new mail for ${smtpUser}:`, error.message);
+      // Silent error handling
     }
   }
 
@@ -254,10 +240,7 @@ class ImapIdleService {
   scheduleReconnect(userId, tenantId, smtpHost, smtpUser, smtpPassword) {
     if (this.isShuttingDown) return;
 
-    console.log(`🔄 Scheduling reconnect for ${smtpUser} in 30 seconds...`);
-
     const reconnectTimer = setTimeout(() => {
-      console.log(`♻️ Reconnecting IDLE for ${smtpUser}...`);
       this.startIdleForUser(userId, tenantId, smtpHost, smtpUser, smtpPassword);
     }, 30000); // Reconnect after 30 seconds
 
@@ -289,7 +272,6 @@ class ImapIdleService {
         const smtpPassword = settings.getDecryptedSmtpPassword();
 
         if (!smtpPassword) {
-          console.log(`⚠️ Skipping ${smtpUser} - failed to decrypt password`);
           continue;
         }
 
@@ -305,10 +287,9 @@ class ImapIdleService {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
 
-      console.log(`\n✅ IMAP IDLE service started for ${this.connections.size} users\n`);
-
+      // Silent start - IMAP IDLE service running
     } catch (error) {
-      console.error('❌ Failed to start IDLE connections:', error.message);
+      // Silent error
     }
   }
 
@@ -320,8 +301,6 @@ class ImapIdleService {
     const conn = this.connections.get(userIdStr);
 
     if (!conn) return;
-
-    console.log(`🛑 Stopping IDLE for ${conn.smtpUser}...`);
 
     // Clear reconnect timer
     if (conn.reconnectTimer) {
@@ -341,13 +320,9 @@ class ImapIdleService {
    * Stop all IDLE connections
    */
   async stopAllIdleConnections() {
-    console.log('\n🛑 Stopping all IMAP IDLE connections...\n');
-
     this.isShuttingDown = true;
 
     for (const [userId, conn] of this.connections) {
-      console.log(`🔌 Closing connection for ${conn.smtpUser}...`);
-
       // Clear reconnect timer
       if (conn.reconnectTimer) {
         clearTimeout(conn.reconnectTimer);
@@ -360,7 +335,6 @@ class ImapIdleService {
     }
 
     this.connections.clear();
-    console.log('✅ All IMAP IDLE connections stopped\n');
   }
 
   /**
