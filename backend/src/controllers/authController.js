@@ -914,6 +914,19 @@ const googleOAuthCallback = async (req, res) => {
 
     // Check if this is a new user (from passport strategy)
     if (profile.isNewUser) {
+      // Check if email is in SAAS admin whitelist
+      const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
+        .split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(email => email); // Remove empty strings
+
+      const isSaasAdmin = saasAdminEmails.includes(profile.email.toLowerCase());
+      const userType = isSaasAdmin ? 'SAAS_OWNER' : 'TENANT_ADMIN';
+
+      if (isSaasAdmin) {
+        console.log('🔑 SAAS Admin detected:', profile.email);
+      }
+
       // Create new user with Google account
       const newUser = await User.create({
         email: profile.email,
@@ -924,8 +937,9 @@ const googleOAuthCallback = async (req, res) => {
         authProvider: 'google',
         emailVerified: true, // Google verifies emails
         isPendingVerification: false,
-        isProfileComplete: false,
-        userType: 'TENANT_ADMIN',
+        isProfileComplete: isSaasAdmin ? true : false, // SAAS admins don't need profile completion
+        userType: userType,
+        tenant: isSaasAdmin ? null : undefined, // SAAS admins don't belong to tenants
         isActive: true,
         lastLogin: new Date()
       });

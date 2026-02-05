@@ -305,29 +305,33 @@ tenantSchema.pre('save', async function(next) {
   // Only generate if organizationId doesn't exist
   if (!this.organizationId && this.isNew) {
     try {
-      // Find the highest organizationId
       const Tenant = this.constructor;
-      const lastTenant = await Tenant.findOne({
-        organizationId: { $exists: true, $ne: null }
+
+      // Get all existing organization IDs and find the max number
+      const tenants = await Tenant.find({
+        organizationId: { $exists: true, $ne: null, $regex: /^UFS\d+$/ }
       })
-        .sort({ organizationId: -1 })
         .select('organizationId')
         .lean();
 
-      let nextNumber = 1;
-      if (lastTenant && lastTenant.organizationId) {
-        // Extract number from format like UFS001
-        const match = lastTenant.organizationId.match(/UFS(\d+)/);
+      let maxNumber = 0;
+      tenants.forEach(t => {
+        const match = t.organizationId.match(/UFS(\d+)/);
         if (match) {
-          nextNumber = parseInt(match[1], 10) + 1;
+          const num = parseInt(match[1], 10);
+          if (num > maxNumber) maxNumber = num;
         }
-      }
+      });
 
-      // Generate new organizationId with padding (UFS001, UFS002, etc.)
+      // Generate new unique organizationId
+      const nextNumber = maxNumber + 1;
       this.organizationId = `UFS${String(nextNumber).padStart(3, '0')}`;
+
+      console.log(`Generated Organization ID: ${this.organizationId}`);
     } catch (error) {
       console.error('Error generating organizationId:', error);
-      // Continue without organizationId (it's not required)
+      // Fallback: use timestamp-based ID
+      this.organizationId = `UFS${Date.now().toString().slice(-6)}`;
     }
   }
   next();

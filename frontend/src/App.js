@@ -96,7 +96,7 @@ import ContactDetail from './pages/ContactDetail';
 import Loading from './components/common/Loading';
 
 // Protected route wrapper
-const ProtectedRoute = ({ children, requireSaas = false, skipProfileCheck = false }) => {
+const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false, skipProfileCheck = false }) => {
   const { user, loading, isSaasOwner } = useAuth();
 
   if (loading) {
@@ -114,8 +114,14 @@ const ProtectedRoute = ({ children, requireSaas = false, skipProfileCheck = fals
     }
   }
 
+  // SAAS owners can only access SAAS routes
   if (requireSaas && !isSaasOwner()) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Tenant routes are blocked for SAAS owners
+  if (requireTenant && isSaasOwner()) {
+    return <Navigate to="/saas/dashboard" replace />;
   }
 
   return children;
@@ -180,24 +186,24 @@ function AppRoutes() {
       <Route path="/reseller/dashboard" element={<ResellerDashboard />} />
       
 
-      {/* Protected routes */}
+      {/* Protected routes - Tenant Only */}
       <Route path="/dashboard" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Dashboard />
         </ProtectedRoute>
       } />
 
-     
-      {/* 💰 SUBSCRIPTION ROUTE - NEW */}
- 
+
+      {/* 💰 SUBSCRIPTION ROUTE - Tenant Only */}
+
       <Route path="/subscription" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Subscription />
         </ProtectedRoute>
       } />
 
       <Route path="/activity-logs" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <ActivityLogs />
   </ProtectedRoute>
 } />
@@ -228,7 +234,7 @@ function AppRoutes() {
 
 
 <Route path="/product-categories" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <ProductCategories />
   </ProtectedRoute>
 } />
@@ -238,106 +244,106 @@ function AppRoutes() {
 
 
 
-{/* 📦 PRODUCT MANAGEMENT ROUTE (CRM Products) */}
+{/* 📦 PRODUCT MANAGEMENT ROUTE (CRM Products) - Tenant Only */}
 <Route path="/products-management" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <Products />
   </ProtectedRoute>
 } />
 
-{/* 💰 B2B WORKFLOW ROUTES (RFI → RFQ → PO → Invoice) */}
+{/* 💰 B2B WORKFLOW ROUTES (RFI → RFQ → PO → Invoice) - Tenant Only */}
 
 {/* RFI Routes */}
 <Route path="/rfi" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <RFIs />
   </ProtectedRoute>
 } />
 <Route path="/rfi/new" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <RFIForm />
   </ProtectedRoute>
 } />
 <Route path="/rfi/:id" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <RFIDetail />
   </ProtectedRoute>
 } />
 <Route path="/rfi/:id/edit" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <RFIForm />
   </ProtectedRoute>
 } />
 
 {/* Quotation Routes */}
 <Route path="/quotations" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <Quotations />
   </ProtectedRoute>
 } />
 <Route path="/quotations/new" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <QuotationForm />
   </ProtectedRoute>
 } />
 <Route path="/quotations/:id" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <QuotationDetail />
   </ProtectedRoute>
 } />
 <Route path="/quotations/:id/edit" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <QuotationForm />
   </ProtectedRoute>
 } />
 
 {/* Purchase Order Routes */}
 <Route path="/purchase-orders" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <PurchaseOrders />
   </ProtectedRoute>
 } />
 <Route path="/purchase-orders/new" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <PurchaseOrderForm />
   </ProtectedRoute>
 } />
 <Route path="/purchase-orders/:id" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <PurchaseOrderDetail />
   </ProtectedRoute>
 } />
 <Route path="/purchase-orders/:id/edit" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <PurchaseOrderForm />
   </ProtectedRoute>
 } />
 
 {/* Invoice Routes */}
 <Route path="/invoices" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <Invoices />
   </ProtectedRoute>
 } />
 <Route path="/invoices/new" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <InvoiceForm />
   </ProtectedRoute>
 } />
 <Route path="/invoices/:id/edit" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <InvoiceForm />
   </ProtectedRoute>
 } />
 <Route path="/invoices/:id" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <InvoiceDetail />
   </ProtectedRoute>
 } />
 
 {/* 🎫 SUPPORT TICKET ROUTES */}
 <Route path="/support" element={
-  <ProtectedRoute>
+  <ProtectedRoute requireTenant>
     <Support />
   </ProtectedRoute>
 } />
@@ -347,34 +353,34 @@ function AppRoutes() {
   </ProtectedRoute>
 } />
 
-      {/* CRM Routes */}
+      {/* CRM Routes - Tenant Only */}
       <Route path="/leads" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Leads />
         </ProtectedRoute>
       } />
       <Route path="/leads/:id" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <LeadDetail />
         </ProtectedRoute>
       } />
       <Route path="/accounts" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Accounts />
         </ProtectedRoute>
       } />
       <Route path="/contacts" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Contacts />
         </ProtectedRoute>
       } />
       <Route path="/opportunities" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Opportunities />
         </ProtectedRoute>
       } />
       <Route path="/activities/*" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <div style={{ padding: '40px', textAlign: 'center' }}>
             <h2>Activities</h2>
             <p>Coming in Phase 2...</p>
@@ -382,26 +388,26 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Settings Routes (User management moved here) */}
+      {/* Settings Routes - Tenant Only */}
       <Route path="/settings/users" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Users />
         </ProtectedRoute>
       } />
       <Route path="/settings/roles" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Roles />
         </ProtectedRoute>
       } />
       <Route path="/settings/groups" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Groups />
         </ProtectedRoute>
       } />
 
-      {/* Admin/Product Team routes */}
+      {/* Admin/Product Team routes - Tenant Only */}
       <Route path="/admin/field-builder" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <FieldBuilder />
         </ProtectedRoute>
       } />
@@ -438,13 +444,13 @@ function AppRoutes() {
       } />
      
 
-      <Route path="/accounts/:id" element={<ProtectedRoute><AccountDetail /></ProtectedRoute>} />
-      <Route path="/contacts/:id" element={<ProtectedRoute><ContactDetail /></ProtectedRoute>} />
+      <Route path="/accounts/:id" element={<ProtectedRoute requireTenant><AccountDetail /></ProtectedRoute>} />
+      <Route path="/contacts/:id" element={<ProtectedRoute requireTenant><ContactDetail /></ProtectedRoute>} />
 
-      <Route path="/meetings" element={<ProtectedRoute><Meetings /></ProtectedRoute>} />
-      <Route path="/calls" element={<ProtectedRoute><Calls /></ProtectedRoute>} />
-      <Route path="/emails" element={<ProtectedRoute><EmailInbox /></ProtectedRoute>} />
-      <Route path="/meetings/:id" element={<ProtectedRoute><MeetingDetail /></ProtectedRoute>} />
+      <Route path="/meetings" element={<ProtectedRoute requireTenant><Meetings /></ProtectedRoute>} />
+      <Route path="/calls" element={<ProtectedRoute requireTenant><Calls /></ProtectedRoute>} />
+      <Route path="/emails" element={<ProtectedRoute requireTenant><EmailInbox /></ProtectedRoute>} />
+      <Route path="/meetings/:id" element={<ProtectedRoute requireTenant><MeetingDetail /></ProtectedRoute>} />
 
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -452,7 +458,7 @@ function AppRoutes() {
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
       <Route path="/tasks" element={
-        <ProtectedRoute>
+        <ProtectedRoute requireTenant>
           <Tasks />
         </ProtectedRoute>
       } />

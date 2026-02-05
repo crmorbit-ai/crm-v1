@@ -1,13 +1,123 @@
 import React, { useEffect, useState } from 'react';
-import { useAuth } from '../context/AuthContext';
 import { Link } from 'react-router-dom';
 import { tenantService } from '../services/tenantService';
-import '../styles/dashboard.css';
+import SaasLayout, { StatCard, Card, Button, useWindowSize } from '../components/layout/SaasLayout';
+
+// Simple Bar Chart Component - Responsive
+const BarChart = ({ data, maxValue }) => {
+  const { isMobile } = useWindowSize();
+  const max = maxValue || Math.max(...data.map(d => d.value), 1);
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'flex-end', gap: isMobile ? '8px' : '12px', height: isMobile ? '140px' : '180px', padding: '10px 0' }}>
+      {data.map((item, index) => (
+        <div key={index} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+          <div style={{
+            width: '100%',
+            maxWidth: isMobile ? '40px' : '60px',
+            height: `${Math.max((item.value / max) * (isMobile ? 100 : 140), 8)}px`,
+            background: item.color || `linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)`,
+            borderRadius: '6px 6px 0 0',
+            transition: 'height 0.5s ease',
+            position: 'relative'
+          }}>
+            <span style={{
+              position: 'absolute',
+              top: '-22px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: isMobile ? '12px' : '14px',
+              fontWeight: '700',
+              color: '#1e293b'
+            }}>
+              {item.value}
+            </span>
+          </div>
+          <span style={{ fontSize: isMobile ? '9px' : '11px', fontWeight: '600', color: '#64748b', textAlign: 'center' }}>
+            {item.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+// Donut Chart Component - Responsive
+const DonutChart = ({ data }) => {
+  const { isMobile } = useWindowSize();
+  const size = isMobile ? 100 : 140;
+  const total = data.reduce((sum, item) => sum + item.value, 0) || 1;
+  let cumulativePercent = 0;
+
+  const getCoordinatesForPercent = (percent) => {
+    const x = Math.cos(2 * Math.PI * percent);
+    const y = Math.sin(2 * Math.PI * percent);
+    return [x, y];
+  };
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '20px', flexWrap: 'wrap', justifyContent: 'center' }}>
+      <svg width={size} height={size} viewBox="-1 -1 2 2" style={{ transform: 'rotate(-90deg)', flexShrink: 0 }}>
+        {data.map((item, index) => {
+          const percent = item.value / total;
+          const [startX, startY] = getCoordinatesForPercent(cumulativePercent);
+          cumulativePercent += percent;
+          const [endX, endY] = getCoordinatesForPercent(cumulativePercent);
+          const largeArcFlag = percent > 0.5 ? 1 : 0;
+
+          if (percent === 0) return null;
+
+          return (
+            <path
+              key={index}
+              d={`M ${startX} ${startY} A 1 1 0 ${largeArcFlag} 1 ${endX} ${endY} L 0 0`}
+              fill={item.color}
+              stroke="#fff"
+              strokeWidth="0.04"
+            />
+          );
+        })}
+        <circle cx="0" cy="0" r="0.6" fill="#fff" />
+      </svg>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+        {data.map((item, index) => (
+          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ width: '10px', height: '10px', borderRadius: '2px', background: item.color, flexShrink: 0 }} />
+            <span style={{ fontSize: isMobile ? '10px' : '12px', color: '#64748b' }}>{item.label}</span>
+            <span style={{ fontSize: isMobile ? '10px' : '12px', fontWeight: '700', color: '#1e293b' }}>{item.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// Progress Bar Component
+const ProgressBar = ({ label, value, max, color }) => {
+  const percent = Math.min((value / max) * 100, 100);
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+        <span style={{ fontSize: '12px', color: '#64748b' }}>{label}</span>
+        <span style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b' }}>{value}</span>
+      </div>
+      <div style={{ height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
+        <div style={{
+          width: `${percent}%`,
+          height: '100%',
+          background: color || '#3b82f6',
+          borderRadius: '4px',
+          transition: 'width 0.5s ease'
+        }} />
+      </div>
+    </div>
+  );
+};
 
 const SaasDashboard = () => {
-  const { user, logout } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const { isMobile, isTablet } = useWindowSize();
 
   useEffect(() => {
     loadStats();
@@ -17,676 +127,168 @@ const SaasDashboard = () => {
     try {
       setLoading(true);
       const data = await tenantService.getTenantStats();
-      console.log('Stats loaded:', data);
       setStats(data);
     } catch (error) {
       console.error('Failed to load stats:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      // Set default stats to show 0s instead of errors
       setStats({
         totalTenants: 0,
         activeTenants: 0,
         suspendedTenants: 0,
         trialTenants: 0,
         recentTenants: 0,
-        tenantsByPlan: {
-          free: 0,
-          basic: 0,
-          professional: 0,
-          enterprise: 0
-        }
+        tenantsByPlan: { free: 0, basic: 0, professional: 0, enterprise: 0 }
       });
     } finally {
       setLoading(false);
     }
   };
 
+  // Chart data
+  const planChartData = [
+    { label: 'Free', value: stats?.tenantsByPlan?.free || 0, color: 'linear-gradient(180deg, #94a3b8 0%, #64748b 100%)' },
+    { label: 'Basic', value: stats?.tenantsByPlan?.basic || 0, color: 'linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%)' },
+    { label: 'Pro', value: stats?.tenantsByPlan?.professional || 0, color: 'linear-gradient(180deg, #8b5cf6 0%, #6d28d9 100%)' },
+    { label: 'Enterprise', value: stats?.tenantsByPlan?.enterprise || 0, color: 'linear-gradient(180deg, #f59e0b 0%, #d97706 100%)' }
+  ];
+
+  const statusChartData = [
+    { label: 'Active', value: stats?.activeTenants || 0, color: '#22c55e' },
+    { label: 'Trial', value: stats?.trialTenants || 0, color: '#f59e0b' },
+    { label: 'Suspended', value: stats?.suspendedTenants || 0, color: '#ef4444' }
+  ];
+
+  // Responsive grid columns
+  const statsColumns = isMobile ? 2 : 4;
+  const chartsColumns = isMobile ? 1 : isTablet ? 2 : 3;
+  const bottomColumns = isMobile ? 1 : 2;
+
   return (
-    <div className="dashboard" style={{
-      background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0f9ff 100%)',
-      minHeight: '80vh'
-    }}>
-      <header className="dashboard-header" style={{
-        background: 'linear-gradient(135deg, rgb(28 31 32) 0%, rgb(103 133 143) 25%, rgb(59 82 98) 50%, rgb(34 41 56) 75%, rgb(60 66 74) 100%) 0% 0% / 400% 400%',
-        backgroundSize: '400% 400%',
-        animation: 'gradientShift 15s ease infinite',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.15)',
-        borderBottom: '2px solid rgba(255, 255, 255, 0.2)',
-        padding: '-10px 0'
-      }}>
-        <div className="container" style={{ maxWidth: '1600px',margin: '0 auto' }}>
-          <div className="flex-between">
-            <h1 style={{
-              background: 'linear-gradient(135deg, #ffffff 0%, #e0f2fe 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-              fontSize: '28px',
-              fontWeight: '800',
-              textShadow: '2px 2px 4px rgba(0, 0, 0, 0.2)',
-              margin: 0
-            }}>🚀 SAAS Platform Dashboard</h1>
-            <div className="flex gap-10" style={{ alignItems: 'center' }}>
-              <span style={{
-                color: '#ffffff',
-                fontWeight: 700,
-                fontSize: '15px',
-                textShadow: '1px 1px 2px rgba(0, 0, 0, 0.3)',
-                background: 'rgba(255, 255, 255, 0.15)',
-                padding: '8px 16px',
-                borderRadius: '20px',
-                backdropFilter: 'blur(10px)'
-              }}>
-                👋 Welcome, {user?.firstName} {user?.lastName}
-              </span>
-              <button onClick={logout} style={{
-                background: 'rgba(255, 255, 255, 0.2)',
-                border: '2px solid rgba(255, 255, 255, 0.4)',
-                color: '#ffffff',
-                padding: '10px 24px',
-                borderRadius: '10px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                transition: 'all 0.3s ease',
-                backdropFilter: 'blur(10px)',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 16px rgba(0, 0, 0, 0.2)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
-              }}>
-                Logout
-              </button>
-            </div>
+    <SaasLayout title="Dashboard">
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '60px', color: '#64748b' }}>
+          Loading...
+        </div>
+      ) : (
+        <>
+          {/* Stats Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${statsColumns}, 1fr)`, gap: '12px', marginBottom: '20px' }}>
+            <StatCard icon="🏢" value={stats?.totalTenants || 0} label="Total Tenants" />
+            <StatCard icon="✅" value={stats?.activeTenants || 0} label="Active" />
+            <StatCard icon="⏳" value={stats?.trialTenants || 0} label="On Trial" />
+            <StatCard icon="🚫" value={stats?.suspendedTenants || 0} label="Suspended" />
           </div>
-        </div>
-      </header>
 
-      <nav className="dashboard-nav" style={{
-        background: 'rgba(255, 255, 255, 0.9)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)',
-        borderBottom: '1px solid rgba(93, 185, 222, 0.2)',
-        padding: '0'
-      }}>
-        <div className="container" style={{
-          display: 'flex',
-          gap: '8px',
-          padding: '8px 20px',
-          maxWidth: '1400px'
-        }}>
-          <Link to="/saas/dashboard" style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            fontWeight: '700',
-            fontSize: '14px',
-            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-            color: '#ffffff',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease',
-            boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
-          }}>Dashboard</Link>
-          <Link to="/saas/tenants" style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            fontWeight: '600',
-            fontSize: '14px',
-            background: 'rgba(93, 185, 222, 0.1)',
-            color: '#2a5298',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
-            e.target.style.transform = 'translateY(0)';
-          }}>Tenants</Link>
-          <Link to="/saas/subscriptions" style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            fontWeight: '600',
-            fontSize: '14px',
-            background: 'rgba(93, 185, 222, 0.1)',
-            color: '#2a5298',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
-            e.target.style.transform = 'translateY(0)';
-          }}>Subscriptions</Link>
-          <Link to="/saas/billings" style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            fontWeight: '600',
-            fontSize: '14px',
-            background: 'rgba(93, 185, 222, 0.1)',
-            color: '#2a5298',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
-            e.target.style.transform = 'translateY(0)';
-          }}>Billings</Link>
-          <Link to="/saas/resellers" style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            fontWeight: '600',
-            fontSize: '14px',
-            background: 'rgba(93, 185, 222, 0.1)',
-            color: '#2a5298',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
-            e.target.style.transform = 'translateY(0)';
-          }}>🤝 Resellers</Link>
-          <Link to="/support-admin" style={{
-            padding: '8px 20px',
-            borderRadius: '8px',
-            fontWeight: '600',
-            fontSize: '14px',
-            background: 'rgba(93, 185, 222, 0.1)',
-            color: '#2a5298',
-            textDecoration: 'none',
-            transition: 'all 0.3s ease'
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.2)';
-            e.target.style.transform = 'translateY(-2px)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.background = 'rgba(93, 185, 222, 0.1)';
-            e.target.style.transform = 'translateY(0)';
-          }}>🎫 Support Tickets</Link>
-        </div>
-      </nav>
+          {/* Charts Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${chartsColumns}, 1fr)`, gap: '16px', marginBottom: '16px' }}>
+            {/* Bar Chart - Tenants by Plan */}
+            <Card title="Tenants by Plan">
+              <BarChart data={planChartData} />
+            </Card>
 
-      <main className="dashboard-content" style={{ padding: '32px 0' }}>
-        <div className="container" style={{ maxWidth: '1400px', margin: '0 auto' }}>
-          {loading ? (
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              alignItems: 'center',
-              minHeight: '400px',
-              fontSize: '18px',
-              fontWeight: '600',
-              color: '#2a5298'
-            }}>
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.95)',
-                padding: '32px 48px',
-                borderRadius: '16px',
-                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)'
-              }}>
-                ⏳ Loading statistics...
+            {/* Donut Chart - Status Distribution */}
+            <Card title="Status Distribution">
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '10px 0' }}>
+                <DonutChart data={statusChartData} />
               </div>
-            </div>
-          ) : (
-            <>
-              <div className="stats-grid" style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '24px',
-                marginBottom: '32px'
-              }}>
-                <div className="stat-card" style={{
-                  background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(37, 99, 235, 0.1) 100%)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: '20px',
-                  padding: '28px',
-                  border: '2px solid rgba(59, 130, 246, 0.2)',
-                  boxShadow: '0 12px 32px rgba(59, 130, 246, 0.15)',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 20px 48px rgba(59, 130, 246, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(59, 130, 246, 0.15)';
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div className="stat-icon" style={{
-                      background: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                      color: 'white',
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px',
-                      boxShadow: '0 8px 24px rgba(59, 130, 246, 0.4)'
-                    }}>🏢</div>
-                    <div className="stat-info">
-                      <h3 className="stat-value" style={{
-                        fontSize: '36px',
-                        fontWeight: '800',
-                        margin: '0 0 4px 0',
-                        color: '#1e40af'
-                      }}>{stats?.totalTenants || 0}</h3>
-                      <p className="stat-label" style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        margin: 0,
-                        color: '#3b82f6'
-                      }}>Total Tenants</p>
-                    </div>
-                  </div>
-                </div>
+            </Card>
 
-                <div className="stat-card" style={{
-                  background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: '20px',
-                  padding: '28px',
-                  border: '2px solid rgba(16, 185, 129, 0.2)',
-                  boxShadow: '0 12px 32px rgba(16, 185, 129, 0.15)',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 20px 48px rgba(16, 185, 129, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(16, 185, 129, 0.15)';
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div className="stat-icon" style={{
-                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      color: 'white',
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px',
-                      boxShadow: '0 8px 24px rgba(16, 185, 129, 0.4)'
-                    }}>✅</div>
-                    <div className="stat-info">
-                      <h3 className="stat-value" style={{
-                        fontSize: '36px',
-                        fontWeight: '800',
-                        margin: '0 0 4px 0',
-                        color: '#065f46'
-                      }}>{stats?.activeTenants || 0}</h3>
-                      <p className="stat-label" style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        margin: 0,
-                        color: '#10b981'
-                      }}>Active Tenants</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="stat-card" style={{
-                  background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.15) 0%, rgba(217, 119, 6, 0.1) 100%)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: '20px',
-                  padding: '28px',
-                  border: '2px solid rgba(245, 158, 11, 0.2)',
-                  boxShadow: '0 12px 32px rgba(245, 158, 11, 0.15)',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 20px 48px rgba(245, 158, 11, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(245, 158, 11, 0.15)';
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div className="stat-icon" style={{
-                      background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                      color: 'white',
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px',
-                      boxShadow: '0 8px 24px rgba(245, 158, 11, 0.4)'
-                    }}>🔄</div>
-                    <div className="stat-info">
-                      <h3 className="stat-value" style={{
-                        fontSize: '36px',
-                        fontWeight: '800',
-                        margin: '0 0 4px 0',
-                        color: '#92400e'
-                      }}>{stats?.trialTenants || 0}</h3>
-                      <p className="stat-label" style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        margin: 0,
-                        color: '#f59e0b'
-                      }}>Trial Tenants</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="stat-card" style={{
-                  background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
-                  backdropFilter: 'blur(20px)',
-                  borderRadius: '20px',
-                  padding: '28px',
-                  border: '2px solid rgba(239, 68, 68, 0.2)',
-                  boxShadow: '0 12px 32px rgba(239, 68, 68, 0.15)',
-                  transition: 'all 0.3s ease',
-                  cursor: 'pointer'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-8px)';
-                  e.currentTarget.style.boxShadow = '0 20px 48px rgba(239, 68, 68, 0.25)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(239, 68, 68, 0.15)';
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    <div className="stat-icon" style={{
-                      background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                      color: 'white',
-                      width: '64px',
-                      height: '64px',
-                      borderRadius: '16px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: '32px',
-                      boxShadow: '0 8px 24px rgba(239, 68, 68, 0.4)'
-                    }}>⏸️</div>
-                    <div className="stat-info">
-                      <h3 className="stat-value" style={{
-                        fontSize: '36px',
-                        fontWeight: '800',
-                        margin: '0 0 4px 0',
-                        color: '#991b1b'
-                      }}>{stats?.suspendedTenants || 0}</h3>
-                      <p className="stat-label" style={{
-                        fontSize: '14px',
-                        fontWeight: '600',
-                        margin: 0,
-                        color: '#ef4444'
-                      }}>Suspended</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '20px',
-                padding: '32px',
-                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)',
-                border: '2px solid rgba(93, 185, 222, 0.15)',
-                marginBottom: '24px'
-              }}>
+            {/* Monthly Growth Card */}
+            <Card title="This Month">
+              <div style={{ textAlign: 'center', padding: isMobile ? '12px 0' : '20px 0' }}>
                 <div style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  marginBottom: '24px',
-                  color: '#1a1a1a',
-                  paddingBottom: '16px',
-                  borderBottom: '2px solid rgba(93, 185, 222, 0.2)'
-                }}>📊 Tenants by Plan</div>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '16px'
-                }}>
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.1) 0%, rgba(42, 82, 152, 0.05) 100%)',
-                    padding: '20px',
-                    borderRadius: '16px',
-                    border: '2px solid rgba(93, 185, 222, 0.2)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#2a5298' }}>Free</span>
-                    <span style={{ fontSize: '28px', fontWeight: '800', color: '#5db9de' }}>{stats?.tenantsByPlan?.free || 0}</span>
-                  </div>
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(5, 150, 105, 0.05) 100%)',
-                    padding: '20px',
-                    borderRadius: '16px',
-                    border: '2px solid rgba(16, 185, 129, 0.2)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#065f46' }}>Basic</span>
-                    <span style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>{stats?.tenantsByPlan?.basic || 0}</span>
-                  </div>
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(147, 51, 234, 0.1) 0%, rgba(126, 34, 206, 0.05) 100%)',
-                    padding: '20px',
-                    borderRadius: '16px',
-                    border: '2px solid rgba(147, 51, 234, 0.2)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#6b21a8' }}>Professional</span>
-                    <span style={{ fontSize: '28px', fontWeight: '800', color: '#9333ea' }}>{stats?.tenantsByPlan?.professional || 0}</span>
-                  </div>
-                  <div style={{
-                    background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.1) 0%, rgba(202, 138, 4, 0.05) 100%)',
-                    padding: '20px',
-                    borderRadius: '16px',
-                    border: '2px solid rgba(234, 179, 8, 0.2)',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center'
-                  }}>
-                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#854d0e' }}>Enterprise</span>
-                    <span style={{ fontSize: '28px', fontWeight: '800', color: '#eab308' }}>{stats?.tenantsByPlan?.enterprise || 0}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.95)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '20px',
-                padding: '32px',
-                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.08)',
-                border: '2px solid rgba(93, 185, 222, 0.15)',
-                marginBottom: '24px'
-              }}>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  marginBottom: '24px',
-                  color: '#1a1a1a',
-                  paddingBottom: '16px',
-                  borderBottom: '2px solid rgba(93, 185, 222, 0.2)'
-                }}>⚡ Quick Actions</div>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-                  gap: '16px'
-                }}>
-                  <Link to="/saas/tenants" style={{
-                    padding: '16px 24px',
-                    borderRadius: '14px',
-                    fontWeight: '700',
-                    fontSize: '15px',
-                    background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 6px 20px rgba(93, 185, 222, 0.3)',
-                    border: 'none',
-                    display: 'block'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-4px)';
-                    e.target.style.boxShadow = '0 12px 32px rgba(93, 185, 222, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 6px 20px rgba(93, 185, 222, 0.3)';
-                  }}>
-                    View All Tenants
-                  </Link>
-                  <Link to="/saas/subscriptions" style={{
-                    padding: '16px 24px',
-                    borderRadius: '14px',
-                    fontWeight: '700',
-                    fontSize: '15px',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 6px 20px rgba(16, 185, 129, 0.3)',
-                    border: 'none',
-                    display: 'block'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-4px)';
-                    e.target.style.boxShadow = '0 12px 32px rgba(16, 185, 129, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.3)';
-                  }}>
-                    Manage Subscriptions
-                  </Link>
-                  <Link to="/saas/billings" style={{
-                    padding: '16px 24px',
-                    borderRadius: '14px',
-                    fontWeight: '700',
-                    fontSize: '15px',
-                    background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 6px 20px rgba(245, 158, 11, 0.3)',
-                    border: 'none',
-                    display: 'block'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-4px)';
-                    e.target.style.boxShadow = '0 12px 32px rgba(245, 158, 11, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 6px 20px rgba(245, 158, 11, 0.3)';
-                  }}>
-                    Billing Overview
-                  </Link>
-                  <Link to="/saas/resellers" style={{
-                    padding: '16px 24px',
-                    borderRadius: '14px',
-                    fontWeight: '700',
-                    fontSize: '15px',
-                    background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    textAlign: 'center',
-                    transition: 'all 0.3s ease',
-                    boxShadow: '0 6px 20px rgba(139, 92, 246, 0.3)',
-                    border: 'none',
-                    display: 'block'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-4px)';
-                    e.target.style.boxShadow = '0 12px 32px rgba(139, 92, 246, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.3)';
-                  }}>
-                    🤝 Manage Resellers
-                  </Link>
-                </div>
-              </div>
-
-              <div style={{
-                background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.15) 0%, rgba(42, 82, 152, 0.1) 100%)',
-                backdropFilter: 'blur(20px)',
-                borderRadius: '20px',
-                padding: '32px',
-                boxShadow: '0 12px 40px rgba(93, 185, 222, 0.15)',
-                border: '2px solid rgba(93, 185, 222, 0.25)',
-                textAlign: 'center'
-              }}>
-                <div style={{
-                  fontSize: '20px',
-                  fontWeight: '800',
-                  marginBottom: '16px',
-                  color: '#1a1a1a'
-                }}>📈 Recent Growth</div>
-                <p style={{
-                  fontSize: '32px',
-                  fontWeight: '800',
-                  margin: 0,
-                  background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+                  fontSize: isMobile ? '36px' : '52px',
+                  fontWeight: '700',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text'
+                  marginBottom: '8px'
                 }}>
-                  {stats?.recentTenants || 0} new tenants
-                </p>
-                <p style={{
-                  fontSize: '16px',
-                  fontWeight: '600',
-                  margin: '8px 0 0 0',
-                  color: '#4b5563'
-                }}>in the last 30 days</p>
+                  +{stats?.recentTenants || 0}
+                </div>
+                <div style={{ fontSize: isMobile ? '11px' : '13px', color: '#64748b', fontWeight: '500', marginBottom: '16px' }}>
+                  new tenants (30 days)
+                </div>
+                <div style={{
+                  padding: '12px',
+                  background: '#f0fdf4',
+                  borderRadius: '8px',
+                  border: '1px solid #bbf7d0'
+                }}>
+                  <span style={{ fontSize: isMobile ? '11px' : '13px', color: '#15803d', fontWeight: '600' }}>
+                    📈 {stats?.totalTenants > 0 ? Math.round((stats?.recentTenants / stats?.totalTenants) * 100) : 0}% growth rate
+                  </span>
+                </div>
               </div>
-            </>
-          )}
-        </div>
-      </main>
+            </Card>
+          </div>
 
-      <style>{`
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-      `}</style>
-    </div>
+          {/* Bottom Row */}
+          <div style={{ display: 'grid', gridTemplateColumns: `repeat(${bottomColumns}, 1fr)`, gap: '16px', marginBottom: '16px' }}>
+            {/* Plan Distribution Progress */}
+            <Card title="Plan Distribution">
+              <ProgressBar
+                label="Free Plan"
+                value={stats?.tenantsByPlan?.free || 0}
+                max={stats?.totalTenants || 1}
+                color="#94a3b8"
+              />
+              <ProgressBar
+                label="Basic Plan"
+                value={stats?.tenantsByPlan?.basic || 0}
+                max={stats?.totalTenants || 1}
+                color="#3b82f6"
+              />
+              <ProgressBar
+                label="Professional Plan"
+                value={stats?.tenantsByPlan?.professional || 0}
+                max={stats?.totalTenants || 1}
+                color="#8b5cf6"
+              />
+              <ProgressBar
+                label="Enterprise Plan"
+                value={stats?.tenantsByPlan?.enterprise || 0}
+                max={stats?.totalTenants || 1}
+                color="#f59e0b"
+              />
+            </Card>
+
+            {/* Quick Actions */}
+            <Card title="Quick Actions">
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '10px' }}>
+                <Link to="/saas/tenants" style={{ textDecoration: 'none' }}>
+                  <Button style={{ width: '100%', justifyContent: 'flex-start', gap: '8px' }}>
+                    🏢 Tenants
+                  </Button>
+                </Link>
+                <Link to="/saas/subscriptions" style={{ textDecoration: 'none' }}>
+                  <Button variant="secondary" style={{ width: '100%', justifyContent: 'flex-start', gap: '8px' }}>
+                    📊 Subscriptions
+                  </Button>
+                </Link>
+                <Link to="/saas/billings" style={{ textDecoration: 'none' }}>
+                  <Button variant="secondary" style={{ width: '100%', justifyContent: 'flex-start', gap: '8px' }}>
+                    💰 Billings
+                  </Button>
+                </Link>
+                <Link to="/saas/resellers" style={{ textDecoration: 'none' }}>
+                  <Button variant="secondary" style={{ width: '100%', justifyContent: 'flex-start', gap: '8px' }}>
+                    🤝 Resellers
+                  </Button>
+                </Link>
+                <Link to="/saas/support" style={{ textDecoration: 'none' }}>
+                  <Button variant="secondary" style={{ width: '100%', justifyContent: 'flex-start', gap: '8px' }}>
+                    🎧 Support
+                  </Button>
+                </Link>
+                <Button variant="ghost" onClick={loadStats} style={{ width: '100%', justifyContent: 'flex-start', gap: '8px' }}>
+                  🔄 Refresh
+                </Button>
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
+    </SaasLayout>
   );
 };
 

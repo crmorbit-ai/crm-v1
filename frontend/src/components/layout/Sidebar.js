@@ -50,7 +50,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
 
     if (!hasAccess) {
       return (
-        <div className="px-3 py-2 text-sm text-white/50 cursor-not-allowed">
+        <div className="px-3 py-2 text-sm text-white/100 cursor-not-allowed">
           {label}
         </div>
       );
@@ -136,74 +136,105 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
         {/* Navigation */}
         <ScrollArea className="flex-1 px-3 py-4">
           <nav className="space-y-1">
-            {/* Dashboard */}
-            <NavItem to="/dashboard" label="Dashboard" />
+            {/* SAAS Owner Navigation */}
+            {isSaasOwner() ? (
+              <>
+                {/* SAAS Dashboard */}
+                <NavItem to="/saas/dashboard" label="SAAS Dashboard" />
 
-            <div className="my-3 border-t border-white/20" />
+                <div className="my-3 border-t border-white/20" />
 
-            {/* Lead Management */}
-            <NavSection title="Lead Management" section="leadManagement">
-              <NavItem to="/data-center" label="Customers" />
-              <NavItem to="/leads" label="Leads" permission="lead_management" />
-              <NavItem to="/contacts" label="Contacts" permission="contact_management" />
-              <NavItem to="/accounts" label="Accounts" permission="account_management" />
-              <NavItem to="/opportunities" label="Opportunities" permission="opportunity_management" />
-            </NavSection>
+                {/* Tenant Management */}
+                <NavSection title="Tenant Management" section="tenantManagement">
+                  <NavItem to="/saas/tenants" label="All Tenants" />
+                  <NavItem to="/saas/subscriptions" label="Subscriptions" />
+                  <NavItem to="/saas/billings" label="Billings" />
+                </NavSection>
 
-            {/* Sales & Finance */}
-            <NavSection title="Sales & Finance" section="salesFinance">
-              <NavItem to="/rfi" label="RFI" />
-              <NavItem to="/quotations" label="Quotations" />
-              <NavItem to="/purchase-orders" label="Purchase Orders" />
-              <NavItem to="/invoices" label="Invoices" />
-            </NavSection>
+                {/* Reseller Management */}
+                <NavSection title="Reseller Management" section="resellerManagement">
+                  <NavItem to="/saas/resellers" label="Resellers" />
+                </NavSection>
 
-            {/* Task Management */}
-            <NavSection title="Task Management" section="taskManagement">
-              <NavItem to="/tasks" label="Tasks" />
-              <NavItem to="/meetings" label="Meetings" />
-              <NavItem to="/calls" label="Calls" />
-              <NavItem to="/emails" label="Email Inbox" />
-            </NavSection>
+                {/* Support */}
+                <NavSection title="Support" section="support">
+                  <NavItem to="/support-admin" label="Support Dashboard" />
+                </NavSection>
 
-            {/* Product */}
-            <NavSection title="Product" section="product">
-              <NavItem to="/products-management" label="Product" permission="product_management" />
-              <NavItem to="/products" label="Product Marketplace" />
-            </NavSection>
+                {/* Data Center */}
+                <NavSection title="Data Center" section="dataCenter">
+                  <NavItem to="/data-center" label="Global Data" />
+                </NavSection>
+              </>
+            ) : (
+              <>
+                {/* Tenant User Navigation */}
+                {/* Dashboard */}
+                <NavItem to="/dashboard" label="Dashboard" />
 
-            {/* Account Management */}
-            <NavSection title="Account Management" section="accountManagement">
-              <NavItem to="/subscription" label="Subscription & Billing" />
-            </NavSection>
+                <div className="my-3 border-t border-white/20" />
 
-            {/* Role Management */}
-            <NavSection title="Role Management" section="roleManagement">
-              <NavItem to="/settings/users" label="Users" permission="user_management" />
-              <NavItem to="/settings/roles" label="Roles" permission="role_management" />
-              <NavItem to="/settings/groups" label="Groups" permission="group_management" />
-              <NavItem to="/activity-logs" label="Audit Logs" />
-            </NavSection>
+                {/* Lead Management */}
+                <NavSection title="Lead Management" section="leadManagement">
+                  <NavItem to="/data-center" label="Customers" />
+                  <NavItem to="/leads" label="Leads" permission="lead_management" />
+                  <NavItem to="/contacts" label="Contacts" permission="contact_management" />
+                  <NavItem to="/accounts" label="Accounts" permission="account_management" />
+                  <NavItem to="/opportunities" label="Opportunities" permission="opportunity_management" />
+                </NavSection>
 
-            {/* Support */}
-            <NavSection title="Support" section="support">
-              {isSaasOwner() ? (
-                <NavItem to="/support-admin" label="Support Dashboard" />
-              ) : (
-                <NavItem to="/support" label="My Tickets" />
-              )}
-            </NavSection>
+                {/* Sales & Finance */}
+                <NavSection title="Sales & Finance" section="salesFinance">
+                  <NavItem to="/rfi" label="RFI" />
+                  <NavItem to="/quotations" label="Quotations" />
+                  <NavItem to="/purchase-orders" label="Purchase Orders" />
+                  <NavItem to="/invoices" label="Invoices" />
+                </NavSection>
 
-            {/* Customization */}
-            <NavSection title="Customization" section="customization">
-              <NavItem to="/admin/field-builder" label="Field Builder" permission="field_management" />
-            </NavSection>
+                {/* Task Management */}
+                <NavSection title="Task Management" section="taskManagement">
+                  <NavItem to="/tasks" label="Tasks" />
+                  <NavItem to="/meetings" label="Meetings" />
+                  <NavItem to="/calls" label="Calls" />
+                  <NavItem to="/emails" label="Email Inbox" />
+                </NavSection>
+
+                {/* Product */}
+                <NavSection title="Product" section="product">
+                  <NavItem to="/products-management" label="Product" permission="product_management" />
+                  <NavItem to="/products" label="Product Marketplace" />
+                </NavSection>
+
+                {/* Account Management */}
+                <NavSection title="Account Management" section="accountManagement">
+                  <NavItem to="/subscription" label="Subscription & Billing" />
+                </NavSection>
+
+                {/* Role Management */}
+                <NavSection title="Role Management" section="roleManagement">
+                  <NavItem to="/settings/users" label="Users" permission="user_management" />
+                  <NavItem to="/settings/roles" label="Roles" permission="role_management" />
+                  <NavItem to="/settings/groups" label="Groups" permission="group_management" />
+                  <NavItem to="/activity-logs" label="Audit Logs" />
+                </NavSection>
+
+                {/* Support */}
+                <NavSection title="Support" section="support">
+                  <NavItem to="/support" label="My Tickets" />
+                </NavSection>
+
+                {/* Customization */}
+                <NavSection title="Customization" section="customization">
+                  <NavItem to="/admin/field-builder" label="Field Builder" permission="field_management" />
+                </NavSection>
+              </>
+            )}
           </nav>
         </ScrollArea>
 
         {/* Footer */}
         <div className="p-4 border-t border-white/20 text-center">
-          <p className="text-xs text-white/70">© 2024 CRM Platform</p>
+          <p className="text-xs text-white/70">© 2026 Unified crm</p>
           <p className="text-xs text-white/70 mt-1">Version 1.0.0</p>
         </div>
       </div>

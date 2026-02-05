@@ -41,9 +41,9 @@ const getTenants = async (req, res) => {
 
     // Get tenants with pagination
     const tenants = await Tenant.find(query)
-      .populate('subscription')
-      .limit(limit * 1)
-      .skip((page - 1) * limit)
+      .populate('reseller', 'firstName lastName email')
+      .limit(parseInt(limit))
+      .skip((parseInt(page) - 1) * parseInt(limit))
       .sort({ createdAt: -1 });
 
     // Get user count for each tenant
@@ -63,7 +63,7 @@ const getTenants = async (req, res) => {
         total,
         page: parseInt(page),
         limit: parseInt(limit),
-        pages: Math.ceil(total / limit)
+        pages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (error) {
@@ -80,8 +80,7 @@ const getTenants = async (req, res) => {
 const getTenant = async (req, res) => {
   try {
     const tenant = await Tenant.findById(req.params.id)
-      .populate('subscription')
-      .populate('enabledFeatures');
+      .populate('reseller', 'firstName lastName email');
 
     if (!tenant) {
       return errorResponse(res, 404, 'Tenant not found');
