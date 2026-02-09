@@ -41,6 +41,7 @@ import Groups from './pages/Groups';
 
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
+import SaasAdmins from './pages/SaasAdmins';
 
 import Billings from './pages/Billings';
 
@@ -94,6 +95,9 @@ import ContactDetail from './pages/ContactDetail';
 
 // Common components
 import Loading from './components/common/Loading';
+
+// AI Components
+import AIChatWidget from './components/ai/AIChatWidget';
 
 // Protected route wrapper
 const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false, skipProfileCheck = false }) => {
@@ -469,6 +473,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/saas/admins" element={
+        <ProtectedRoute requireSaas>
+          <SaasAdmins />
+        </ProtectedRoute>
+      } />
+
       {/* Default redirect */}
       <Route path="/" element={
         user ? (
@@ -488,6 +498,18 @@ function AppRoutes() {
   );
 }
 
+// AI Chat Wrapper - only show for logged in tenant users
+const AIChat = () => {
+  const { user } = useAuth();
+
+  // Show AI chat for logged in users (except SAAS owners)
+  if (!user || user.userType === 'SAAS_OWNER' || user.userType === 'SAAS_ADMIN') {
+    return null;
+  }
+
+  return <AIChatWidget />;
+};
+
 function App() {
   return (
     <Router>
@@ -495,6 +517,7 @@ function App() {
         <ThemeProvider>
           <div className="App">
             <AppRoutes />
+            <AIChat />
           </div>
         </ThemeProvider>
       </AuthProvider>

@@ -896,8 +896,26 @@ const completeProfile = async (req, res) => {
  */
 const googleOAuthInitiate = (req, res, next) => {
   const passport = require('../config/passport');
+
+  // Capture the origin from referer or query param for dynamic redirect
+  const referer = req.get('referer') || req.get('origin');
+  let origin = req.query.origin || (referer ? new URL(referer).origin : null);
+
+  // Allowed frontend URLs (comma-separated in env)
+  const allowedOrigins = (process.env.ALLOWED_FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:3001')
+    .split(',')
+    .map(url => url.trim());
+
+  // Validate origin against allowed list, default to first allowed if invalid
+  if (!origin || !allowedOrigins.includes(origin)) {
+    origin = allowedOrigins[0];
+  }
+
+  console.log('🔐 Google OAuth initiated from origin:', origin);
+
   passport.authenticate('google', {
-    scope: ['profile', 'email']
+    scope: ['profile', 'email'],
+    state: Buffer.from(JSON.stringify({ origin })).toString('base64')
   })(req, res, next);
 };
 
@@ -907,7 +925,31 @@ const googleOAuthInitiate = (req, res, next) => {
  * @access  Public
  */
 const googleOAuthCallback = async (req, res) => {
+  // Extract origin from state parameter for dynamic redirect
+  let frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
+
   try {
+    // Parse state to get origin
+    if (req.query.state) {
+      try {
+        const state = JSON.parse(Buffer.from(req.query.state, 'base64').toString());
+        if (state.origin) {
+          // Validate origin against allowed list
+          const allowedOrigins = (process.env.ALLOWED_FRONTEND_URLS || process.env.FRONTEND_URL || 'http://localhost:3001')
+            .split(',')
+            .map(url => url.trim());
+
+          if (allowedOrigins.includes(state.origin)) {
+            frontendURL = state.origin;
+          }
+        }
+      } catch (e) {
+        console.log('⚠️ Could not parse OAuth state, using default URL');
+      }
+    }
+
+    console.log('🔐 Google OAuth callback, redirecting to:', frontendURL);
+
     const profile = req.user;
 
     console.log('🔐 Google OAuth callback:', profile.email);
@@ -950,7 +992,6 @@ const googleOAuthCallback = async (req, res) => {
       console.log('✅ New Google user created:', newUser.email);
 
       // Redirect to frontend with token and profile completion flag
-      const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
       return res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=true`);
     }
 
@@ -966,14 +1007,11 @@ const googleOAuthCallback = async (req, res) => {
     // Generate token with fully populated user
     const token = generateToken(existingUser);
 
-    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
-
     console.log('✅ Google OAuth successful for existing user:', existingUser.email);
 
     res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=${!existingUser.isProfileComplete}`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
-    const frontendURL = process.env.FRONTEND_URL || 'http://localhost:3001';
     res.redirect(`${frontendURL}/login?error=oauth_failed`);
   }
 };

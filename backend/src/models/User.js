@@ -77,6 +77,33 @@ const userSchema = new mongoose.Schema({
   saasRole: {
     type: String
   },
+  // Who added this SAAS_ADMIN (for tracking/audit)
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  // Viewing Credentials (for SAAS Admins to view sensitive tenant data)
+  viewingCredentialId: {
+    type: String,
+    default: null
+  },
+  viewingCredentialPassword: {
+    type: String,
+    default: null
+  },
+  isViewingCredentialSet: {
+    type: Boolean,
+    default: false
+  },
+  viewingCredentialOTP: {
+    type: String,
+    default: null
+  },
+  viewingCredentialOTPExpire: {
+    type: Date,
+    default: null
+  },
   // Email Verification (for signup)
   emailVerified: {
     type: Boolean,

@@ -5,8 +5,8 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
+    "predev": "lsof -ti:4000 | xargs kill -9 2>/dev/null || true",
     "dev": "nodemon src/server.js",
-    "restart": "pkill -f 'node src/server.js' || true && sleep 1 && node src/server.js",
     "kill-port": "lsof -ti:4000 | xargs kill -9 || true",
     "test": "echo \"Error: no test specified\" && exit 1",
     "seed": "node src/scripts/seedDatabase.js",
@@ -20,6 +20,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "axios": "^1.13.2",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
