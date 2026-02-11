@@ -201,38 +201,50 @@ const Tenants = () => {
   const getStatusVariant = (s) => ({ active: 'success', trial: 'warning', suspended: 'danger' }[s] || 'default');
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
 
+  // Table columns - only show basic info, sensitive data in right panel after verification
   const columns = [
-    {
-      header: 'Org ID',
-      render: (row) => (
-        <span style={{ background: '#fef3c7', color: '#92400e', padding: '3px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', fontFamily: 'monospace' }}>
-          {row.organizationId || 'N/A'}
-        </span>
-      )
-    },
     {
       header: 'Company',
       render: (row) => (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '11px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '13px' }}>
             {row.organizationName?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div>
-            <div style={{ fontWeight: '600', fontSize: '12px' }}>{row.organizationName || 'N/A'}</div>
-            <div style={{ fontSize: '10px', color: '#94a3b8' }}>{maskEmail(row.contactEmail)}</div>
+            <div style={{ fontWeight: '600', fontSize: '13px', color: '#1e293b' }}>{row.organizationName || 'N/A'}</div>
+            <div style={{ fontSize: '11px', color: '#94a3b8' }}>{maskEmail(row.contactEmail)}</div>
           </div>
         </div>
       )
     },
     {
-      header: 'Plan',
+      header: 'Created',
       align: 'center',
-      render: (row) => <Badge variant="info">{row.subscription?.planName || 'Free'}</Badge>
+      render: (row) => <span style={{ fontSize: '11px', color: '#64748b' }}>{formatDate(row.createdAt)}</span>
     },
     {
-      header: 'Status',
+      header: 'Action',
       align: 'center',
-      render: (row) => <Badge variant={getStatusVariant(row.subscription?.status)}>{row.subscription?.status || 'N/A'}</Badge>
+      render: (row) => (
+        <button
+          onClick={(e) => { e.stopPropagation(); handleTenantClick(row); }}
+          style={{
+            background: isVerified ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : '#e2e8f0',
+            color: isVerified ? '#fff' : '#64748b',
+            border: 'none',
+            padding: '6px 12px',
+            borderRadius: '6px',
+            fontSize: '10px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px'
+          }}
+        >
+          {isVerified ? '👁 View' : '🔒 Locked'}
+        </button>
+      )
     }
   ];
 
@@ -309,14 +321,43 @@ const Tenants = () => {
         {/* Right - Details (only if verified) */}
         {selectedTenant && isVerified && (
           <DetailPanel title="Tenant Details" onClose={() => setSelectedTenant(null)}>
+            {/* Header with Company Name */}
             <div style={styles.detailHeader}>
               <div style={styles.detailAvatar}>{selectedTenant.organizationName?.charAt(0)}</div>
-              <div>
+              <div style={{ flex: 1 }}>
                 <div style={styles.detailName}>{selectedTenant.organizationName}</div>
-                <div style={styles.detailId}>#{selectedTenant.organizationId}</div>
+                <Badge variant={getStatusVariant(selectedTenant.subscription?.status)} style={{ marginTop: '4px' }}>
+                  {selectedTenant.subscription?.status || 'N/A'}
+                </Badge>
               </div>
             </div>
 
+            {/* Org ID - Prominent Display */}
+            <div style={styles.orgIdBox}>
+              <div style={styles.orgIdLabel}>Organization ID</div>
+              <div style={styles.orgIdValue}>{selectedTenant.organizationId || 'N/A'}</div>
+            </div>
+
+            {/* Plan & Status Section */}
+            <div style={styles.section}>
+              <h4 style={styles.sectionTitle}>Subscription</h4>
+              <div style={styles.planBox}>
+                <div style={styles.planItem}>
+                  <span style={styles.planLabel}>Plan</span>
+                  <Badge variant="info">{selectedTenant.subscription?.planName || 'Free'}</Badge>
+                </div>
+                <div style={styles.planItem}>
+                  <span style={styles.planLabel}>Status</span>
+                  <Badge variant={getStatusVariant(selectedTenant.subscription?.status)}>
+                    {selectedTenant.subscription?.status || 'N/A'}
+                  </Badge>
+                </div>
+              </div>
+              <InfoRow label="Users" value={`${selectedTenant.userCount || 0} / ${selectedTenant.subscription?.maxUsers || '∞'}`} />
+              <InfoRow label="Expires" value={formatDate(selectedTenant.subscription?.endDate)} />
+            </div>
+
+            {/* Contact Info */}
             <div style={styles.section}>
               <h4 style={styles.sectionTitle}>Contact Info</h4>
               <InfoRow label="Email" value={selectedTenant.contactEmail} />
@@ -324,16 +365,9 @@ const Tenants = () => {
               <InfoRow label="Admin" value={selectedTenant.adminUser ? `${selectedTenant.adminUser.firstName} ${selectedTenant.adminUser.lastName}` : 'N/A'} />
             </div>
 
+            {/* Other Info */}
             <div style={styles.section}>
-              <h4 style={styles.sectionTitle}>Subscription</h4>
-              <InfoRow label="Plan" value={selectedTenant.subscription?.planName || 'Free'} />
-              <InfoRow label="Status" value={selectedTenant.subscription?.status || 'N/A'} />
-              <InfoRow label="Users" value={`${selectedTenant.userCount || 0} / ${selectedTenant.subscription?.maxUsers || '∞'}`} />
-              <InfoRow label="Expires" value={formatDate(selectedTenant.subscription?.endDate)} />
-            </div>
-
-            <div style={styles.section}>
-              <h4 style={styles.sectionTitle}>Info</h4>
+              <h4 style={styles.sectionTitle}>Other Info</h4>
               <InfoRow label="Created" value={formatDate(selectedTenant.createdAt)} />
               <InfoRow label="Slug" value={selectedTenant.slug || 'N/A'} />
             </div>
@@ -530,6 +564,49 @@ const styles = {
   detailId: {
     fontSize: '11px',
     color: '#64748b'
+  },
+  orgIdBox: {
+    background: '#fef3c7',
+    border: '1px solid #fbbf24',
+    borderRadius: '8px',
+    padding: '12px',
+    marginBottom: '16px',
+    textAlign: 'center'
+  },
+  orgIdLabel: {
+    fontSize: '10px',
+    fontWeight: '600',
+    color: '#92400e',
+    textTransform: 'uppercase',
+    marginBottom: '4px'
+  },
+  orgIdValue: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#78350f',
+    fontFamily: 'monospace',
+    letterSpacing: '1px'
+  },
+  planBox: {
+    display: 'flex',
+    gap: '12px',
+    marginBottom: '10px'
+  },
+  planItem: {
+    flex: 1,
+    background: '#f8fafc',
+    borderRadius: '6px',
+    padding: '10px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '4px'
+  },
+  planLabel: {
+    fontSize: '10px',
+    fontWeight: '500',
+    color: '#64748b',
+    textTransform: 'uppercase'
   },
   section: {
     marginBottom: '16px'
