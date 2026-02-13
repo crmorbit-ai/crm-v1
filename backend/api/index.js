@@ -308,6 +308,12 @@ try {
   app.use('/api/emails', require('../src/routes/emails'));
   console.log('  ✅ CRM routes loaded');
 
+  // SAAS Admin & AI Routes
+  app.use('/api/saas-admins', require('../src/routes/saasAdmins'));
+  app.use('/api/viewing-pin', require('../src/routes/viewingPin'));
+  app.use('/api/ai', require('../src/routes/ai'));
+  console.log('  ✅ SAAS Admin & AI routes loaded');
+
   console.log('✅ All routes loaded successfully');
 } catch (error) {
   console.error('❌ Error loading routes:', error);
