@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import PinVerification from '../components/common/PinVerification';
 import { leadService } from '../services/leadService';
 import { taskService } from '../services/taskService';
 import { noteService } from '../services/noteService';
@@ -63,6 +64,7 @@ import {
 
 const Leads = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, hasPermission } = useAuth();
   const [leads, setLeads] = useState([]);
   const [products, setProducts] = useState([]);
@@ -76,7 +78,7 @@ const Leads = () => {
   const [phoneVerification, setPhoneVerification] = useState({ status: 'pending', message: '', isValid: null });
 
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
-  const [filters, setFilters] = useState({ search: '', leadStatus: '', leadSource: '', rating: '', assignedGroup: '', unassigned: false });
+  const [filters, setFilters] = useState({ search: '', leadStatus: searchParams.get('status') || '', leadSource: '', rating: '', assignedGroup: '', unassigned: false });
 
   const [groups, setGroups] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState([]);
@@ -87,6 +89,11 @@ const Leads = () => {
   const [displayColumns, setDisplayColumns] = useState([]);
 
   const [stats, setStats] = useState({ total: 0, new: 0, qualified: 0, contacted: 0 });
+
+  // PIN Verification State
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pendingLeadId, setPendingLeadId] = useState(null);
 
   // Side Panel State
   const [selectedLeadId, setSelectedLeadId] = useState(null);
@@ -145,6 +152,14 @@ const Leads = () => {
     loadGroups();
   }, [pagination.page, filters]);
 
+  // Sync filter with URL params when navigating from another page
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && statusParam !== filters.leadStatus) {
+      setFilters(prev => ({ ...prev, leadStatus: statusParam }));
+    }
+  }, [searchParams]);
+
   const loadProducts = async () => {
     try {
       const response = await productItemService.getAllProducts({ isActive: 'true' }, 1, 1000);
@@ -174,6 +189,36 @@ const Leads = () => {
         setFieldDefinitions(createFields);
       }
     } catch (err) { console.error('Load field definitions error:', err); }
+  };
+
+  // Masking functions for sensitive data (when PIN not verified)
+  const maskEmail = (email) => {
+    if (!email || isPinVerified) return email;
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return '***@***.***';
+    return name[0] + '***@' + domain[0] + '***.' + domain.split('.').pop();
+  };
+
+  const maskPhone = (phone) => {
+    if (!phone || isPinVerified) return phone;
+    return phone.slice(0, 2) + '******' + phone.slice(-2);
+  };
+
+  const maskName = (name) => {
+    if (!name || isPinVerified) return name;
+    return name[0] + '***';
+  };
+
+  // Check if field should be masked
+  const sensitiveFields = ['email', 'phone', 'firstName', 'lastName', 'mobile', 'company'];
+
+  const getMaskedValue = (fieldName, value) => {
+    if (isPinVerified || !value) return value;
+    if (fieldName === 'email') return maskEmail(value);
+    if (fieldName === 'phone' || fieldName === 'mobile') return maskPhone(value);
+    if (fieldName === 'firstName' || fieldName === 'lastName') return maskName(value);
+    if (fieldName === 'company') return maskName(value);
+    return value;
   };
 
   const extractColumns = (leadsData) => {
@@ -423,10 +468,8 @@ const Leads = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
-  // Load lead details in side panel
-  const handleLeadClick = async (leadId) => {
-    if (selectedLeadId === leadId) return;
-
+  // Load lead details in side panel (after PIN verification)
+  const loadLeadDetails = async (leadId) => {
     setSelectedLeadId(leadId);
     setLoadingDetail(true);
     setDetailActiveTab('overview');
@@ -452,6 +495,31 @@ const Leads = () => {
       console.error('Error loading lead details:', err);
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  // Handle lead click - check PIN first
+  const handleLeadClick = (leadId) => {
+    if (selectedLeadId === leadId) return;
+
+    if (!isPinVerified) {
+      // Need PIN verification first
+      setPendingLeadId(leadId);
+      setShowPinModal(true);
+      return;
+    }
+
+    // Already verified, load directly
+    loadLeadDetails(leadId);
+  };
+
+  // Handle PIN verification success
+  const handlePinVerified = () => {
+    setIsPinVerified(true);
+    setShowPinModal(false);
+    if (pendingLeadId) {
+      loadLeadDetails(pendingLeadId);
+      setPendingLeadId(null);
     }
   };
 
@@ -761,6 +829,16 @@ const Leads = () => {
 
   return (
     <DashboardLayout title="Leads">
+      {/* PIN Verification Modal */}
+      <PinVerification
+        isOpen={showPinModal}
+        onClose={() => { setShowPinModal(false); setPendingLeadId(null); }}
+        onVerified={handlePinVerified}
+        resourceType="lead"
+        resourceId={pendingLeadId}
+        resourceName="Lead"
+      />
+
       {success && <Alert variant="success" className="mb-4"><AlertDescription>{success}</AlertDescription></Alert>}
       {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
 
@@ -773,30 +851,70 @@ const Leads = () => {
           overflow: 'auto'
         }}>
 
-      {/* Stats */}
+      {/* Stats - Clickable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => handleFilterChange('leadStatus', '')}
+          style={{
+            cursor: 'pointer',
+            border: filters.leadStatus === '' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+            background: filters.leadStatus === '' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+            boxShadow: filters.leadStatus === '' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
           <div className="stat-icon"><Target className="h-5 w-5" /></div>
           <div>
             <p className="stat-value">{stats.total}</p>
             <p className="stat-label">Total Leads</p>
           </div>
         </div>
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => handleFilterChange('leadStatus', 'New')}
+          style={{
+            cursor: 'pointer',
+            border: filters.leadStatus === 'New' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+            background: filters.leadStatus === 'New' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+            boxShadow: filters.leadStatus === 'New' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
           <div className="stat-icon" style={{background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'}}><Target className="h-5 w-5" /></div>
           <div>
             <p className="stat-value text-blue-600">{stats.new}</p>
             <p className="stat-label">New Leads</p>
           </div>
         </div>
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => handleFilterChange('leadStatus', 'Qualified')}
+          style={{
+            cursor: 'pointer',
+            border: filters.leadStatus === 'Qualified' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+            background: filters.leadStatus === 'Qualified' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+            boxShadow: filters.leadStatus === 'Qualified' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
           <div className="stat-icon" style={{background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)'}}><Target className="h-5 w-5" /></div>
           <div>
             <p className="stat-value text-green-600">{stats.qualified}</p>
             <p className="stat-label">Qualified</p>
           </div>
         </div>
-        <div className="stat-card">
+        <div
+          className="stat-card"
+          onClick={() => handleFilterChange('leadStatus', 'Contacted')}
+          style={{
+            cursor: 'pointer',
+            border: filters.leadStatus === 'Contacted' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+            background: filters.leadStatus === 'Contacted' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+            boxShadow: filters.leadStatus === 'Contacted' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+            transition: 'all 0.2s'
+          }}
+        >
           <div className="stat-icon" style={{background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)'}}><Target className="h-5 w-5" /></div>
           <div>
             <p className="stat-value text-purple-600">{stats.contacted}</p>
@@ -1103,8 +1221,8 @@ const Leads = () => {
                       {lead.firstName?.[0]}{lead.lastName?.[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-extrabold text-gray-800 text-lg truncate">{lead.firstName} {lead.lastName}</h3>
-                      <p className="text-sm text-gray-500 font-semibold truncate">{lead.jobTitle} {lead.company && `at ${lead.company}`}</p>
+                      <h3 className="font-extrabold text-gray-800 text-lg truncate">{getMaskedValue('firstName', lead.firstName)} {getMaskedValue('lastName', lead.lastName)}</h3>
+                      <p className="text-sm text-gray-500 font-semibold truncate">{lead.jobTitle} {lead.company && `at ${getMaskedValue('company', lead.company)}`}</p>
                     </div>
                     {canDeleteLead && (
                       <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDeleteLead(e, lead._id)}>
@@ -1117,8 +1235,8 @@ const Leads = () => {
                     {lead.rating && <Badge variant="outline">{lead.rating}</Badge>}
                   </div>
                   <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-500" /><span className="truncate">{lead.email}</span></div>
-                    {lead.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-green-500" /><span>{lead.phone}</span></div>}
+                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-500" /><span className="truncate">{getMaskedValue('email', lead.email)}</span></div>
+                    {lead.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-green-500" /><span>{getMaskedValue('phone', lead.phone)}</span></div>}
                     {lead.leadSource && <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-purple-500" /><span>{lead.leadSource}</span></div>}
                   </div>
                 </div>
@@ -1160,7 +1278,12 @@ const Leads = () => {
                         {column === 'leadStatus' ? (
                           <Badge variant={getStatusBadgeVariant(lead.leadStatus)}>{lead.leadStatus || 'New'}</Badge>
                         ) : (
-                          <span className="truncate max-w-[200px] block">{formatFieldValue(getFieldValue(lead, column))}</span>
+                          <span className="truncate max-w-[200px] block">
+                            {sensitiveFields.includes(column)
+                              ? getMaskedValue(column, getFieldValue(lead, column)) || '-'
+                              : formatFieldValue(getFieldValue(lead, column))
+                            }
+                          </span>
                         )}
                       </TableCell>
                     ))}

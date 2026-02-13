@@ -1,27 +1,43 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { subscriptionService } from '../services/subscriptionService';
 import SaasLayout, { StatCard, Card, Badge, Button, Table, Select, DetailPanel, InfoRow, useWindowSize } from '../components/layout/SaasLayout';
 
 const SaasSubscriptions = () => {
-  const [subscriptions, setSubscriptions] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [allSubscriptions, setAllSubscriptions] = useState([]);
   const [revenue, setRevenue] = useState({ total: 0, monthlyRecurring: 0 });
   const [loading, setLoading] = useState(true);
-  const [filters, setFilters] = useState({ status: '', plan: '', page: 1 });
-  const [pagination, setPagination] = useState(null);
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
+  const [filterPlan, setFilterPlan] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const [selectedTenant, setSelectedTenant] = useState(null);
   const { isMobile } = useWindowSize();
 
   useEffect(() => {
     loadSubscriptions();
-  }, [filters]);
+  }, []);
+
+  // Sync filter with URL params when navigating from another page
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && statusParam !== filterStatus) {
+      setFilterStatus(statusParam);
+    }
+  }, [searchParams]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, filterPlan]);
 
   const loadSubscriptions = async () => {
     try {
       setLoading(true);
-      const response = await subscriptionService.getAllSubscriptions(filters);
+      const response = await subscriptionService.getAllSubscriptions({ page: 1, limit: 1000 });
       if (response.success) {
-        setSubscriptions(response.data.subscriptions);
-        setPagination(response.data.pagination);
+        setAllSubscriptions(response.data.subscriptions || []);
         setRevenue(response.data.revenue);
       }
     } catch (error) {
@@ -31,12 +47,13 @@ const SaasSubscriptions = () => {
     }
   };
 
-  const handleFilterChange = (key, value) => {
-    setFilters(prev => ({ ...prev, [key]: value, page: 1 }));
-  };
-
-  const handlePageChange = (newPage) => {
-    setFilters(prev => ({ ...prev, page: newPage }));
+  const handleStatusFilter = (status) => {
+    setFilterStatus(status);
+    if (status !== 'all') {
+      setSearchParams({ status });
+    } else {
+      setSearchParams({});
+    }
   };
 
   const handleUpdateSubscription = async (updates) => {
@@ -65,11 +82,27 @@ const SaasSubscriptions = () => {
     return new Date(date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
   };
 
-  // Calculate stats
+  // Calculate stats from all subscriptions
   const stats = {
-    active: subscriptions.filter(s => s.subscription?.status === 'active').length,
-    trial: subscriptions.filter(s => s.subscription?.status === 'trial').length
+    total: allSubscriptions.length,
+    active: allSubscriptions.filter(s => s.subscription?.status === 'active').length,
+    trial: allSubscriptions.filter(s => s.subscription?.status === 'trial').length,
+    expired: allSubscriptions.filter(s => s.subscription?.status === 'expired').length,
+    suspended: allSubscriptions.filter(s => s.subscription?.status === 'suspended' || s.isSuspended).length
   };
+
+  // Filter subscriptions based on status and plan
+  const filteredSubscriptions = allSubscriptions.filter(s => {
+    const status = s.isSuspended ? 'suspended' : (s.subscription?.status || 'trial');
+    const matchesStatus = filterStatus === 'all' || status === filterStatus;
+    const matchesPlan = !filterPlan || s.subscription?.planName === filterPlan;
+    return matchesStatus && matchesPlan;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSubscriptions.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedSubscriptions = filteredSubscriptions.slice(startIndex, startIndex + pageSize);
 
   // Responsive columns
   const columns = isMobile ? [
@@ -159,10 +192,10 @@ const SaasSubscriptions = () => {
     <SaasLayout title="Subscription Management">
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: `repeat(${statsColumns}, 1fr)`, gap: '12px', marginBottom: '16px' }}>
-        <StatCard icon="💰" value={`₹${(revenue.total || 0).toLocaleString()}`} label="Total Revenue" />
-        <StatCard icon="🔄" value={`₹${(revenue.monthlyRecurring || 0).toLocaleString()}`} label="Monthly Recurring" />
-        <StatCard icon="✅" value={stats.active} label="Active Subscriptions" />
-        <StatCard icon="⏳" value={stats.trial} label="On Trial" />
+        <StatCard icon="📊" value={stats.total} label="Total" onClick={() => handleStatusFilter('all')} active={filterStatus === 'all'} />
+        <StatCard icon="✅" value={stats.active} label="Active" onClick={() => handleStatusFilter('active')} active={filterStatus === 'active'} />
+        <StatCard icon="⏳" value={stats.trial} label="Trial" onClick={() => handleStatusFilter('trial')} active={filterStatus === 'trial'} />
+        <StatCard icon="🚫" value={stats.suspended} label="Suspended" onClick={() => handleStatusFilter('suspended')} active={filterStatus === 'suspended'} />
       </div>
 
       {/* Main Content - Split View */}
@@ -183,10 +216,10 @@ const SaasSubscriptions = () => {
             <div style={{ display: 'flex', gap: '12px', alignItems: 'end', flexWrap: 'wrap' }}>
               <Select
                 label="Status"
-                value={filters.status}
-                onChange={(e) => handleFilterChange('status', e.target.value)}
+                value={filterStatus}
+                onChange={(e) => handleStatusFilter(e.target.value)}
                 options={[
-                  { value: '', label: 'All Status' },
+                  { value: 'all', label: 'All Status' },
                   { value: 'trial', label: 'Trial' },
                   { value: 'active', label: 'Active' },
                   { value: 'expired', label: 'Expired' },
@@ -196,8 +229,8 @@ const SaasSubscriptions = () => {
               />
               <Select
                 label="Plan"
-                value={filters.plan}
-                onChange={(e) => handleFilterChange('plan', e.target.value)}
+                value={filterPlan}
+                onChange={(e) => setFilterPlan(e.target.value)}
                 options={[
                   { value: '', label: 'All Plans' },
                   { value: 'Free', label: 'Free' },
@@ -210,8 +243,8 @@ const SaasSubscriptions = () => {
               {!isMobile && (
                 <>
                   <Button size="small" onClick={loadSubscriptions}>Refresh</Button>
-                  {(filters.status || filters.plan) && (
-                    <Button size="small" variant="ghost" onClick={() => setFilters({ status: '', plan: '', page: 1 })}>Clear</Button>
+                  {(filterStatus !== 'all' || filterPlan) && (
+                    <Button size="small" variant="ghost" onClick={() => { handleStatusFilter('all'); setFilterPlan(''); }}>Clear</Button>
                   )}
                 </>
               )}
@@ -219,8 +252,8 @@ const SaasSubscriptions = () => {
             {isMobile && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
                 <Button size="small" onClick={loadSubscriptions} style={{ flex: 1 }}>Refresh</Button>
-                {(filters.status || filters.plan) && (
-                  <Button size="small" variant="ghost" onClick={() => setFilters({ status: '', plan: '', page: 1 })} style={{ flex: 1 }}>Clear</Button>
+                {(filterStatus !== 'all' || filterPlan) && (
+                  <Button size="small" variant="ghost" onClick={() => { handleStatusFilter('all'); setFilterPlan(''); }} style={{ flex: 1 }}>Clear</Button>
                 )}
               </div>
             )}
@@ -228,14 +261,14 @@ const SaasSubscriptions = () => {
 
           {/* Table */}
           <Card
-            title={`Subscriptions (${pagination?.totalCount || subscriptions.length})`}
+            title={`Subscriptions (${filteredSubscriptions.length})`}
             noPadding
             style={{ flex: 1, marginTop: '12px', overflow: 'hidden' }}
           >
             <div style={{ height: isMobile ? 'auto' : '100%', maxHeight: isMobile ? '400px' : 'none', overflow: 'auto' }}>
               <Table
                 columns={columns}
-                data={subscriptions}
+                data={paginatedSubscriptions}
                 loading={loading}
                 emptyMessage="No subscriptions found"
                 onRowClick={setSelectedTenant}
@@ -245,39 +278,61 @@ const SaasSubscriptions = () => {
           </Card>
 
           {/* Pagination - Bottom */}
-          {pagination && pagination.totalPages > 1 && (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '12px',
-              marginTop: '12px',
-              padding: '12px',
-              background: '#fff',
-              borderRadius: '8px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)'
-            }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            marginTop: '12px',
+            padding: '12px',
+            background: '#fff',
+            borderRadius: '8px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            flexWrap: 'wrap',
+            gap: '10px'
+          }}>
+            <span style={{ fontSize: '12px', color: '#64748b' }}>
+              Showing {startIndex + 1}-{Math.min(startIndex + pageSize, filteredSubscriptions.length)} of {filteredSubscriptions.length}
+              {filterStatus !== 'all' && ` (${filterStatus})`}
+            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {filterStatus !== 'all' && (
+                <button
+                  onClick={() => handleStatusFilter('all')}
+                  style={{
+                    background: '#fee2e2',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    color: '#dc2626',
+                    fontWeight: '500'
+                  }}
+                >
+                  ✕ Clear Filter
+                </button>
+              )}
               <Button
                 size="small"
                 variant="secondary"
-                onClick={() => handlePageChange(filters.page - 1)}
-                disabled={filters.page === 1}
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
               >
-                Prev
+                ← Prev
               </Button>
-              <span style={{ fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
-                Page {filters.page} of {pagination.totalPages}
+              <span style={{ fontSize: '12px', color: '#1e293b', fontWeight: '600' }}>
+                Page {currentPage} of {totalPages || 1}
               </span>
               <Button
                 size="small"
                 variant="secondary"
-                onClick={() => handlePageChange(filters.page + 1)}
-                disabled={filters.page === pagination.totalPages}
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
               >
-                Next
+                Next →
               </Button>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Right Panel - Detail */}

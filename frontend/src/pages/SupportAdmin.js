@@ -116,17 +116,48 @@ const SupportAdmin = () => {
     open: stats.byStatus?.Open || 0,
     inProgress: stats.byStatus?.['In Progress'] || 0,
     resolved: stats.byStatus?.Resolved || 0,
+    waiting: stats.byStatus?.['Waiting for Customer'] || 0,
     total: stats.overall?.total || 0
+  };
+
+  // Handle status filter from stats click
+  const handleStatsFilter = (status) => {
+    setFilters(prev => ({ ...prev, status }));
+    setPagination(prev => ({ ...prev, page: 1 }));
   };
 
   return (
     <SaasLayout title="Support Dashboard">
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-        <StatCard icon="🔴" value={statCounts.open} label="Open Tickets" />
-        <StatCard icon="⚡" value={statCounts.inProgress} label="In Progress" />
-        <StatCard icon="✅" value={statCounts.resolved} label="Resolved" />
-        <StatCard icon="📊" value={statCounts.total} label="Total Tickets" />
+        <StatCard
+          icon="📊"
+          value={statCounts.total}
+          label="Total"
+          onClick={() => handleStatsFilter('')}
+          active={filters.status === ''}
+        />
+        <StatCard
+          icon="🔴"
+          value={statCounts.open}
+          label="Open"
+          onClick={() => handleStatsFilter('Open')}
+          active={filters.status === 'Open'}
+        />
+        <StatCard
+          icon="⚡"
+          value={statCounts.inProgress}
+          label="In Progress"
+          onClick={() => handleStatsFilter('In Progress')}
+          active={filters.status === 'In Progress'}
+        />
+        <StatCard
+          icon="✅"
+          value={statCounts.resolved}
+          label="Resolved"
+          onClick={() => handleStatsFilter('Resolved')}
+          active={filters.status === 'Resolved'}
+        />
       </div>
 
       {/* Main Content - Split View */}
@@ -174,6 +205,19 @@ const SupportAdmin = () => {
                 />
               </div>
               <Button size="small" onClick={loadTickets}>Refresh</Button>
+              {(filters.status || filters.priority || filters.search) && (
+                <Button
+                  size="small"
+                  variant="ghost"
+                  onClick={() => {
+                    setFilters({ status: '', priority: '', category: '', search: '' });
+                    setPagination(prev => ({ ...prev, page: 1 }));
+                  }}
+                  style={{ color: '#dc2626' }}
+                >
+                  ✕ Clear
+                </Button>
+              )}
             </div>
           </Card>
 

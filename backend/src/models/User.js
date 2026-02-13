@@ -153,6 +153,23 @@ const userSchema = new mongoose.Schema({
   resetPasswordOTPVerified: {
     type: Boolean,
     default: false
+  },
+  // Viewing PIN (for Tenant users to view leads/contacts/etc)
+  viewingPin: {
+    type: String,  // Hashed 4-6 digit PIN
+    default: null
+  },
+  isViewingPinSet: {
+    type: Boolean,
+    default: false
+  },
+  viewingPinOTP: {
+    type: String,
+    default: null
+  },
+  viewingPinOTPExpiry: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true

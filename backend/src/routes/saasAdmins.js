@@ -13,7 +13,13 @@ const {
   setViewingCredentials,
   verifyViewingCredentials,
   forgotViewingCredentials,
-  resetViewingCredentials
+  resetViewingCredentials,
+  getViewingPinStatus,
+  setViewingPin,
+  verifyViewingPin,
+  changeViewingPin,
+  forgotViewingPin,
+  resetViewingPin
 } = require('../controllers/saasAdminController');
 
 // All routes require SAAS access
@@ -40,6 +46,14 @@ router.post('/set-viewing-credentials', setViewingCredentials);
 router.post('/verify-viewing-credentials', verifyViewingCredentials);
 router.post('/forgot-viewing-credentials', forgotViewingCredentials);
 router.post('/reset-viewing-credentials', resetViewingCredentials);
+
+// Viewing PIN routes
+router.get('/viewing-pin/status', getViewingPinStatus);
+router.post('/viewing-pin/set', setViewingPin);
+router.post('/viewing-pin/verify', verifyViewingPin);
+router.post('/viewing-pin/change', changeViewingPin);
+router.post('/viewing-pin/forgot', forgotViewingPin);
+router.post('/viewing-pin/reset', resetViewingPin);
 
 // Routes only for Primary Owner
 router.get('/', requirePrimaryOwner, getAllSaasAdmins);

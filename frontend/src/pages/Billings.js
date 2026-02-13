@@ -96,10 +96,10 @@ const Billings = () => {
     <SaasLayout title="Billing Management">
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-        <StatCard icon="💰" value={`₹${stats.totalRevenue.toLocaleString()}`} label="Total Revenue" />
-        <StatCard icon="📅" value={`₹${stats.monthlyRevenue.toLocaleString()}`} label="Monthly Recurring" />
-        <StatCard icon="✅" value={stats.paidInvoices} label="Active Plans" />
-        <StatCard icon="⏳" value={stats.pendingPayments} label="Inactive/Trial" />
+        <StatCard icon="💰" value={`₹${stats.totalRevenue.toLocaleString()}`} label="Total Revenue" to="/saas/subscriptions" />
+        <StatCard icon="📅" value={`₹${stats.monthlyRevenue.toLocaleString()}`} label="Monthly Recurring" to="/saas/subscriptions" />
+        <StatCard icon="✅" value={stats.paidInvoices} label="Active Plans" to="/saas/subscriptions?status=active" />
+        <StatCard icon="⏳" value={stats.pendingPayments} label="Inactive/Trial" to="/saas/subscriptions?status=trial" />
       </div>
 
       {/* Main Content - Split View */}

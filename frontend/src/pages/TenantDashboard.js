@@ -40,37 +40,37 @@ const TenantDashboard = () => {
       <main className="dashboard-content">
         <div className="container">
           <div className="stats-grid">
-            <div className="stat-card">
+            <Link to="/users" className="stat-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
               <div className="stat-icon" style={{backgroundColor: '#e3f2fd'}}>👥</div>
               <div className="stat-info">
                 <h3 className="stat-value">--</h3>
                 <p className="stat-label">Total Users</p>
               </div>
-            </div>
+            </Link>
 
-            <div className="stat-card">
+            <Link to="/roles" className="stat-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
               <div className="stat-icon" style={{backgroundColor: '#f3e5f5'}}>🔐</div>
               <div className="stat-info">
                 <h3 className="stat-value">--</h3>
                 <p className="stat-label">Active Roles</p>
               </div>
-            </div>
+            </Link>
 
-            <div className="stat-card">
+            <Link to="/groups" className="stat-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
               <div className="stat-icon" style={{backgroundColor: '#e8f5e9'}}>👥</div>
               <div className="stat-info">
                 <h3 className="stat-value">--</h3>
                 <p className="stat-label">Groups</p>
               </div>
-            </div>
+            </Link>
 
-            <div className="stat-card">
+            <Link to="/subscription" className="stat-card" style={{ textDecoration: 'none', cursor: 'pointer' }}>
               <div className="stat-icon" style={{backgroundColor: '#fff3e0'}}>📊</div>
               <div className="stat-info">
                 <h3 className="stat-value">{user?.tenant?.planType || 'Free'}</h3>
                 <p className="stat-label">Current Plan</p>
               </div>
-            </div>
+            </Link>
           </div>
 
           <div className="card mt-20">

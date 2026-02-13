@@ -474,6 +474,11 @@ const updateLead = async (req, res) => {
       }
     }
 
+    // Handle empty string for product - convert to null
+    if (req.body.product === '' || req.body.product === 'null' || req.body.product === 'undefined') {
+      req.body.product = null;
+    }
+
     // Validate product if provided
     if (req.body.product) {
       const ProductItem = require('../models/ProductItem');
@@ -504,14 +509,14 @@ const updateLead = async (req, res) => {
       }
     }
 
-    // Fields to track
+    // Fields to track (product handled separately)
     const allowedFields = [
       'firstName', 'lastName', 'email', 'phone', 'mobilePhone', 'fax',
       'company', 'jobTitle', 'website', 'leadSource', 'leadStatus',
       'industry', 'numberOfEmployees', 'annualRevenue', 'rating',
       'emailOptOut', 'doNotCall', 'skypeId', 'secondaryEmail', 'twitter',
       'linkedIn', 'street', 'city', 'state', 'country', 'zipCode',
-      'flatHouseNo', 'latitude', 'longitude', 'description', 'tags', 'product'
+      'flatHouseNo', 'latitude', 'longitude', 'description', 'tags'
     ];
 
     // Track changes BEFORE updating
@@ -523,6 +528,11 @@ const updateLead = async (req, res) => {
         lead[field] = req.body[field];
       }
     });
+
+    // Handle product field separately (to avoid empty string ObjectId error)
+    if (req.body.product !== undefined) {
+      lead.product = req.body.product || null;
+    }
 
     // Handle product details update
     if (req.body.productDetails) {
@@ -548,13 +558,23 @@ const updateLead = async (req, res) => {
       lead.productDetails = undefined;
     }
 
+    // Handle empty string for owner - convert to null
+    if (req.body.owner === '' || req.body.owner === 'null' || req.body.owner === 'undefined') {
+      req.body.owner = null;
+    }
+
     // Handle owner separately
-    if (req.body.owner && req.body.owner !== lead.owner.toString()) {
-      changes.owner = {
-        old: lead.owner.toString(),
-        new: req.body.owner
-      };
-      lead.owner = req.body.owner;
+    if (req.body.owner !== undefined) {
+      const currentOwnerId = lead.owner ? lead.owner.toString() : null;
+      const newOwnerId = req.body.owner ? req.body.owner.toString() : null;
+
+      if (newOwnerId !== currentOwnerId) {
+        changes.owner = {
+          old: currentOwnerId,
+          new: newOwnerId
+        };
+        lead.owner = req.body.owner || null;
+      }
     }
 
     // Update custom fields if validated
@@ -581,7 +601,7 @@ const updateLead = async (req, res) => {
     }
 
     // Send email notification if owner changed
-    if (changes.owner) {
+    if (changes.owner && changes.owner.new) {
       try {
         const newOwner = await mongoose.model('User').findById(changes.owner.new);
         const updatedBy = await mongoose.model('User').findById(req.user._id);
@@ -614,7 +634,20 @@ const updateLead = async (req, res) => {
     successResponse(res, 200, 'Lead updated successfully', lead);
   } catch (error) {
     console.error('Update lead error:', error);
-    errorResponse(res, 500, 'Server error');
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return errorResponse(res, 400, `Validation failed: ${messages.join(', ')}`);
+    }
+
+    if (error.name === 'CastError') {
+      return errorResponse(res, 400, `Invalid ${error.path}: ${error.value}`);
+    }
+
+    errorResponse(res, 500, error.message || 'Server error');
   }
 };
 

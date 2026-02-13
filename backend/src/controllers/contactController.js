@@ -9,7 +9,7 @@ const { trackChanges, getRecordName } = require('../utils/changeTracker');
 
 const getContacts = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, account, title } = req.query;
+    const { page = 1, limit = 10, search, account, title, isPrimary, hasAccount } = req.query;
     let query = { isActive: true };
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') query.tenant = req.user.tenant;
     if (search) {
@@ -20,6 +20,8 @@ const getContacts = async (req, res) => {
     }
     if (account) query.account = account;
     if (title) query.title = { $regex: title, $options: 'i' };
+    if (isPrimary === 'true') query.isPrimary = true;
+    if (hasAccount === 'true') query.account = { $ne: null };
     const total = await Contact.countDocuments(query);
     const contacts = await Contact.find(query)
       .populate('account', 'accountName accountNumber')

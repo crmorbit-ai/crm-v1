@@ -1,34 +1,51 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { tenantService } from '../services/tenantService';
 import { API_URL } from '../config/api.config';
 import SaasLayout, { StatCard, Card, Badge, Button, Table, DetailPanel, InfoRow, useWindowSize } from '../components/layout/SaasLayout';
 
 const Tenants = () => {
-  const [tenants, setTenants] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState({ total: 0, active: 0, trial: 0, suspended: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
   const [selectedTenant, setSelectedTenant] = useState(null);
-  const [pagination, setPagination] = useState({ page: 1, limit: 10, total: 0, pages: 0 });
+  const [allTenants, setAllTenants] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const { isMobile } = useWindowSize();
 
-  // Credential states
-  const [isCredentialSet, setIsCredentialSet] = useState(false);
-  const [isVerified, setIsVerified] = useState(false);
-  const [showCredentialModal, setShowCredentialModal] = useState(false);
+  // PIN Verification States
+  const [isPinSet, setIsPinSet] = useState(false);
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
   const [showSetupModal, setShowSetupModal] = useState(false);
-  const [showForgotModal, setShowForgotModal] = useState(false);
-  const [credentialId, setCredentialId] = useState('');
-  const [credentialPassword, setCredentialPassword] = useState('');
-  const [newCredentialId, setNewCredentialId] = useState('');
-  const [newCredentialPassword, setNewCredentialPassword] = useState('');
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [showForgotPinModal, setShowForgotPinModal] = useState(false);
+  const [pin, setPin] = useState(['', '', '', '']);
+  const [newPin, setNewPin] = useState(['', '', '', '']);
+  const [confirmPin, setConfirmPin] = useState(['', '', '', '']);
+  const [currentPin, setCurrentPin] = useState(['', '', '', '']);
+  const [changeNewPin, setChangeNewPin] = useState(['', '', '', '']);
+  const [changeConfirmPin, setChangeConfirmPin] = useState(['', '', '', '']);
   const [forgotOtp, setForgotOtp] = useState('');
+  const [resetPin, setResetPin] = useState(['', '', '', '']);
+  const [resetConfirmPin, setResetConfirmPin] = useState(['', '', '', '']);
   const [forgotStep, setForgotStep] = useState(1);
-  const [credLoading, setCredLoading] = useState(false);
+  const [pinError, setPinError] = useState('');
+  const [pinLoading, setPinLoading] = useState(false);
   const [pendingTenant, setPendingTenant] = useState(null);
+  const pinRefs = useRef([]);
+  const newPinRefs = useRef([]);
+  const confirmPinRefs = useRef([]);
+  const currentPinRefs = useRef([]);
+  const changeNewPinRefs = useRef([]);
+  const changeConfirmPinRefs = useRef([]);
+  const resetPinRefs = useRef([]);
+  const resetConfirmPinRefs = useRef([]);
 
   const getAuthHeader = () => {
     const token = localStorage.getItem('token');
@@ -36,16 +53,41 @@ const Tenants = () => {
   };
 
   useEffect(() => {
-    checkCredentialStatus();
+    checkPinStatus();
     loadTenants();
     loadStats();
-  }, [pagination.page]);
+  }, []);
 
-  const checkCredentialStatus = async () => {
+  // Sync filter with URL params when navigating from another page
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && statusParam !== filterStatus) {
+      setFilterStatus(statusParam);
+    }
+  }, [searchParams]);
+
+  const checkPinStatus = async () => {
     try {
-      const res = await axios.get(`${API_URL}/saas-admins/me`, { headers: getAuthHeader() });
-      setIsCredentialSet(res.data?.data?.user?.isViewingCredentialSet || false);
+      const res = await axios.get(`${API_URL}/saas-admins/viewing-pin/status`, { headers: getAuthHeader() });
+      setIsPinSet(res.data?.data?.isPinSet || false);
     } catch (err) { console.error(err); }
+  };
+
+  // PIN input handlers
+  const handlePinChange = (index, value, pinArray, setPinArray, refs) => {
+    if (!/^\d*$/.test(value)) return;
+    const newPinArray = [...pinArray];
+    newPinArray[index] = value.slice(-1);
+    setPinArray(newPinArray);
+    if (value && index < 3) {
+      refs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePinKeyDown = (index, e, refs) => {
+    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+      refs.current[index - 1]?.focus();
+    }
   };
 
   const loadStats = async () => {
@@ -64,11 +106,9 @@ const Tenants = () => {
     try {
       setLoading(true);
       setError(null);
-      const data = await tenantService.getTenants({ page: pagination.page, limit: pagination.limit });
-      setTenants(data.tenants || data || []);
-      if (data.pagination) {
-        setPagination(prev => ({ ...prev, ...data.pagination, pages: data.pagination.pages || Math.ceil((data.pagination.total || 0) / prev.limit) }));
-      }
+      // Load all tenants for client-side filtering
+      const data = await tenantService.getTenants({ page: 1, limit: 1000 });
+      setAllTenants(data.tenants || data || []);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load tenants');
     } finally { setLoading(false); }
@@ -84,91 +124,168 @@ const Tenants = () => {
 
   // Handle tenant row click
   const handleTenantClick = (tenant) => {
-    if (!isCredentialSet) {
-      alert('Please set your viewing credentials first.');
+    if (!isPinSet) {
       setShowSetupModal(true);
       return;
     }
-    if (!isVerified) {
+    if (!isPinVerified) {
       setPendingTenant(tenant);
-      setShowCredentialModal(true);
+      setShowPinModal(true);
       return;
     }
     setSelectedTenant(tenant);
   };
 
-  // Verify viewing credentials
-  const handleVerifyCredentials = async () => {
+  // Verify PIN
+  const handleVerifyPin = async () => {
+    const pinValue = pin.join('');
+    if (pinValue.length < 4) {
+      setPinError('Enter your PIN');
+      return;
+    }
     try {
-      setCredLoading(true);
-      await axios.post(`${API_URL}/saas-admins/verify-viewing-credentials`,
-        { credentialId, credentialPassword },
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/saas-admins/viewing-pin/verify`,
+        { pin: pinValue },
         { headers: getAuthHeader() }
       );
-      setIsVerified(true);
-      setShowCredentialModal(false);
+      setIsPinVerified(true);
+      setShowPinModal(false);
       setSelectedTenant(pendingTenant);
       setPendingTenant(null);
-      setCredentialId('');
-      setCredentialPassword('');
+      setPin(['', '', '', '']);
     } catch (err) {
-      alert(err.response?.data?.message || 'Invalid credentials');
-    } finally { setCredLoading(false); }
+      setPinError(err.response?.data?.message || 'Invalid PIN');
+      setPin(['', '', '', '']);
+      pinRefs.current[0]?.focus();
+    } finally { setPinLoading(false); }
   };
 
-  // Set viewing credentials
-  const handleSetCredentials = async () => {
-    if (newCredentialId.length < 4) return alert('ID must be at least 4 characters');
-    if (newCredentialPassword.length < 6) return alert('Password must be at least 6 characters');
+  // Set PIN
+  const handleSetPin = async () => {
+    const pinValue = newPin.join('');
+    const confirmValue = confirmPin.join('');
+
+    if (pinValue.length < 4) {
+      setPinError('PIN must be at least 4 digits');
+      return;
+    }
+    if (pinValue !== confirmValue) {
+      setPinError('PINs do not match');
+      return;
+    }
     try {
-      setCredLoading(true);
-      await axios.post(`${API_URL}/saas-admins/set-viewing-credentials`,
-        { credentialId: newCredentialId, credentialPassword: newCredentialPassword },
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/saas-admins/viewing-pin/set`,
+        { pin: pinValue },
         { headers: getAuthHeader() }
       );
-      setIsCredentialSet(true);
+      setIsPinSet(true);
       setShowSetupModal(false);
-      setNewCredentialId('');
-      setNewCredentialPassword('');
-      alert('Viewing credentials set successfully!');
+      setNewPin(['', '', '', '']);
+      setConfirmPin(['', '', '', '']);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to set credentials');
-    } finally { setCredLoading(false); }
+      setPinError(err.response?.data?.message || 'Failed to set PIN');
+    } finally { setPinLoading(false); }
   };
 
-  // Forgot credentials - send OTP
+  // Change PIN
+  const handleChangePin = async () => {
+    const currentValue = currentPin.join('');
+    const newValue = changeNewPin.join('');
+    const confirmValue = changeConfirmPin.join('');
+
+    if (isPinSet && currentValue.length < 4) {
+      setPinError('Enter current PIN');
+      return;
+    }
+    if (newValue.length < 4) {
+      setPinError('New PIN must be at least 4 digits');
+      return;
+    }
+    if (newValue !== confirmValue) {
+      setPinError('PINs do not match');
+      return;
+    }
+    try {
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/saas-admins/viewing-pin/change`,
+        { currentPin: currentValue, newPin: newValue },
+        { headers: getAuthHeader() }
+      );
+      alert('PIN changed successfully!');
+      closeAllPinModals();
+      setIsPinSet(true);
+    } catch (err) {
+      setPinError(err.response?.data?.message || 'Failed to change PIN');
+    } finally { setPinLoading(false); }
+  };
+
+  // Forgot PIN - Send OTP
   const handleForgotSendOtp = async () => {
     try {
-      setCredLoading(true);
-      await axios.post(`${API_URL}/saas-admins/forgot-viewing-credentials`, {}, { headers: getAuthHeader() });
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/saas-admins/viewing-pin/forgot`, {}, { headers: getAuthHeader() });
       setForgotStep(2);
       alert('OTP sent to your email!');
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to send OTP');
-    } finally { setCredLoading(false); }
+      setPinError(err.response?.data?.message || 'Failed to send OTP');
+    } finally { setPinLoading(false); }
   };
 
-  // Reset credentials with OTP
-  const handleResetCredentials = async () => {
-    if (newCredentialId.length < 4 || newCredentialPassword.length < 6) {
-      return alert('ID min 4 chars, Password min 6 chars');
+  // Reset PIN with OTP
+  const handleResetPin = async () => {
+    const newValue = resetPin.join('');
+    const confirmValue = resetConfirmPin.join('');
+
+    if (!forgotOtp || forgotOtp.length < 6) {
+      setPinError('Enter valid OTP');
+      return;
+    }
+    if (newValue.length < 4) {
+      setPinError('New PIN must be at least 4 digits');
+      return;
+    }
+    if (newValue !== confirmValue) {
+      setPinError('PINs do not match');
+      return;
     }
     try {
-      setCredLoading(true);
-      await axios.post(`${API_URL}/saas-admins/reset-viewing-credentials`,
-        { otp: forgotOtp, newCredentialId, newCredentialPassword },
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/saas-admins/viewing-pin/reset`,
+        { otp: forgotOtp, newPin: newValue },
         { headers: getAuthHeader() }
       );
-      setIsCredentialSet(true);
-      setShowForgotModal(false);
-      setForgotStep(1);
-      setForgotOtp('');
-      setNewCredentialId('');
-      setNewCredentialPassword('');
-      alert('Credentials reset successfully!');
+      alert('PIN reset successfully!');
+      closeAllPinModals();
+      setIsPinSet(true);
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to reset credentials');
-    } finally { setCredLoading(false); }
+      setPinError(err.response?.data?.message || 'Failed to reset PIN');
+    } finally { setPinLoading(false); }
+  };
+
+  // Close all PIN modals
+  const closeAllPinModals = () => {
+    setShowPinModal(false);
+    setShowSetupModal(false);
+    setShowChangePinModal(false);
+    setShowForgotPinModal(false);
+    setPin(['', '', '', '']);
+    setNewPin(['', '', '', '']);
+    setConfirmPin(['', '', '', '']);
+    setCurrentPin(['', '', '', '']);
+    setChangeNewPin(['', '', '', '']);
+    setChangeConfirmPin(['', '', '', '']);
+    setForgotOtp('');
+    setResetPin(['', '', '', '']);
+    setResetConfirmPin(['', '', '', '']);
+    setForgotStep(1);
+    setPinError('');
   };
 
   const handleSuspend = async (id) => {
@@ -191,12 +308,33 @@ const Tenants = () => {
     } catch (err) { alert(err.response?.data?.message || 'Failed'); }
   };
 
-  const filteredTenants = tenants.filter(t => {
-    const matchesSearch = t.organizationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+  // Get tenant status - check isSuspended first, then subscription.status
+  const getTenantStatus = (t) => {
+    if (t.isSuspended === true) return 'suspended';
+    return t.subscription?.status || 'trial';
+  };
+
+  // Filter tenants based on search and status
+  const filteredTenants = allTenants.filter(t => {
+    const matchesSearch = !searchTerm ||
+      t.organizationName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       t.organizationId?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || t.subscription?.status === filterStatus;
+
+    const status = getTenantStatus(t);
+    const matchesStatus = filterStatus === 'all' || status === filterStatus;
+
     return matchesSearch && matchesStatus;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredTenants.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedTenants = filteredTenants.slice(startIndex, startIndex + pageSize);
+
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchTerm]);
 
   const getStatusVariant = (s) => ({ active: 'success', trial: 'warning', suspended: 'danger' }[s] || 'default');
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
@@ -218,6 +356,14 @@ const Tenants = () => {
       )
     },
     {
+      header: 'Status',
+      align: 'center',
+      render: (row) => {
+        const status = getTenantStatus(row);
+        return <Badge variant={getStatusVariant(status)}>{status}</Badge>;
+      }
+    },
+    {
       header: 'Created',
       align: 'center',
       render: (row) => <span style={{ fontSize: '11px', color: '#64748b' }}>{formatDate(row.createdAt)}</span>
@@ -229,8 +375,8 @@ const Tenants = () => {
         <button
           onClick={(e) => { e.stopPropagation(); handleTenantClick(row); }}
           style={{
-            background: isVerified ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : '#e2e8f0',
-            color: isVerified ? '#fff' : '#64748b',
+            background: isPinVerified ? 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)' : '#e2e8f0',
+            color: isPinVerified ? '#fff' : '#64748b',
             border: 'none',
             padding: '6px 12px',
             borderRadius: '6px',
@@ -242,7 +388,7 @@ const Tenants = () => {
             gap: '4px'
           }}
         >
-          {isVerified ? '👁 View' : '🔒 Locked'}
+          {isPinVerified ? '👁 View' : '🔒 Locked'}
         </button>
       )
     }
@@ -250,26 +396,26 @@ const Tenants = () => {
 
   return (
     <SaasLayout title="Tenant Management">
-      {/* Credential Status Banner */}
+      {/* PIN Status Banner */}
       <div style={styles.credBanner}>
         <div style={styles.credInfo}>
-          <span style={{ fontWeight: '600' }}>Viewing Credentials:</span>
-          {isCredentialSet ? (
+          <span style={{ fontWeight: '600' }}>🔐 Viewing PIN:</span>
+          {isPinSet ? (
             <Badge variant="success">Set</Badge>
           ) : (
             <Badge variant="danger">Not Set</Badge>
           )}
-          {isVerified && <Badge variant="info">Verified</Badge>}
+          {isPinVerified && <Badge variant="info">Verified</Badge>}
         </div>
         <div style={styles.credActions}>
-          {!isCredentialSet ? (
-            <button onClick={() => setShowSetupModal(true)} style={styles.credBtn}>Set Credentials</button>
+          {!isPinSet ? (
+            <button onClick={() => setShowSetupModal(true)} style={styles.credBtn}>Set PIN</button>
           ) : (
             <>
-              <button onClick={() => { setIsVerified(false); setShowCredentialModal(true); setPendingTenant(null); }} style={styles.credBtn}>
-                {isVerified ? 'Re-verify' : 'Verify'}
+              <button onClick={() => { setIsPinVerified(false); setShowPinModal(true); setPendingTenant(null); }} style={styles.credBtn}>
+                {isPinVerified ? 'Re-verify' : 'Verify PIN'}
               </button>
-              <button onClick={() => { setShowForgotModal(true); setForgotStep(1); }} style={styles.credBtnOutline}>Forgot?</button>
+              <button onClick={() => { setPinError(''); setShowChangePinModal(true); }} style={styles.credBtnOutline}>Change PIN</button>
             </>
           )}
         </div>
@@ -277,10 +423,10 @@ const Tenants = () => {
 
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-        <StatCard icon="🏢" value={stats.total} label="Total" />
-        <StatCard icon="✅" value={stats.active} label="Active" />
-        <StatCard icon="⏳" value={stats.trial} label="Trial" />
-        <StatCard icon="🚫" value={stats.suspended} label="Suspended" />
+        <StatCard icon="🏢" value={stats.total} label="Total" onClick={() => setFilterStatus('all')} active={filterStatus === 'all'} />
+        <StatCard icon="✅" value={stats.active} label="Active" onClick={() => setFilterStatus('active')} active={filterStatus === 'active'} />
+        <StatCard icon="⏳" value={stats.trial} label="Trial" onClick={() => setFilterStatus('trial')} active={filterStatus === 'trial'} />
+        <StatCard icon="🚫" value={stats.suspended} label="Suspended" onClick={() => setFilterStatus('suspended')} active={filterStatus === 'suspended'} />
       </div>
 
       {/* Main Content */}
@@ -295,6 +441,11 @@ const Tenants = () => {
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 style={styles.searchInput}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck="false"
+                name="tenant-search-unique"
               />
               <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={styles.selectInput}>
                 <option value="all">All Status</option>
@@ -307,19 +458,92 @@ const Tenants = () => {
             {loading ? (
               <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Loading...</div>
             ) : (
-              <Table
-                columns={columns}
-                data={filteredTenants}
-                onRowClick={handleTenantClick}
-                selectedId={selectedTenant?._id}
-                emptyMessage="No tenants found"
-              />
+              <>
+                <Table
+                  columns={columns}
+                  data={paginatedTenants}
+                  onRowClick={handleTenantClick}
+                  selectedId={selectedTenant?._id}
+                  emptyMessage="No tenants found"
+                />
+                {/* Pagination */}
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '12px',
+                  borderTop: '1px solid #e2e8f0',
+                  fontSize: '12px',
+                  color: '#64748b',
+                  flexWrap: 'wrap',
+                  gap: '10px'
+                }}>
+                  <span>
+                    Showing {startIndex + 1}-{Math.min(startIndex + pageSize, filteredTenants.length)} of {filteredTenants.length} tenants
+                    {filterStatus !== 'all' && ` (${filterStatus})`}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {filterStatus !== 'all' && (
+                      <button
+                        onClick={() => setFilterStatus('all')}
+                        style={{
+                          background: '#fee2e2',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          color: '#dc2626',
+                          fontWeight: '500'
+                        }}
+                      >
+                        ✕ Clear Filter
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      style={{
+                        background: currentPage === 1 ? '#f1f5f9' : '#3b82f6',
+                        color: currentPage === 1 ? '#94a3b8' : '#fff',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                        fontSize: '11px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      ← Prev
+                    </button>
+                    <span style={{ fontWeight: '600', color: '#1e293b' }}>
+                      Page {currentPage} of {totalPages || 1}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage >= totalPages}
+                      style={{
+                        background: currentPage >= totalPages ? '#f1f5f9' : '#3b82f6',
+                        color: currentPage >= totalPages ? '#94a3b8' : '#fff',
+                        border: 'none',
+                        padding: '6px 12px',
+                        borderRadius: '4px',
+                        cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                        fontSize: '11px',
+                        fontWeight: '600'
+                      }}
+                    >
+                      Next →
+                    </button>
+                  </div>
+                </div>
+              </>
             )}
           </Card>
         </div>
 
         {/* Right - Details (only if verified) */}
-        {selectedTenant && isVerified && (
+        {selectedTenant && isPinVerified && (
           <DetailPanel title="Tenant Details" onClose={() => setSelectedTenant(null)}>
             {/* Header with Company Name */}
             <div style={styles.detailHeader}>
@@ -383,87 +607,269 @@ const Tenants = () => {
         )}
       </div>
 
-      {/* Verify Credentials Modal */}
-      {showCredentialModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowCredentialModal(false)}>
+      {/* Verify PIN Modal */}
+      {showPinModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowPinModal(false)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>Enter Viewing Credentials</h3>
-            <p style={styles.modalSubtitle}>Verify your credentials to view tenant details</p>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Credential ID</label>
-              <input type="text" value={credentialId} onChange={e => setCredentialId(e.target.value)} style={styles.input} />
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
+              <h3 style={styles.modalTitle}>Enter Viewing PIN</h3>
+              <p style={styles.modalSubtitle}>Enter your PIN to view tenant details</p>
             </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Password</label>
-              <input type="password" value={credentialPassword} onChange={e => setCredentialPassword(e.target.value)} style={styles.input} />
+            {pinError && <div style={styles.errorBox}>{pinError}</div>}
+            <div style={styles.pinInputs}>
+              {pin.map((digit, index) => (
+                <input
+                  key={index}
+                  ref={el => pinRefs.current[index] = el}
+                  type="password"
+                  value={digit}
+                  onChange={e => handlePinChange(index, e.target.value, pin, setPin, pinRefs)}
+                  onKeyDown={e => handlePinKeyDown(index, e, pinRefs)}
+                  style={styles.pinInput}
+                  maxLength={1}
+                  inputMode="numeric"
+                  autoFocus={index === 0}
+                  autoComplete="new-password"
+                  name={`pin-digit-${index}`}
+                />
+              ))}
             </div>
             <div style={styles.modalActions}>
-              <button onClick={() => setShowCredentialModal(false)} style={styles.cancelBtn}>Cancel</button>
-              <button onClick={handleVerifyCredentials} style={styles.submitBtn} disabled={credLoading}>
-                {credLoading ? 'Verifying...' : 'Verify'}
+              <button onClick={() => { setShowPinModal(false); setPin(['', '', '', '']); setPinError(''); }} style={styles.cancelBtn}>Cancel</button>
+              <button onClick={handleVerifyPin} style={styles.submitBtn} disabled={pinLoading}>
+                {pinLoading ? 'Verifying...' : 'Verify'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Setup Credentials Modal */}
+      {/* Setup PIN Modal */}
       {showSetupModal && (
         <div style={styles.modalOverlay} onClick={() => setShowSetupModal(false)}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>Set Viewing Credentials</h3>
-            <p style={styles.modalSubtitle}>Create credentials to access sensitive tenant data</p>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Create Credential ID (min 4 chars)</label>
-              <input type="text" value={newCredentialId} onChange={e => setNewCredentialId(e.target.value)} style={styles.input} placeholder="e.g., admin123" />
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔐</div>
+              <h3 style={styles.modalTitle}>Set Your Viewing PIN</h3>
+              <p style={styles.modalSubtitle}>Create a 4 digit PIN to securely access tenant data</p>
             </div>
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Create Password (min 6 chars)</label>
-              <input type="password" value={newCredentialPassword} onChange={e => setNewCredentialPassword(e.target.value)} style={styles.input} />
+            {pinError && <div style={styles.errorBox}>{pinError}</div>}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={styles.pinLabel}>Create PIN</label>
+              <div style={styles.pinInputs}>
+                {newPin.map((digit, index) => (
+                  <input
+                    key={`new-${index}`}
+                    ref={el => newPinRefs.current[index] = el}
+                    type="password"
+                    value={digit}
+                    onChange={e => handlePinChange(index, e.target.value, newPin, setNewPin, newPinRefs)}
+                    onKeyDown={e => handlePinKeyDown(index, e, newPinRefs)}
+                    style={styles.pinInput}
+                    maxLength={1}
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    name={`new-pin-${index}`}
+                  />
+                ))}
+              </div>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={styles.pinLabel}>Confirm PIN</label>
+              <div style={styles.pinInputs}>
+                {confirmPin.map((digit, index) => (
+                  <input
+                    key={`confirm-${index}`}
+                    ref={el => confirmPinRefs.current[index] = el}
+                    type="password"
+                    value={digit}
+                    onChange={e => handlePinChange(index, e.target.value, confirmPin, setConfirmPin, confirmPinRefs)}
+                    onKeyDown={e => handlePinKeyDown(index, e, confirmPinRefs)}
+                    style={styles.pinInput}
+                    maxLength={1}
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                    name={`confirm-pin-${index}`}
+                  />
+                ))}
+              </div>
             </div>
             <div style={styles.modalActions}>
-              <button onClick={() => setShowSetupModal(false)} style={styles.cancelBtn}>Cancel</button>
-              <button onClick={handleSetCredentials} style={styles.submitBtn} disabled={credLoading}>
-                {credLoading ? 'Setting...' : 'Set Credentials'}
+              <button onClick={() => { setShowSetupModal(false); setNewPin(['', '', '', '']); setConfirmPin(['', '', '', '']); setPinError(''); }} style={styles.cancelBtn}>Cancel</button>
+              <button onClick={handleSetPin} style={styles.submitBtn} disabled={pinLoading}>
+                {pinLoading ? 'Setting...' : 'Set PIN'}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Forgot Credentials Modal */}
-      {showForgotModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowForgotModal(false)}>
+      {/* Change PIN Modal */}
+      {showChangePinModal && (
+        <div style={styles.modalOverlay} onClick={closeAllPinModals}>
           <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <h3 style={styles.modalTitle}>Reset Viewing Credentials</h3>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔐</div>
+              <h3 style={styles.modalTitle}>Change Viewing PIN</h3>
+              <p style={styles.modalSubtitle}>Enter current PIN and set a new one</p>
+            </div>
+            {pinError && <div style={styles.errorBox}>{pinError}</div>}
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={styles.pinLabel}>Current PIN</label>
+              <div style={styles.pinInputs}>
+                {currentPin.map((digit, index) => (
+                  <input
+                    key={`current-${index}`}
+                    ref={el => currentPinRefs.current[index] = el}
+                    type="password"
+                    value={digit}
+                    onChange={e => handlePinChange(index, e.target.value, currentPin, setCurrentPin, currentPinRefs)}
+                    onKeyDown={e => handlePinKeyDown(index, e, currentPinRefs)}
+                    style={styles.pinInput}
+                    maxLength={1}
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={styles.pinLabel}>New PIN</label>
+              <div style={styles.pinInputs}>
+                {changeNewPin.map((digit, index) => (
+                  <input
+                    key={`changeNew-${index}`}
+                    ref={el => changeNewPinRefs.current[index] = el}
+                    type="password"
+                    value={digit}
+                    onChange={e => handlePinChange(index, e.target.value, changeNewPin, setChangeNewPin, changeNewPinRefs)}
+                    onKeyDown={e => handlePinKeyDown(index, e, changeNewPinRefs)}
+                    style={styles.pinInput}
+                    maxLength={1}
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '16px' }}>
+              <label style={styles.pinLabel}>Confirm New PIN</label>
+              <div style={styles.pinInputs}>
+                {changeConfirmPin.map((digit, index) => (
+                  <input
+                    key={`changeConfirm-${index}`}
+                    ref={el => changeConfirmPinRefs.current[index] = el}
+                    type="password"
+                    value={digit}
+                    onChange={e => handlePinChange(index, e.target.value, changeConfirmPin, setChangeConfirmPin, changeConfirmPinRefs)}
+                    onKeyDown={e => handlePinKeyDown(index, e, changeConfirmPinRefs)}
+                    style={styles.pinInput}
+                    maxLength={1}
+                    inputMode="numeric"
+                    autoComplete="new-password"
+                  />
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <button onClick={() => { closeAllPinModals(); setShowForgotPinModal(true); }} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '11px', cursor: 'pointer' }}>
+                Forgot PIN?
+              </button>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button onClick={closeAllPinModals} style={styles.cancelBtn}>Cancel</button>
+                <button onClick={handleChangePin} style={styles.submitBtn} disabled={pinLoading}>
+                  {pinLoading ? 'Changing...' : 'Change PIN'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Forgot PIN Modal */}
+      {showForgotPinModal && (
+        <div style={styles.modalOverlay} onClick={closeAllPinModals}>
+          <div style={styles.modal} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔓</div>
+              <h3 style={styles.modalTitle}>Reset Viewing PIN</h3>
+              <p style={styles.modalSubtitle}>
+                {forgotStep === 1 ? "We'll send an OTP to your email" : "Enter OTP and set new PIN"}
+              </p>
+            </div>
+            {pinError && <div style={styles.errorBox}>{pinError}</div>}
+
             {forgotStep === 1 ? (
-              <>
-                <p style={styles.modalSubtitle}>We'll send an OTP to your email to verify identity</p>
-                <div style={styles.modalActions}>
-                  <button onClick={() => setShowForgotModal(false)} style={styles.cancelBtn}>Cancel</button>
-                  <button onClick={handleForgotSendOtp} style={styles.submitBtn} disabled={credLoading}>
-                    {credLoading ? 'Sending...' : 'Send OTP'}
-                  </button>
-                </div>
-              </>
+              <div style={styles.modalActions}>
+                <button onClick={closeAllPinModals} style={styles.cancelBtn}>Cancel</button>
+                <button onClick={handleForgotSendOtp} style={styles.submitBtn} disabled={pinLoading}>
+                  {pinLoading ? 'Sending...' : 'Send OTP'}
+                </button>
+              </div>
             ) : (
               <>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>OTP (from email)</label>
-                  <input type="text" value={forgotOtp} onChange={e => setForgotOtp(e.target.value)} style={styles.input} maxLength={6} />
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={styles.pinLabel}>Enter OTP</label>
+                  <input
+                    type="text"
+                    value={forgotOtp}
+                    onChange={e => setForgotOtp(e.target.value)}
+                    maxLength={6}
+                    placeholder="6-digit OTP"
+                    style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '16px', textAlign: 'center', letterSpacing: '8px', boxSizing: 'border-box' }}
+                    autoComplete="off"
+                  />
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>New Credential ID</label>
-                  <input type="text" value={newCredentialId} onChange={e => setNewCredentialId(e.target.value)} style={styles.input} />
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={styles.pinLabel}>New PIN</label>
+                  <div style={styles.pinInputs}>
+                    {resetPin.map((digit, index) => (
+                      <input
+                        key={`reset-${index}`}
+                        ref={el => resetPinRefs.current[index] = el}
+                        type="password"
+                        value={digit}
+                        onChange={e => handlePinChange(index, e.target.value, resetPin, setResetPin, resetPinRefs)}
+                        onKeyDown={e => handlePinKeyDown(index, e, resetPinRefs)}
+                        style={styles.pinInput}
+                        maxLength={1}
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>New Password</label>
-                  <input type="password" value={newCredentialPassword} onChange={e => setNewCredentialPassword(e.target.value)} style={styles.input} />
+
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={styles.pinLabel}>Confirm New PIN</label>
+                  <div style={styles.pinInputs}>
+                    {resetConfirmPin.map((digit, index) => (
+                      <input
+                        key={`resetConfirm-${index}`}
+                        ref={el => resetConfirmPinRefs.current[index] = el}
+                        type="password"
+                        value={digit}
+                        onChange={e => handlePinChange(index, e.target.value, resetConfirmPin, setResetConfirmPin, resetConfirmPinRefs)}
+                        onKeyDown={e => handlePinKeyDown(index, e, resetConfirmPinRefs)}
+                        style={styles.pinInput}
+                        maxLength={1}
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                      />
+                    ))}
+                  </div>
                 </div>
+
                 <div style={styles.modalActions}>
                   <button onClick={() => setForgotStep(1)} style={styles.cancelBtn}>Back</button>
-                  <button onClick={handleResetCredentials} style={styles.submitBtn} disabled={credLoading}>
-                    {credLoading ? 'Resetting...' : 'Reset'}
+                  <button onClick={handleResetPin} style={styles.submitBtn} disabled={pinLoading}>
+                    {pinLoading ? 'Resetting...' : 'Reset PIN'}
                   </button>
                 </div>
               </>
@@ -697,6 +1103,41 @@ const styles = {
     fontSize: '12px',
     fontWeight: '600',
     cursor: 'pointer'
+  },
+  pinInputs: {
+    display: 'flex',
+    gap: '8px',
+    justifyContent: 'center',
+    marginBottom: '16px'
+  },
+  pinInput: {
+    width: '42px',
+    height: '48px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '10px',
+    fontSize: '20px',
+    fontWeight: '700',
+    textAlign: 'center',
+    outline: 'none',
+    transition: 'border-color 0.2s'
+  },
+  pinLabel: {
+    display: 'block',
+    fontSize: '11px',
+    fontWeight: '600',
+    color: '#64748b',
+    marginBottom: '8px',
+    textTransform: 'uppercase',
+    textAlign: 'center'
+  },
+  errorBox: {
+    background: '#fef2f2',
+    color: '#dc2626',
+    padding: '10px 14px',
+    borderRadius: '8px',
+    fontSize: '12px',
+    marginBottom: '16px',
+    textAlign: 'center'
   }
 };
 

@@ -182,32 +182,36 @@ const SaasLayout = ({ children, title }) => {
 export { useWindowSize };
 
 // Stat Card matching tenant dashboard (cyan-white gradient)
-export const StatCard = ({ icon, value, label }) => {
+export const StatCard = ({ icon, value, label, onClick, to, active }) => {
   const { isMobile } = useWindowSize();
 
-  return (
+  const cardContent = (
     <div style={{
-      background: 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+      background: active
+        ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)'
+        : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
       borderRadius: '8px',
       padding: isMobile ? '12px' : '14px 16px',
-      border: '1px solid #e2e8f0',
+      border: active ? '2px solid #14b8a6' : '1px solid #e2e8f0',
       display: 'flex',
       alignItems: 'center',
       gap: isMobile ? '10px' : '12px',
       transition: 'all 0.2s',
       cursor: 'pointer',
       position: 'relative',
-      overflow: 'hidden'
+      overflow: 'hidden',
+      boxShadow: active ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none'
     }}
+    onClick={onClick}
     onMouseEnter={(e) => {
       e.currentTarget.style.transform = 'translateY(-2px)';
       e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-      e.currentTarget.style.borderColor = '#3b82f6';
+      if (!active) e.currentTarget.style.borderColor = '#14b8a6';
     }}
     onMouseLeave={(e) => {
       e.currentTarget.style.transform = 'translateY(0)';
-      e.currentTarget.style.boxShadow = 'none';
-      e.currentTarget.style.borderColor = '#e2e8f0';
+      e.currentTarget.style.boxShadow = active ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none';
+      if (!active) e.currentTarget.style.borderColor = '#e2e8f0';
     }}
     >
       {/* Top accent bar */}
@@ -233,6 +237,11 @@ export const StatCard = ({ icon, value, label }) => {
       </div>
     </div>
   );
+
+  if (to) {
+    return <Link to={to} style={{ textDecoration: 'none' }}>{cardContent}</Link>;
+  }
+  return cardContent;
 };
 
 // Compact Card

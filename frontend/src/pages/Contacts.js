@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PinVerification from '../components/common/PinVerification';
 import { contactService } from '../services/contactService';
 import { accountService } from '../services/accountService';
 import { taskService } from '../services/taskService';
@@ -22,7 +23,7 @@ const Contacts = () => {
   const [viewMode, setViewMode] = useState('table');
 
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
-  const [filters, setFilters] = useState({ search: '', account: '', title: '' });
+  const [filters, setFilters] = useState({ search: '', account: '', title: '', isPrimary: '', hasAccount: '' });
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -35,6 +36,11 @@ const Contacts = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [stats, setStats] = useState({ total: 0, primary: 0, withAccount: 0, recent: 0 });
+
+  // PIN Verification State
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pendingContactId, setPendingContactId] = useState(null);
 
   // Split View Panel State
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -58,11 +64,29 @@ const Contacts = () => {
   const [detailTaskData, setDetailTaskData] = useState({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
   const [detailNoteData, setDetailNoteData] = useState({ title: '', content: '' });
 
+  // Masking functions for sensitive data (when PIN not verified)
+  const maskEmail = (email) => {
+    if (!email || isPinVerified) return email;
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return '***@***.***';
+    return name[0] + '***@' + domain[0] + '***.' + domain.split('.').pop();
+  };
+
+  const maskPhone = (phone) => {
+    if (!phone || isPinVerified) return phone;
+    return phone.slice(0, 2) + '******' + phone.slice(-2);
+  };
+
+  const maskName = (name) => {
+    if (!name || isPinVerified) return name;
+    return name[0] + '***';
+  };
+
   useEffect(() => {
     loadContacts();
     loadAccounts();
     loadCustomFields();
-  }, [pagination.page, filters.search, filters.account, filters.title]);
+  }, [pagination.page, filters.search, filters.account, filters.title, filters.isPrimary, filters.hasAccount]);
 
   const loadContacts = async () => {
     try {
@@ -163,9 +187,19 @@ const Contacts = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  const handleStatsFilter = (filterType) => {
+    if (filterType === 'all') {
+      setFilters(prev => ({ ...prev, isPrimary: '', hasAccount: '' }));
+    } else if (filterType === 'primary') {
+      setFilters(prev => ({ ...prev, isPrimary: 'true', hasAccount: '' }));
+    } else if (filterType === 'withAccount') {
+      setFilters(prev => ({ ...prev, isPrimary: '', hasAccount: 'true' }));
+    }
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
   // === Split View Functions ===
-  const handleContactClick = async (contactId) => {
-    if (selectedContactId === contactId) return;
+  const loadContactDetails = async (contactId) => {
     setSelectedContactId(contactId);
     setLoadingDetail(true);
     setDetailActiveTab('overview');
@@ -181,6 +215,28 @@ const Contacts = () => {
       }
     } catch (err) { console.error('Error loading contact details:', err); }
     finally { setLoadingDetail(false); }
+  };
+
+  // Handle contact click - check PIN first
+  const handleContactClick = (contactId) => {
+    if (selectedContactId === contactId) return;
+
+    if (!isPinVerified) {
+      setPendingContactId(contactId);
+      setShowPinModal(true);
+      return;
+    }
+    loadContactDetails(contactId);
+  };
+
+  // Handle PIN verification success
+  const handlePinVerified = () => {
+    setIsPinVerified(true);
+    setShowPinModal(false);
+    if (pendingContactId) {
+      loadContactDetails(pendingContactId);
+      setPendingContactId(null);
+    }
   };
 
   const loadDetailTasks = async (contactId) => {
@@ -301,6 +357,16 @@ const Contacts = () => {
 
   return (
     <DashboardLayout title="Contacts">
+      {/* PIN Verification Modal */}
+      <PinVerification
+        isOpen={showPinModal}
+        onClose={() => { setShowPinModal(false); setPendingContactId(null); }}
+        onVerified={handlePinVerified}
+        resourceType="contact"
+        resourceId={pendingContactId}
+        resourceName="Contact"
+      />
+
       {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
       {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
@@ -309,12 +375,54 @@ const Contacts = () => {
         {/* Left Side */}
         <div style={{ flex: selectedContactId ? '0 0 55%' : '1 1 100%', minWidth: 0, overflow: 'auto' }}>
 
-          {/* Statistics Cards */}
+          {/* Statistics Cards - Clickable */}
           <div className="stats-grid">
-            <div className="stat-card"><div className="stat-label">Total Contacts</div><div className="stat-value">{stats.total}</div></div>
-            <div className="stat-card"><div className="stat-label">Primary Contacts</div><div className="stat-value">{stats.primary}</div></div>
-            <div className="stat-card"><div className="stat-label">With Account</div><div className="stat-value">{stats.withAccount}</div></div>
-            <div className="stat-card"><div className="stat-label">This Page</div><div className="stat-value">{stats.recent}</div></div>
+            <div
+              className="stat-card"
+              onClick={() => handleStatsFilter('all')}
+              style={{
+                cursor: 'pointer',
+                border: filters.isPrimary === '' && filters.hasAccount === '' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+                background: filters.isPrimary === '' && filters.hasAccount === '' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                boxShadow: filters.isPrimary === '' && filters.hasAccount === '' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div className="stat-label">Total Contacts</div>
+              <div className="stat-value">{stats.total}</div>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => handleStatsFilter('primary')}
+              style={{
+                cursor: 'pointer',
+                border: filters.isPrimary === 'true' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+                background: filters.isPrimary === 'true' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                boxShadow: filters.isPrimary === 'true' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div className="stat-label">Primary Contacts</div>
+              <div className="stat-value">{stats.primary}</div>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => handleStatsFilter('withAccount')}
+              style={{
+                cursor: 'pointer',
+                border: filters.hasAccount === 'true' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+                background: filters.hasAccount === 'true' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                boxShadow: filters.hasAccount === 'true' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div className="stat-label">With Account</div>
+              <div className="stat-value">{stats.withAccount}</div>
+            </div>
+            <div className="stat-card">
+              <div className="stat-label">This Page</div>
+              <div className="stat-value">{stats.recent}</div>
+            </div>
           </div>
 
           {/* Filters */}
@@ -409,13 +517,13 @@ const Contacts = () => {
                             {contact.firstName?.[0]}{contact.lastName?.[0]}
                           </div>
                           <div>
-                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{contact.firstName} {contact.lastName}</h3>
+                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{maskName(contact.firstName)} {maskName(contact.lastName)}</h3>
                             <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{contact.title || 'No title'}</p>
                           </div>
                         </div>
                         {contact.isPrimary && <span style={{ display: 'inline-block', padding: '2px 8px', background: '#DCFCE7', color: '#166534', borderRadius: '4px', fontSize: '10px', fontWeight: '600', marginBottom: '8px' }}>Primary</span>}
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          <div>{contact.email}</div>
+                          <div>{maskEmail(contact.email)}</div>
                           {contact.account && <div style={{ marginTop: '4px' }}>{contact.account.accountName}</div>}
                         </div>
                       </div>
@@ -442,14 +550,14 @@ const Contacts = () => {
                                   {contact.firstName?.[0]}{contact.lastName?.[0]}
                                 </div>
                                 <div>
-                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{contact.firstName} {contact.lastName}{contact.isPrimary && ' ⭐'}</div>
+                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{maskName(contact.firstName)} {maskName(contact.lastName)}{contact.isPrimary && ' ⭐'}</div>
                                   <div style={{ fontSize: '12px', color: '#64748b' }}>{contact.title || '-'}</div>
                                 </div>
                               </div>
                             </td>
                             <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.account?.accountName || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.email}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.phone || contact.mobile || '-'}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{maskEmail(contact.email)}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{maskPhone(contact.phone || contact.mobile) || '-'}</td>
                           </tr>
                         ))}
                       </tbody>

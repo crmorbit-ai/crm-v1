@@ -11,6 +11,7 @@ const SaasAdmins = () => {
   const [panelMode, setPanelMode] = useState('add'); // 'add' or 'reset'
   const [selectedAdmin, setSelectedAdmin] = useState(null);
   const [isPrimary, setIsPrimary] = useState(false);
+  const [filterType, setFilterType] = useState('all'); // 'all', 'primary', 'secondary', 'active', 'inactive'
 
   // Form states
   const [formData, setFormData] = useState({
@@ -163,25 +164,61 @@ const SaasAdmins = () => {
 
           {/* Stats */}
           <div style={styles.statsGrid}>
-            <div style={styles.statCard}>
+            <div
+              style={{...styles.statCard, ...(filterType === 'all' ? styles.activeStatCard : {}), cursor: 'pointer'}}
+              onClick={() => setFilterType('all')}
+            >
               <span style={styles.statNum}>{admins.length}</span>
               <span style={styles.statLabel}>Total</span>
             </div>
-            <div style={styles.statCard}>
+            <div
+              style={{...styles.statCard, ...(filterType === 'primary' ? styles.activeStatCard : {}), cursor: 'pointer'}}
+              onClick={() => setFilterType('primary')}
+            >
               <span style={styles.statNum}>{admins.filter(a => a.isPrimary).length}</span>
               <span style={styles.statLabel}>Primary</span>
             </div>
-            <div style={styles.statCard}>
+            <div
+              style={{...styles.statCard, ...(filterType === 'secondary' ? styles.activeStatCard : {}), cursor: 'pointer'}}
+              onClick={() => setFilterType('secondary')}
+            >
               <span style={styles.statNum}>{admins.filter(a => !a.isPrimary).length}</span>
               <span style={styles.statLabel}>Secondary</span>
             </div>
-            <div style={styles.statCard}>
+            <div
+              style={{...styles.statCard, ...(filterType === 'active' ? styles.activeStatCard : {}), cursor: 'pointer'}}
+              onClick={() => setFilterType('active')}
+            >
               <span style={styles.statNum}>{admins.filter(a => a.isActive).length}</span>
               <span style={styles.statLabel}>Active</span>
             </div>
           </div>
 
           {error && <div style={styles.error}>{error}</div>}
+
+          {/* Filter indicator */}
+          {filterType !== 'all' && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <span style={{ fontSize: '12px', color: '#64748b' }}>
+                Showing: <strong style={{ color: '#1e293b', textTransform: 'capitalize' }}>{filterType}</strong>
+              </span>
+              <button
+                onClick={() => setFilterType('all')}
+                style={{
+                  background: '#fee2e2',
+                  border: 'none',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  color: '#dc2626',
+                  fontWeight: '500'
+                }}
+              >
+                ✕ Clear
+              </button>
+            </div>
+          )}
 
           {/* Table */}
           <div style={styles.tableCard}>
@@ -199,7 +236,16 @@ const SaasAdmins = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {admins.map(admin => (
+                  {admins
+                    .filter(admin => {
+                      if (filterType === 'all') return true;
+                      if (filterType === 'primary') return admin.isPrimary;
+                      if (filterType === 'secondary') return !admin.isPrimary;
+                      if (filterType === 'active') return admin.isActive;
+                      if (filterType === 'inactive') return !admin.isActive;
+                      return true;
+                    })
+                    .map(admin => (
                     <tr key={admin._id} style={styles.tr}>
                       <td style={styles.td}>
                         <div style={styles.adminCell}>
@@ -420,7 +466,13 @@ const styles = {
     border: '1px solid #e2e8f0',
     display: 'flex',
     flexDirection: 'column',
-    alignItems: 'center'
+    alignItems: 'center',
+    transition: 'all 0.2s'
+  },
+  activeStatCard: {
+    background: 'linear-gradient(135deg, rgb(120, 245, 240) 0%, rgb(200, 255, 252) 100%)',
+    border: '2px solid #14b8a6',
+    boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)'
   },
   statNum: {
     fontSize: '24px',

@@ -590,6 +590,208 @@ const resetViewingCredentials = async (req, res) => {
   }
 };
 
+// ===== VIEWING PIN APIs =====
+
+/**
+ * @desc    Get PIN status
+ * @route   GET /api/saas-admins/viewing-pin/status
+ * @access  SAAS_OWNER, SAAS_ADMIN
+ */
+const getViewingPinStatus = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    successResponse(res, 200, 'PIN status fetched', {
+      isPinSet: user.isViewingPinSet || false
+    });
+  } catch (error) {
+    console.error('Get PIN Status Error:', error);
+    errorResponse(res, 500, error.message);
+  }
+};
+
+/**
+ * @desc    Set viewing PIN
+ * @route   POST /api/saas-admins/viewing-pin/set
+ * @access  SAAS_OWNER, SAAS_ADMIN
+ */
+const setViewingPin = async (req, res) => {
+  try {
+    const { pin } = req.body;
+
+    if (!pin || pin.length !== 4) {
+      return errorResponse(res, 400, 'PIN must be 4 digits');
+    }
+
+    if (!/^\d+$/.test(pin)) {
+      return errorResponse(res, 400, 'PIN must contain only digits');
+    }
+
+    const user = await User.findById(req.user._id);
+    user.viewingPin = hashOTP(pin);
+    user.isViewingPinSet = true;
+    await user.save();
+
+    successResponse(res, 200, 'Viewing PIN set successfully');
+  } catch (error) {
+    console.error('Set Viewing PIN Error:', error);
+    errorResponse(res, 500, error.message);
+  }
+};
+
+/**
+ * @desc    Verify viewing PIN
+ * @route   POST /api/saas-admins/viewing-pin/verify
+ * @access  SAAS_OWNER, SAAS_ADMIN
+ */
+const verifyViewingPin = async (req, res) => {
+  try {
+    const { pin } = req.body;
+
+    if (!pin) {
+      return errorResponse(res, 400, 'PIN is required');
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user.isViewingPinSet) {
+      return errorResponse(res, 400, 'Viewing PIN not set. Please set it first.');
+    }
+
+    if (user.viewingPin !== hashOTP(pin)) {
+      return errorResponse(res, 401, 'Invalid PIN');
+    }
+
+    successResponse(res, 200, 'PIN verified', { verified: true });
+  } catch (error) {
+    console.error('Verify Viewing PIN Error:', error);
+    errorResponse(res, 500, error.message);
+  }
+};
+
+/**
+ * @desc    Change viewing PIN
+ * @route   POST /api/saas-admins/viewing-pin/change
+ * @access  SAAS_OWNER, SAAS_ADMIN
+ */
+const changeViewingPin = async (req, res) => {
+  try {
+    const { currentPin, newPin } = req.body;
+
+    if (!newPin || newPin.length !== 4) {
+      return errorResponse(res, 400, 'New PIN must be 4 digits');
+    }
+
+    if (!/^\d+$/.test(newPin)) {
+      return errorResponse(res, 400, 'PIN must contain only digits');
+    }
+
+    const user = await User.findById(req.user._id);
+
+    // If PIN already set, verify current PIN
+    if (user.isViewingPinSet && user.viewingPin) {
+      if (!currentPin) {
+        return errorResponse(res, 400, 'Current PIN is required');
+      }
+      if (user.viewingPin !== hashOTP(currentPin)) {
+        return errorResponse(res, 401, 'Current PIN is incorrect');
+      }
+    }
+
+    user.viewingPin = hashOTP(newPin);
+    user.isViewingPinSet = true;
+    await user.save();
+
+    successResponse(res, 200, 'Viewing PIN changed successfully');
+  } catch (error) {
+    console.error('Change Viewing PIN Error:', error);
+    errorResponse(res, 500, error.message);
+  }
+};
+
+/**
+ * @desc    Forgot viewing PIN - Send OTP
+ * @route   POST /api/saas-admins/viewing-pin/forgot
+ * @access  SAAS_OWNER, SAAS_ADMIN
+ */
+const forgotViewingPin = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id);
+    const otp = generateOTP();
+
+    user.viewingPinOTP = hashOTP(otp);
+    user.viewingPinOTPExpiry = new Date(Date.now() + 10 * 60 * 1000);
+    await user.save();
+
+    // Send OTP email
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      to: user.email,
+      subject: 'Reset Viewing PIN - OTP',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Reset Viewing PIN</h2>
+          <p>Hello ${user.firstName},</p>
+          <p>Your OTP to reset viewing PIN:</p>
+          <div style="background: #f5f5f5; padding: 30px; border-radius: 8px; margin: 20px 0; text-align: center;">
+            <h1 style="font-size: 40px; letter-spacing: 10px; color: #6366f1; margin: 0;">${otp}</h1>
+          </div>
+          <p>Valid for 10 minutes.</p>
+        </div>
+      `
+    });
+
+    successResponse(res, 200, 'OTP sent to your email');
+  } catch (error) {
+    console.error('Forgot Viewing PIN Error:', error);
+    errorResponse(res, 500, error.message);
+  }
+};
+
+/**
+ * @desc    Reset viewing PIN with OTP
+ * @route   POST /api/saas-admins/viewing-pin/reset
+ * @access  SAAS_OWNER, SAAS_ADMIN
+ */
+const resetViewingPin = async (req, res) => {
+  try {
+    const { otp, newPin } = req.body;
+
+    if (!otp || !newPin) {
+      return errorResponse(res, 400, 'OTP and new PIN are required');
+    }
+
+    if (newPin.length < 4 || newPin.length > 6 || !/^\d+$/.test(newPin)) {
+      return errorResponse(res, 400, 'New PIN must be 4 digits');
+    }
+
+    const user = await User.findById(req.user._id);
+
+    if (!user.viewingPinOTP || !user.viewingPinOTPExpiry) {
+      return errorResponse(res, 400, 'No OTP request found. Please request a new OTP.');
+    }
+
+    if (new Date() > user.viewingPinOTPExpiry) {
+      return errorResponse(res, 400, 'OTP has expired. Please request a new one.');
+    }
+
+    if (user.viewingPinOTP !== hashOTP(otp)) {
+      return errorResponse(res, 400, 'Invalid OTP');
+    }
+
+    user.viewingPin = hashOTP(newPin);
+    user.isViewingPinSet = true;
+    user.viewingPinOTP = null;
+    user.viewingPinOTPExpiry = null;
+    await user.save();
+
+    successResponse(res, 200, 'Viewing PIN reset successfully');
+  } catch (error) {
+    console.error('Reset Viewing PIN Error:', error);
+    errorResponse(res, 500, error.message);
+  }
+};
+
 module.exports = {
   getAllSaasAdmins,
   initiateSaasAdmin,
@@ -602,5 +804,11 @@ module.exports = {
   setViewingCredentials,
   verifyViewingCredentials,
   forgotViewingCredentials,
-  resetViewingCredentials
+  resetViewingCredentials,
+  getViewingPinStatus,
+  setViewingPin,
+  verifyViewingPin,
+  changeViewingPin,
+  forgotViewingPin,
+  resetViewingPin
 };

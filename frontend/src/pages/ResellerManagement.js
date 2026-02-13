@@ -1,31 +1,56 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { API_URL } from '../config/api.config';
 import SaasLayout, { StatCard, Card, Badge, Button, Modal, Select, Input, DetailPanel, InfoRow } from '../components/layout/SaasLayout';
 
 const ResellerManagement = () => {
-  const [resellers, setResellers] = useState([]);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [allResellers, setAllResellers] = useState([]);
   const [selectedReseller, setSelectedReseller] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
   const [showModal, setShowModal] = useState(false);
   const [modalType, setModalType] = useState('');
   const [actionData, setActionData] = useState({ status: '', commissionRate: '' });
 
   useEffect(() => {
     fetchResellers();
-  }, [filter]);
+  }, []);
+
+  // Sync filter with URL params
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam && statusParam !== filterStatus) {
+      setFilterStatus(statusParam);
+    }
+  }, [searchParams]);
+
+  // Reset page when filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus]);
 
   const fetchResellers = async () => {
     try {
       const token = localStorage.getItem('token');
-      const url = filter === 'all' ? `${API_URL}/resellers` : `${API_URL}/resellers?status=${filter}`;
-      const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      const response = await fetch(`${API_URL}/resellers`, { headers: { 'Authorization': `Bearer ${token}` } });
       const data = await response.json();
-      if (data.success) setResellers(data.data.resellers);
+      if (data.success) setAllResellers(data.data.resellers || []);
     } catch (error) {
       console.error('Error fetching resellers:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusFilter = (status) => {
+    setFilterStatus(status);
+    if (status !== 'all') {
+      setSearchParams({ status });
+    } else {
+      setSearchParams({});
     }
   };
 
@@ -90,22 +115,33 @@ const ResellerManagement = () => {
     return map[status] || 'default';
   };
 
-  // Calculate stats
+  // Calculate stats from all resellers
   const stats = {
-    total: resellers.length,
-    approved: resellers.filter(r => r.status === 'approved').length,
-    pending: resellers.filter(r => r.status === 'pending').length,
-    totalRevenue: resellers.reduce((sum, r) => sum + (r.stats?.monthlyCommission || 0), 0)
+    total: allResellers.length,
+    approved: allResellers.filter(r => r.status === 'approved').length,
+    pending: allResellers.filter(r => r.status === 'pending').length,
+    suspended: allResellers.filter(r => r.status === 'suspended').length,
+    totalRevenue: allResellers.reduce((sum, r) => sum + (r.stats?.monthlyCommission || 0), 0)
   };
+
+  // Filter resellers based on status
+  const filteredResellers = allResellers.filter(r => {
+    return filterStatus === 'all' || r.status === filterStatus;
+  });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredResellers.length / pageSize);
+  const startIndex = (currentPage - 1) * pageSize;
+  const paginatedResellers = filteredResellers.slice(startIndex, startIndex + pageSize);
 
   return (
     <SaasLayout title="Reseller Management">
       {/* Stats */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
-        <StatCard icon="🤝" value={stats.total} label="Total Resellers" />
-        <StatCard icon="✅" value={stats.approved} label="Approved" />
-        <StatCard icon="⏳" value={stats.pending} label="Pending Approval" />
-        <StatCard icon="💰" value={`₹${stats.totalRevenue.toLocaleString()}`} label="Total Commissions" />
+        <StatCard icon="🤝" value={stats.total} label="Total" onClick={() => handleStatusFilter('all')} active={filterStatus === 'all'} />
+        <StatCard icon="✅" value={stats.approved} label="Approved" onClick={() => handleStatusFilter('approved')} active={filterStatus === 'approved'} />
+        <StatCard icon="⏳" value={stats.pending} label="Pending" onClick={() => handleStatusFilter('pending')} active={filterStatus === 'pending'} />
+        <StatCard icon="🚫" value={stats.suspended} label="Suspended" onClick={() => handleStatusFilter('suspended')} active={filterStatus === 'suspended'} />
       </div>
 
       {loading ? (
@@ -117,27 +153,45 @@ const ResellerManagement = () => {
           <div style={{ flex: selectedReseller ? '0 0 55%' : '1', display: 'flex', flexDirection: 'column' }}>
             {/* Filter Tabs */}
             <Card>
-              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', alignItems: 'center' }}>
                 {['all', 'pending', 'approved', 'suspended'].map((status) => (
                   <Button
                     key={status}
                     size="small"
-                    variant={filter === status ? 'primary' : 'secondary'}
-                    onClick={() => setFilter(status)}
+                    variant={filterStatus === status ? 'primary' : 'secondary'}
+                    onClick={() => handleStatusFilter(status)}
                     style={{ textTransform: 'capitalize' }}
                   >
                     {status}
                   </Button>
                 ))}
+                {filterStatus !== 'all' && (
+                  <button
+                    onClick={() => handleStatusFilter('all')}
+                    style={{
+                      background: '#fee2e2',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      color: '#dc2626',
+                      fontWeight: '500',
+                      marginLeft: '8px'
+                    }}
+                  >
+                    ✕ Clear
+                  </button>
+                )}
               </div>
             </Card>
 
             {/* Resellers List */}
-            <Card title={`Resellers (${resellers.length})`} noPadding style={{ flex: 1, marginTop: '12px', overflow: 'hidden' }}>
+            <Card title={`Resellers (${filteredResellers.length})`} noPadding style={{ flex: 1, marginTop: '12px', overflow: 'hidden' }}>
               <div style={{ height: '100%', overflow: 'auto' }}>
-                {resellers.length > 0 ? (
+                {paginatedResellers.length > 0 ? (
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {resellers.map((reseller) => (
+                    {paginatedResellers.map((reseller) => (
                       <div
                         key={reseller._id}
                         onClick={() => fetchResellerDetails(reseller._id)}
@@ -193,6 +247,64 @@ const ResellerManagement = () => {
                 )}
               </div>
             </Card>
+
+            {/* Pagination */}
+            {filteredResellers.length > 0 && (
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginTop: '12px',
+                padding: '10px 14px',
+                background: '#fff',
+                borderRadius: '8px',
+                border: '1px solid #e2e8f0',
+                flexWrap: 'wrap',
+                gap: '10px'
+              }}>
+                <span style={{ fontSize: '11px', color: '#64748b' }}>
+                  Showing {startIndex + 1}-{Math.min(startIndex + pageSize, filteredResellers.length)} of {filteredResellers.length}
+                  {filterStatus !== 'all' && ` (${filterStatus})`}
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    style={{
+                      background: currentPage === 1 ? '#f1f5f9' : '#3b82f6',
+                      color: currentPage === 1 ? '#94a3b8' : '#fff',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    ← Prev
+                  </button>
+                  <span style={{ fontSize: '11px', fontWeight: '600', color: '#1e293b' }}>
+                    Page {currentPage} of {totalPages || 1}
+                  </span>
+                  <button
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    style={{
+                      background: currentPage >= totalPages ? '#f1f5f9' : '#3b82f6',
+                      color: currentPage >= totalPages ? '#94a3b8' : '#fff',
+                      border: 'none',
+                      padding: '6px 12px',
+                      borderRadius: '4px',
+                      cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+                      fontSize: '11px',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Right Panel - Detail */}

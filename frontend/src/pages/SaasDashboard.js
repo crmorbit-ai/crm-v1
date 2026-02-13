@@ -172,10 +172,10 @@ const SaasDashboard = () => {
         <>
           {/* Stats Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${statsColumns}, 1fr)`, gap: '12px', marginBottom: '20px' }}>
-            <StatCard icon="🏢" value={stats?.totalTenants || 0} label="Total Tenants" />
-            <StatCard icon="✅" value={stats?.activeTenants || 0} label="Active" />
-            <StatCard icon="⏳" value={stats?.trialTenants || 0} label="On Trial" />
-            <StatCard icon="🚫" value={stats?.suspendedTenants || 0} label="Suspended" />
+            <StatCard icon="🏢" value={stats?.totalTenants || 0} label="Total Tenants" to="/saas/tenants" />
+            <StatCard icon="✅" value={stats?.activeTenants || 0} label="Active" to="/saas/tenants?status=active" />
+            <StatCard icon="⏳" value={stats?.trialTenants || 0} label="On Trial" to="/saas/tenants?status=trial" />
+            <StatCard icon="🚫" value={stats?.suspendedTenants || 0} label="Suspended" to="/saas/tenants?status=suspended" />
           </div>
 
           {/* Charts Row */}

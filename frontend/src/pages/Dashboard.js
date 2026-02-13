@@ -116,50 +116,57 @@ const Dashboard = () => {
   );
 
   // Stat card with original gradient styling
-  const StatCard = ({ title, value, subtitle, icon: Icon, trend }) => (
-    <div
-      className="relative overflow-hidden rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400"
-      style={{
-        background: 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
-      }}
-    >
-      {/* Top accent bar */}
-      <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
+  const StatCard = ({ title, value, subtitle, icon: Icon, trend, to }) => {
+    const cardContent = (
+      <div
+        className="relative overflow-hidden rounded-lg border border-gray-200 p-4 transition-all duration-200 hover:-translate-y-1 hover:shadow-lg hover:border-blue-400 cursor-pointer"
+        style={{
+          background: 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+        }}
+      >
+        {/* Top accent bar */}
+        <div className="absolute top-0 left-0 right-0 h-1 bg-blue-500" />
 
-      <div className="flex items-center gap-3">
-        {Icon && (
-          <div
-            className="h-12 w-12 rounded-lg flex items-center justify-center text-2xl shadow-md"
-            style={{
-              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-              color: 'white',
-            }}
-          >
-            <Icon className="h-6 w-6" />
-          </div>
-        )}
-        <div className="flex-1">
-          <p className="text-2xl font-extrabold text-gray-800 leading-none">
-            {value}
-          </p>
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
-            {title}
-          </p>
-          {subtitle && (
-            <p className={`text-xs mt-1 flex items-center gap-1 font-semibold ${
-              trend === 'up' ? 'text-green-600' :
-              trend === 'down' ? 'text-red-600' :
-              'text-gray-500'
-            }`}>
-              {trend === 'up' && <TrendingUp className="h-3 w-3" />}
-              {trend === 'down' && <TrendingDown className="h-3 w-3" />}
-              {subtitle}
-            </p>
+        <div className="flex items-center gap-3">
+          {Icon && (
+            <div
+              className="h-12 w-12 rounded-lg flex items-center justify-center text-2xl shadow-md"
+              style={{
+                background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
+                color: 'white',
+              }}
+            >
+              <Icon className="h-6 w-6" />
+            </div>
           )}
+          <div className="flex-1">
+            <p className="text-2xl font-extrabold text-gray-800 leading-none">
+              {value}
+            </p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-1">
+              {title}
+            </p>
+            {subtitle && (
+              <p className={`text-xs mt-1 flex items-center gap-1 font-semibold ${
+                trend === 'up' ? 'text-green-600' :
+                trend === 'down' ? 'text-red-600' :
+                'text-gray-500'
+              }`}>
+                {trend === 'up' && <TrendingUp className="h-3 w-3" />}
+                {trend === 'down' && <TrendingDown className="h-3 w-3" />}
+                {subtitle}
+              </p>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+
+    if (to) {
+      return <Link to={to} className="block no-underline">{cardContent}</Link>;
+    }
+    return cardContent;
+  };
 
   // Card with blue accent bar
   const AccentCard = ({ children, className = "" }) => (
@@ -190,18 +197,21 @@ const Dashboard = () => {
               subtitle={`${stats?.leads?.newThisMonth || 0} new this month`}
               icon={Target}
               trend="up"
+              to="/leads"
             />
             <StatCard
               title="Accounts"
               value={stats?.accounts?.total || 0}
               subtitle={`${stats?.accounts?.newThisMonth || 0} new this month`}
               icon={Building2}
+              to="/accounts"
             />
             <StatCard
               title="Contacts"
               value={stats?.contacts?.total || 0}
               subtitle={`${stats?.contacts?.newThisMonth || 0} new this month`}
               icon={Contact}
+              to="/contacts"
             />
             <StatCard
               title="Total Pipeline"
@@ -209,6 +219,7 @@ const Dashboard = () => {
               subtitle={`${stats?.opportunities?.total || 0} opportunities`}
               icon={DollarSign}
               trend="up"
+              to="/opportunities"
             />
           </>
         )}
@@ -228,23 +239,27 @@ const Dashboard = () => {
             title="Weighted Pipeline"
             value={formatCurrency(stats.opportunities.weightedValue || 0)}
             subtitle="Expected value"
+            to="/opportunities"
           />
           <StatCard
             title="Closing This Month"
             value={stats.opportunities.closingThisMonth || 0}
             subtitle="Opportunities"
+            to="/opportunities"
           />
           <StatCard
             title="Closed Won"
             value={stats.opportunities.wonCount || 0}
             subtitle="Success"
             trend="up"
+            to="/opportunities?stage=Closed Won"
           />
           <StatCard
             title="Closed Lost"
             value={stats.opportunities.lostCount || 0}
             subtitle="Lost deals"
             trend="down"
+            to="/opportunities?stage=Closed Lost"
           />
         </div>
       )}
@@ -299,9 +314,10 @@ const Dashboard = () => {
           <div className="p-4">
             <div className="space-y-3">
               {stats.opportunities.byStage.map((item) => (
-                <div
+                <Link
                   key={item._id}
-                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 bg-gradient-to-r from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200"
+                  to={`/opportunities?stage=${encodeURIComponent(item._id || '')}`}
+                  className="flex items-center justify-between p-4 rounded-lg border border-gray-200 bg-gradient-to-r from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200 no-underline cursor-pointer"
                 >
                   <div className="flex items-center gap-4">
                     <div className="w-1 h-10 bg-blue-500 rounded-full" />
@@ -315,7 +331,7 @@ const Dashboard = () => {
                   <p className="text-lg font-extrabold text-green-600">
                     {formatCurrency(item.totalAmount || 0)}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -331,9 +347,10 @@ const Dashboard = () => {
           <div className="p-4">
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {stats.leads.byStatusDetailed.map((item) => (
-                <div
+                <Link
                   key={item._id}
-                  className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200"
+                  to={`/leads?status=${encodeURIComponent(item._id || '')}`}
+                  className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200 no-underline cursor-pointer"
                 >
                   <Badge variant={
                     item._id?.toLowerCase() === 'converted' ? 'success' :
@@ -343,7 +360,7 @@ const Dashboard = () => {
                     {item._id || 'Unknown'}
                   </Badge>
                   <p className="text-3xl font-extrabold text-gray-800 mt-3">{item.count}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
@@ -359,15 +376,16 @@ const Dashboard = () => {
           <div className="p-4">
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
               {stats.accounts.byType.map((item) => (
-                <div
+                <Link
                   key={item._id}
-                  className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200"
+                  to={`/accounts?type=${encodeURIComponent(item._id || '')}`}
+                  className="flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 bg-gradient-to-b from-white to-gray-50 hover:border-blue-400 hover:shadow-md transition-all duration-200 no-underline cursor-pointer"
                 >
                   <p className="text-sm font-semibold text-gray-500 text-center">
                     {item._id || 'Unknown'}
                   </p>
                   <p className="text-2xl font-extrabold text-gray-800 mt-2">{item.count}</p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>

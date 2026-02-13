@@ -118,12 +118,20 @@ const ResellerDashboard = () => {
           marginBottom: '32px'
         }}>
           {/* Total Tenants */}
-          <div style={{
-            background: 'white',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
+          <div
+            onClick={() => document.getElementById('clients-table')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: '1px solid transparent'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; e.currentTarget.style.borderColor = '#3b82f6'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'; e.currentTarget.style.borderColor = 'transparent'; }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
                 <p style={{ color: '#6B7280', fontSize: '14px', margin: '0 0 8px 0' }}>
@@ -149,12 +157,20 @@ const ResellerDashboard = () => {
           </div>
 
           {/* Active Tenants */}
-          <div style={{
-            background: 'white',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
+          <div
+            onClick={() => document.getElementById('clients-table')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: '1px solid transparent'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; e.currentTarget.style.borderColor = '#10B981'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'; e.currentTarget.style.borderColor = 'transparent'; }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
                 <p style={{ color: '#6B7280', fontSize: '14px', margin: '0 0 8px 0' }}>
@@ -180,12 +196,20 @@ const ResellerDashboard = () => {
           </div>
 
           {/* Monthly Commission */}
-          <div style={{
-            background: 'white',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
+          <div
+            onClick={() => document.getElementById('clients-table')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: '1px solid transparent'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; e.currentTarget.style.borderColor = '#8B5CF6'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'; e.currentTarget.style.borderColor = 'transparent'; }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
                 <p style={{ color: '#6B7280', fontSize: '14px', margin: '0 0 8px 0' }}>
@@ -214,12 +238,20 @@ const ResellerDashboard = () => {
           </div>
 
           {/* Total Earned */}
-          <div style={{
-            background: 'white',
-            padding: '24px',
-            borderRadius: '12px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
-          }}>
+          <div
+            onClick={() => document.getElementById('clients-table')?.scrollIntoView({ behavior: 'smooth' })}
+            style={{
+              background: 'white',
+              padding: '24px',
+              borderRadius: '12px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: '1px solid transparent'
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; e.currentTarget.style.borderColor = '#F59E0B'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)'; e.currentTarget.style.borderColor = 'transparent'; }}
+          >
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
               <div>
                 <p style={{ color: '#6B7280', fontSize: '14px', margin: '0 0 8px 0' }}>
@@ -246,7 +278,7 @@ const ResellerDashboard = () => {
         </div>
 
         {/* Clients Table */}
-        <div style={{
+        <div id="clients-table" style={{
           background: 'white',
           borderRadius: '12px',
           boxShadow: '0 1px 3px rgba(0,0,0,0.1)',

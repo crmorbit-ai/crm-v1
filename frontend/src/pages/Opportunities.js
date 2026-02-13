@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config/api.config';
@@ -7,10 +7,13 @@ import '../styles/crm.css';
 
 const Opportunities = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { hasPermission } = useAuth();
   const [opportunities, setOpportunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [draggedItem, setDraggedItem] = useState(null);
+  const [highlightedStage, setHighlightedStage] = useState(searchParams.get('stage') || '');
+  const stageRefs = useRef({});
 
   const stages = [
     { name: 'Qualification', color: '#3B82F6', percentage: 10 },
@@ -26,6 +29,17 @@ const Opportunities = () => {
   useEffect(() => {
     loadOpportunities();
   }, []);
+
+  // Scroll to highlighted stage when page loads
+  useEffect(() => {
+    if (highlightedStage && !loading && stageRefs.current[highlightedStage]) {
+      setTimeout(() => {
+        stageRefs.current[highlightedStage]?.scrollIntoView({ behavior: 'smooth', inline: 'center' });
+      }, 300);
+      // Clear highlight after 3 seconds
+      setTimeout(() => setHighlightedStage(''), 3000);
+    }
+  }, [highlightedStage, loading]);
 
   const loadOpportunities = async () => {
     try {
@@ -101,19 +115,24 @@ const Opportunities = () => {
             const stageOpps = getOpportunitiesByStage(stage.name);
             const total = getTotalByStage(stage.name);
 
+            const isHighlighted = highlightedStage === stage.name;
             return (
               <div
                 key={stage.name}
+                ref={(el) => stageRefs.current[stage.name] = el}
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e, stage.name)}
                 style={{
                   minWidth:'280px',
                   maxWidth:'280px',
-                  background:'#F9FAFB',
+                  background: isHighlighted ? '#EFF6FF' : '#F9FAFB',
                   borderRadius:'8px',
                   padding:'12px',
                   display:'flex',
-                  flexDirection:'column'
+                  flexDirection:'column',
+                  border: isHighlighted ? '2px solid #3B82F6' : 'none',
+                  boxShadow: isHighlighted ? '0 4px 12px rgba(59, 130, 246, 0.3)' : 'none',
+                  transition: 'all 0.3s ease'
                 }}
               >
                 <div style={{marginBottom:'12px'}}>

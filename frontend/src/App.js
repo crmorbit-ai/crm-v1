@@ -92,6 +92,7 @@ import ResellerManagement from './pages/ResellerManagement';
 
 import AccountDetail from './pages/AccountDetail';
 import ContactDetail from './pages/ContactDetail';
+import AuditLogs from './pages/AuditLogs';
 
 // Common components
 import Loading from './components/common/Loading';
@@ -212,8 +213,11 @@ function AppRoutes() {
   </ProtectedRoute>
 } />
 
-
-
+      <Route path="/audit-logs" element={
+  <ProtectedRoute requireTenant>
+    <AuditLogs />
+  </ProtectedRoute>
+} />
 
       {/* 🚀 DATA CENTER ROUTES - NEW */}
 <Route path="/data-center" element={

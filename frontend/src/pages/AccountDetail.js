@@ -8,6 +8,7 @@ import '../styles/crm.css';
 const AccountDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [account, setAccount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');

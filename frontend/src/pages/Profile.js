@@ -1,8 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import profileService from '../services/profileService';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../config/api.config';
 import '../styles/crm.css';
 
 const Profile = () => {
@@ -44,10 +46,167 @@ const Profile = () => {
   });
   const [changingPassword, setChangingPassword] = useState(false);
 
+  // PIN management
+  const [isPinSet, setIsPinSet] = useState(false);
+  const [showChangePinModal, setShowChangePinModal] = useState(false);
+  const [showForgotPinModal, setShowForgotPinModal] = useState(false);
+  const [currentPin, setCurrentPin] = useState(['', '', '', '']);
+  const [newPin, setNewPin] = useState(['', '', '', '']);
+  const [confirmNewPin, setConfirmNewPin] = useState(['', '', '', '']);
+  const [forgotPinOtp, setForgotPinOtp] = useState('');
+  const [resetPin, setResetPin] = useState(['', '', '', '']);
+  const [confirmResetPin, setConfirmResetPin] = useState(['', '', '', '']);
+  const [forgotPinStep, setForgotPinStep] = useState(1); // 1 = send OTP, 2 = enter OTP & new PIN
+  const [pinLoading, setPinLoading] = useState(false);
+  const [pinError, setPinError] = useState('');
+  const currentPinRefs = useRef([]);
+  const newPinRefs = useRef([]);
+  const confirmNewPinRefs = useRef([]);
+  const resetPinRefs = useRef([]);
+  const confirmResetPinRefs = useRef([]);
+
+  const getAuthHeader = () => {
+    const token = localStorage.getItem('token');
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  };
+
   // Load profile
   useEffect(() => {
     loadProfile();
+    checkPinStatus();
   }, []);
+
+  // Check PIN status
+  const checkPinStatus = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/viewing-pin/status`, { headers: getAuthHeader() });
+      setIsPinSet(res.data?.data?.isViewingPinSet || false);
+    } catch (err) { console.error(err); }
+  };
+
+  // PIN input handlers
+  const handlePinInputChange = (index, value, pinArray, setPinArray, refs) => {
+    if (!/^\d*$/.test(value)) return;
+    const newPinArray = [...pinArray];
+    newPinArray[index] = value.slice(-1);
+    setPinArray(newPinArray);
+    if (value && index < 3) {
+      refs.current[index + 1]?.focus();
+    }
+  };
+
+  const handlePinKeyDown = (index, e, refs) => {
+    if (e.key === 'Backspace' && !e.target.value && index > 0) {
+      refs.current[index - 1]?.focus();
+    }
+  };
+
+  // Change PIN handler
+  const handleChangePin = async () => {
+    const currentPinValue = currentPin.join('');
+    const newPinValue = newPin.join('');
+    const confirmValue = confirmNewPin.join('');
+
+    if (isPinSet && currentPinValue.length < 4) {
+      setPinError('Enter current PIN');
+      return;
+    }
+    if (newPinValue.length < 4) {
+      setPinError('New PIN must be at least 4 digits');
+      return;
+    }
+    if (newPinValue !== confirmValue) {
+      setPinError('PINs do not match');
+      return;
+    }
+
+    try {
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/viewing-pin/change`,
+        { currentPin: currentPinValue, newPin: newPinValue },
+        { headers: getAuthHeader() }
+      );
+      alert('PIN changed successfully!');
+      setShowChangePinModal(false);
+      setCurrentPin(['', '', '', '']);
+      setNewPin(['', '', '', '']);
+      setConfirmNewPin(['', '', '', '']);
+      setIsPinSet(true);
+    } catch (err) {
+      setPinError(err.response?.data?.message || 'Failed to change PIN');
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  // Forgot PIN - Send OTP
+  const handleForgotPinSendOtp = async () => {
+    try {
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/viewing-pin/forgot`, {}, { headers: getAuthHeader() });
+      setForgotPinStep(2);
+      alert('OTP sent to your email!');
+    } catch (err) {
+      setPinError(err.response?.data?.message || 'Failed to send OTP');
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  // Reset PIN with OTP
+  const handleResetPinWithOtp = async () => {
+    const resetPinValue = resetPin.join('');
+    const confirmValue = confirmResetPin.join('');
+
+    if (!forgotPinOtp || forgotPinOtp.length < 6) {
+      setPinError('Enter valid OTP');
+      return;
+    }
+    if (resetPinValue.length < 4) {
+      setPinError('New PIN must be at least 4 digits');
+      return;
+    }
+    if (resetPinValue !== confirmValue) {
+      setPinError('PINs do not match');
+      return;
+    }
+
+    try {
+      setPinLoading(true);
+      setPinError('');
+      await axios.post(`${API_URL}/viewing-pin/reset`,
+        { otp: forgotPinOtp, newPin: resetPinValue },
+        { headers: getAuthHeader() }
+      );
+      alert('PIN reset successfully!');
+      setShowForgotPinModal(false);
+      setForgotPinStep(1);
+      setForgotPinOtp('');
+      setResetPin(['', '', '', '']);
+      setConfirmResetPin(['', '', '', '']);
+      setIsPinSet(true);
+    } catch (err) {
+      setPinError(err.response?.data?.message || 'Failed to reset PIN');
+    } finally {
+      setPinLoading(false);
+    }
+  };
+
+  // Close PIN modals
+  const closePinModals = () => {
+    setShowChangePinModal(false);
+    setShowForgotPinModal(false);
+    setCurrentPin(['', '', '', '']);
+    setNewPin(['', '', '', '']);
+    setConfirmNewPin(['', '', '', '']);
+    setForgotPinOtp('');
+    setResetPin(['', '', '', '']);
+    setConfirmResetPin(['', '', '', '']);
+    setForgotPinStep(1);
+    setPinError('');
+  };
 
   const loadProfile = async () => {
     try {
@@ -264,6 +423,13 @@ const Profile = () => {
                   className="btn-secondary"
                 >
                   Change Password
+                </button>
+                <button
+                  onClick={() => { setPinError(''); setShowChangePinModal(true); }}
+                  className="btn-secondary"
+                  style={{ background: '#6366f1', color: '#fff' }}
+                >
+                  {isPinSet ? '🔐 Change PIN' : '🔐 Set PIN'}
                 </button>
               </>
             ) : (
@@ -644,6 +810,201 @@ const Profile = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {/* Change PIN Modal */}
+        {showChangePinModal && (
+          <div className="modal-overlay" onClick={closePinModals}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '300px', padding: '20px', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{isPinSet ? 'Change PIN' : 'Set PIN'}</h3>
+                <button onClick={closePinModals} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9ca3af' }}>&times;</button>
+              </div>
+              <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '16px', marginTop: '0' }}>
+                {isPinSet ? 'Enter current & new 4 digit PIN' : 'Create a 4 digit PIN'}
+              </p>
+
+              {pinError && (
+                <div style={{ background: '#fef2f2', color: '#dc2626', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', marginBottom: '12px', textAlign: 'center' }}>
+                  {pinError}
+                </div>
+              )}
+
+              {isPinSet && (
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Current PIN</label>
+                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                    {currentPin.map((digit, index) => (
+                      <input
+                        key={`current-${index}`}
+                        ref={el => currentPinRefs.current[index] = el}
+                        type="password"
+                        value={digit}
+                        onChange={e => handlePinInputChange(index, e.target.value, currentPin, setCurrentPin, currentPinRefs)}
+                        onKeyDown={e => handlePinKeyDown(index, e, currentPinRefs)}
+                        style={{ width: '36px', height: '40px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '16px', fontWeight: '700', textAlign: 'center', outline: 'none' }}
+                        maxLength={1}
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ marginBottom: '12px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>New PIN</label>
+                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                  {newPin.map((digit, index) => (
+                    <input
+                      key={`new-${index}`}
+                      ref={el => newPinRefs.current[index] = el}
+                      type="password"
+                      value={digit}
+                      onChange={e => handlePinInputChange(index, e.target.value, newPin, setNewPin, newPinRefs)}
+                      onKeyDown={e => handlePinKeyDown(index, e, newPinRefs)}
+                      style={{ width: '36px', height: '40px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '16px', fontWeight: '700', textAlign: 'center', outline: 'none' }}
+                      maxLength={1}
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Confirm PIN</label>
+                <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                  {confirmNewPin.map((digit, index) => (
+                    <input
+                      key={`confirm-${index}`}
+                      ref={el => confirmNewPinRefs.current[index] = el}
+                      type="password"
+                      value={digit}
+                      onChange={e => handlePinInputChange(index, e.target.value, confirmNewPin, setConfirmNewPin, confirmNewPinRefs)}
+                      onKeyDown={e => handlePinKeyDown(index, e, confirmNewPinRefs)}
+                      style={{ width: '36px', height: '40px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '16px', fontWeight: '700', textAlign: 'center', outline: 'none' }}
+                      maxLength={1}
+                      inputMode="numeric"
+                      autoComplete="new-password"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'space-between', alignItems: 'center' }}>
+                {isPinSet && (
+                  <button
+                    type="button"
+                    onClick={() => { closePinModals(); setShowForgotPinModal(true); }}
+                    style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '11px', cursor: 'pointer', padding: 0 }}
+                  >
+                    Forgot PIN?
+                  </button>
+                )}
+                <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                  <button type="button" onClick={closePinModals} style={{ padding: '8px 14px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+                  <button type="button" onClick={handleChangePin} disabled={pinLoading} style={{ padding: '8px 14px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                    {pinLoading ? 'Saving...' : (isPinSet ? 'Change' : 'Set PIN')}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Forgot PIN Modal */}
+        {showForgotPinModal && (
+          <div className="modal-overlay" onClick={closePinModals}>
+            <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '300px', padding: '20px', borderRadius: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Reset PIN</h3>
+                <button onClick={closePinModals} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9ca3af' }}>&times;</button>
+              </div>
+
+              {pinError && (
+                <div style={{ background: '#fef2f2', color: '#dc2626', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', marginBottom: '12px', textAlign: 'center' }}>
+                  {pinError}
+                </div>
+              )}
+
+              {forgotPinStep === 1 ? (
+                <>
+                  <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '16px', marginTop: 0 }}>
+                    We'll send an OTP to your email.
+                  </p>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={closePinModals} style={{ padding: '8px 14px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>Cancel</button>
+                    <button type="button" onClick={handleForgotPinSendOtp} disabled={pinLoading} style={{ padding: '8px 14px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                      {pinLoading ? 'Sending...' : 'Send OTP'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Enter OTP</label>
+                    <input
+                      type="text"
+                      value={forgotPinOtp}
+                      onChange={e => setForgotPinOtp(e.target.value)}
+                      maxLength={6}
+                      placeholder="6-digit OTP"
+                      style={{ width: '100%', padding: '8px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', textAlign: 'center', letterSpacing: '6px', boxSizing: 'border-box' }}
+                      autoComplete="off"
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>New PIN</label>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      {resetPin.map((digit, index) => (
+                        <input
+                          key={`reset-${index}`}
+                          ref={el => resetPinRefs.current[index] = el}
+                          type="password"
+                          value={digit}
+                          onChange={e => handlePinInputChange(index, e.target.value, resetPin, setResetPin, resetPinRefs)}
+                          onKeyDown={e => handlePinKeyDown(index, e, resetPinRefs)}
+                          style={{ width: '36px', height: '40px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '16px', fontWeight: '700', textAlign: 'center', outline: 'none' }}
+                          maxLength={1}
+                          inputMode="numeric"
+                          autoComplete="new-password"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Confirm PIN</label>
+                    <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                      {confirmResetPin.map((digit, index) => (
+                        <input
+                          key={`confirmReset-${index}`}
+                          ref={el => confirmResetPinRefs.current[index] = el}
+                          type="password"
+                          value={digit}
+                          onChange={e => handlePinInputChange(index, e.target.value, confirmResetPin, setConfirmResetPin, confirmResetPinRefs)}
+                          onKeyDown={e => handlePinKeyDown(index, e, confirmResetPinRefs)}
+                          style={{ width: '36px', height: '40px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '16px', fontWeight: '700', textAlign: 'center', outline: 'none' }}
+                          maxLength={1}
+                          inputMode="numeric"
+                          autoComplete="new-password"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button type="button" onClick={() => setForgotPinStep(1)} style={{ padding: '8px 14px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>Back</button>
+                    <button type="button" onClick={handleResetPinWithOtp} disabled={pinLoading} style={{ padding: '8px 14px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '12px', cursor: 'pointer' }}>
+                      {pinLoading ? 'Resetting...' : 'Reset PIN'}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

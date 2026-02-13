@@ -109,6 +109,7 @@ app.use('/api/user-settings', require('./routes/userSettings'));
 app.use('/api/support-tickets', require('./routes/supportTickets'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/saas-admins', require('./routes/saasAdmins'));
+app.use('/api/viewing-pin', require('./routes/viewingPin'));
 
 
 app.use((req, res) => {

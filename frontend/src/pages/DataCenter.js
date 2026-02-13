@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import PinVerification from '../components/common/PinVerification';
 import dataCenterService from '../services/dataCenterService';
 import productService from '../services/productService';
 import BulkCommunication from '../components/BulkCommunication';
@@ -53,6 +54,29 @@ const DataCenter = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [displayColumns, setDisplayColumns] = useState([]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+
+  // PIN Verification State
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pendingCandidateId, setPendingCandidateId] = useState(null);
+
+  // Masking functions for sensitive data
+  const maskEmail = (email) => {
+    if (!email || isPinVerified) return email;
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return '***@***.***';
+    return name[0] + '***@' + domain[0] + '***.' + domain.split('.').pop();
+  };
+
+  const maskPhone = (phone) => {
+    if (!phone || isPinVerified) return phone;
+    return phone.slice(0, 2) + '******' + phone.slice(-2);
+  };
+
+  const maskName = (name) => {
+    if (!name || isPinVerified) return name;
+    return name[0] + '***';
+  };
 
   const extractColumns = (candidatesData) => {
     if (!candidatesData || candidatesData.length === 0) return [];
@@ -280,8 +304,7 @@ const DataCenter = () => {
   };
 
   // === Split View Functions ===
-  const handleCandidateClick = async (candidateId) => {
-    if (selectedCandidateId === candidateId) return;
+  const loadCandidateDetails = async (candidateId) => {
     setSelectedCandidateId(candidateId);
     setLoadingDetail(true);
     setShowDetailMoveForm(false);
@@ -293,6 +316,27 @@ const DataCenter = () => {
       console.error('Error loading candidate details:', err);
     } finally {
       setLoadingDetail(false);
+    }
+  };
+
+  const handleCandidateClick = (candidateId) => {
+    if (selectedCandidateId === candidateId) return;
+
+    if (!isPinVerified) {
+      setPendingCandidateId(candidateId);
+      setShowPinModal(true);
+      return;
+    }
+    loadCandidateDetails(candidateId);
+  };
+
+  // Handle PIN verification success
+  const handlePinVerified = () => {
+    setIsPinVerified(true);
+    setShowPinModal(false);
+    if (pendingCandidateId) {
+      loadCandidateDetails(pendingCandidateId);
+      setPendingCandidateId(null);
     }
   };
 
@@ -402,6 +446,16 @@ const DataCenter = () => {
 
   return (
     <DashboardLayout title="Customer Database">
+      {/* PIN Verification Modal */}
+      <PinVerification
+        isOpen={showPinModal}
+        onClose={() => { setShowPinModal(false); setPendingCandidateId(null); }}
+        onVerified={handlePinVerified}
+        resourceType="lead"
+        resourceId={pendingCandidateId}
+        resourceName="Customer Data"
+      />
+
       {/* Split View Container */}
       <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
         {/* Left Side - Data List */}
@@ -561,7 +615,7 @@ const DataCenter = () => {
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} style={{ width: '16px', height: '16px' }} />
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>{candidate.firstName} {candidate.lastName}</h3>
+                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>{maskName(candidate.firstName)} {maskName(candidate.lastName)}</h3>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{candidate.currentDesignation || 'N/A'}</p>
                       </div>
                     </div>
@@ -570,8 +624,8 @@ const DataCenter = () => {
                       <span className={`status-badge ${candidate.status === 'Available' ? 'success' : 'secondary'}`} style={{ fontSize: '10px', padding: '2px 6px' }}>{candidate.status}</span>
                     </div>
                     <div style={{ fontSize: '11px', color: '#64748b' }}>
-                      {candidate.email && <div style={{ marginBottom: '2px' }}>{candidate.email}</div>}
-                      {candidate.phone && <div style={{ marginBottom: '2px' }}>{candidate.phone}</div>}
+                      {candidate.email && <div style={{ marginBottom: '2px' }}>{maskEmail(candidate.email)}</div>}
+                      {candidate.phone && <div style={{ marginBottom: '2px' }}>{maskPhone(candidate.phone)}</div>}
                       <div>{candidate.totalExperience} yrs exp</div>
                     </div>
                     <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => handleCandidateClick(candidate._id)} style={{ width: '100%', marginTop: '8px', fontSize: '11px', padding: '4px' }}>View Profile</button>
@@ -597,11 +651,23 @@ const DataCenter = () => {
                         <td style={{ padding: '8px' }}>
                           <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} onClick={(e) => e.stopPropagation()} style={{ width: '16px', height: '16px' }} />
                         </td>
-                        {displayColumns.map((column) => (
-                          <td key={column} style={{ padding: '8px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: '#475569' }}>
-                            {formatFieldValue(getFieldValue(candidate, column))}
-                          </td>
-                        ))}
+                        {displayColumns.map((column) => {
+                          let value = formatFieldValue(getFieldValue(candidate, column));
+                          // Apply masking to sensitive columns
+                          const lowerCol = column.toLowerCase();
+                          if (lowerCol.includes('email') && value !== '-') {
+                            value = maskEmail(value);
+                          } else if ((lowerCol.includes('phone') || lowerCol.includes('mobile') || lowerCol.includes('contact')) && value !== '-') {
+                            value = maskPhone(value);
+                          } else if ((lowerCol === 'firstname' || lowerCol === 'lastname' || lowerCol === 'name') && value !== '-') {
+                            value = maskName(value);
+                          }
+                          return (
+                            <td key={column} style={{ padding: '8px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: '#475569' }}>
+                              {value}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>

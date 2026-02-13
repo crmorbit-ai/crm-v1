@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PinVerification from '../components/common/PinVerification';
 import { accountService } from '../services/accountService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -10,6 +11,7 @@ import '../styles/crm.css';
 
 const Accounts = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { hasPermission } = useAuth();
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +20,7 @@ const Accounts = () => {
   const [viewMode, setViewMode] = useState('table');
 
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
-  const [filters, setFilters] = useState({ search: '', accountType: '', industry: '' });
+  const [filters, setFilters] = useState({ search: '', accountType: searchParams.get('type') || '', industry: '' });
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const [formData, setFormData] = useState({
@@ -33,12 +35,35 @@ const Accounts = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [stats, setStats] = useState({ total: 0, customers: 0, prospects: 0, partners: 0 });
 
+  // PIN Verification State
+  const [isPinVerified, setIsPinVerified] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pendingAccountId, setPendingAccountId] = useState(null);
+
   // Split View Panel State
   const [selectedAccountId, setSelectedAccountId] = useState(null);
   const [selectedAccountData, setSelectedAccountData] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailActiveTab, setDetailActiveTab] = useState('overview');
   const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
+
+  // Masking functions for sensitive data
+  const maskEmail = (email) => {
+    if (!email || isPinVerified) return email;
+    const [name, domain] = email.split('@');
+    if (!name || !domain) return '***@***.***';
+    return name[0] + '***@' + domain[0] + '***.' + domain.split('.').pop();
+  };
+
+  const maskPhone = (phone) => {
+    if (!phone || isPinVerified) return phone;
+    return phone.slice(0, 2) + '******' + phone.slice(-2);
+  };
+
+  const maskName = (name) => {
+    if (!name || isPinVerified) return name;
+    return name[0] + '***';
+  };
 
   // Detail Panel Forms
   const [showDetailEditForm, setShowDetailEditForm] = useState(false);
@@ -49,6 +74,14 @@ const Accounts = () => {
     loadAccounts();
     loadCustomFields();
   }, [pagination.page, filters.search, filters.accountType, filters.industry]);
+
+  // Sync filter with URL params when navigating from another page
+  useEffect(() => {
+    const typeParam = searchParams.get('type');
+    if (typeParam && typeParam !== filters.accountType) {
+      setFilters(prev => ({ ...prev, accountType: typeParam }));
+    }
+  }, [searchParams]);
 
   const loadAccounts = async () => {
     try {
@@ -142,9 +175,14 @@ const Accounts = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  // Handle stats click filter
+  const handleStatsFilter = (type) => {
+    setFilters(prev => ({ ...prev, accountType: type }));
+    setPagination(prev => ({ ...prev, page: 1 }));
+  };
+
   // === Split View Functions ===
-  const handleAccountClick = async (accountId) => {
-    if (selectedAccountId === accountId) return;
+  const loadAccountDetails = async (accountId) => {
     setSelectedAccountId(accountId);
     setLoadingDetail(true);
     setDetailActiveTab('overview');
@@ -158,6 +196,28 @@ const Accounts = () => {
       }
     } catch (err) { console.error('Error loading account details:', err); }
     finally { setLoadingDetail(false); }
+  };
+
+  // Handle account click - check PIN first
+  const handleAccountClick = (accountId) => {
+    if (selectedAccountId === accountId) return;
+
+    if (!isPinVerified) {
+      setPendingAccountId(accountId);
+      setShowPinModal(true);
+      return;
+    }
+    loadAccountDetails(accountId);
+  };
+
+  // Handle PIN verification success
+  const handlePinVerified = () => {
+    setIsPinVerified(true);
+    setShowPinModal(false);
+    if (pendingAccountId) {
+      loadAccountDetails(pendingAccountId);
+      setPendingAccountId(null);
+    }
   };
 
   const loadDetailCustomFields = async () => {
@@ -238,6 +298,16 @@ const Accounts = () => {
 
   return (
     <DashboardLayout title="Accounts">
+      {/* PIN Verification Modal */}
+      <PinVerification
+        isOpen={showPinModal}
+        onClose={() => { setShowPinModal(false); setPendingAccountId(null); }}
+        onVerified={handlePinVerified}
+        resourceType="contact"
+        resourceId={pendingAccountId}
+        resourceName="Account"
+      />
+
       {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
       {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
@@ -246,12 +316,64 @@ const Accounts = () => {
         {/* Left Side */}
         <div style={{ flex: selectedAccountId ? '0 0 55%' : '1 1 100%', minWidth: 0, overflow: 'auto' }}>
 
-          {/* Stats */}
+          {/* Stats - Clickable */}
           <div className="stats-grid">
-            <div className="stat-card"><div className="stat-label">Total Accounts</div><div className="stat-value">{stats.total}</div></div>
-            <div className="stat-card"><div className="stat-label">Customers</div><div className="stat-value">{stats.customers}</div></div>
-            <div className="stat-card"><div className="stat-label">Prospects</div><div className="stat-value">{stats.prospects}</div></div>
-            <div className="stat-card"><div className="stat-label">Partners</div><div className="stat-value">{stats.partners}</div></div>
+            <div
+              className="stat-card"
+              onClick={() => handleStatsFilter('')}
+              style={{
+                cursor: 'pointer',
+                border: filters.accountType === '' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+                background: filters.accountType === '' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                boxShadow: filters.accountType === '' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div className="stat-label">Total Accounts</div>
+              <div className="stat-value">{stats.total}</div>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => handleStatsFilter('Customer')}
+              style={{
+                cursor: 'pointer',
+                border: filters.accountType === 'Customer' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+                background: filters.accountType === 'Customer' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                boxShadow: filters.accountType === 'Customer' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div className="stat-label">Customers</div>
+              <div className="stat-value">{stats.customers}</div>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => handleStatsFilter('Prospect')}
+              style={{
+                cursor: 'pointer',
+                border: filters.accountType === 'Prospect' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+                background: filters.accountType === 'Prospect' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                boxShadow: filters.accountType === 'Prospect' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div className="stat-label">Prospects</div>
+              <div className="stat-value">{stats.prospects}</div>
+            </div>
+            <div
+              className="stat-card"
+              onClick={() => handleStatsFilter('Partner')}
+              style={{
+                cursor: 'pointer',
+                border: filters.accountType === 'Partner' ? '2px solid #14b8a6' : '1px solid #e2e8f0',
+                background: filters.accountType === 'Partner' ? 'linear-gradient(135deg, rgb(120 245 240) 0%, rgb(200 255 252) 100%)' : 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                boxShadow: filters.accountType === 'Partner' ? '0 4px 12px rgba(20, 184, 166, 0.3)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <div className="stat-label">Partners</div>
+              <div className="stat-value">{stats.partners}</div>
+            </div>
           </div>
 
           {/* Filters */}
@@ -350,7 +472,7 @@ const Accounts = () => {
                             {getAccountTypeIcon(account.accountType)}
                           </div>
                           <div>
-                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{account.accountName}</h3>
+                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{maskName(account.accountName)}</h3>
                             <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>#{account.accountNumber}</p>
                           </div>
                         </div>
@@ -359,8 +481,8 @@ const Accounts = () => {
                           {account.industry && <span style={{ padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.industry}</span>}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          {account.phone && <div>{account.phone}</div>}
-                          {account.website && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</div>}
+                          {account.phone && <div>{maskPhone(account.phone)}</div>}
+                          {account.website && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isPinVerified ? account.website : '*****.***'}</div>}
                         </div>
                       </div>
                     ))}
@@ -386,14 +508,14 @@ const Accounts = () => {
                                   {getAccountTypeIcon(account.accountType)}
                                 </div>
                                 <div>
-                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{account.accountName}</div>
+                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{maskName(account.accountName)}</div>
                                   <div style={{ fontSize: '11px', color: '#94a3b8' }}>#{account.accountNumber}</div>
                                 </div>
                               </div>
                             </td>
                             <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.accountType}</span></td>
                             <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.industry || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.phone || '-'}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.phone ? maskPhone(account.phone) : '-'}</td>
                           </tr>
                         ))}
                       </tbody>
