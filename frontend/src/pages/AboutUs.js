@@ -97,7 +97,7 @@ const AboutUs = () => {
               <h2 className="text-4xl font-extrabold text-white mb-6">Our Story</h2>
               <p className="text-lg text-gray-400 mb-4">
                 Unified CRM was born from a simple idea: businesses deserve a CRM that's powerful yet simple to use.
-                Founded in 2024, we set out to create a complete business management solution that combines
+                Founded in 2025, we set out to create a complete business management solution that combines
                 lead management, B2B workflows, email integration, and team collaboration in one platform.
               </p>
               <p className="text-lg text-gray-400 mb-4">

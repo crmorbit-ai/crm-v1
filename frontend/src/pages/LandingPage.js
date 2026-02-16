@@ -788,12 +788,7 @@ const LandingPage = () => {
       </footer>
 
       {/* Floating Action Button */}
-      <button
-        onClick={() => { navigate('/register'); }}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full shadow-2xl hover:shadow-purple-500/25 transition transform hover:scale-110 flex items-center justify-center text-2xl z-50"
-      >
-        🚀
-      </button>
+      
 
       <style jsx>{`
         /* Gradient Animation */
