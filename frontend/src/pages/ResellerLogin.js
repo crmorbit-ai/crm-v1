@@ -51,78 +51,93 @@ const ResellerLogin = () => {
 
   return (
     <div className="auth-container" style={{
-      background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #1a2a35 50%, #95b5ef 75%, #2a5298 100%)',
-      backgroundSize: '400% 400%',
-      animation: 'gradientShift 15s ease infinite',
+      background: '#0f172a',
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '30px 20px'
+      padding: '30px 20px',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
+      {/* Background glow effects */}
+      <div style={{
+        position: 'absolute',
+        top: '-20%',
+        left: '-10%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-20%',
+        right: '-10%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        pointerEvents: 'none'
+      }} />
       <div className="auth-card" style={{
-        maxWidth: '480px',
+        maxWidth: '420px',
         width: '100%',
-        padding: '40px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)',
-        borderRadius: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.3)'
+        position: 'relative',
+        zIndex: 1
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <img
-            src="/logo.png"
-            alt="UFS CRM"
-            style={{
-              width: '180px',
-              height: 'auto',
-              mixBlendMode: 'multiply',
-              filter: 'contrast(1.1)',
-              display: 'block',
-              margin: '0 auto 20px'
-            }}
-          />
+        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '6px 12px',
+            display: 'inline-block',
+            marginBottom: '16px'
+          }}>
+            <img
+              src="/logo.png"
+              alt="UFS CRM"
+              style={{
+                height: '20px',
+                display: 'block'
+              }}
+            />
+          </div>
           <h1 className="auth-title" style={{
             marginBottom: '8px',
-            fontSize: '24px',
-            fontWeight: '800',
-            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            fontSize: '22px',
+            fontWeight: '500',
+            color: '#ffffff'
           }}>Partner Login</h1>
-          <p className="auth-subtitle" style={{ marginBottom: '0', fontSize: '15px', color: '#6b7280' }}>
+          <p className="auth-subtitle" style={{ marginBottom: '0', fontSize: '15px', color: '#9ca3af' }}>
             Access your reseller dashboard
           </p>
         </div>
 
         {error && (
           <div style={{
-            padding: '14px 18px',
-            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
-            color: '#991b1b',
-            borderRadius: '12px',
-            marginBottom: '24px',
+            padding: '12px 16px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            color: '#f87171',
+            borderRadius: '6px',
+            marginBottom: '16px',
             fontSize: '14px',
-            fontWeight: '500',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px'
+            border: '1px solid rgba(239, 68, 68, 0.3)'
           }}>
-            <span style={{ fontSize: '18px' }}>⚠️</span>
             {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group" style={{ marginBottom: '20px' }}>
+          <div className="form-group" style={{ marginBottom: '12px' }}>
             <label className="form-label" style={{
               fontSize: '14px',
               fontWeight: '600',
-              color: '#374151',
-              marginBottom: '8px',
+              color: '#e5e7eb',
+              marginBottom: '6px',
               display: 'block'
             }}>Email Address</label>
             <input
@@ -135,29 +150,33 @@ const ResellerLogin = () => {
               required
               autoFocus
               style={{
-                padding: '14px 16px',
-                borderRadius: '12px',
-                border: '2px solid #e5e7eb',
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 fontSize: '15px',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.2s ease',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#ffffff',
+                outline: 'none'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5db9de';
-                e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
+                e.target.style.borderColor = '#8b5cf6';
+                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                 e.target.style.boxShadow = 'none';
               }}
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '24px' }}>
+          <div className="form-group" style={{ marginBottom: '16px' }}>
             <label className="form-label" style={{
               fontSize: '14px',
               fontWeight: '600',
-              color: '#374151',
-              marginBottom: '8px',
+              color: '#e5e7eb',
+              marginBottom: '6px',
               display: 'block'
             }}>Password</label>
             <input
@@ -169,18 +188,22 @@ const ResellerLogin = () => {
               onChange={handleChange}
               required
               style={{
-                padding: '14px 16px',
-                borderRadius: '12px',
-                border: '2px solid #e5e7eb',
+                width: '100%',
+                padding: '12px 14px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 fontSize: '15px',
-                transition: 'all 0.3s ease'
+                transition: 'all 0.2s ease',
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#ffffff',
+                outline: 'none'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#5db9de';
-                e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
+                e.target.style.borderColor = '#8b5cf6';
+                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = '#e5e7eb';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                 e.target.style.boxShadow = 'none';
               }}
             />
@@ -191,37 +214,34 @@ const ResellerLogin = () => {
             className="btn btn-primary btn-block"
             disabled={loading}
             style={{
-              padding: '16px',
-              fontSize: '16px',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+              width: '100%',
+              padding: '12px 16px',
+              fontSize: '15px',
+              fontWeight: '600',
+              background: loading ? '#4b5563' : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
               color: '#ffffff',
               border: 'none',
-              borderRadius: '12px',
-              boxShadow: '0 8px 24px rgba(93, 185, 222, 0.4)',
-              transition: 'all 0.3s ease',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-              width: '100%'
+              borderRadius: '10px',
+              boxShadow: loading ? 'none' : '0 4px 15px rgba(139, 92, 246, 0.3)',
+              transition: 'all 0.2s ease',
+              cursor: loading ? 'not-allowed' : 'pointer'
             }}
             onMouseEnter={(e) => {
               if (!loading) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 32px rgba(93, 185, 222, 0.5)';
+                e.target.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.4)';
               }
             }}
             onMouseLeave={(e) => {
               if (!loading) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 24px rgba(93, 185, 222, 0.4)';
+                e.target.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.3)';
               }
             }}
           >
-            {loading ? '⏳ Logging in...' : '🚀 Login to Dashboard'}
+            {loading ? 'Logging in...' : 'Log in'}
           </button>
 
-          <div className="auth-footer" style={{ marginTop: '24px', textAlign: 'center' }}>
-            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '10px' }}>
+          <div className="auth-footer" style={{ marginTop: '16px', textAlign: 'center' }}>
+            <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '8px' }}>
               Not a partner yet?{' '}
               <button
                 type="button"
@@ -230,14 +250,12 @@ const ResellerLogin = () => {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#5db9de',
+                  color: '#a78bfa',
                   fontWeight: '600',
                   textDecoration: 'none',
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.2s ease',
                   padding: 0
                 }}
-                onMouseEnter={(e) => e.target.style.color = '#2a5298'}
-                onMouseLeave={(e) => e.target.style.color = '#5db9de'}
               >
                 Apply now
               </button>
@@ -250,28 +268,18 @@ const ResellerLogin = () => {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  color: '#5db9de',
-                  fontWeight: '600',
+                  color: '#6b7280',
+                  fontWeight: '400',
                   textDecoration: 'none',
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.2s ease',
                   padding: 0
                 }}
-                onMouseEnter={(e) => e.target.style.color = '#2a5298'}
-                onMouseLeave={(e) => e.target.style.color = '#5db9de'}
               >
                 ← Back to Home
               </button>
             </p>
           </div>
         </form>
-
-        <style>{`
-          @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-          }
-        `}</style>
       </div>
     </div>
   );

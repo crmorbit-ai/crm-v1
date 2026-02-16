@@ -87,20 +87,37 @@ const ResellerRegister = () => {
 
   if (success) {
     return (
-      <div className="auth-container">
-        <div className="auth-card" style={{ maxWidth: '600px', textAlign: 'center' }}>
+      <div style={{
+        minHeight: '100vh',
+        background: '#0f172a',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 20px'
+      }}>
+        <div style={{ maxWidth: '500px', textAlign: 'center' }}>
           <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
-          <h1 className="auth-title">Application Submitted!</h1>
-          <p className="auth-subtitle" style={{ marginBottom: '20px' }}>
+          <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#ffffff', marginBottom: '12px' }}>Application Submitted!</h1>
+          <p style={{ fontSize: '16px', color: '#9ca3af', marginBottom: '16px' }}>
             Thank you for your interest in becoming a reseller partner.
           </p>
-          <p style={{ color: '#6B7280', marginBottom: '30px' }}>
+          <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '14px' }}>
             We will review your application and get back to you within 2-3 business days.
             You'll receive an email once your application is approved.
           </p>
           <button
             onClick={() => navigate('/')}
-            className="btn btn-primary btn-block"
+            style={{
+              padding: '12px 24px',
+              fontSize: '15px',
+              fontWeight: '600',
+              color: 'white',
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: 'pointer',
+              boxShadow: '0 4px 15px rgba(139, 92, 246, 0.3)'
+            }}
           >
             Back to Home
           </button>
@@ -110,167 +127,237 @@ const ResellerRegister = () => {
   }
 
   return (
-    <div className="auth-container" style={{
-      background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #1a2a35 50%, #95b5ef 75%, #2a5298 100%)',
-      backgroundSize: '400% 400%',
-      animation: 'gradientShift 15s ease infinite',
+    <div style={{
+      background: '#0f172a',
       minHeight: '100vh',
-      padding: '30px 20px'
+      padding: '30px 20px',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <div className="auth-card" style={{
-        maxWidth: '900px',
-        padding: '20px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)',
-        borderRadius: '20px',
-        border: '1px solid rgba(255, 255, 255, 0.3)'
+      {/* Background glow effects */}
+      <div style={{
+        position: 'absolute',
+        top: '-20%',
+        left: '-10%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-20%',
+        right: '-10%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        maxWidth: '800px',
+        margin: '0 auto',
+        position: 'relative',
+        zIndex: 1
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-          <img
-            src="/logo.png"
-            alt="UFS CRM"
-            style={{
-              width: '130px',
-              height: 'auto',
-              mixBlendMode: 'multiply',
-              filter: 'contrast(1.1)',
-              display: 'block',
-              margin: '0 auto 8px'
-            }}
-          />
-          <h1 className="auth-title" style={{
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '8px',
+            padding: '6px 12px',
+            display: 'inline-block',
+            marginBottom: '12px'
+          }}>
+            <img
+              src="/logo.png"
+              alt="UFS CRM"
+              style={{
+                height: '20px',
+                display: 'block'
+              }}
+            />
+          </div>
+          <h1 style={{
             marginBottom: '4px',
-            fontSize: '18px',
-            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
+            fontSize: '22px',
+            fontWeight: '500',
+            color: '#ffffff'
           }}>Become a Reseller Partner</h1>
-          <p className="auth-subtitle" style={{ marginBottom: '0', fontSize: '13px', color: '#6b7280' }}>
+          <p style={{ marginBottom: '0', fontSize: '14px', color: '#9ca3af' }}>
             Fill out the form below to apply for our reseller program
           </p>
         </div>
 
         {error && (
           <div style={{
-            padding: '10px 14px',
-            background: '#FEE2E2',
-            color: '#991B1B',
-            borderRadius: '8px',
-            marginBottom: '12px',
-            fontSize: '13px'
+            padding: '12px 16px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '6px',
+            color: '#f87171',
+            marginBottom: '16px',
+            fontSize: '14px'
           }}>
-            ❌ {error}
+            {error}
           </div>
         )}
 
         <form onSubmit={handleSubmit}>
           {/* Personal Information */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.08) 0%, rgba(42, 82, 152, 0.05) 100%)',
+            background: 'rgba(255, 255, 255, 0.03)',
             borderRadius: '12px',
-            padding: '14px',
-            marginBottom: '10px',
-            border: '1px solid rgba(93, 185, 222, 0.2)'
+            padding: '16px',
+            marginBottom: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              marginBottom: '10px',
-              paddingBottom: '6px',
-              borderBottom: '2px solid rgba(93, 185, 222, 0.3)'
+              marginBottom: '12px',
+              paddingBottom: '8px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <div style={{
                 width: '28px',
                 height: '28px',
-                background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
                 borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
+                fontSize: '14px'
               }}>👤</div>
               <h3 style={{
                 fontSize: '14px',
-                fontWeight: '700',
+                fontWeight: '600',
                 margin: 0,
-                color: '#1a1a1a'
+                color: '#ffffff'
               }}>Personal Information</h3>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>First Name *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>First Name *</label>
                 <input
                   type="text"
                   name="firstName"
-                  className="form-input"
                   value={formData.firstName}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Last Name *</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Last Name *</label>
                 <input
                   type="text"
                   name="lastName"
-                  className="form-input"
                   value={formData.lastName}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Email *</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Email *</label>
                 <input
                   type="email"
                   name="email"
-                  className="form-input"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Phone *</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Phone *</label>
                 <input
                   type="tel"
                   name="phone"
-                  className="form-input"
                   value={formData.phone}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Password *</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Password *</label>
                 <input
                   type="password"
                   name="password"
-                  className="form-input"
                   value={formData.password}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Confirm Password *</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Confirm Password *</label>
                 <input
                   type="password"
                   name="confirmPassword"
-                  className="form-input"
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
             </div>
@@ -278,129 +365,192 @@ const ResellerRegister = () => {
 
           {/* Business & Address Combined */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(42, 82, 152, 0.08) 0%, rgba(93, 185, 222, 0.05) 100%)',
+            background: 'rgba(255, 255, 255, 0.03)',
             borderRadius: '12px',
-            padding: '14px',
-            marginBottom: '10px',
-            border: '1px solid rgba(42, 82, 152, 0.2)'
+            padding: '16px',
+            marginBottom: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              marginBottom: '10px',
-              paddingBottom: '6px',
-              borderBottom: '2px solid rgba(42, 82, 152, 0.3)'
+              marginBottom: '12px',
+              paddingBottom: '8px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <div style={{
                 width: '28px',
                 height: '28px',
-                background: 'linear-gradient(135deg, #2a5298 0%, #5db9de 100%)',
+                background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
                 borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(42, 82, 152, 0.3)'
+                fontSize: '14px'
               }}>🏢</div>
               <h3 style={{
                 fontSize: '14px',
-                fontWeight: '700',
+                fontWeight: '600',
                 margin: 0,
-                color: '#1a1a1a'
+                color: '#ffffff'
               }}>Business & Address Information</h3>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Company Name *</label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Company Name *</label>
                 <input
                   type="text"
                   name="companyName"
-                  className="form-input"
                   value={formData.companyName}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Occupation *</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Occupation *</label>
                 <input
                   type="text"
                   name="occupation"
-                  className="form-input"
                   placeholder="e.g., Consultant"
                   value={formData.occupation}
                   onChange={handleChange}
                   required
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Website</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Website</label>
                 <input
                   type="url"
                   name="website"
-                  className="form-input"
                   placeholder="yourwebsite.com"
                   value={formData.website}
                   onChange={handleChange}
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0', gridColumn: '1 / -1' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Street Address</label>
+              <div style={{ marginBottom: '0', gridColumn: '1 / -1' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Street Address</label>
                 <input
                   type="text"
                   name="street"
-                  className="form-input"
                   value={formData.street}
                   onChange={handleChange}
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>City</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>City</label>
                 <input
                   type="text"
                   name="city"
-                  className="form-input"
                   value={formData.city}
                   onChange={handleChange}
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>State</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>State</label>
                 <input
                   type="text"
                   name="state"
-                  className="form-input"
                   value={formData.state}
                   onChange={handleChange}
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Country</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Country</label>
                 <input
                   type="text"
                   name="country"
-                  className="form-input"
                   value={formData.country}
                   onChange={handleChange}
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Zip Code</label>
+              <div style={{ marginBottom: '0' }}>
+                <label style={{ fontSize: '12px', marginBottom: '5px', display: 'block', color: '#e5e7eb', fontWeight: '500' }}>Zip Code</label>
                 <input
                   type="text"
                   name="zipCode"
-                  className="form-input"
                   value={formData.zipCode}
                   onChange={handleChange}
-                  style={{ padding: '9px' }}
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    fontSize: '14px',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    color: '#ffffff',
+                    outline: 'none'
+                  }}
                 />
               </div>
             </div>
@@ -408,59 +558,68 @@ const ResellerRegister = () => {
 
           {/* Why Partner */}
           <div style={{
-            background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.08) 0%, rgba(42, 82, 152, 0.05) 100%)',
+            background: 'rgba(255, 255, 255, 0.03)',
             borderRadius: '12px',
-            padding: '14px',
-            marginBottom: '10px',
-            border: '1px solid rgba(93, 185, 222, 0.2)'
+            padding: '16px',
+            marginBottom: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
-              marginBottom: '10px',
-              paddingBottom: '6px',
-              borderBottom: '2px solid rgba(93, 185, 222, 0.3)'
+              marginBottom: '12px',
+              paddingBottom: '8px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
               <div style={{
                 width: '28px',
                 height: '28px',
-                background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+                background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
                 borderRadius: '6px',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
+                fontSize: '14px'
               }}>💬</div>
               <h3 style={{
                 fontSize: '14px',
-                fontWeight: '700',
+                fontWeight: '600',
                 margin: 0,
-                color: '#1a1a1a'
+                color: '#ffffff'
               }}>Why Partner With Us? *</h3>
             </div>
-            <div className="form-group" style={{ marginBottom: '0' }}>
+            <div style={{ marginBottom: '0' }}>
               <textarea
                 name="reason"
-                className="form-input"
                 rows="2"
                 placeholder="Tell us about your business, client base, and why you'd be a great partner..."
                 value={formData.reason}
                 onChange={handleChange}
                 required
-                style={{ resize: 'vertical', padding: '9px' }}
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  fontSize: '14px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  color: '#ffffff',
+                  outline: 'none',
+                  resize: 'vertical',
+                  fontFamily: 'inherit'
+                }}
               />
             </div>
           </div>
 
           {/* Info Box */}
           <div style={{
-            padding: '10px 12px',
-            background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.12) 0%, rgba(42, 82, 152, 0.08) 100%)',
+            padding: '12px 14px',
+            background: 'rgba(139, 92, 246, 0.1)',
             borderRadius: '10px',
-            marginBottom: '10px',
-            border: '1px solid rgba(93, 185, 222, 0.3)',
+            marginBottom: '12px',
+            border: '1px solid rgba(139, 92, 246, 0.2)',
             display: 'flex',
             alignItems: 'start',
             gap: '10px'
@@ -470,7 +629,7 @@ const ResellerRegister = () => {
               lineHeight: 1
             }}>✨</div>
             <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '12px', color: '#1a1a1a', margin: '0 0 5px 0', fontWeight: '700' }}>
+              <p style={{ fontSize: '12px', color: '#ffffff', margin: '0 0 5px 0', fontWeight: '600' }}>
                 Partner Benefits:
               </p>
               <div style={{
@@ -478,7 +637,7 @@ const ResellerRegister = () => {
                 gridTemplateColumns: '1fr 1fr',
                 gap: '4px',
                 fontSize: '11px',
-                color: '#4b5563'
+                color: '#9ca3af'
               }}>
                 <div>• 10% recurring commission</div>
                 <div>• Partner dashboard</div>
@@ -490,79 +649,67 @@ const ResellerRegister = () => {
 
           <button
             type="submit"
-            className="btn btn-primary btn-block"
             disabled={loading}
             style={{
-              marginTop: '2px',
-              marginBottom: '8px',
+              width: '100%',
+              marginBottom: '12px',
               padding: '12px',
               fontSize: '15px',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+              fontWeight: '600',
+              background: loading ? '#4b5563' : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
               color: '#ffffff',
               border: 'none',
               borderRadius: '10px',
-              boxShadow: '0 8px 24px rgba(93, 185, 222, 0.4)',
-              transition: 'all 0.3s ease',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1
+              boxShadow: loading ? 'none' : '0 4px 15px rgba(139, 92, 246, 0.3)',
+              transition: 'all 0.2s ease',
+              cursor: loading ? 'not-allowed' : 'pointer'
             }}
             onMouseEnter={(e) => {
               if (!loading) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 32px rgba(93, 185, 222, 0.5)';
+                e.target.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.4)';
               }
             }}
             onMouseLeave={(e) => {
               if (!loading) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 24px rgba(93, 185, 222, 0.4)';
+                e.target.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.3)';
               }
             }}
           >
-            {loading ? '⏳ Submitting Application...' : '🚀 Submit Application'}
+            {loading ? 'Submitting Application...' : 'Submit Application'}
           </button>
 
-          <style>{`
-            @keyframes gradientShift {
-              0% { background-position: 0% 50%; }
-              50% { background-position: 100% 50%; }
-              100% { background-position: 0% 50%; }
-            }
-
-            @media (max-width: 1024px) {
-              form > div > div[style*="gridTemplateColumns"] {
-                grid-template-columns: 1fr 1fr !important;
-              }
-            }
-
-            @media (max-width: 768px) {
-              .auth-card {
-                max-width: 100% !important;
-                padding: 20px !important;
-                margin: 0 10px !important;
-              }
-              form > div > div[style*="gridTemplateColumns"] {
-                grid-template-columns: 1fr !important;
-              }
-              form > div > div > div[style*="gridColumn"] {
-                grid-column: 1 / -1 !important;
-              }
-            }
-          `}</style>
-
-          <div className="auth-footer">
-            <p>
+          <div style={{ textAlign: 'center' }}>
+            <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '8px' }}>
               Already a partner?{' '}
               <button
                 type="button"
                 onClick={() => navigate('/reseller/login')}
-                className="auth-link"
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#a78bfa',
+                  fontWeight: '600',
+                  padding: 0
+                }}
               >
                 Login here
               </button>
             </p>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              style={{
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                color: '#6b7280',
+                fontSize: '14px',
+                padding: 0
+              }}
+            >
+              ← Back to Home
+            </button>
           </div>
         </form>
       </div>

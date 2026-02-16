@@ -82,7 +82,7 @@ const Login = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, rgb(226 164 204) 0%, rgb(250, 245, 255) 25%, rgb(235 218 226) 50%, rgb(255 255 255) 75%)',
+      background: '#0f172a',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -90,6 +90,29 @@ const Login = () => {
       position: 'relative',
       overflow: 'hidden'
     }}>
+      {/* Background glow effects */}
+      <div style={{
+        position: 'absolute',
+        top: '-20%',
+        left: '-10%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        pointerEvents: 'none'
+      }} />
+      <div style={{
+        position: 'absolute',
+        bottom: '-20%',
+        right: '-10%',
+        width: '500px',
+        height: '500px',
+        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
+        borderRadius: '50%',
+        filter: 'blur(60px)',
+        pointerEvents: 'none'
+      }} />
       <div style={{
         width: '100%',
         maxWidth: '400px',
@@ -99,15 +122,21 @@ const Login = () => {
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
           <Link to="/" style={{ display: 'inline-block' }}>
-            <img
-              src="/logo.png"
-              alt="Logo"
-              style={{
-                height: '24px',
-                mixBlendMode: 'multiply',
-                filter: 'contrast(1.2)'
-              }}
-            />
+            <div style={{
+              background: 'white',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              display: 'inline-block'
+            }}>
+              <img
+                src="/logo.png"
+                alt="Logo"
+                style={{
+                  height: '20px',
+                  display: 'block'
+                }}
+              />
+            </div>
           </Link>
         </div>
 
@@ -116,17 +145,17 @@ const Login = () => {
           <h2 style={{
             fontSize: '22px',
             fontWeight: '500',
-            color: '#1a1a1a',
+            color: '#ffffff',
             marginBottom: '2px'
           }}>
             Welcome back!
           </h2>
-          <p style={{ fontSize: '17px', color: '#6b7280', marginBottom: '4px' }}>
+          <p style={{ fontSize: '17px', color: '#9ca3af', marginBottom: '4px' }}>
             Don't have an account?{' '}
             <Link
               to="/register"
               style={{
-                color: '#667eea',
+                color: '#a78bfa',
                 textDecoration: 'none',
                 fontWeight: '600'
               }}
@@ -140,10 +169,10 @@ const Login = () => {
         {error && (
           <div style={{
             padding: '12px 16px',
-            background: '#fef2f2',
-            border: '1px solid #fecaca',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
             borderRadius: '6px',
-            color: '#dc2626',
+            color: '#f87171',
             marginBottom: '16px',
             fontSize: '14px'
           }}>
@@ -160,9 +189,9 @@ const Login = () => {
             padding: '12px 16px',
             fontSize: '15px',
             fontWeight: '600',
-            color: '#1a1a1a',
-            background: 'white',
-            border: '1px solid #d1d5db',
+            color: '#ffffff',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
             borderRadius: '6px',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
@@ -173,12 +202,12 @@ const Login = () => {
             marginBottom: '16px'
           }}
           onMouseEnter={(e) => {
-            e.target.style.background = '#f9fafb';
-            e.target.style.borderColor = '#9ca3af';
+            e.target.style.background = 'rgba(255, 255, 255, 0.1)';
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.2)';
           }}
           onMouseLeave={(e) => {
-            e.target.style.background = 'white';
-            e.target.style.borderColor = '#d1d5db';
+            e.target.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
           }}
         >
           <svg width="18" height="18" viewBox="0 0 24 24">
@@ -192,9 +221,9 @@ const Login = () => {
 
         {/* Divider */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', margin: '16px 0' }}>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
-          <span style={{ color: '#9ca3af', fontSize: '14px', fontWeight: '500' }}>OR</span>
-          <div style={{ flex: 1, height: '1px', background: '#e5e7eb' }} />
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
+          <span style={{ color: '#6b7280', fontSize: '14px', fontWeight: '500' }}>OR</span>
+          <div style={{ flex: 1, height: '1px', background: 'rgba(255, 255, 255, 0.1)' }} />
         </div>
 
         {/* Form */}
@@ -204,7 +233,7 @@ const Login = () => {
               display: 'block',
               fontSize: '14px',
               fontWeight: '600',
-              color: '#374151',
+              color: '#e5e7eb',
               marginBottom: '2px'
             }}>
               Email
@@ -220,19 +249,20 @@ const Login = () => {
                 width: '100%',
                 padding: '12px 14px',
                 fontSize: '15px',
-                border: '1px solid #d1d5db',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '10px',
                 outline: 'none',
                 transition: 'all 0.2s ease',
                 fontFamily: 'inherit',
-                background: 'white'
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#ffffff'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                e.target.style.borderColor = '#8b5cf6';
+                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = '#d1d5db';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                 e.target.style.boxShadow = 'none';
               }}
             />
@@ -243,7 +273,7 @@ const Login = () => {
               display: 'block',
               fontSize: '14px',
               fontWeight: '600',
-              color: '#374151',
+              color: '#e5e7eb',
               marginBottom: '6px'
             }}>
               Password
@@ -259,19 +289,20 @@ const Login = () => {
                 width: '100%',
                 padding: '12px 14px',
                 fontSize: '15px',
-                border: '1px solid #d1d5db',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '10px',
                 outline: 'none',
                 transition: 'all 0.2s ease',
                 fontFamily: 'inherit',
-                background: 'white'
+                background: 'rgba(255, 255, 255, 0.05)',
+                color: '#ffffff'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#667eea';
-                e.target.style.boxShadow = '0 0 0 3px rgba(102, 126, 234, 0.1)';
+                e.target.style.borderColor = '#8b5cf6';
+                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = '#d1d5db';
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
                 e.target.style.boxShadow = 'none';
               }}
             />
@@ -286,14 +317,15 @@ const Login = () => {
               fontSize: '15px',
               fontWeight: '600',
               color: 'white',
-              background: loading ? '#9ca3af' : '#667eea',
+              background: loading ? '#4b5563' : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
               border: 'none',
               borderRadius: '10px',
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease'
+              transition: 'all 0.2s ease',
+              boxShadow: loading ? 'none' : '0 4px 15px rgba(139, 92, 246, 0.3)'
             }}
-            onMouseEnter={(e) => !loading && (e.target.style.background = '#5568d3')}
-            onMouseLeave={(e) => !loading && (e.target.style.background = '#667eea')}
+            onMouseEnter={(e) => !loading && (e.target.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.4)')}
+            onMouseLeave={(e) => !loading && (e.target.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.3)')}
           >
             {loading ? 'Signing in...' : 'Log in'}
           </button>
@@ -305,7 +337,7 @@ const Login = () => {
             to="/forgot-password"
             style={{
               fontSize: '14px',
-              color: '#667eea',
+              color: '#a78bfa',
               textDecoration: 'none',
               fontWeight: '500'
             }}
@@ -320,7 +352,7 @@ const Login = () => {
             to="/"
             style={{
               display: 'inline-block',
-              color: '#9ca3af',
+              color: '#6b7280',
               fontSize: '14px',
               textDecoration: 'none'
             }}

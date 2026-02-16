@@ -97,66 +97,6 @@ const LandingPage = () => {
     }
   ];
 
-  const pricingPlans = [
-    {
-      name: "Free",
-      price: "₹0",
-      period: "forever",
-      features: [
-        "15-day trial all features",
-        "Up to 5 users",
-        "1,000 leads & contacts",
-        "Basic task management",
-        "1GB storage",
-        "Email support"
-      ],
-      highlighted: false
-    },
-    {
-      name: "Basic",
-      price: "₹1,499",
-      period: "per month",
-      features: [
-        "Up to 10 users",
-        "5,000 leads & contacts",
-        "Email integration",
-        "Custom fields",
-        "5GB storage",
-        "Priority email support"
-      ],
-      highlighted: false
-    },
-    {
-      name: "Professional",
-      price: "₹2,999",
-      period: "per month",
-      features: [
-        "Up to 50 users",
-        "Unlimited leads & contacts",
-        "Complete B2B workflow",
-        "Advanced reports",
-        "API access",
-        "50GB storage",
-        "24/7 priority support"
-      ],
-      highlighted: true
-    },
-    {
-      name: "Enterprise",
-      price: "Custom",
-      period: "contact us",
-      features: [
-        "Unlimited everything",
-        "White labeling",
-        "Dedicated support",
-        "Custom integrations",
-        "Multi-currency",
-        "SLA guarantee"
-      ],
-      highlighted: false
-    }
-  ];
-
   // 3D Tilt effect calculator
   const calculateTilt = (element, mouseX, mouseY) => {
     if (!element) return { rotateX: 0, rotateY: 0 };
@@ -169,46 +109,45 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#0f172a]">
       {/* Sticky Navigation */}
       <nav
         className={`fixed w-full top-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? 'bg-white/80 backdrop-blur-lg shadow-lg py-3'
+            ? 'bg-[#0f172a]/90 backdrop-blur-lg shadow-lg py-3 border-b border-white/5'
             : 'bg-transparent py-4'
         }`}
       >
         <div className="max-w-9xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="CRM Logo"
-              className="h-6 w-auto object-contain"
-            />
+            <div className="bg-white rounded-lg p-1.5">
+              <img
+                src="/logo.png"
+                alt="CRM Logo"
+                className="h-5 w-auto object-contain"
+              />
+            </div>
           </div>
 
           <div className="hidden md:flex gap-8 items-center">
-            <a href="#features" className="text-gray-700 hover:text-blue-600 font-medium transition">
+            <a href="#features" className="text-gray-300 hover:text-white font-medium transition">
               Features
-            </a>
-            <a href="#pricing" className="text-gray-700 hover:text-blue-600 font-medium transition">
-              Pricing
             </a>
             <button
               onClick={() => navigate("/reseller/register")}
-              className="px-4 py-2 text-purple-600 font-semibold hover:bg-purple-50 rounded-lg transition border-2 border-purple-600"
+              className="px-4 py-2 text-purple-400 font-semibold hover:bg-purple-500/10 rounded-lg transition border-2 border-purple-500/50"
             >
               🤝 Become Partner
             </button>
             <button
               onClick={() => { navigate('/login'); }}
-              className="px-4 py-2 text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition"
+              className="px-4 py-2 text-gray-300 font-semibold hover:text-white rounded-lg transition"
             >
               Sign In
             </button>
             <button
               onClick={() => { navigate('/register'); }}
-              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition transform hover:scale-105"
+              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/25 transition transform hover:scale-105"
             >
               Get Started Free
             </button>
@@ -245,18 +184,18 @@ const LandingPage = () => {
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left Side - Content */}
             <div className="space-y-8">
-              <div className="inline-block px-4 py-2 glass-card text-blue-700 rounded-full text-sm font-semibold">
+              <div className="inline-block px-4 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-sm font-semibold backdrop-blur-sm">
                 ⚡ #1 CRM Solution in India
               </div>
 
-              <h1 className="text-6xl font-extrabold text-gray-900 leading-tight">
+              <h1 className="text-6xl font-extrabold text-white leading-tight">
                 Grow Your Business
-                <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
+                <span className="block bg-gradient-to-r from-purple-400 via-blue-400 to-purple-400 bg-clip-text text-transparent animate-gradient">
                   10x Faster
                 </span>
               </h1>
 
-              <p className="text-xl text-gray-600 leading-relaxed">
+              <p className="text-xl text-gray-400 leading-relaxed">
                 Complete CRM solution with B2B sales workflow, email integration, and powerful team management.
                 From leads to invoices - manage your entire sales pipeline in one platform.
               </p>
@@ -270,7 +209,7 @@ const LandingPage = () => {
                 </button>
                 <button
                   onClick={() => { navigate('/login'); }}
-                  className="px-8 py-4 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-lg"
+                  className="px-8 py-4 bg-white/5 border border-white/10 text-gray-300 font-bold rounded-xl hover:bg-white/10 transition text-lg"
                 >
                   Sign In →
                 </button>
@@ -280,39 +219,39 @@ const LandingPage = () => {
               <div className="flex flex-wrap gap-6 pt-6">
                 <div className="flex items-center gap-2">
                   <div className="text-yellow-500 text-2xl">⭐⭐⭐⭐⭐</div>
-                  <span className="text-gray-600 font-medium">4.9/5 Rating</span>
+                  <span className="text-gray-400 font-medium">4.9/5 Rating</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-2xl">🔒</div>
-                  <span className="text-gray-600 font-medium">ISO Certified</span>
+                  <span className="text-gray-400 font-medium">ISO Certified</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-2xl">✅</div>
-                  <span className="text-gray-600 font-medium">GDPR Compliant</span>
+                  <span className="text-gray-400 font-medium">GDPR Compliant</span>
                 </div>
               </div>
             </div>
 
             {/* Right Side - 3D Floating Dashboard Preview */}
             <div className="relative">
-              <div className="glass-card-strong p-8 rounded-3xl shadow-2xl transform-3d">
+              <div className="bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-3xl">
                 <div className="space-y-4">
                   {/* Mini Dashboard Elements - FLOATING */}
-                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl animate-float">
+                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl animate-float">
                     <div className="text-4xl">📊</div>
                     <div className="text-white">
                       <div className="font-bold text-lg">Real-time Analytics</div>
                       <div className="text-sm opacity-90">Track your sales pipeline</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-500 to-pink-500 rounded-xl animate-float animation-delay-500">
+                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl animate-float animation-delay-500">
                     <div className="text-4xl">💰</div>
                     <div className="text-white">
                       <div className="font-bold text-lg">Revenue Growth</div>
                       <div className="text-sm opacity-90">+45% this month</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-pink-500 to-blue-500 rounded-xl animate-float animation-delay-1000">
+                  <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl animate-float animation-delay-1000">
                     <div className="text-4xl">🎯</div>
                     <div className="text-white">
                       <div className="font-bold text-lg">Lead Conversion</div>
@@ -352,7 +291,7 @@ const LandingPage = () => {
       </section>
 
       {/* Moving Feature Marquee */}
-      <section className="py-8 bg-white overflow-hidden">
+      <section className="py-8 bg-[#0f172a] overflow-hidden">
         <div className="marquee-container">
           <div className="marquee-content">
             {[
@@ -383,47 +322,36 @@ const LandingPage = () => {
       </section>
 
       {/* Complete CRM Ecosystem - Rotating Box */}
-      <section className="py-20 bg-gradient-to-br from-slate-50 via-white to-slate-100 relative overflow-hidden">
-        {/* Background Particles */}
-        <div className="absolute inset-0 opacity-30">
-          {Array.from({ length: 20 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-2 h-2 bg-blue-500 rounded-full animate-particle-float"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`
-              }}
-            />
-          ))}
-        </div>
+      <section className="py-20 bg-[#1e293b] relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600 rounded-full filter blur-3xl opacity-10"></div>
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left Side - Heading */}
             <div>
               <h3 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
-                <span className="text-gray-900">Complete CRM </span>
+                <span className="text-white">Complete CRM </span>
                 <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">
                   Ecosystem
                 </span>
               </h3>
-              <p className="text-xl text-gray-600 mb-8">
+              <p className="text-xl text-gray-400 mb-8">
                 Everything you need to manage your business from a single platform
               </p>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
-                  <span className="text-gray-700 font-medium">18+ Powerful Modules</span>
+                  <span className="text-gray-300 font-medium">18+ Powerful Modules</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"></div>
-                  <span className="text-gray-700 font-medium">Complete B2B Workflow</span>
+                  <span className="text-gray-300 font-medium">Complete B2B Workflow</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
-                  <span className="text-gray-700 font-medium">Real-time Automation</span>
+                  <span className="text-gray-300 font-medium">Real-time Automation</span>
                 </div>
               </div>
             </div>
@@ -517,7 +445,7 @@ const LandingPage = () => {
       </section>
 
       {/* Features Section with 3D Tilt Cards */}
-      <section id="features" className="py-24 bg-gray-50 relative overflow-hidden">
+      <section id="features" className="py-24 bg-[#1e293b] relative overflow-hidden">
         {/* Animated Background Grid */}
         <div className="absolute inset-0 opacity-10">
           <div className="grid-lines-background"></div>
@@ -525,13 +453,13 @@ const LandingPage = () => {
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 glass-card text-blue-700 rounded-full text-sm font-semibold mb-4">
+            <div className="inline-block px-4 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-sm font-semibold mb-4 backdrop-blur-sm">
               ✨ POWERFUL FEATURES
             </div>
-            <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
+            <h2 className="text-5xl font-extrabold text-white mb-4">
               Everything You Need to Scale
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
               From lead capture to deal closure, we've got all the tools you need
             </p>
           </div>
@@ -540,8 +468,8 @@ const LandingPage = () => {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className={`glass-card-strong p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer tilt-card ${
-                  activeFeature === index ? 'ring-4 ring-blue-500' : ''
+                className={`bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-2xl hover:bg-white/10 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer ${
+                  activeFeature === index ? 'ring-2 ring-purple-500' : ''
                 }`}
                 onMouseEnter={() => setActiveFeature(index)}
               >
@@ -553,10 +481,10 @@ const LandingPage = () => {
                 >
                   {feature.icon}
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                <h3 className="text-2xl font-bold text-white mb-3">
                   {feature.title}
                 </h3>
-                <p className="text-gray-600 leading-relaxed">
+                <p className="text-gray-400 leading-relaxed">
                   {feature.description}
                 </p>
               </div>
@@ -566,7 +494,7 @@ const LandingPage = () => {
       </section>
 
       {/* Detailed Features Section */}
-      <section className="py-24 bg-white relative overflow-hidden">
+      <section className="py-24 bg-[#0f172a] relative overflow-hidden">
         {/* Floating Particles */}
         <div className="absolute inset-0">
           {Array.from({ length: 15 }).map((_, i) => (
@@ -586,10 +514,10 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-16 items-center mb-24">
             <div>
-              <h2 className="text-4xl font-extrabold text-gray-900 mb-6">
+              <h2 className="text-4xl font-extrabold text-white mb-6">
                 📋 Complete B2B Sales Workflow
               </h2>
-              <p className="text-lg text-gray-600 mb-6">
+              <p className="text-lg text-gray-400 mb-6">
                 Streamline your entire sales process from inquiry to payment.
                 Professional document generation with built-in PDF export.
               </p>
@@ -601,53 +529,53 @@ const LandingPage = () => {
                   "Invoice Creation with Payment Tracking"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">
+                    <div className="w-6 h-6 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center text-sm font-bold">
                       ✓
                     </div>
-                    <span className="text-gray-700 font-medium">{item}</span>
+                    <span className="text-gray-300 font-medium">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="glass-card p-8 rounded-2xl transform hover:scale-105 transition duration-500">
-              <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-2xl transform hover:scale-105 transition duration-500">
+              <div className="bg-white/5 border border-white/10 p-6 rounded-xl">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
                     📋
                   </div>
                   <div>
-                    <div className="font-bold">Quotation #QT-2025-00123</div>
-                    <div className="text-sm text-gray-500">Status: Accepted</div>
+                    <div className="font-bold text-white">Quotation #QT-2025-00123</div>
+                    <div className="text-sm text-gray-400">Status: Accepted</div>
                   </div>
                 </div>
-                <p className="text-gray-600">Convert to Invoice → PO-2025-00045</p>
+                <p className="text-gray-400">Convert to Invoice → PO-2025-00045</p>
               </div>
             </div>
           </div>
 
           {/* Team & Customization */}
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="order-2 md:order-1 glass-card p-8 rounded-2xl transform hover:scale-105 transition duration-500">
-              <div className="bg-white p-6 rounded-xl shadow-lg">
+            <div className="order-2 md:order-1 bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-2xl transform hover:scale-105 transition duration-500">
+              <div className="bg-white/5 border border-white/10 p-6 rounded-xl">
                 <div className="text-2xl mb-4">👥</div>
-                <div className="font-bold text-lg mb-2">Team Assignment</div>
+                <div className="font-bold text-lg mb-2 text-white">Team Assignment</div>
                 <div className="space-y-3">
                   <div className="flex gap-3 items-center">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm">Sales Team - 12 members</span>
+                    <span className="text-sm text-gray-300">Sales Team - 12 members</span>
                   </div>
                   <div className="flex gap-3 items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">Support Team - 5 members</span>
+                    <span className="text-sm text-gray-300">Support Team - 5 members</span>
                   </div>
                 </div>
               </div>
             </div>
             <div className="order-1 md:order-2">
-              <h2 className="text-4xl font-extrabold text-gray-900 mb-6">
+              <h2 className="text-4xl font-extrabold text-white mb-6">
                 🎯 Powerful Team Management
               </h2>
-              <p className="text-lg text-gray-600 mb-6">
+              <p className="text-lg text-gray-400 mb-6">
                 Organize teams with groups, assign leads to specific members,
                 and control access with role-based permissions.
               </p>
@@ -659,10 +587,10 @@ const LandingPage = () => {
                   "Activity logs and audit trail"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-bold">
+                    <div className="w-6 h-6 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center text-sm font-bold">
                       ✓
                     </div>
-                    <span className="text-gray-700 font-medium">{item}</span>
+                    <span className="text-gray-300 font-medium">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -671,85 +599,23 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* Pricing Section with 3D Cards */}
-      <section id="pricing" className="py-24 bg-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="grid-lines-background"></div>
-        </div>
-
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
-          <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 glass-card text-purple-700 rounded-full text-sm font-semibold mb-4">
-              💰 SIMPLE PRICING
-            </div>
-            <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
-              Choose Your Perfect Plan
-            </h2>
-            <p className="text-xl text-gray-600">
-              No hidden fees. Cancel anytime.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            {pricingPlans.map((plan, index) => (
-              <div
-                key={index}
-                className={`glass-card-strong rounded-2xl p-8 tilt-card ${
-                  plan.highlighted
-                    ? 'ring-4 ring-blue-500 shadow-2xl scale-105'
-                    : 'shadow-lg'
-                } transition-all hover:shadow-2xl`}
-                style={{ animationDelay: `${index * 0.1}s` }}
-              >
-                {plan.highlighted && (
-                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-bold px-4 py-2 rounded-full inline-block mb-4 animate-pulse">
-                    ⭐ MOST POPULAR
-                  </div>
-                )}
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-                <div className="mb-6">
-                  <span className="text-5xl font-extrabold text-gray-900">{plan.price}</span>
-                  <span className="text-gray-500 ml-2">/{plan.period}</span>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-center gap-3">
-                      <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-bold animate-pulse">
-                        ✓
-                      </div>
-                      <span className="text-gray-700">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <button
-                  onClick={() => { navigate('/register'); }}
-                  className={`w-full py-3 rounded-xl font-bold transition transform hover:scale-105 ${
-                    plan.highlighted
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg'
-                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                  }`}
-                >
-                  Get Started
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
 
       {/* Reseller Partner Program */}
-      <section className="py-24 bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 text-white relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full filter blur-3xl animate-morph"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full filter blur-3xl animate-morph animation-delay-2000"></div>
+      <section className="py-24 bg-[#0f172a] text-white relative overflow-hidden">
+        <div className="absolute inset-0">
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600 rounded-full filter blur-3xl opacity-10"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <h2 className="text-5xl font-extrabold mb-6 animate-slide-in">
+            <div className="inline-block px-4 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-sm font-semibold mb-6 backdrop-blur-sm">
+              PARTNER PROGRAM
+            </div>
+            <h2 className="text-5xl font-extrabold mb-6 text-white">
               💰 Become a Reseller Partner
             </h2>
-            <p className="text-2xl opacity-90 max-w-3xl mx-auto animate-slide-in animation-delay-200">
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
               Earn 10% recurring commission on every client you refer.
               Join our partner program and grow your income!
             </p>
@@ -763,12 +629,12 @@ const LandingPage = () => {
             ].map((item, i) => (
               <div
                 key={i}
-                className="bg-white/20 backdrop-blur-lg p-8 rounded-2xl text-center transform hover:scale-110 transition duration-500 animate-float border border-white/30"
+                className="bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-2xl text-center transform hover:scale-105 hover:bg-white/10 transition duration-500"
                 style={{ animationDelay: `${i * 0.5}s` }}
               >
                 <div className="text-6xl mb-4">{item.icon}</div>
                 <h3 className="text-2xl font-bold mb-3 text-white">{item.title}</h3>
-                <p className="text-white/90">{item.desc}</p>
+                <p className="text-gray-400">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -776,15 +642,15 @@ const LandingPage = () => {
           <div className="text-center">
             <button
               onClick={() => navigate("/reseller/register")}
-              className="px-12 py-5 bg-white text-purple-600 font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-xl"
+              className="px-12 py-5 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition transform hover:scale-105 text-xl"
             >
               Apply to Become a Partner →
             </button>
-            <p className="mt-6 opacity-90">
+            <p className="mt-6 text-gray-400">
               Already a partner?{' '}
               <button
                 onClick={() => navigate("/reseller/login")}
-                className="font-bold underline hover:opacity-80"
+                className="font-bold text-purple-400 hover:text-purple-300"
               >
                 Login here
               </button>
@@ -794,24 +660,26 @@ const LandingPage = () => {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 bg-gradient-to-br from-blue-50 to-purple-50">
-        <div className="max-w-4xl mx-auto px-6 text-center">
-          <h2 className="text-5xl font-extrabold text-gray-900 mb-6 animate-slide-in">
+      <section className="py-24 bg-[#1e293b] relative overflow-hidden">
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600 rounded-full filter blur-3xl opacity-10"></div>
+        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
+          <h2 className="text-5xl font-extrabold text-white mb-6">
             Ready to Transform Your Business?
           </h2>
-          <p className="text-2xl text-gray-600 mb-12 animate-slide-in animation-delay-200">
+          <p className="text-2xl text-gray-400 mb-12">
             Start managing leads, quotations, and invoices in one powerful platform
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <button
               onClick={() => { navigate('/register'); }}
-              className="px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-xl"
+              className="px-12 py-5 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-purple-500/25 transition transform hover:scale-105 text-xl"
             >
               Start Free Trial - No Credit Card Required
             </button>
             <button
               onClick={() => { navigate('/login'); }}
-              className="px-12 py-5 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-xl"
+              className="px-12 py-5 bg-white/5 border border-white/10 text-gray-300 font-bold rounded-xl hover:bg-white/10 transition text-xl"
             >
               Sign In to Your Account
             </button>
@@ -823,49 +691,65 @@ const LandingPage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-16">
+      <footer className="bg-[#0f172a] text-white py-16 border-t border-white/5">
         <div className="max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-5 gap-8 mb-12">
             <div className="md:col-span-2">
-              <img
-                src="/logo.png"
-                alt="CRM Logo"
-                className="h-7 w-auto object-contain mb-4"
-              />
+              <div className="bg-white rounded-lg p-1.5 inline-block mb-4">
+                <img
+                  src="/logo.png"
+                  alt="CRM Logo"
+                  className="h-5 w-auto object-contain"
+                />
+              </div>
               <p className="text-gray-400 mb-6">
                 Complete CRM solution with B2B workflow, email integration, team management, and more.
               </p>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition transform hover:scale-110">
-                  📘
-                </div>
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-400 transition transform hover:scale-110">
-                  🐦
-                </div>
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-600 transition transform hover:scale-110">
-                  📷
-                </div>
-                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition transform hover:scale-110">
-                  💼
-                </div>
+              <div className="flex gap-3">
+                {/* Instagram - Gradient */}
+                <a href="https://www.instagram.com/texoraai" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-500/20 hover:border-pink-500/50 transition transform hover:scale-110">
+                  <svg className="w-5 h-5" viewBox="0 0 24 24">
+                    <defs>
+                      <linearGradient id="instagram-gradient" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#FFDC80" />
+                        <stop offset="25%" stopColor="#F77737" />
+                        <stop offset="50%" stopColor="#E1306C" />
+                        <stop offset="75%" stopColor="#C13584" />
+                        <stop offset="100%" stopColor="#833AB4" />
+                      </linearGradient>
+                    </defs>
+                    <path fill="url(#instagram-gradient)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                </a>
+                {/* X/Twitter - White */}
+                <a href="https://x.com/texoraai" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-white/20 hover:border-white/50 transition transform hover:scale-110">
+                  <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                {/* LinkedIn - Blue */}
+                <a href="https://www.linkedin.com/company/texora-ai/" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600/20 hover:border-blue-600/50 transition transform hover:scale-110">
+                  <svg className="w-5 h-5" fill="#0A66C2" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+                {/* YouTube - Red */}
+                <a href="https://www.youtube.com/@Texoraai" target="_blank" rel="noopener noreferrer" className="w-10 h-10 bg-white/5 border border-white/10 rounded-full flex items-center justify-center cursor-pointer hover:bg-red-600/20 hover:border-red-600/50 transition transform hover:scale-110">
+                  <svg className="w-5 h-5" fill="#FF0000" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
               </div>
             </div>
             <div>
               <h4 className="font-bold text-lg mb-4">Product</h4>
               <ul className="space-y-3 text-gray-400">
                 <li><a href="#features" className="hover:text-white transition">Features</a></li>
-                <li><a href="#pricing" className="hover:text-white transition">Pricing</a></li>
-                <li><a href="#" className="hover:text-white transition">Security</a></li>
-                <li><a href="#" className="hover:text-white transition">Integrations</a></li>
+                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Security</a></li>
+                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Integrations</a></li>
               </ul>
             </div>
             <div>
               <h4 className="font-bold text-lg mb-4">Company</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><a href="#" className="hover:text-white transition">About Us</a></li>
-                <li><a href="#" className="hover:text-white transition">Careers</a></li>
-                <li><a href="#" className="hover:text-white transition">Blog</a></li>
-                <li><a href="#" className="hover:text-white transition">Contact</a></li>
+                <li><button onClick={() => navigate("/about")} className="hover:text-white transition text-left">About Us</button></li>
+                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Careers</a></li>
+                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Blog</a></li>
+                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Contact</a></li>
               </ul>
             </div>
             <div>
@@ -887,16 +771,16 @@ const LandingPage = () => {
                     Partner Login
                   </button>
                 </li>
-                <li><a href="#" className="hover:text-white transition">Partner Resources</a></li>
+                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Partner Resources</a></li>
               </ul>
             </div>
           </div>
-          <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-400">© 2025 CRMOrbit. All rights reserved.</p>
+          <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-gray-400">© 2026 Unified CRM. All rights reserved.</p>
             <div className="flex gap-6 text-gray-400">
-              <a href="#" className="hover:text-white transition">Privacy Policy</a>
-              <a href="#" className="hover:text-white transition">Terms of Service</a>
-              <a href="#" className="hover:text-white transition">Cookie Policy</a>
+              <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Privacy Policy</a>
+              <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Terms of Service</a>
+              <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Cookie Policy</a>
             </div>
           </div>
         </div>
@@ -905,7 +789,7 @@ const LandingPage = () => {
       {/* Floating Action Button */}
       <button
         onClick={() => { navigate('/register'); }}
-        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full shadow-2xl hover:shadow-3xl transition transform hover:scale-110 flex items-center justify-center text-2xl z-50"
+        className="fixed bottom-8 right-8 w-16 h-16 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full shadow-2xl hover:shadow-purple-500/25 transition transform hover:scale-110 flex items-center justify-center text-2xl z-50"
       >
         🚀
       </button>
@@ -1095,14 +979,14 @@ const LandingPage = () => {
 
         /* Glassmorphism */
         .glass-card {
-          background: rgba(255, 255, 255, 0.7);
+          background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(10px);
-          border: 1px solid rgba(255, 255, 255, 0.3);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
         .glass-card-strong {
-          background: rgba(255, 255, 255, 0.9);
+          background: rgba(255, 255, 255, 0.05);
           backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.5);
+          border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         /* 3D Tilt Cards */
@@ -1132,7 +1016,7 @@ const LandingPage = () => {
         .marquee-container {
           width: 100%;
           overflow: hidden;
-          background: linear-gradient(to right, #f8fafc, #ffffff, #f8fafc);
+          background: #0f172a;
           padding: 20px 0;
           position: relative;
         }
@@ -1147,11 +1031,11 @@ const LandingPage = () => {
         }
         .marquee-container::before {
           left: 0;
-          background: linear-gradient(to right, white, transparent);
+          background: linear-gradient(to right, #0f172a, transparent);
         }
         .marquee-container::after {
           right: 0;
-          background: linear-gradient(to left, white, transparent);
+          background: linear-gradient(to left, #0f172a, transparent);
         }
         .marquee-content {
           display: flex;
@@ -1162,7 +1046,7 @@ const LandingPage = () => {
           display: inline-block;
           padding: 12px 24px;
           margin: 0 12px;
-          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          background: linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%);
           color: white;
           border-radius: 30px;
           font-weight: 600;
@@ -1185,18 +1069,18 @@ const LandingPage = () => {
         /* Rotating Showcase Box */
         .rotating-showcase-box {
           background: linear-gradient(135deg,
-            #f472b6 0%,    /* Light Pink */
-            #c084fc 25%,   /* Light Purple */
-            #818cf8 50%,   /* Light Indigo */
-            #60a5fa 75%,   /* Light Blue */
-            #22d3ee 100%   /* Light Cyan */
+            #7c3aed 0%,    /* Purple */
+            #8b5cf6 25%,   /* Violet */
+            #6366f1 50%,   /* Indigo */
+            #3b82f6 75%,   /* Blue */
+            #6366f1 100%   /* Indigo */
           );
           border-radius: 32px;
           padding: 60px 40px;
           text-align: center;
           box-shadow:
-            0 20px 60px rgba(244, 114, 182, 0.4),
-            0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+            0 20px 60px rgba(139, 92, 246, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.1) inset;
           position: relative;
           overflow: hidden;
           min-height: 450px;
@@ -1216,7 +1100,7 @@ const LandingPage = () => {
           background: linear-gradient(
             60deg,
             transparent,
-            rgba(255, 255, 255, 0.3),
+            rgba(255, 255, 255, 0.15),
             transparent
           );
           animation: shine 4s infinite;
@@ -1227,12 +1111,12 @@ const LandingPage = () => {
           inset: -3px;
           background: linear-gradient(
             45deg,
-            #f472b6,
-            #c084fc,
-            #818cf8,
-            #60a5fa,
-            #22d3ee,
-            #f472b6
+            #7c3aed,
+            #8b5cf6,
+            #6366f1,
+            #3b82f6,
+            #6366f1,
+            #7c3aed
           );
           border-radius: 32px;
           z-index: -1;
