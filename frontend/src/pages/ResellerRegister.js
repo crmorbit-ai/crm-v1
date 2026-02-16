@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { API_URL } from '../config/api.config';
-import '../styles/auth.css';
 
 const ResellerRegister = () => {
   const navigate = useNavigate();
@@ -31,13 +30,13 @@ const ResellerRegister = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
+    setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
-    // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -85,22 +84,74 @@ const ResellerRegister = () => {
     }
   };
 
+  const inputStyle = {
+    width: '100%',
+    padding: '12px 14px',
+    fontSize: '15px',
+    border: '1px solid rgba(255, 255, 255, 0.1)',
+    borderRadius: '10px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    fontFamily: 'inherit',
+    background: 'rgba(255, 255, 255, 0.05)',
+    color: '#ffffff'
+  };
+
+  const labelStyle = {
+    display: 'block',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#e2e8f0',
+    marginBottom: '2px'
+  };
+
+  const handleFocus = (e) => {
+    e.target.style.borderColor = '#8b5cf6';
+    e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+  };
+
+  const handleBlur = (e) => {
+    e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+    e.target.style.boxShadow = 'none';
+  };
+
   if (success) {
     return (
-      <div className="auth-container">
-        <div className="auth-card" style={{ maxWidth: '600px', textAlign: 'center' }}>
-          <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
-          <h1 className="auth-title">Application Submitted!</h1>
-          <p className="auth-subtitle" style={{ marginBottom: '20px' }}>
+      <div style={{
+        minHeight: '100vh',
+        background: '#0f172a',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 20px'
+      }}>
+        <div style={{
+          width: '100%',
+          maxWidth: '400px',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: '64px', marginBottom: '16px' }}>✅</div>
+          <h1 style={{ fontSize: '24px', fontWeight: '500', color: '#ffffff', marginBottom: '8px' }}>
+            Application Submitted!
+          </h1>
+          <p style={{ color: '#94a3b8', marginBottom: '16px' }}>
             Thank you for your interest in becoming a reseller partner.
           </p>
-          <p style={{ color: '#6B7280', marginBottom: '30px' }}>
+          <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '24px' }}>
             We will review your application and get back to you within 2-3 business days.
-            You'll receive an email once your application is approved.
           </p>
           <button
             onClick={() => navigate('/')}
-            className="btn btn-primary btn-block"
+            style={{
+              padding: '12px 24px',
+              fontSize: '15px',
+              fontWeight: '600',
+              color: 'white',
+              background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+              border: 'none',
+              borderRadius: '10px',
+              cursor: 'pointer'
+            }}
           >
             Back to Home
           </button>
@@ -110,462 +161,248 @@ const ResellerRegister = () => {
   }
 
   return (
-    <div className="auth-container" style={{
-      background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #1a2a35 50%, #95b5ef 75%, #2a5298 100%)',
-      backgroundSize: '400% 400%',
-      animation: 'gradientShift 15s ease infinite',
+    <div style={{
       minHeight: '100vh',
-      padding: '30px 20px'
+      background: '#0f172a',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '40px 20px',
+      position: 'relative',
+      overflow: 'hidden'
     }}>
-      <div className="auth-card" style={{
-        maxWidth: '900px',
-        padding: '20px',
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)',
-        borderRadius: '20px',
-        border: '1px solid rgba(255, 255, 255, 0.3)'
+      {/* Background glow effects */}
+      <div style={{
+        position: 'absolute',
+        top: '10%',
+        left: '20%',
+        width: '400px',
+        height: '400px',
+        background: '#8b5cf6',
+        borderRadius: '50%',
+        filter: 'blur(150px)',
+        opacity: '0.15'
+      }}></div>
+      <div style={{
+        position: 'absolute',
+        bottom: '10%',
+        right: '20%',
+        width: '400px',
+        height: '400px',
+        background: '#3b82f6',
+        borderRadius: '50%',
+        filter: 'blur(150px)',
+        opacity: '0.15'
+      }}></div>
+
+      <div style={{
+        width: '100%',
+        maxWidth: '500px',
+        position: 'relative',
+        zIndex: 1
       }}>
-        <div style={{ textAlign: 'center', marginBottom: '12px' }}>
-          <img
-            src="/logo.png"
-            alt="UFS CRM"
-            style={{
-              width: '130px',
-              height: 'auto',
-              mixBlendMode: 'multiply',
-              filter: 'contrast(1.1)',
-              display: 'block',
-              margin: '0 auto 8px'
-            }}
-          />
-          <h1 className="auth-title" style={{
-            marginBottom: '4px',
-            fontSize: '18px',
-            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-            backgroundClip: 'text'
-          }}>Become a Reseller Partner</h1>
-          <p className="auth-subtitle" style={{ marginBottom: '0', fontSize: '13px', color: '#6b7280' }}>
-            Fill out the form below to apply for our reseller program
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+          <Link to="/" style={{ display: 'inline-block' }}>
+            <div style={{ background: 'white', borderRadius: '8px', padding: '6px', display: 'inline-block' }}>
+              <img
+                src="/logo.png"
+                alt="Logo"
+                style={{
+                  height: '20px',
+                  display: 'block'
+                }}
+              />
+            </div>
+          </Link>
+        </div>
+
+        {/* Header */}
+        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
+          <h2 style={{
+            fontSize: '22px',
+            fontWeight: '500',
+            color: '#ffffff',
+            marginBottom: '2px'
+          }}>
+            Become a Partner
+          </h2>
+          <p style={{ fontSize: '17px', color: '#94a3b8', marginBottom: '4px' }}>
+            Already a partner?{' '}
+            <Link
+              to="/reseller/login"
+              style={{
+                color: '#a78bfa',
+                textDecoration: 'none',
+                fontWeight: '600'
+              }}
+            >
+              Login here
+            </Link>
           </p>
         </div>
 
+        {/* Error */}
         {error && (
           <div style={{
-            padding: '10px 14px',
-            background: '#FEE2E2',
-            color: '#991B1B',
-            borderRadius: '8px',
-            marginBottom: '12px',
-            fontSize: '13px'
+            padding: '12px 16px',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '6px',
+            color: '#f87171',
+            marginBottom: '16px',
+            fontSize: '14px'
           }}>
-            ❌ {error}
+            {error}
           </div>
         )}
 
+        {/* Form */}
         <form onSubmit={handleSubmit}>
-          {/* Personal Information */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.08) 0%, rgba(42, 82, 152, 0.05) 100%)',
-            borderRadius: '12px',
-            padding: '14px',
-            marginBottom: '10px',
-            border: '1px solid rgba(93, 185, 222, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '10px',
-              paddingBottom: '6px',
-              borderBottom: '2px solid rgba(93, 185, 222, 0.3)'
-            }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
-              }}>👤</div>
-              <h3 style={{
-                fontSize: '14px',
-                fontWeight: '700',
-                margin: 0,
-                color: '#1a1a1a'
-              }}>Personal Information</h3>
+          {/* Row 1 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <label style={labelStyle}>First Name *</label>
+              <input type="text" name="firstName" value={formData.firstName} onChange={handleChange} required style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>First Name *</label>
-                <input
-                  type="text"
-                  name="firstName"
-                  className="form-input"
-                  value={formData.firstName}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Last Name *</label>
-                <input
-                  type="text"
-                  name="lastName"
-                  className="form-input"
-                  value={formData.lastName}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Email *</label>
-                <input
-                  type="email"
-                  name="email"
-                  className="form-input"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Phone *</label>
-                <input
-                  type="tel"
-                  name="phone"
-                  className="form-input"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Password *</label>
-                <input
-                  type="password"
-                  name="password"
-                  className="form-input"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Confirm Password *</label>
-                <input
-                  type="password"
-                  name="confirmPassword"
-                  className="form-input"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
+            <div>
+              <label style={labelStyle}>Last Name *</label>
+              <input type="text" name="lastName" value={formData.lastName} onChange={handleChange} required style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
           </div>
 
-          {/* Business & Address Combined */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(42, 82, 152, 0.08) 0%, rgba(93, 185, 222, 0.05) 100%)',
-            borderRadius: '12px',
-            padding: '14px',
-            marginBottom: '10px',
-            border: '1px solid rgba(42, 82, 152, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '10px',
-              paddingBottom: '6px',
-              borderBottom: '2px solid rgba(42, 82, 152, 0.3)'
-            }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                background: 'linear-gradient(135deg, #2a5298 0%, #5db9de 100%)',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(42, 82, 152, 0.3)'
-              }}>🏢</div>
-              <h3 style={{
-                fontSize: '14px',
-                fontWeight: '700',
-                margin: 0,
-                color: '#1a1a1a'
-              }}>Business & Address Information</h3>
+          {/* Row 2 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <label style={labelStyle}>Email *</label>
+              <input type="email" name="email" value={formData.email} onChange={handleChange} required style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Company Name *</label>
-                <input
-                  type="text"
-                  name="companyName"
-                  className="form-input"
-                  value={formData.companyName}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Occupation *</label>
-                <input
-                  type="text"
-                  name="occupation"
-                  className="form-input"
-                  placeholder="e.g., Consultant"
-                  value={formData.occupation}
-                  onChange={handleChange}
-                  required
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Website</label>
-                <input
-                  type="url"
-                  name="website"
-                  className="form-input"
-                  placeholder="yourwebsite.com"
-                  value={formData.website}
-                  onChange={handleChange}
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0', gridColumn: '1 / -1' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Street Address</label>
-                <input
-                  type="text"
-                  name="street"
-                  className="form-input"
-                  value={formData.street}
-                  onChange={handleChange}
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>City</label>
-                <input
-                  type="text"
-                  name="city"
-                  className="form-input"
-                  value={formData.city}
-                  onChange={handleChange}
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>State</label>
-                <input
-                  type="text"
-                  name="state"
-                  className="form-input"
-                  value={formData.state}
-                  onChange={handleChange}
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Country</label>
-                <input
-                  type="text"
-                  name="country"
-                  className="form-input"
-                  value={formData.country}
-                  onChange={handleChange}
-                  style={{ padding: '9px' }}
-                />
-              </div>
-              <div className="form-group" style={{ marginBottom: '0' }}>
-                <label className="form-label" style={{ fontSize: '12px', marginBottom: '5px' }}>Zip Code</label>
-                <input
-                  type="text"
-                  name="zipCode"
-                  className="form-input"
-                  value={formData.zipCode}
-                  onChange={handleChange}
-                  style={{ padding: '9px' }}
-                />
-              </div>
+            <div>
+              <label style={labelStyle}>Phone *</label>
+              <input type="tel" name="phone" value={formData.phone} onChange={handleChange} required style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
           </div>
 
-          {/* Why Partner */}
-          <div style={{
-            background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.08) 0%, rgba(42, 82, 152, 0.05) 100%)',
-            borderRadius: '12px',
-            padding: '14px',
-            marginBottom: '10px',
-            border: '1px solid rgba(93, 185, 222, 0.2)'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              marginBottom: '10px',
-              paddingBottom: '6px',
-              borderBottom: '2px solid rgba(93, 185, 222, 0.3)'
-            }}>
-              <div style={{
-                width: '28px',
-                height: '28px',
-                background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-                borderRadius: '6px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '14px',
-                boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
-              }}>💬</div>
-              <h3 style={{
-                fontSize: '14px',
-                fontWeight: '700',
-                margin: 0,
-                color: '#1a1a1a'
-              }}>Why Partner With Us? *</h3>
+          {/* Row 3 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <label style={labelStyle}>Password *</label>
+              <input type="password" name="password" value={formData.password} onChange={handleChange} required style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
-            <div className="form-group" style={{ marginBottom: '0' }}>
-              <textarea
-                name="reason"
-                className="form-input"
-                rows="2"
-                placeholder="Tell us about your business, client base, and why you'd be a great partner..."
-                value={formData.reason}
-                onChange={handleChange}
-                required
-                style={{ resize: 'vertical', padding: '9px' }}
-              />
+            <div>
+              <label style={labelStyle}>Confirm Password *</label>
+              <input type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} required style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
           </div>
 
-          {/* Info Box */}
-          <div style={{
-            padding: '10px 12px',
-            background: 'linear-gradient(135deg, rgba(93, 185, 222, 0.12) 0%, rgba(42, 82, 152, 0.08) 100%)',
-            borderRadius: '10px',
-            marginBottom: '10px',
-            border: '1px solid rgba(93, 185, 222, 0.3)',
-            display: 'flex',
-            alignItems: 'start',
-            gap: '10px'
-          }}>
-            <div style={{
-              fontSize: '18px',
-              lineHeight: 1
-            }}>✨</div>
-            <div style={{ flex: 1 }}>
-              <p style={{ fontSize: '12px', color: '#1a1a1a', margin: '0 0 5px 0', fontWeight: '700' }}>
-                Partner Benefits:
-              </p>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: '1fr 1fr',
-                gap: '4px',
-                fontSize: '11px',
-                color: '#4b5563'
-              }}>
-                <div>• 10% recurring commission</div>
-                <div>• Partner dashboard</div>
-                <div>• Marketing materials</div>
-                <div>• Priority support</div>
-              </div>
+          {/* Row 4 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <label style={labelStyle}>Company Name *</label>
+              <input type="text" name="companyName" value={formData.companyName} onChange={handleChange} required style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
             </div>
+            <div>
+              <label style={labelStyle}>Occupation *</label>
+              <input type="text" name="occupation" value={formData.occupation} onChange={handleChange} required placeholder="e.g., Consultant" style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+            </div>
+          </div>
+
+          {/* Row 5 */}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={labelStyle}>Website (Optional)</label>
+            <input type="url" name="website" value={formData.website} onChange={handleChange} placeholder="https://yourwebsite.com" style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+          </div>
+
+          {/* Row 6 - Address */}
+          <div style={{ marginBottom: '12px' }}>
+            <label style={labelStyle}>Street Address</label>
+            <input type="text" name="street" value={formData.street} onChange={handleChange} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+          </div>
+
+          {/* Row 7 */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+            <div>
+              <label style={labelStyle}>City</label>
+              <input type="text" name="city" value={formData.city} onChange={handleChange} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+            </div>
+            <div>
+              <label style={labelStyle}>State</label>
+              <input type="text" name="state" value={formData.state} onChange={handleChange} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+            </div>
+            <div>
+              <label style={labelStyle}>Country</label>
+              <input type="text" name="country" value={formData.country} onChange={handleChange} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+            </div>
+            <div>
+              <label style={labelStyle}>Zip Code</label>
+              <input type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} style={inputStyle} onFocus={handleFocus} onBlur={handleBlur} />
+            </div>
+          </div>
+
+          {/* Row 8 - Reason */}
+          <div style={{ marginBottom: '16px' }}>
+            <label style={labelStyle}>Why Partner With Us? *</label>
+            <textarea
+              name="reason"
+              value={formData.reason}
+              onChange={handleChange}
+              required
+              rows="3"
+              placeholder="Tell us about your business and why you'd be a great partner..."
+              style={{ ...inputStyle, resize: 'vertical' }}
+              onFocus={handleFocus}
+              onBlur={handleBlur}
+            />
           </div>
 
           <button
             type="submit"
-            className="btn btn-primary btn-block"
             disabled={loading}
             style={{
-              marginTop: '2px',
-              marginBottom: '8px',
-              padding: '12px',
+              width: '100%',
+              padding: '12px 16px',
               fontSize: '15px',
-              fontWeight: '700',
-              background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-              color: '#ffffff',
+              fontWeight: '600',
+              color: 'white',
+              background: loading ? '#64748b' : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
               border: 'none',
               borderRadius: '10px',
-              boxShadow: '0 8px 24px rgba(93, 185, 222, 0.4)',
-              transition: 'all 0.3s ease',
               cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1
+              transition: 'all 0.2s ease'
             }}
-            onMouseEnter={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 12px 32px rgba(93, 185, 222, 0.5)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (!loading) {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 8px 24px rgba(93, 185, 222, 0.4)';
-              }
+            onMouseEnter={(e) => !loading && (e.target.style.opacity = '0.9')}
+            onMouseLeave={(e) => !loading && (e.target.style.opacity = '1')}
+          >
+            {loading ? 'Submitting...' : 'Submit Application'}
+          </button>
+        </form>
+
+        {/* Back to home */}
+        <div style={{ marginTop: '12px', textAlign: 'center' }}>
+          <Link
+            to="/"
+            style={{
+              display: 'inline-block',
+              color: '#64748b',
+              fontSize: '14px',
+              textDecoration: 'none'
             }}
           >
-            {loading ? '⏳ Submitting Application...' : '🚀 Submit Application'}
-          </button>
-
-          <style>{`
-            @keyframes gradientShift {
-              0% { background-position: 0% 50%; }
-              50% { background-position: 100% 50%; }
-              100% { background-position: 0% 50%; }
-            }
-
-            @media (max-width: 1024px) {
-              form > div > div[style*="gridTemplateColumns"] {
-                grid-template-columns: 1fr 1fr !important;
-              }
-            }
-
-            @media (max-width: 768px) {
-              .auth-card {
-                max-width: 100% !important;
-                padding: 20px !important;
-                margin: 0 10px !important;
-              }
-              form > div > div[style*="gridTemplateColumns"] {
-                grid-template-columns: 1fr !important;
-              }
-              form > div > div > div[style*="gridColumn"] {
-                grid-column: 1 / -1 !important;
-              }
-            }
-          `}</style>
-
-          <div className="auth-footer">
-            <p>
-              Already a partner?{' '}
-              <button
-                type="button"
-                onClick={() => navigate('/reseller/login')}
-                className="auth-link"
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                Login here
-              </button>
-            </p>
-          </div>
-        </form>
+            ← Back to home
+          </Link>
+        </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          div[style*="gridTemplateColumns: 1fr 1fr"] {
+            grid-template-columns: 1fr !important;
+          }
+          div[style*="gridTemplateColumns: 1fr 1fr 1fr 1fr"] {
+            grid-template-columns: 1fr 1fr !important;
+          }
+        }
+      `}</style>
     </div>
   );
 };

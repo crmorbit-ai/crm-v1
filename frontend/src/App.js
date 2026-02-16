@@ -11,6 +11,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import CompleteProfile from './pages/CompleteProfile';
 import OAuthCallback from './pages/OAuthCallback';
 import LandingPage from './pages/LandingPage';
+import AboutUs from './pages/AboutUs';
 
 // Dashboard components
 import Dashboard from './pages/Dashboard';
@@ -35,9 +36,7 @@ import ChangePassword from './pages/ChangePassword';
 import Profile from './pages/Profile';
 
 // User management (Settings)
-import Users from './pages/Users';
-import Roles from './pages/Roles';
-import Groups from './pages/Groups';
+import TeamManagement from './pages/TeamManagement';
 
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
@@ -101,7 +100,7 @@ import Loading from './components/common/Loading';
 import AIChatWidget from './components/ai/AIChatWidget';
 
 // Protected route wrapper
-const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false, skipProfileCheck = false }) => {
+const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false }) => {
   const { user, loading, isSaasOwner } = useAuth();
 
   if (loading) {
@@ -110,13 +109,6 @@ const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false, 
 
   if (!user) {
     return <Navigate to="/login" replace />;
-  }
-
-  // Check profile completion (skip for SAAS owners and specific routes)
-  if (!skipProfileCheck && !isSaasOwner() && user.userType !== 'RESELLER') {
-    if (!user.isProfileComplete) {
-      return <Navigate to="/complete-profile" replace />;
-    }
   }
 
   // SAAS owners can only access SAAS routes
@@ -171,7 +163,7 @@ function AppRoutes() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/auth/callback" element={<OAuthCallback />} />
       <Route path="/complete-profile" element={
-        <ProtectedRoute skipProfileCheck={true}>
+        <ProtectedRoute>
           <CompleteProfile />
         </ProtectedRoute>
       } />
@@ -396,20 +388,27 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* Settings Routes - Tenant Only */}
+      {/* Team Management - Simplified */}
+      <Route path="/team" element={
+        <ProtectedRoute requireTenant>
+          <TeamManagement />
+        </ProtectedRoute>
+      } />
+
+      {/* Settings Routes - Tenant Only (Legacy) */}
       <Route path="/settings/users" element={
         <ProtectedRoute requireTenant>
-          <Users />
+          <TeamManagement />
         </ProtectedRoute>
       } />
       <Route path="/settings/roles" element={
         <ProtectedRoute requireTenant>
-          <Roles />
+          <TeamManagement />
         </ProtectedRoute>
       } />
       <Route path="/settings/groups" element={
         <ProtectedRoute requireTenant>
-          <Groups />
+          <TeamManagement />
         </ProtectedRoute>
       } />
 
@@ -495,6 +494,9 @@ function AppRoutes() {
           <LandingPage />
         )
       } />
+
+      {/* About Us Page */}
+      <Route path="/about" element={<AboutUs />} />
 
       {/* 404 */}
       <Route path="*" element={<div>404 - Page Not Found</div>} />
