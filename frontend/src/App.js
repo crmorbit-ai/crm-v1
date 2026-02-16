@@ -11,6 +11,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import CompleteProfile from './pages/CompleteProfile';
 import OAuthCallback from './pages/OAuthCallback';
 import LandingPage from './pages/LandingPage';
+import AboutUs from './pages/AboutUs';
 
 // Dashboard components
 import Dashboard from './pages/Dashboard';
@@ -35,9 +36,7 @@ import ChangePassword from './pages/ChangePassword';
 import Profile from './pages/Profile';
 
 // User management (Settings)
-import Users from './pages/Users';
-import Roles from './pages/Roles';
-import Groups from './pages/Groups';
+import TeamManagement from './pages/TeamManagement';
 
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
@@ -397,19 +396,9 @@ function AppRoutes() {
       } />
 
       {/* Settings Routes - Tenant Only */}
-      <Route path="/settings/users" element={
+      <Route path="/settings/team" element={
         <ProtectedRoute requireTenant>
-          <Users />
-        </ProtectedRoute>
-      } />
-      <Route path="/settings/roles" element={
-        <ProtectedRoute requireTenant>
-          <Roles />
-        </ProtectedRoute>
-      } />
-      <Route path="/settings/groups" element={
-        <ProtectedRoute requireTenant>
-          <Groups />
+          <TeamManagement />
         </ProtectedRoute>
       } />
 
@@ -482,6 +471,9 @@ function AppRoutes() {
           <SaasAdmins />
         </ProtectedRoute>
       } />
+
+      {/* About Us */}
+      <Route path="/about" element={<AboutUs />} />
 
       {/* Default redirect */}
       <Route path="/" element={
