@@ -747,9 +747,10 @@ const LandingPage = () => {
               <h4 className="font-bold text-lg mb-4">Company</h4>
               <ul className="space-y-3 text-gray-400">
                 <li><button onClick={() => navigate("/about")} className="hover:text-white transition text-left">About Us</button></li>
-                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Careers</a></li>
-                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Blog</a></li>
-                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Contact</a></li>
+                <li><a href="https://texora.ai/career" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Careers</a></li>
+                <li><a href="https://texora.ai/contact" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Contact</a></li>
+                <li><a href="https://texora.ai/blogs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Blog</a></li>
+                
               </ul>
             </div>
             <div>
@@ -778,7 +779,7 @@ const LandingPage = () => {
           <div className="border-t border-white/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-gray-400">© 2026 Unified CRM. All rights reserved.</p>
             <div className="flex gap-6 text-gray-400">
-              <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Privacy Policy</a>
+              <a href="https://texora.ai/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Privacy Policy</a>
               <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Terms of Service</a>
               <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Cookie Policy</a>
             </div>
