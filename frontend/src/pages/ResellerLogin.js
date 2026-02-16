@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../config/api.config';
+import '../styles/auth.css';
 
 const ResellerLogin = () => {
   const navigate = useNavigate();
@@ -16,7 +17,6 @@ const ResellerLogin = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -50,179 +50,137 @@ const ResellerLogin = () => {
   };
 
   return (
-    <div style={{
+    <div className="auth-container" style={{
+      background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #1a2a35 50%, #95b5ef 75%, #2a5298 100%)',
+      backgroundSize: '400% 400%',
+      animation: 'gradientShift 15s ease infinite',
       minHeight: '100vh',
-      background: '#0f172a',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '40px 20px',
-      position: 'relative',
-      overflow: 'hidden'
+      padding: '30px 20px'
     }}>
-      {/* Background glow effects */}
-      <div style={{
-        position: 'absolute',
-        top: '10%',
-        left: '20%',
-        width: '400px',
-        height: '400px',
-        background: '#8b5cf6',
-        borderRadius: '50%',
-        filter: 'blur(150px)',
-        opacity: '0.15'
-      }}></div>
-      <div style={{
-        position: 'absolute',
-        bottom: '10%',
-        right: '20%',
-        width: '400px',
-        height: '400px',
-        background: '#3b82f6',
-        borderRadius: '50%',
-        filter: 'blur(150px)',
-        opacity: '0.15'
-      }}></div>
-
-      <div style={{
+      <div className="auth-card" style={{
+        maxWidth: '480px',
         width: '100%',
-        maxWidth: '400px',
-        position: 'relative',
-        zIndex: 1
+        padding: '40px',
+        background: 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        boxShadow: '0 25px 80px rgba(0, 0, 0, 0.3)',
+        borderRadius: '24px',
+        border: '1px solid rgba(255, 255, 255, 0.3)'
       }}>
-        {/* Logo */}
-        <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-          <Link to="/" style={{ display: 'inline-block' }}>
-            <div style={{ background: 'white', borderRadius: '8px', padding: '6px', display: 'inline-block' }}>
-              <img
-                src="/logo.png"
-                alt="Logo"
-                style={{
-                  height: '20px',
-                  display: 'block'
-                }}
-              />
-            </div>
-          </Link>
-        </div>
-
-        {/* Header */}
-        <div style={{ marginBottom: '20px', textAlign: 'center' }}>
-          <h2 style={{
-            fontSize: '22px',
-            fontWeight: '500',
-            color: '#ffffff',
-            marginBottom: '2px'
-          }}>
-            Partner Login
-          </h2>
-          <p style={{ fontSize: '17px', color: '#94a3b8', marginBottom: '4px' }}>
-            Not a partner yet?{' '}
-            <Link
-              to="/reseller/register"
-              style={{
-                color: '#a78bfa',
-                textDecoration: 'none',
-                fontWeight: '600'
-              }}
-            >
-              Apply now
-            </Link>
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <img
+            src="/logo.png"
+            alt="UFS CRM"
+            style={{
+              width: '180px',
+              height: 'auto',
+              mixBlendMode: 'multiply',
+              filter: 'contrast(1.1)',
+              display: 'block',
+              margin: '0 auto 20px'
+            }}
+          />
+          <h1 className="auth-title" style={{
+            marginBottom: '8px',
+            fontSize: '24px',
+            fontWeight: '800',
+            background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text'
+          }}>Partner Login</h1>
+          <p className="auth-subtitle" style={{ marginBottom: '0', fontSize: '15px', color: '#6b7280' }}>
+            Access your reseller dashboard
           </p>
         </div>
 
-        {/* Error */}
         {error && (
           <div style={{
-            padding: '12px 16px',
-            background: 'rgba(239, 68, 68, 0.1)',
+            padding: '14px 18px',
+            background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%)',
+            color: '#991b1b',
+            borderRadius: '12px',
+            marginBottom: '24px',
+            fontSize: '14px',
+            fontWeight: '500',
             border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '6px',
-            color: '#f87171',
-            marginBottom: '16px',
-            fontSize: '14px'
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px'
           }}>
+            <span style={{ fontSize: '18px' }}>⚠️</span>
             {error}
           </div>
         )}
 
-        {/* Form */}
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '12px' }}>
-            <label style={{
-              display: 'block',
+          <div className="form-group" style={{ marginBottom: '20px' }}>
+            <label className="form-label" style={{
               fontSize: '14px',
               fontWeight: '600',
-              color: '#e2e8f0',
-              marginBottom: '2px'
-            }}>
-              Email
-            </label>
+              color: '#374151',
+              marginBottom: '8px',
+              display: 'block'
+            }}>Email Address</label>
             <input
               type="email"
               name="email"
+              className="form-input"
+              placeholder="partner@example.com"
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="Enter your email"
+              autoFocus
               style={{
-                width: '100%',
-                padding: '12px 14px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                border: '2px solid #e5e7eb',
                 fontSize: '15px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '10px',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                fontFamily: 'inherit',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#ffffff'
+                transition: 'all 0.3s ease'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#8b5cf6';
-                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                e.target.style.borderColor = '#5db9de';
+                e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.target.style.borderColor = '#e5e7eb';
                 e.target.style.boxShadow = 'none';
               }}
             />
           </div>
 
-          <div style={{ marginBottom: '16px' }}>
-            <label style={{
-              display: 'block',
+          <div className="form-group" style={{ marginBottom: '24px' }}>
+            <label className="form-label" style={{
               fontSize: '14px',
               fontWeight: '600',
-              color: '#e2e8f0',
-              marginBottom: '6px'
-            }}>
-              Password
-            </label>
+              color: '#374151',
+              marginBottom: '8px',
+              display: 'block'
+            }}>Password</label>
             <input
               type="password"
               name="password"
+              className="form-input"
+              placeholder="Enter your password"
               value={formData.password}
               onChange={handleChange}
               required
-              placeholder="Enter your password"
               style={{
-                width: '100%',
-                padding: '12px 14px',
+                padding: '14px 16px',
+                borderRadius: '12px',
+                border: '2px solid #e5e7eb',
                 fontSize: '15px',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                borderRadius: '10px',
-                outline: 'none',
-                transition: 'all 0.2s ease',
-                fontFamily: 'inherit',
-                background: 'rgba(255, 255, 255, 0.05)',
-                color: '#ffffff'
+                transition: 'all 0.3s ease'
               }}
               onFocus={(e) => {
-                e.target.style.borderColor = '#8b5cf6';
-                e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.1)';
+                e.target.style.borderColor = '#5db9de';
+                e.target.style.boxShadow = '0 0 0 3px rgba(93, 185, 222, 0.1)';
               }}
               onBlur={(e) => {
-                e.target.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                e.target.style.borderColor = '#e5e7eb';
                 e.target.style.boxShadow = 'none';
               }}
             />
@@ -230,40 +188,90 @@ const ResellerLogin = () => {
 
           <button
             type="submit"
+            className="btn btn-primary btn-block"
             disabled={loading}
             style={{
-              width: '100%',
-              padding: '12px 16px',
-              fontSize: '15px',
-              fontWeight: '600',
-              color: 'white',
-              background: loading ? '#64748b' : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+              padding: '16px',
+              fontSize: '16px',
+              fontWeight: '700',
+              background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
+              color: '#ffffff',
               border: 'none',
-              borderRadius: '10px',
+              borderRadius: '12px',
+              boxShadow: '0 8px 24px rgba(93, 185, 222, 0.4)',
+              transition: 'all 0.3s ease',
               cursor: loading ? 'not-allowed' : 'pointer',
-              transition: 'all 0.2s ease'
+              opacity: loading ? 0.7 : 1,
+              width: '100%'
             }}
-            onMouseEnter={(e) => !loading && (e.target.style.opacity = '0.9')}
-            onMouseLeave={(e) => !loading && (e.target.style.opacity = '1')}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 12px 32px rgba(93, 185, 222, 0.5)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 8px 24px rgba(93, 185, 222, 0.4)';
+              }
+            }}
           >
-            {loading ? 'Logging in...' : 'Log in'}
+            {loading ? '⏳ Logging in...' : '🚀 Login to Dashboard'}
           </button>
+
+          <div className="auth-footer" style={{ marginTop: '24px', textAlign: 'center' }}>
+            <p style={{ color: '#6b7280', fontSize: '14px', marginBottom: '10px' }}>
+              Not a partner yet?{' '}
+              <button
+                type="button"
+                onClick={() => navigate('/reseller/register')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#5db9de',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                  transition: 'all 0.3s ease',
+                  padding: 0
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#2a5298'}
+                onMouseLeave={(e) => e.target.style.color = '#5db9de'}
+              >
+                Apply now
+              </button>
+            </p>
+            <p style={{ color: '#6b7280', fontSize: '14px', margin: 0 }}>
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: '#5db9de',
+                  fontWeight: '600',
+                  textDecoration: 'none',
+                  transition: 'all 0.3s ease',
+                  padding: 0
+                }}
+                onMouseEnter={(e) => e.target.style.color = '#2a5298'}
+                onMouseLeave={(e) => e.target.style.color = '#5db9de'}
+              >
+                ← Back to Home
+              </button>
+            </p>
+          </div>
         </form>
 
-        {/* Back to home */}
-        <div style={{ marginTop: '16px', textAlign: 'center' }}>
-          <Link
-            to="/"
-            style={{
-              display: 'inline-block',
-              color: '#64748b',
-              fontSize: '14px',
-              textDecoration: 'none'
-            }}
-          >
-            ← Back to home
-          </Link>
-        </div>
+        <style>{`
+          @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+          }
+        `}</style>
       </div>
     </div>
   );

@@ -97,6 +97,66 @@ const LandingPage = () => {
     }
   ];
 
+  const pricingPlans = [
+    {
+      name: "Free",
+      price: "₹0",
+      period: "forever",
+      features: [
+        "15-day trial all features",
+        "Up to 5 users",
+        "1,000 leads & contacts",
+        "Basic task management",
+        "1GB storage",
+        "Email support"
+      ],
+      highlighted: false
+    },
+    {
+      name: "Basic",
+      price: "₹1,499",
+      period: "per month",
+      features: [
+        "Up to 10 users",
+        "5,000 leads & contacts",
+        "Email integration",
+        "Custom fields",
+        "5GB storage",
+        "Priority email support"
+      ],
+      highlighted: false
+    },
+    {
+      name: "Professional",
+      price: "₹2,999",
+      period: "per month",
+      features: [
+        "Up to 50 users",
+        "Unlimited leads & contacts",
+        "Complete B2B workflow",
+        "Advanced reports",
+        "API access",
+        "50GB storage",
+        "24/7 priority support"
+      ],
+      highlighted: true
+    },
+    {
+      name: "Enterprise",
+      price: "Custom",
+      period: "contact us",
+      features: [
+        "Unlimited everything",
+        "White labeling",
+        "Dedicated support",
+        "Custom integrations",
+        "Multi-currency",
+        "SLA guarantee"
+      ],
+      highlighted: false
+    }
+  ];
+
   // 3D Tilt effect calculator
   const calculateTilt = (element, mouseX, mouseY) => {
     if (!element) return { rotateX: 0, rotateY: 0 };
@@ -109,45 +169,46 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-white">
       {/* Sticky Navigation */}
       <nav
         className={`fixed w-full top-0 z-50 transition-all duration-300 ${
           isScrolled
-            ? 'bg-[#0f172a]/90 backdrop-blur-xl shadow-2xl shadow-purple-500/5 py-3 border-b border-white/5'
+            ? 'bg-white/80 backdrop-blur-lg shadow-lg py-3'
             : 'bg-transparent py-4'
         }`}
       >
         <div className="max-w-9xl mx-auto px-6 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="bg-white rounded-lg p-1.5">
-              <img
-                src="/logo.png"
-                alt="CRM Logo"
-                className="h-5 w-auto object-contain"
-              />
-            </div>
+            <img
+              src="/logo.png"
+              alt="CRM Logo"
+              className="h-6 w-auto object-contain"
+            />
           </div>
 
           <div className="hidden md:flex gap-8 items-center">
-            <a href="#features" className="text-gray-300 hover:text-white font-medium transition">
+            <a href="#features" className="text-gray-700 hover:text-blue-600 font-medium transition">
               Features
+            </a>
+            <a href="#pricing" className="text-gray-700 hover:text-blue-600 font-medium transition">
+              Pricing
             </a>
             <button
               onClick={() => navigate("/reseller/register")}
-              className="px-4 py-2 text-purple-400 font-semibold hover:bg-purple-500/10 rounded-lg transition border border-purple-500/50"
+              className="px-4 py-2 text-purple-600 font-semibold hover:bg-purple-50 rounded-lg transition border-2 border-purple-600"
             >
               🤝 Become Partner
             </button>
             <button
               onClick={() => { navigate('/login'); }}
-              className="px-4 py-2 text-gray-300 font-semibold hover:text-white rounded-lg transition"
+              className="px-4 py-2 text-blue-600 font-semibold hover:bg-blue-50 rounded-lg transition"
             >
               Sign In
             </button>
             <button
               onClick={() => { navigate('/register'); }}
-              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/25 transition transform hover:scale-105"
+              className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-lg hover:shadow-lg transition transform hover:scale-105"
             >
               Get Started Free
             </button>
@@ -156,16 +217,16 @@ const LandingPage = () => {
       </nav>
 
       {/* Hero Section with Particles & Morphing Shapes */}
-      <section ref={heroRef} className="relative pt-32 pb-20 overflow-hidden bg-[#0f172a]">
+      <section ref={heroRef} className="relative pt-32 pb-20 overflow-hidden">
         {/* Animated Grid Background */}
-        <div className="absolute inset-0 grid-background-dark"></div>
+        <div className="absolute inset-0 grid-background"></div>
 
         {/* Particle System */}
         <div className="particles-container">
           {Array.from({ length: 50 }).map((_, i) => (
             <div
               key={i}
-              className="particle-dark"
+              className="particle"
               style={{
                 left: `${Math.random() * 100}%`,
                 animationDelay: `${Math.random() * 10}s`,
@@ -176,26 +237,26 @@ const LandingPage = () => {
         </div>
 
         {/* Morphing Blob Shapes */}
-        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-br from-blue-600 to-purple-600 rounded-full filter blur-3xl opacity-20 animate-morph"></div>
-        <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-br from-purple-600 to-pink-600 rounded-full filter blur-3xl opacity-20 animate-morph animation-delay-2000"></div>
-        <div className="absolute bottom-20 left-1/2 w-96 h-96 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full filter blur-3xl opacity-15 animate-morph animation-delay-4000"></div>
+        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph"></div>
+        <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph animation-delay-2000"></div>
+        <div className="absolute bottom-20 left-1/2 w-96 h-96 bg-gradient-to-br from-pink-400 to-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph animation-delay-4000"></div>
 
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
             {/* Left Side - Content */}
             <div className="space-y-8">
-              <div className="inline-block px-4 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-sm font-semibold backdrop-blur-sm">
+              <div className="inline-block px-4 py-2 glass-card text-blue-700 rounded-full text-sm font-semibold">
                 ⚡ #1 CRM Solution in India
               </div>
 
-              <h1 className="text-6xl font-extrabold text-white leading-tight">
+              <h1 className="text-6xl font-extrabold text-gray-900 leading-tight">
                 Grow Your Business
-                <span className="block bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+                <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent animate-gradient">
                   10x Faster
                 </span>
               </h1>
 
-              <p className="text-xl text-gray-400 leading-relaxed">
+              <p className="text-xl text-gray-600 leading-relaxed">
                 Complete CRM solution with B2B sales workflow, email integration, and powerful team management.
                 From leads to invoices - manage your entire sales pipeline in one platform.
               </p>
@@ -203,13 +264,13 @@ const LandingPage = () => {
               <div className="flex flex-wrap gap-4">
                 <button
                   onClick={() => { navigate('/register'); }}
-                  className="px-8 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-purple-500/25 transition transform hover:scale-105 text-lg animate-gradient-shift"
+                  className="px-8 py-4 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-lg animate-gradient-shift"
                 >
                   Start Free Trial
                 </button>
                 <button
                   onClick={() => { navigate('/login'); }}
-                  className="px-8 py-4 bg-white/5 border border-white/10 text-gray-300 font-bold rounded-xl hover:bg-white/10 hover:text-white transition text-lg backdrop-blur-sm"
+                  className="px-8 py-4 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-lg"
                 >
                   Sign In →
                 </button>
@@ -219,22 +280,22 @@ const LandingPage = () => {
               <div className="flex flex-wrap gap-6 pt-6">
                 <div className="flex items-center gap-2">
                   <div className="text-yellow-500 text-2xl">⭐⭐⭐⭐⭐</div>
-                  <span className="text-gray-400 font-medium">4.9/5 Rating</span>
+                  <span className="text-gray-600 font-medium">4.9/5 Rating</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-2xl">🔒</div>
-                  <span className="text-gray-400 font-medium">ISO Certified</span>
+                  <span className="text-gray-600 font-medium">ISO Certified</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-2xl">✅</div>
-                  <span className="text-gray-400 font-medium">GDPR Compliant</span>
+                  <span className="text-gray-600 font-medium">GDPR Compliant</span>
                 </div>
               </div>
             </div>
 
             {/* Right Side - 3D Floating Dashboard Preview */}
             <div className="relative">
-              <div className="bg-white/5 border border-white/10 backdrop-blur-xl p-8 rounded-3xl shadow-2xl transform-3d">
+              <div className="glass-card-strong p-8 rounded-3xl shadow-2xl transform-3d">
                 <div className="space-y-4">
                   {/* Mini Dashboard Elements - FLOATING */}
                   <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl animate-float">
@@ -291,7 +352,7 @@ const LandingPage = () => {
       </section>
 
       {/* Moving Feature Marquee */}
-      <section className="py-8 bg-[#1e293b] overflow-hidden border-y border-white/5">
+      <section className="py-8 bg-white overflow-hidden">
         <div className="marquee-container">
           <div className="marquee-content">
             {[
@@ -322,13 +383,13 @@ const LandingPage = () => {
       </section>
 
       {/* Complete CRM Ecosystem - Rotating Box */}
-      <section className="py-20 bg-[#0f172a] relative overflow-hidden">
+      <section className="py-20 bg-gradient-to-br from-slate-50 via-white to-slate-100 relative overflow-hidden">
         {/* Background Particles */}
         <div className="absolute inset-0 opacity-30">
           {Array.from({ length: 20 }).map((_, i) => (
             <div
               key={i}
-              className="absolute w-2 h-2 bg-purple-500 rounded-full animate-particle-float"
+              className="absolute w-2 h-2 bg-blue-500 rounded-full animate-particle-float"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -343,26 +404,26 @@ const LandingPage = () => {
             {/* Left Side - Heading */}
             <div>
               <h3 className="text-4xl md:text-5xl font-extrabold mb-6 leading-tight">
-                <span className="text-white">Complete CRM </span>
-                <span className="bg-gradient-to-r from-pink-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent">
+                <span className="text-gray-900">Complete CRM </span>
+                <span className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 bg-clip-text text-transparent">
                   Ecosystem
                 </span>
               </h3>
-              <p className="text-xl text-gray-400 mb-8">
+              <p className="text-xl text-gray-600 mb-8">
                 Everything you need to manage your business from a single platform
               </p>
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
-                  <span className="text-gray-300 font-medium">18+ Powerful Modules</span>
+                  <span className="text-gray-700 font-medium">18+ Powerful Modules</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"></div>
-                  <span className="text-gray-300 font-medium">Complete B2B Workflow</span>
+                  <span className="text-gray-700 font-medium">Complete B2B Workflow</span>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-3 h-3 bg-gradient-to-r from-indigo-500 to-blue-500 rounded-full"></div>
-                  <span className="text-gray-300 font-medium">Real-time Automation</span>
+                  <span className="text-gray-700 font-medium">Real-time Automation</span>
                 </div>
               </div>
             </div>
@@ -456,21 +517,21 @@ const LandingPage = () => {
       </section>
 
       {/* Features Section with 3D Tilt Cards */}
-      <section id="features" className="py-24 bg-[#1e293b] relative overflow-hidden">
+      <section id="features" className="py-24 bg-gray-50 relative overflow-hidden">
         {/* Animated Background Grid */}
         <div className="absolute inset-0 opacity-10">
-          <div className="grid-lines-background-dark"></div>
+          <div className="grid-lines-background"></div>
         </div>
 
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-sm font-semibold mb-4 backdrop-blur-sm">
+            <div className="inline-block px-4 py-2 glass-card text-blue-700 rounded-full text-sm font-semibold mb-4">
               ✨ POWERFUL FEATURES
             </div>
-            <h2 className="text-5xl font-extrabold text-white mb-4">
+            <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
               Everything You Need to Scale
             </h2>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
               From lead capture to deal closure, we've got all the tools you need
             </p>
           </div>
@@ -479,23 +540,23 @@ const LandingPage = () => {
             {features.map((feature, index) => (
               <div
                 key={index}
-                className={`glass-card-dark p-8 rounded-2xl hover:shadow-2xl hover:shadow-purple-500/10 transition-all duration-300 transform hover:-translate-y-2 cursor-pointer tilt-card ${
-                  activeFeature === index ? 'ring-2 ring-purple-500/50' : ''
+                className={`glass-card-strong p-8 rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 cursor-pointer tilt-card ${
+                  activeFeature === index ? 'ring-4 ring-blue-500' : ''
                 }`}
                 onMouseEnter={() => setActiveFeature(index)}
               >
                 <div
                   className="w-16 h-16 rounded-2xl flex items-center justify-center mb-6 text-3xl"
                   style={{
-                    background: `linear-gradient(135deg, ${feature.color}30, ${feature.color}10)`
+                    background: `linear-gradient(135deg, ${feature.color}40, ${feature.color}20)`
                   }}
                 >
                   {feature.icon}
                 </div>
-                <h3 className="text-2xl font-bold text-white mb-3">
+                <h3 className="text-2xl font-bold text-gray-900 mb-3">
                   {feature.title}
                 </h3>
-                <p className="text-gray-400 leading-relaxed">
+                <p className="text-gray-600 leading-relaxed">
                   {feature.description}
                 </p>
               </div>
@@ -505,7 +566,7 @@ const LandingPage = () => {
       </section>
 
       {/* Detailed Features Section */}
-      <section className="py-24 bg-[#0f172a] relative overflow-hidden">
+      <section className="py-24 bg-white relative overflow-hidden">
         {/* Floating Particles */}
         <div className="absolute inset-0">
           {Array.from({ length: 15 }).map((_, i) => (
@@ -525,10 +586,10 @@ const LandingPage = () => {
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-16 items-center mb-24">
             <div>
-              <h2 className="text-4xl font-extrabold text-white mb-6">
+              <h2 className="text-4xl font-extrabold text-gray-900 mb-6">
                 📋 Complete B2B Sales Workflow
               </h2>
-              <p className="text-lg text-gray-400 mb-6">
+              <p className="text-lg text-gray-600 mb-6">
                 Streamline your entire sales process from inquiry to payment.
                 Professional document generation with built-in PDF export.
               </p>
@@ -540,53 +601,53 @@ const LandingPage = () => {
                   "Invoice Creation with Payment Tracking"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center text-sm font-bold">
+                    <div className="w-6 h-6 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-sm font-bold">
                       ✓
                     </div>
-                    <span className="text-gray-300 font-medium">{item}</span>
+                    <span className="text-gray-700 font-medium">{item}</span>
                   </li>
                 ))}
               </ul>
             </div>
-            <div className="glass-card-dark p-8 rounded-2xl transform hover:scale-105 transition duration-500">
-              <div className="bg-white/5 border border-white/10 p-6 rounded-xl">
+            <div className="glass-card p-8 rounded-2xl transform hover:scale-105 transition duration-500">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center text-white font-bold">
                     📋
                   </div>
                   <div>
-                    <div className="font-bold text-white">Quotation #QT-2025-00123</div>
-                    <div className="text-sm text-gray-400">Status: Accepted</div>
+                    <div className="font-bold">Quotation #QT-2025-00123</div>
+                    <div className="text-sm text-gray-500">Status: Accepted</div>
                   </div>
                 </div>
-                <p className="text-gray-400">Convert to Invoice → PO-2025-00045</p>
+                <p className="text-gray-600">Convert to Invoice → PO-2025-00045</p>
               </div>
             </div>
           </div>
 
           {/* Team & Customization */}
           <div className="grid md:grid-cols-2 gap-16 items-center">
-            <div className="order-2 md:order-1 glass-card-dark p-8 rounded-2xl transform hover:scale-105 transition duration-500">
-              <div className="bg-white/5 border border-white/10 p-6 rounded-xl">
+            <div className="order-2 md:order-1 glass-card p-8 rounded-2xl transform hover:scale-105 transition duration-500">
+              <div className="bg-white p-6 rounded-xl shadow-lg">
                 <div className="text-2xl mb-4">👥</div>
-                <div className="font-bold text-lg mb-2 text-white">Team Assignment</div>
+                <div className="font-bold text-lg mb-2">Team Assignment</div>
                 <div className="space-y-3">
                   <div className="flex gap-3 items-center">
                     <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                    <span className="text-sm text-gray-300">Sales Team - 12 members</span>
+                    <span className="text-sm">Sales Team - 12 members</span>
                   </div>
                   <div className="flex gap-3 items-center">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm text-gray-300">Support Team - 5 members</span>
+                    <span className="text-sm">Support Team - 5 members</span>
                   </div>
                 </div>
               </div>
             </div>
             <div className="order-1 md:order-2">
-              <h2 className="text-4xl font-extrabold text-white mb-6">
+              <h2 className="text-4xl font-extrabold text-gray-900 mb-6">
                 🎯 Powerful Team Management
               </h2>
-              <p className="text-lg text-gray-400 mb-6">
+              <p className="text-lg text-gray-600 mb-6">
                 Organize teams with groups, assign leads to specific members,
                 and control access with role-based permissions.
               </p>
@@ -598,10 +659,10 @@ const LandingPage = () => {
                   "Activity logs and audit trail"
                 ].map((item, i) => (
                   <li key={i} className="flex items-center gap-3">
-                    <div className="w-6 h-6 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center text-sm font-bold">
+                    <div className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-bold">
                       ✓
                     </div>
-                    <span className="text-gray-300 font-medium">{item}</span>
+                    <span className="text-gray-700 font-medium">{item}</span>
                   </li>
                 ))}
               </ul>
@@ -610,21 +671,85 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* Pricing Section with 3D Cards */}
+      <section id="pricing" className="py-24 bg-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="grid-lines-background"></div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-block px-4 py-2 glass-card text-purple-700 rounded-full text-sm font-semibold mb-4">
+              💰 SIMPLE PRICING
+            </div>
+            <h2 className="text-5xl font-extrabold text-gray-900 mb-4">
+              Choose Your Perfect Plan
+            </h2>
+            <p className="text-xl text-gray-600">
+              No hidden fees. Cancel anytime.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto">
+            {pricingPlans.map((plan, index) => (
+              <div
+                key={index}
+                className={`glass-card-strong rounded-2xl p-8 tilt-card ${
+                  plan.highlighted
+                    ? 'ring-4 ring-blue-500 shadow-2xl scale-105'
+                    : 'shadow-lg'
+                } transition-all hover:shadow-2xl`}
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                {plan.highlighted && (
+                  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-bold px-4 py-2 rounded-full inline-block mb-4 animate-pulse">
+                    ⭐ MOST POPULAR
+                  </div>
+                )}
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h3>
+                <div className="mb-6">
+                  <span className="text-5xl font-extrabold text-gray-900">{plan.price}</span>
+                  <span className="text-gray-500 ml-2">/{plan.period}</span>
+                </div>
+                <ul className="space-y-4 mb-8">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <div className="w-5 h-5 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-xs font-bold animate-pulse">
+                        ✓
+                      </div>
+                      <span className="text-gray-700">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() => { navigate('/register'); }}
+                  className={`w-full py-3 rounded-xl font-bold transition transform hover:scale-105 ${
+                    plan.highlighted
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:shadow-lg'
+                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                  }`}
+                >
+                  Get Started
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Reseller Partner Program */}
-      <section className="py-24 bg-[#0f172a] text-white relative overflow-hidden">
-        {/* Background glow effects */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-600 rounded-full filter blur-3xl opacity-10"></div>
+      <section className="py-24 bg-gradient-to-br from-purple-600 via-blue-600 to-purple-600 text-white relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-96 h-96 bg-white rounded-full filter blur-3xl animate-morph"></div>
+          <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full filter blur-3xl animate-morph animation-delay-2000"></div>
+        </div>
 
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
-            <div className="inline-block px-4 py-2 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-sm font-semibold mb-4 backdrop-blur-sm">
-              🤝 PARTNER PROGRAM
-            </div>
-            <h2 className="text-5xl font-extrabold mb-6 text-white">
-              Become a Reseller Partner
+            <h2 className="text-5xl font-extrabold mb-6 animate-slide-in">
+              💰 Become a Reseller Partner
             </h2>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+            <p className="text-2xl opacity-90 max-w-3xl mx-auto animate-slide-in animation-delay-200">
               Earn 10% recurring commission on every client you refer.
               Join our partner program and grow your income!
             </p>
@@ -638,11 +763,12 @@ const LandingPage = () => {
             ].map((item, i) => (
               <div
                 key={i}
-                className="bg-white/5 border border-white/10 backdrop-blur-lg p-8 rounded-2xl text-center transform hover:scale-105 hover:bg-white/10 transition duration-300"
+                className="bg-white/20 backdrop-blur-lg p-8 rounded-2xl text-center transform hover:scale-110 transition duration-500 animate-float border border-white/30"
+                style={{ animationDelay: `${i * 0.5}s` }}
               >
-                <div className="text-5xl mb-4">{item.icon}</div>
-                <h3 className="text-xl font-bold mb-3 text-white">{item.title}</h3>
-                <p className="text-gray-400">{item.desc}</p>
+                <div className="text-6xl mb-4">{item.icon}</div>
+                <h3 className="text-2xl font-bold mb-3 text-white">{item.title}</h3>
+                <p className="text-white/90">{item.desc}</p>
               </div>
             ))}
           </div>
@@ -650,15 +776,15 @@ const LandingPage = () => {
           <div className="text-center">
             <button
               onClick={() => navigate("/reseller/register")}
-              className="px-10 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-purple-500/25 transition transform hover:scale-105 text-lg"
+              className="px-12 py-5 bg-white text-purple-600 font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-xl"
             >
               Apply to Become a Partner →
             </button>
-            <p className="mt-6 text-gray-400">
+            <p className="mt-6 opacity-90">
               Already a partner?{' '}
               <button
                 onClick={() => navigate("/reseller/login")}
-                className="font-semibold text-purple-400 hover:text-purple-300 transition"
+                className="font-bold underline hover:opacity-80"
               >
                 Login here
               </button>
@@ -668,28 +794,24 @@ const LandingPage = () => {
       </section>
 
       {/* Final CTA */}
-      <section className="py-24 bg-[#1e293b] relative overflow-hidden">
-        {/* Background glow effects */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full filter blur-3xl opacity-10"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
-
-        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-          <h2 className="text-5xl font-extrabold text-white mb-6 animate-slide-in">
+      <section className="py-24 bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="max-w-4xl mx-auto px-6 text-center">
+          <h2 className="text-5xl font-extrabold text-gray-900 mb-6 animate-slide-in">
             Ready to Transform Your Business?
           </h2>
-          <p className="text-2xl text-gray-400 mb-12 animate-slide-in animation-delay-200">
+          <p className="text-2xl text-gray-600 mb-12 animate-slide-in animation-delay-200">
             Start managing leads, quotations, and invoices in one powerful platform
           </p>
           <div className="flex flex-wrap gap-4 justify-center">
             <button
               onClick={() => { navigate('/register'); }}
-              className="px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl hover:shadow-purple-500/25 transition transform hover:scale-105 text-xl"
+              className="px-12 py-5 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-2xl transition transform hover:scale-105 text-xl"
             >
               Start Free Trial - No Credit Card Required
             </button>
             <button
               onClick={() => { navigate('/login'); }}
-              className="px-12 py-5 bg-white/5 border border-white/10 text-gray-300 font-bold rounded-xl hover:bg-white/10 hover:text-white transition text-xl backdrop-blur-sm"
+              className="px-12 py-5 glass-card text-gray-700 font-bold rounded-xl hover:border-blue-600 hover:text-blue-600 transition text-xl"
             >
               Sign In to Your Account
             </button>
@@ -701,86 +823,80 @@ const LandingPage = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white">
-        {/* Gradient Top Border */}
-        <div className="h-1 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600"></div>
-
-        <div className="max-w-7xl mx-auto px-6 py-16">
-          {/* Main Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
-            {/* Logo & Description */}
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-lg p-1.5 w-fit mb-5">
-                <img src="/logo.png" alt="Logo" className="h-5 w-auto object-contain" />
-              </div>
-              <p className="text-gray-400 text-sm leading-relaxed mb-5">
-                Complete CRM solution with B2B workflow, email integration, team management, and powerful analytics.
+      <footer className="bg-gray-900 text-white py-16">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="grid md:grid-cols-5 gap-8 mb-12">
+            <div className="md:col-span-2">
+              <img
+                src="/logo.png"
+                alt="CRM Logo"
+                className="h-7 w-auto object-contain mb-4"
+              />
+              <p className="text-gray-400 mb-6">
+                Complete CRM solution with B2B workflow, email integration, team management, and more.
               </p>
-              <a href="mailto:sales@texora.ai" className="text-gray-400 hover:text-white transition text-sm flex items-center gap-2 mb-6">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
-                sales@texora.ai
-              </a>
-              {/* Social Icons */}
-              <div className="flex gap-3">
-                <a href="https://www.instagram.com/texoraai" target="_blank" rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200"
-                  style={{ background: 'linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)' }}>
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                </a>
-                <a href="https://www.linkedin.com/company/texora-ai/posts/?feedView=all" target="_blank" rel="noopener noreferrer"
-                  className="w-10 h-10 bg-[#0A66C2] rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                </a>
-                <a href="https://www.youtube.com/@Texoraai" target="_blank" rel="noopener noreferrer"
-                  className="w-10 h-10 bg-[#FF0000] rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                </a>
-                <a href="https://x.com/texoraai" target="_blank" rel="noopener noreferrer"
-                  className="w-10 h-10 bg-black rounded-full flex items-center justify-center hover:opacity-80 transition-all duration-200">
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                </a>
+              <div className="flex gap-4">
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-600 transition transform hover:scale-110">
+                  📘
+                </div>
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-400 transition transform hover:scale-110">
+                  🐦
+                </div>
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-pink-600 transition transform hover:scale-110">
+                  📷
+                </div>
+                <div className="w-10 h-10 bg-gray-800 rounded-full flex items-center justify-center cursor-pointer hover:bg-blue-700 transition transform hover:scale-110">
+                  💼
+                </div>
               </div>
             </div>
-
-            {/* Product Links */}
             <div>
               <h4 className="font-bold text-lg mb-4">Product</h4>
               <ul className="space-y-3 text-gray-400">
                 <li><a href="#features" className="hover:text-white transition">Features</a></li>
-                <li><a href="https://texora.ai/" className="hover:text-white transition">Security</a></li>
-                <li><a href="https://texora.ai/" className="hover:text-white transition">Integrations</a></li>
+                <li><a href="#pricing" className="hover:text-white transition">Pricing</a></li>
+                <li><a href="#" className="hover:text-white transition">Security</a></li>
+                <li><a href="#" className="hover:text-white transition">Integrations</a></li>
               </ul>
             </div>
-
-            {/* Company Links */}
             <div>
               <h4 className="font-bold text-lg mb-4">Company</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><button onClick={() => navigate("/about")} className="hover:text-white transition text-left">About Us</button></li>
-                <li><a href="https://texora.ai/" className="hover:text-white transition">Careers</a></li>
-                <li><a href="https://texora.ai/" className="hover:text-white transition">Blog</a></li>
-                <li><a href="https://texora.ai/" className="hover:text-white transition">Contact</a></li>
+                <li><a href="#" className="hover:text-white transition">About Us</a></li>
+                <li><a href="#" className="hover:text-white transition">Careers</a></li>
+                <li><a href="#" className="hover:text-white transition">Blog</a></li>
+                <li><a href="#" className="hover:text-white transition">Contact</a></li>
               </ul>
             </div>
-
-            {/* Partners Links */}
             <div>
               <h4 className="font-bold text-lg mb-4">Partners</h4>
               <ul className="space-y-3 text-gray-400">
-                <li><button onClick={() => navigate("/reseller/register")} className="hover:text-white transition text-left">Become a Partner</button></li>
-                <li><button onClick={() => navigate("/reseller/login")} className="hover:text-white transition text-left">Partner Login</button></li>
-                <li><a href="https://texora.ai/" className="hover:text-white transition">Partner Resources</a></li>
+                <li>
+                  <button
+                    onClick={() => navigate("/reseller/register")}
+                    className="hover:text-white transition text-left"
+                  >
+                    Become a Partner
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => navigate("/reseller/login")}
+                    className="hover:text-white transition text-left"
+                  >
+                    Partner Login
+                  </button>
+                </li>
+                <li><a href="#" className="hover:text-white transition">Partner Resources</a></li>
               </ul>
             </div>
           </div>
-
-          {/* Bottom Bar */}
-          <div className="pt-8 border-t border-gray-800 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-gray-400">© 2026 Unified CRM. All rights reserved.</p>
+          <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-gray-400">© 2025 CRMOrbit. All rights reserved.</p>
             <div className="flex gap-6 text-gray-400">
-              <a href="https://texora.ai/" className="hover:text-white transition">Privacy Policy</a>
-              <a href="https://texora.ai/" className="hover:text-white transition">Terms of Service</a>
-              <a href="https://texora.ai/" className="hover:text-white transition">Cookie Policy</a>
+              <a href="#" className="hover:text-white transition">Privacy Policy</a>
+              <a href="#" className="hover:text-white transition">Terms of Service</a>
+              <a href="#" className="hover:text-white transition">Cookie Policy</a>
             </div>
           </div>
         </div>
@@ -866,15 +982,6 @@ const LandingPage = () => {
           opacity: 0.6;
           animation: float-particle 15s infinite;
         }
-        .particle-dark {
-          position: absolute;
-          width: 3px;
-          height: 3px;
-          background: linear-gradient(135deg, #8b5cf6, #ec4899);
-          border-radius: 50%;
-          opacity: 0.4;
-          animation: float-particle 15s infinite;
-        }
         @keyframes float-particle {
           0% {
             transform: translateY(0) translateX(0) scale(1);
@@ -900,13 +1007,6 @@ const LandingPage = () => {
           background-size: 50px 50px;
           animation: moveGrid 20s linear infinite;
         }
-        .grid-background-dark {
-          background-image:
-            linear-gradient(rgba(139, 92, 246, 0.08) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(139, 92, 246, 0.08) 1px, transparent 1px);
-          background-size: 50px 50px;
-          animation: moveGrid 20s linear infinite;
-        }
         .grid-lines-background {
           width: 100%;
           height: 100%;
@@ -914,15 +1014,6 @@ const LandingPage = () => {
             linear-gradient(rgba(99, 102, 241, 0.1) 2px, transparent 2px),
             linear-gradient(90deg, rgba(99, 102, 241, 0.1) 2px, transparent 2px);
           background-size: 100px 100px;
-          animation: moveGrid 30s linear infinite;
-        }
-        .grid-lines-background-dark {
-          width: 100%;
-          height: 100%;
-          background-image:
-            linear-gradient(rgba(139, 92, 246, 0.1) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(139, 92, 246, 0.1) 1px, transparent 1px);
-          background-size: 80px 80px;
           animation: moveGrid 30s linear infinite;
         }
         @keyframes moveGrid {
@@ -1013,11 +1104,6 @@ const LandingPage = () => {
           backdrop-filter: blur(20px);
           border: 1px solid rgba(255, 255, 255, 0.5);
         }
-        .glass-card-dark {
-          background: rgba(255, 255, 255, 0.03);
-          backdrop-filter: blur(20px);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-        }
 
         /* 3D Tilt Cards */
         .tilt-card {
@@ -1046,7 +1132,7 @@ const LandingPage = () => {
         .marquee-container {
           width: 100%;
           overflow: hidden;
-          background: transparent;
+          background: linear-gradient(to right, #f8fafc, #ffffff, #f8fafc);
           padding: 20px 0;
           position: relative;
         }
@@ -1061,11 +1147,11 @@ const LandingPage = () => {
         }
         .marquee-container::before {
           left: 0;
-          background: linear-gradient(to right, #1e293b, transparent);
+          background: linear-gradient(to right, white, transparent);
         }
         .marquee-container::after {
           right: 0;
-          background: linear-gradient(to left, #1e293b, transparent);
+          background: linear-gradient(to left, white, transparent);
         }
         .marquee-content {
           display: flex;
