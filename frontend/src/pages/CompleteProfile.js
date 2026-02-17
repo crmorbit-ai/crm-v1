@@ -1,70 +1,88 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
-  const { completeProfile } = useAuth();
+  const { user, completeProfile } = useAuth();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    organizationName: '',
-    slug: '',
-    businessType: 'B2B',
-    industry: '',
-    numberOfEmployees: '',
-    street: '',
-    city: '',
-    state: '',
-    country: '',
-    zipCode: '',
-    logo: null,
-    primaryColor: '#4A90E2',
-    timezone: 'Asia/Kolkata',
-    dateFormat: 'DD/MM/YYYY',
-    currency: 'INR'
+    organizationName: '', slug: '', businessType: 'B2B', industry: '',
+    numberOfEmployees: '', street: '', city: '', state: '', country: 'India', zipCode: '',
+    logo: null, primaryColor: '#2a5298', timezone: 'Asia/Kolkata', dateFormat: 'DD/MM/YYYY', currency: 'INR'
   });
 
   const [logoPreview, setLogoPreview] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('');
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+
+  // Redirect if profile is already complete
+  useEffect(() => {
+    if (user?.isProfileComplete) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
+
+  // Don't render if profile is already complete
+  if (user?.isProfileComplete) {
+    return null;
+  }
+
+  const industries = [
+    'Technology', 'Healthcare', 'Finance & Banking', 'Manufacturing', 'Retail & E-commerce',
+    'Education', 'Real Estate', 'Consulting', 'Marketing & Advertising', 'Logistics & Transportation',
+    'Food & Beverage', 'Hospitality', 'Automotive', 'Telecommunications', 'Energy & Utilities',
+    'Legal Services', 'Media & Entertainment', 'Construction', 'Agriculture', 'Other'
+  ];
+
+  const indianStates = [
+    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
+    'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
+    'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
+    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
+    'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu & Kashmir', 'Ladakh'
+  ];
+
+  const countries = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Singapore', 'UAE', 'Saudi Arabia', 'Japan', 'Other'];
+
+  const majorCities = {
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad'],
+    'Karnataka': ['Bangalore', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Tiruchirappalli'],
+    'Delhi': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Gandhinagar'],
+    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar'],
+    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Siliguri'],
+    'Uttar Pradesh': ['Lucknow', 'Noida', 'Ghaziabad', 'Kanpur', 'Agra', 'Varanasi'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Ajmer'],
+    'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur'],
+    'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar'],
+    'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala'],
+    'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur'],
+  };
+
+  const getCitiesForState = () => majorCities[formData.state] || [];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
     if (name === 'organizationName') {
-      const slugValue = value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-      setFormData({
-        ...formData,
-        organizationName: value,
-        slug: slugValue
-      });
+      setFormData({ ...formData, organizationName: value, slug: value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') });
+    } else if (name === 'state') {
+      setFormData({ ...formData, state: value, city: '' });
     } else {
-      setFormData({
-        ...formData,
-        [name]: value
-      });
+      setFormData({ ...formData, [name]: value });
     }
   };
 
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (!file.type.startsWith('image/')) {
-        setError('Please select an image file');
-        return;
-      }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Logo file size must be less than 5MB');
-        return;
-      }
+      if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
+      if (file.size > 2 * 1024 * 1024) { setError('Logo must be less than 2MB'); return; }
       setFormData({ ...formData, logo: file });
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result);
-      };
+      reader.onloadend = () => setLogoPreview(reader.result);
       reader.readAsDataURL(file);
       setError('');
     }
@@ -72,294 +90,187 @@ const CompleteProfile = () => {
 
   const validateStep = (step) => {
     setError('');
-    if (step === 1) {
-      if (!formData.organizationName.trim()) {
-        setError('Organization name is required');
-        return false;
-      }
-      if (!formData.slug.trim()) {
-        setError('Organization slug is required');
-        return false;
-      }
-    }
+    if (step === 1 && !formData.organizationName.trim()) { setError('Organization name is required'); return false; }
     return true;
   };
 
-  const handleNext = () => {
-    if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
-    }
-  };
-
-  const handlePrevious = () => {
-    setError('');
-    setCurrentStep(prev => Math.max(prev - 1, 1));
-  };
+  const handleNext = () => { if (validateStep(currentStep)) setCurrentStep(prev => Math.min(prev + 1, 4)); };
+  const handlePrevious = () => { setError(''); setCurrentStep(prev => Math.max(prev - 1, 1)); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
-
     if (!validateStep(currentStep)) return;
-
     setLoading(true);
-    setLoadingStatus('Creating your organization...');
-
     try {
-      // Show progress messages
-      const statusMessages = [
-        'Creating your organization...',
-        'Setting up your workspace...',
-        'Configuring CRM modules...',
-        'Almost done...'
-      ];
-
-      let messageIndex = 0;
-      const statusInterval = setInterval(() => {
-        messageIndex = (messageIndex + 1) % statusMessages.length;
-        setLoadingStatus(statusMessages[messageIndex]);
-      }, 1500);
-
       await completeProfile(formData);
-
-      clearInterval(statusInterval);
-      setLoadingStatus('');
-      setShowSuccessModal(true);
-      // Auto redirect after 3 seconds
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 3000);
+      navigate('/dashboard');
     } catch (err) {
-      setLoadingStatus('');
-      setError(err.response?.data?.message || 'Failed to complete profile. Please try again.');
+      setError(err.response?.data?.message || 'Failed to complete profile');
     } finally {
       setLoading(false);
     }
   };
 
+  const inputStyle = { width: '100%', padding: '11px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', outline: 'none', boxSizing: 'border-box', transition: 'border 0.2s' };
+  const selectStyle = { ...inputStyle, background: '#fff', cursor: 'pointer' };
+  const labelStyle = { display: 'block', fontSize: '13px', fontWeight: '500', color: '#374151', marginBottom: '6px' };
+
+  const stepData = [
+    { title: 'Business Details', desc: 'Tell us about your company', icon: '🏢' },
+    { title: 'Location', desc: 'Where are you located?', icon: '📍' },
+    { title: 'Branding', desc: 'Customize your look', icon: '🎨' },
+    { title: 'Preferences', desc: 'Set your defaults', icon: '⚙️' }
+  ];
+
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
         return (
-          <>
-            <div style={{ marginBottom: '20px' }}>
-              <label style={labelStyle}>Organization Name *</label>
-              <input
-                type="text"
-                name="organizationName"
-                value={formData.organizationName}
-                onChange={handleChange}
-                placeholder="Enter your company name"
-                required
-                style={inputStyle}
-              />
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={labelStyle}>Organization Name *</label>
+                <input type="text" name="organizationName" value={formData.organizationName} onChange={handleChange} placeholder="Your company name" style={inputStyle} />
+              </div>
+              <div>
+                <label style={labelStyle}>URL Slug</label>
+                <input type="text" name="slug" value={formData.slug} onChange={handleChange} placeholder="company-slug" style={inputStyle} />
+              </div>
             </div>
-
-            <div style={{ marginBottom: '20px' }}>
-              <label style={labelStyle}>Organization Slug *</label>
-              <input
-                type="text"
-                name="slug"
-                value={formData.slug}
-                onChange={handleChange}
-                placeholder="company-name"
-                pattern="[a-z0-9-]+"
-                required
-                style={inputStyle}
-              />
-              <small style={{ fontSize: '12px', color: '#6b7280', display: 'block', marginTop: '4px' }}>
-                This will be used in your organization's URL
-              </small>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={labelStyle}>Industry</label>
+                <select name="industry" value={formData.industry} onChange={handleChange} style={selectStyle}>
+                  <option value="">Select Industry</option>
+                  {industries.map(ind => <option key={ind} value={ind}>{ind}</option>)}
+                </select>
+              </div>
               <div>
                 <label style={labelStyle}>Business Type</label>
                 <select name="businessType" value={formData.businessType} onChange={handleChange} style={selectStyle}>
                   <option value="B2B">B2B</option>
                   <option value="B2C">B2C</option>
                   <option value="B2B2C">B2B2C</option>
-                  <option value="Other">Other</option>
                 </select>
               </div>
-
-              <div>
-                <label style={labelStyle}>Industry</label>
-                <input
-                  type="text"
-                  name="industry"
-                  value={formData.industry}
-                  onChange={handleChange}
-                  placeholder="e.g., Technology"
-                  style={inputStyle}
-                />
-              </div>
             </div>
-
-            <div>
-              <label style={labelStyle}>Number of Employees</label>
+            <div style={{ maxWidth: '200px' }}>
+              <label style={labelStyle}>Team Size</label>
               <select name="numberOfEmployees" value={formData.numberOfEmployees} onChange={handleChange} style={selectStyle}>
-                <option value="">Select range</option>
+                <option value="">Select</option>
                 <option value="1-10">1-10</option>
                 <option value="11-50">11-50</option>
                 <option value="51-200">51-200</option>
                 <option value="201-500">201-500</option>
-                <option value="501-1000">501-1000</option>
-                <option value="1000+">1000+</option>
+                <option value="500+">500+</option>
               </select>
             </div>
-          </>
+          </div>
         );
 
       case 2:
         return (
-          <>
-            <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            <div>
               <label style={labelStyle}>Street Address</label>
-              <input
-                type="text"
-                name="street"
-                value={formData.street}
-                onChange={handleChange}
-                placeholder="123 Business Street"
-                style={inputStyle}
-              />
+              <input type="text" name="street" value={formData.street} onChange={handleChange} placeholder="Enter business address" style={inputStyle} />
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-              <div>
-                <label style={labelStyle}>City</label>
-                <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Mumbai" style={inputStyle} />
-              </div>
-              <div>
-                <label style={labelStyle}>State/Province</label>
-                <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="Maharashtra" style={inputStyle} />
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
               <div>
                 <label style={labelStyle}>Country</label>
-                <input type="text" name="country" value={formData.country} onChange={handleChange} placeholder="India" style={inputStyle} />
+                <select name="country" value={formData.country} onChange={handleChange} style={selectStyle}>
+                  {countries.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
               <div>
-                <label style={labelStyle}>Zip/Postal Code</label>
+                <label style={labelStyle}>State</label>
+                {formData.country === 'India' ? (
+                  <select name="state" value={formData.state} onChange={handleChange} style={selectStyle}>
+                    <option value="">Select State</option>
+                    {indianStates.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                ) : (
+                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" style={inputStyle} />
+                )}
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+              <div>
+                <label style={labelStyle}>City</label>
+                {formData.country === 'India' && getCitiesForState().length > 0 ? (
+                  <select name="city" value={formData.city} onChange={handleChange} style={selectStyle}>
+                    <option value="">Select City</option>
+                    {getCitiesForState().map(c => <option key={c} value={c}>{c}</option>)}
+                    <option value="other">Other</option>
+                  </select>
+                ) : (
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" style={inputStyle} />
+                )}
+              </div>
+              <div>
+                <label style={labelStyle}>ZIP Code</label>
                 <input type="text" name="zipCode" value={formData.zipCode} onChange={handleChange} placeholder="400001" style={inputStyle} />
               </div>
             </div>
-          </>
+          </div>
         );
 
       case 3:
         return (
-          <>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={labelStyle}>Company Logo</label>
-              <div style={{
-                border: '2px dashed #d1d5db',
-                borderRadius: '8px',
-                padding: '24px',
-                textAlign: 'center',
-                background: '#f9fafb'
-              }}>
-                {logoPreview ? (
-                  <div style={{ marginBottom: '16px' }}>
-                    <img src={logoPreview} alt="Logo preview" style={{ maxWidth: '120px', maxHeight: '120px', borderRadius: '8px' }} />
-                  </div>
-                ) : (
-                  <div style={{ marginBottom: '16px', fontSize: '48px' }}>📤</div>
-                )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '18px', padding: '18px', background: '#f8fafc', borderRadius: '12px', border: '1px dashed #cbd5e1' }}>
+              <div style={{ width: '70px', height: '70px', borderRadius: '12px', background: '#2a5298', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '26px', fontWeight: '700', overflow: 'hidden' }}>
+                {logoPreview ? <img src={logoPreview} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : formData.organizationName?.[0]?.toUpperCase() || 'C'}
+              </div>
+              <div>
+                <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#64748b' }}>Upload logo (PNG, JPG - max 2MB)</p>
                 <input type="file" id="logo" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
-                <label
-                  htmlFor="logo"
-                  style={{
-                    display: 'inline-block',
-                    padding: '10px 20px',
-                    background: '#5db9de',
-                    color: 'white',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '600'
-                  }}
-                >
+                <label htmlFor="logo" style={{ padding: '8px 18px', background: '#2a5298', color: '#fff', borderRadius: '6px', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
                   {logoPreview ? 'Change Logo' : 'Upload Logo'}
                 </label>
-                <p style={{ fontSize: '12px', color: '#6b7280', marginTop: '8px', marginBottom: 0 }}>PNG, JPG (Max 5MB)</p>
               </div>
             </div>
-
             <div>
-              <label style={labelStyle}>Primary Brand Color</label>
+              <label style={labelStyle}>Brand Color</label>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <input
-                  type="color"
-                  name="primaryColor"
-                  value={formData.primaryColor}
-                  onChange={handleChange}
-                  style={{
-                    width: '60px',
-                    height: '40px',
-                    border: '2px solid #d1d5db',
-                    borderRadius: '6px',
-                    cursor: 'pointer'
-                  }}
-                />
-                <input
-                  type="text"
-                  value={formData.primaryColor}
-                  readOnly
-                  style={{
-                    ...inputStyle,
-                    flex: 1,
-                    fontFamily: 'monospace',
-                    fontWeight: '600'
-                  }}
-                />
+                <input type="color" name="primaryColor" value={formData.primaryColor} onChange={handleChange} style={{ width: '48px', height: '48px', border: '2px solid #e5e7eb', borderRadius: '8px', cursor: 'pointer', padding: 0 }} />
+                <input type="text" value={formData.primaryColor} readOnly style={{ ...inputStyle, width: '110px', fontFamily: 'monospace', textAlign: 'center' }} />
               </div>
             </div>
-          </>
+          </div>
         );
 
       case 4:
         return (
-          <>
-            <div style={{ marginBottom: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '14px' }}>
+            <div>
               <label style={labelStyle}>Timezone</label>
               <select name="timezone" value={formData.timezone} onChange={handleChange} style={selectStyle}>
-                <option value="Asia/Kolkata">Asia/Kolkata (IST)</option>
-                <option value="America/New_York">America/New_York (EST)</option>
-                <option value="America/Los_Angeles">America/Los_Angeles (PST)</option>
-                <option value="Europe/London">Europe/London (GMT)</option>
-                <option value="Asia/Dubai">Asia/Dubai (GST)</option>
-                <option value="Asia/Singapore">Asia/Singapore (SGT)</option>
-                <option value="Australia/Sydney">Australia/Sydney (AEDT)</option>
+                <option value="Asia/Kolkata">IST (India)</option>
+                <option value="America/New_York">EST (US)</option>
+                <option value="America/Los_Angeles">PST (US)</option>
+                <option value="Europe/London">GMT (UK)</option>
+                <option value="Asia/Dubai">GST (Dubai)</option>
               </select>
             </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <label style={labelStyle}>Date Format</label>
-                <select name="dateFormat" value={formData.dateFormat} onChange={handleChange} style={selectStyle}>
-                  <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                  <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                  <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={labelStyle}>Currency</label>
-                <select name="currency" value={formData.currency} onChange={handleChange} style={selectStyle}>
-                  <option value="INR">INR (₹)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="AED">AED (د.إ)</option>
-                  <option value="SGD">SGD (S$)</option>
-                </select>
-              </div>
+            <div>
+              <label style={labelStyle}>Date Format</label>
+              <select name="dateFormat" value={formData.dateFormat} onChange={handleChange} style={selectStyle}>
+                <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+                <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+                <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+              </select>
             </div>
-          </>
+            <div>
+              <label style={labelStyle}>Currency</label>
+              <select name="currency" value={formData.currency} onChange={handleChange} style={selectStyle}>
+                <option value="INR">₹ INR</option>
+                <option value="USD">$ USD</option>
+                <option value="EUR">€ EUR</option>
+                <option value="GBP">£ GBP</option>
+              </select>
+            </div>
+          </div>
         );
 
       default:
@@ -367,721 +278,187 @@ const CompleteProfile = () => {
     }
   };
 
-  const labelStyle = {
-    display: 'block',
-    fontSize: '14px',
-    fontWeight: '600',
-    color: '#374151',
-    marginBottom: '8px'
-  };
-
-  const inputStyle = {
-    width: '100%',
-    padding: '10px 12px',
-    fontSize: '14px',
-    border: '1px solid #d1d5db',
-    borderRadius: '6px',
-    outline: 'none',
-    transition: 'border-color 0.2s'
-  };
-
-  const selectStyle = {
-    ...inputStyle,
-    cursor: 'pointer'
-  };
-
-  const stepLabels = ['Business Details', 'Location', 'Branding', 'Preferences'];
-
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc' }}>
-      {/* Left Side - Brand/Marketing */}
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Left Side */}
       <div style={{
-        width: '38%',
-        background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)',
-        padding: '30px 35px',
+        width: '300px',
+        background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #131d21 50%, #95b5ef 75%, #2a5298 100%)',
+        padding: '28px',
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'center',
-        color: 'white',
+        color: '#fff',
         position: 'relative',
         overflow: 'hidden'
       }}>
-        {/* Decorative elements */}
-        <div style={{
-          position: 'absolute',
-          top: '-100px',
-          right: '-100px',
-          width: '300px',
-          height: '300px',
-          background: 'radial-gradient(circle, rgba(93, 185, 222, 0.15) 0%, transparent 70%)',
-          borderRadius: '50%',
-          pointerEvents: 'none'
-        }}></div>
-        <div style={{
-          position: 'absolute',
-          bottom: '-150px',
-          left: '-150px',
-          width: '400px',
-          height: '400px',
-          background: 'radial-gradient(circle, rgba(42, 82, 152, 0.15) 0%, transparent 70%)',
-          borderRadius: '50%',
-          pointerEvents: 'none'
-        }}></div>
+        {/* Decorative circles */}
+        <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '120px', height: '120px', background: 'rgba(255,255,255,0.08)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: '60px', left: '-30px', width: '80px', height: '80px', background: 'rgba(255,255,255,0.05)', borderRadius: '50%' }} />
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          <div style={{ marginBottom: '35px', textAlign: 'center' }}>
-            <img
-              src="/logo.png"
-              alt="UFS CRM"
-              style={{
-                width: '280px',
-                height: 'auto',
-                display: 'block',
-                margin: '0 auto 18px',
-                filter: 'drop-shadow(0 4px 16px rgba(0, 0, 0, 0.4))'
-              }}
-            />
-            <p style={{
-              fontSize: '15px',
-              lineHeight: '1.5',
-              color: '#cbd5e1',
-              fontWeight: '400',
-              letterSpacing: '0.2px',
-              maxWidth: '320px',
-              margin: '0 auto'
-            }}>
-              Complete your profile in 4 simple steps to unlock the full power of UFS CRM
-            </p>
-          </div>
+        {/* Logo only - white background */}
+        <div style={{
+          background: '#fff',
+          padding: '14px 18px',
+          borderRadius: '10px',
+          marginBottom: '36px',
+          display: 'inline-block',
+          alignSelf: 'flex-start',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+        }}>
+          <img src="/logo.png" alt="Logo" style={{ height: '32px', display: 'block' }} onError={(e) => { e.target.style.display = 'none'; }} />
+        </div>
 
-          <div style={{ marginBottom: '28px' }}>
-            <h3 style={{
-              fontSize: '14px',
-              fontWeight: '700',
-              marginBottom: '16px',
-              color: '#ffffff',
-              textTransform: 'uppercase',
-              letterSpacing: '1.5px',
-              textAlign: 'center'
+        {/* Welcome text */}
+        <div style={{ marginBottom: '32px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: '700', marginBottom: '10px', lineHeight: 1.3 }}>
+            Welcome to Unified CRM
+          </h2>
+          <p style={{ fontSize: '13px', opacity: 0.85, lineHeight: 1.6, margin: 0 }}>
+            Complete your profile in 4 simple steps to start managing your business.
+          </p>
+        </div>
+
+        {/* Steps */}
+        <div style={{ flex: 1 }}>
+          {stepData.map((step, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: '14px',
+              padding: '14px',
+              borderRadius: '10px',
+              marginBottom: '8px',
+              background: currentStep === i + 1 ? 'rgba(255,255,255,0.15)' : 'transparent',
+              transition: 'all 0.2s'
             }}>
-              Platform Features
-            </h3>
-            {[
-              { icon: '🎯', text: 'Complete CRM Suite', color: '#10b981' },
-              { icon: '📊', text: 'Advanced Analytics', color: '#3b82f6' },
-              { icon: '👥', text: 'Team Collaboration', color: '#8b5cf6' },
-              { icon: '⚡', text: 'Workflow Automation', color: '#f59e0b' },
-              { icon: '🔒', text: 'Enterprise Security', color: '#ef4444' }
-            ].map((item, index) => (
-              <div key={index} style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                marginBottom: '10px',
-                padding: '9px 12px',
-                background: 'rgba(255,255,255,0.05)',
-                borderRadius: '8px',
-                backdropFilter: 'blur(10px)',
-                border: '1px solid rgba(255,255,255,0.1)',
-                transition: 'all 0.3s ease'
+              <div style={{
+                width: '36px', height: '36px', borderRadius: '10px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '14px', fontWeight: '600',
+                background: currentStep > i + 1 ? '#10b981' : currentStep === i + 1 ? '#fff' : 'rgba(255,255,255,0.15)',
+                color: currentStep > i + 1 ? '#fff' : currentStep === i + 1 ? '#2a5298' : 'rgba(255,255,255,0.8)',
+                boxShadow: currentStep === i + 1 ? '0 2px 8px rgba(0,0,0,0.15)' : 'none'
               }}>
-                <div style={{
-                  fontSize: '18px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}>
-                  {item.icon}
-                </div>
-                <span style={{
-                  color: '#e2e8f0',
-                  fontSize: '13px',
-                  fontWeight: '500'
-                }}>{item.text}</span>
+                {currentStep > i + 1 ? '✓' : step.icon}
               </div>
-            ))}
-          </div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: currentStep === i + 1 ? '600' : '500', opacity: currentStep < i + 1 ? 0.7 : 1 }}>
+                  {step.title}
+                </div>
+                {currentStep === i + 1 && (
+                  <div style={{ fontSize: '11px', opacity: 0.75, marginTop: '2px' }}>{step.desc}</div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
 
-          <div style={{
-            padding: '14px 16px',
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)',
-            borderRadius: '10px',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            backdropFilter: 'blur(10px)'
-          }}>
-            <p style={{
-              fontSize: '12px',
-              margin: 0,
-              color: '#d1fae5',
-              lineHeight: '1.5'
-            }}>
-              💡 <strong style={{ color: '#a7f3d0' }}>Pro Tip:</strong> All settings can be customized later
-            </p>
-          </div>
+        {/* Footer */}
+        <div style={{ paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+          <p style={{ fontSize: '11px', opacity: 0.6, margin: 0 }}>
+            All settings can be changed later from dashboard
+          </p>
         </div>
       </div>
 
       {/* Right Side - Form */}
-      <div style={{
-        width: '62%',
-        background: '#ffffff',
-        padding: '40px 50px',
-        overflowY: 'auto',
-        boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.06)'
-      }}>
-        {/* Modern Progress Steps */}
-        <div style={{ marginBottom: '35px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', marginBottom: '20px' }}>
-            {[1, 2, 3, 4].map((step) => (
-              <div key={step} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{
-                  width: '100%',
-                  height: '4px',
-                  background: currentStep >= step
-                    ? 'linear-gradient(90deg, #5db9de 0%, #2a5298 100%)'
-                    : '#e5e7eb',
-                  borderRadius: '4px',
-                  marginBottom: '8px',
-                  transition: 'all 0.4s ease',
-                  boxShadow: currentStep >= step ? '0 2px 8px rgba(93, 185, 222, 0.3)' : 'none'
-                }}></div>
-                <div style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '28px',
-                  height: '28px',
-                  borderRadius: '50%',
-                  background: currentStep >= step
-                    ? 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)'
-                    : '#f3f4f6',
-                  color: currentStep >= step ? '#ffffff' : '#9ca3af',
-                  fontSize: '13px',
-                  fontWeight: '700',
-                  transition: 'all 0.3s ease',
-                  boxShadow: currentStep === step
-                    ? '0 4px 12px rgba(93, 185, 222, 0.4), 0 0 0 4px rgba(93, 185, 222, 0.1)'
-                    : currentStep > step ? '0 2px 6px rgba(93, 185, 222, 0.2)' : 'none'
-                }}>
-                  {currentStep > step ? '✓' : step}
-                </div>
-                <div style={{
-                  fontSize: '11px',
-                  color: currentStep >= step ? '#1f2937' : '#9ca3af',
-                  fontWeight: currentStep === step ? '600' : '500',
-                  marginTop: '6px'
-                }}>
-                  {['Business', 'Location', 'Branding', 'Settings'][step - 1]}
-                </div>
+      <div style={{ flex: 1, background: '#f9fafb', display: 'flex', flexDirection: 'column' }}>
+        {/* Header */}
+        <div style={{ padding: '28px 36px', background: '#fff', borderBottom: '1px solid #e5e7eb' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ margin: 0, fontSize: '22px', fontWeight: '700', color: '#111827' }}>
+                {stepData[currentStep - 1].title}
+              </h1>
+              <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#6b7280' }}>
+                {stepData[currentStep - 1].desc}
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {[1, 2, 3, 4].map(s => (
+                  <div key={s} style={{
+                    width: s === currentStep ? '24px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    background: s <= currentStep ? '#2a5298' : '#e5e7eb',
+                    transition: 'all 0.3s'
+                  }} />
+                ))}
               </div>
-            ))}
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                style={{
+                  padding: '8px 16px', background: '#f3f4f6', color: '#6b7280',
+                  border: '1px solid #e5e7eb', borderRadius: '6px', fontSize: '13px',
+                  fontWeight: '500', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px'
+                }}
+              >
+                Skip for Now →
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Step Title with Icon */}
-        <div style={{
-          marginBottom: '30px',
-          padding: '20px 24px',
-          background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
-          borderRadius: '12px',
-          border: '1px solid #bae6fd'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '6px' }}>
-            <div style={{
-              width: '36px',
-              height: '36px',
-              borderRadius: '10px',
-              background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '18px',
-              boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)'
-            }}>
-              {['🏢', '📍', '🎨', '⚙️'][currentStep - 1]}
-            </div>
-            <h2 style={{
-              fontSize: '22px',
-              fontWeight: '700',
-              color: '#0c4a6e',
-              margin: 0
-            }}>
-              {stepLabels[currentStep - 1]}
-            </h2>
+        {/* Form */}
+        <div style={{ flex: 1, padding: '32px 36px', overflowY: 'auto' }}>
+          <div style={{ maxWidth: '600px', background: '#fff', padding: '28px', borderRadius: '12px', border: '1px solid #e5e7eb' }}>
+            {error && (
+              <div style={{ padding: '12px 16px', marginBottom: '20px', background: '#fef2f2', color: '#dc2626', borderRadius: '8px', fontSize: '14px' }}>
+                {error}
+              </div>
+            )}
+            <form onSubmit={handleSubmit}>
+              {renderStepContent()}
+            </form>
           </div>
-          <p style={{ fontSize: '13px', color: '#0369a1', margin: 0, paddingLeft: '48px' }}>
-            {['Tell us about your organization', 'Where are you located?', 'Customize your brand identity', 'Configure your preferences'][currentStep - 1]}
-          </p>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div style={{
-            padding: '14px 18px',
-            background: 'linear-gradient(135deg, #fee2e2 0%, #fecaca 100%)',
-            color: '#991b1b',
-            borderRadius: '10px',
-            marginBottom: '24px',
-            fontSize: '13px',
-            border: '1px solid #fca5a5',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.15)'
-          }}>
-            <span style={{ fontSize: '16px' }}>⚠️</span>
-            <span>{error}</span>
+        {/* Footer */}
+        <div style={{ padding: '20px 36px', background: '#fff', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
+          <button
+            type="button"
+            onClick={handlePrevious}
+            disabled={currentStep === 1}
+            style={{
+              padding: '11px 22px', background: '#fff', color: currentStep === 1 ? '#d1d5db' : '#374151',
+              border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontWeight: '500',
+              cursor: currentStep === 1 ? 'not-allowed' : 'pointer'
+            }}
+          >
+            ← Back
+          </button>
+
+          <div style={{ display: 'flex', gap: '12px' }}>
+            {currentStep > 1 && currentStep < 4 && (
+              <button type="button" onClick={handleNext} style={{
+                padding: '11px 22px', background: '#fff', color: '#6b7280',
+                border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontWeight: '500', cursor: 'pointer'
+              }}>
+                Skip
+              </button>
+            )}
+
+            {currentStep < 4 ? (
+              <button type="button" onClick={handleNext} style={{
+                padding: '11px 28px', background: '#2a5298', color: '#fff',
+                border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer',
+                boxShadow: '0 2px 6px rgba(42, 82, 152, 0.3)'
+              }}>
+                Continue →
+              </button>
+            ) : (
+              <button type="button" onClick={handleSubmit} disabled={loading} style={{
+                padding: '11px 28px', background: loading ? '#9ca3af' : '#2a5298', color: '#fff',
+                border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                boxShadow: loading ? 'none' : '0 2px 6px rgba(42, 82, 152, 0.3)'
+              }}>
+                {loading ? 'Setting up...' : 'Complete Setup ✓'}
+              </button>
+            )}
           </div>
-        )}
-
-        {/* Form Content */}
-        <form onSubmit={handleSubmit}>
-          {renderStepContent()}
-
-          {/* Navigation Buttons */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginTop: '35px',
-            paddingTop: '24px',
-            borderTop: '2px solid #f1f5f9'
-          }}>
-            <button
-              type="button"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-              style={{
-                padding: '11px 22px',
-                background: currentStep === 1 ? '#f8fafc' : '#ffffff',
-                color: currentStep === 1 ? '#cbd5e1' : '#475569',
-                border: '2px solid',
-                borderColor: currentStep === 1 ? '#e2e8f0' : '#cbd5e1',
-                borderRadius: '10px',
-                fontSize: '14px',
-                fontWeight: '600',
-                cursor: currentStep === 1 ? 'not-allowed' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: 'all 0.2s ease',
-                boxShadow: currentStep === 1 ? 'none' : '0 1px 3px rgba(0, 0, 0, 0.05)'
-              }}
-              onMouseEnter={(e) => {
-                if (currentStep !== 1) {
-                  e.target.style.borderColor = '#94a3b8';
-                  e.target.style.transform = 'translateY(-1px)';
-                  e.target.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (currentStep !== 1) {
-                  e.target.style.borderColor = '#cbd5e1';
-                  e.target.style.transform = 'translateY(0)';
-                  e.target.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.05)';
-                }
-              }}
-            >
-              <span>←</span> Previous
-            </button>
-
-            <div style={{ display: 'flex', gap: '10px' }}>
-              {/* Skip button for optional steps (2, 3, 4) */}
-              {currentStep > 1 && currentStep < 4 && (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  style={{
-                    padding: '11px 20px',
-                    background: '#ffffff',
-                    color: '#64748b',
-                    border: '2px solid #e2e8f0',
-                    borderRadius: '10px',
-                    fontSize: '13px',
-                    fontWeight: '600',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = '#f8fafc';
-                    e.target.style.borderColor = '#cbd5e1';
-                    e.target.style.transform = 'translateY(-1px)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = '#ffffff';
-                    e.target.style.borderColor = '#e2e8f0';
-                    e.target.style.transform = 'translateY(0)';
-                  }}
-                >
-                  Skip →
-                </button>
-              )}
-
-              {currentStep < 4 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  style={{
-                    padding: '11px 28px',
-                    background: 'linear-gradient(135deg, #5db9de 0%, #2a5298 100%)',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '10px',
-                    fontSize: '14px',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    boxShadow: '0 4px 12px rgba(93, 185, 222, 0.3)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.transform = 'translateY(-2px)';
-                    e.target.style.boxShadow = '0 6px 20px rgba(93, 185, 222, 0.4)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.transform = 'translateY(0)';
-                    e.target.style.boxShadow = '0 4px 12px rgba(93, 185, 222, 0.3)';
-                  }}
-                >
-                  Continue <span>→</span>
-                </button>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    style={{
-                      padding: '11px 20px',
-                      background: '#ffffff',
-                      color: '#64748b',
-                      border: '2px solid #e2e8f0',
-                      borderRadius: '10px',
-                      fontSize: '13px',
-                      fontWeight: '600',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)'
-                    }}
-                    onMouseEnter={(e) => {
-                      e.target.style.background = '#f8fafc';
-                      e.target.style.borderColor = '#cbd5e1';
-                      e.target.style.transform = 'translateY(-1px)';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.background = '#ffffff';
-                      e.target.style.borderColor = '#e2e8f0';
-                      e.target.style.transform = 'translateY(0)';
-                    }}
-                  >
-                    Skip & Finish
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                      padding: '11px 28px',
-                      background: loading ? '#94a3b8' : 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '10px',
-                      fontSize: '14px',
-                      fontWeight: '700',
-                      cursor: loading ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s ease',
-                      boxShadow: loading ? 'none' : '0 4px 12px rgba(16, 185, 129, 0.3)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!loading) {
-                        e.target.style.transform = 'translateY(-2px)';
-                        e.target.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!loading) {
-                        e.target.style.transform = 'translateY(0)';
-                        e.target.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
-                      }
-                    }}
-                  >
-                    {loading ? '⏳ Saving...' : '✓ Complete Setup'}
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </form>
+        </div>
       </div>
-
-      {/* Loading Overlay */}
-      {loading && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9998,
-          animation: 'fadeIn 0.3s ease'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '20px',
-            padding: '40px 50px',
-            textAlign: 'center',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3)',
-            maxWidth: '400px'
-          }}>
-            {/* Spinner */}
-            <div style={{
-              width: '70px',
-              height: '70px',
-              border: '4px solid #e5e7eb',
-              borderTop: '4px solid #5db9de',
-              borderRadius: '50%',
-              animation: 'spin 1s linear infinite',
-              margin: '0 auto 24px'
-            }}></div>
-            <style>
-              {`
-                @keyframes spin {
-                  0% { transform: rotate(0deg); }
-                  100% { transform: rotate(360deg); }
-                }
-              `}
-            </style>
-
-            <h3 style={{
-              fontSize: '20px',
-              fontWeight: '700',
-              color: '#1f2937',
-              marginBottom: '12px'
-            }}>
-              Setting Up Your CRM
-            </h3>
-
-            <p style={{
-              fontSize: '15px',
-              color: '#5db9de',
-              fontWeight: '600',
-              marginBottom: '8px',
-              minHeight: '24px'
-            }}>
-              {loadingStatus}
-            </p>
-
-            <p style={{
-              fontSize: '13px',
-              color: '#9ca3af',
-              margin: 0
-            }}>
-              Please wait, this will only take a moment...
-            </p>
-
-            {/* Progress dots */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'center',
-              gap: '8px',
-              marginTop: '20px'
-            }}>
-              {[0, 1, 2].map((i) => (
-                <div key={i} style={{
-                  width: '8px',
-                  height: '8px',
-                  borderRadius: '50%',
-                  background: '#5db9de',
-                  animation: `pulse 1.5s ease-in-out infinite`,
-                  animationDelay: `${i * 0.2}s`
-                }}></div>
-              ))}
-            </div>
-            <style>
-              {`
-                @keyframes pulse {
-                  0%, 100% { opacity: 0.3; transform: scale(1); }
-                  50% { opacity: 1; transform: scale(1.2); }
-                }
-              `}
-            </style>
-          </div>
-        </div>
-      )}
-
-      {/* Success Modal */}
-      {showSuccessModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.75)',
-          backdropFilter: 'blur(8px)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          animation: 'fadeIn 0.3s ease'
-        }}>
-          <style>
-            {`
-              @keyframes fadeIn {
-                from { opacity: 0; }
-                to { opacity: 1; }
-              }
-              @keyframes slideUp {
-                from { transform: translateY(30px); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-              }
-              @keyframes float {
-                0%, 100% { transform: translateY(0); }
-                50% { transform: translateY(-10px); }
-              }
-              @keyframes confetti {
-                0% { transform: translateY(-100%) rotate(0deg); opacity: 1; }
-                100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
-              }
-            `}
-          </style>
-
-          {/* Confetti Elements */}
-          {[...Array(30)].map((_, i) => (
-            <div key={i} style={{
-              position: 'absolute',
-              top: '-20px',
-              left: `${Math.random() * 100}%`,
-              width: '10px',
-              height: '10px',
-              background: ['#5db9de', '#2a5298', '#10b981', '#f59e0b', '#ef4444'][Math.floor(Math.random() * 5)],
-              animation: `confetti ${2 + Math.random() * 2}s linear infinite`,
-              animationDelay: `${Math.random() * 2}s`,
-              borderRadius: '2px',
-              opacity: 0.8
-            }}></div>
-          ))}
-
-          <div style={{
-            background: 'white',
-            borderRadius: '24px',
-            padding: '50px 60px',
-            maxWidth: '500px',
-            textAlign: 'center',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.3)',
-            animation: 'slideUp 0.5s ease',
-            position: 'relative'
-          }}>
-            {/* Success Icon with Animation */}
-            <div style={{
-              width: '120px',
-              height: '120px',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              margin: '0 auto 30px',
-              boxShadow: '0 10px 30px rgba(16, 185, 129, 0.4)',
-              animation: 'float 2s ease-in-out infinite'
-            }}>
-              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-            </div>
-
-            <h2 style={{
-              fontSize: '32px',
-              fontWeight: '800',
-              color: '#1f2937',
-              marginBottom: '16px',
-              background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text'
-            }}>
-              Welcome to UFS CRM!
-            </h2>
-
-            <p style={{
-              fontSize: '16px',
-              color: '#6b7280',
-              marginBottom: '10px',
-              lineHeight: '1.6'
-            }}>
-              Your profile has been successfully set up!
-            </p>
-
-            <p style={{
-              fontSize: '14px',
-              color: '#9ca3af',
-              marginBottom: '30px'
-            }}>
-              Redirecting to your dashboard in a moment...
-            </p>
-
-            {/* Loading Progress Bar */}
-            <div style={{
-              width: '100%',
-              height: '6px',
-              background: '#e5e7eb',
-              borderRadius: '999px',
-              overflow: 'hidden',
-              marginBottom: '20px'
-            }}>
-              <div style={{
-                height: '100%',
-                background: 'linear-gradient(90deg, #10b981 0%, #059669 100%)',
-                borderRadius: '999px',
-                animation: 'progress 3s linear'
-              }}></div>
-            </div>
-            <style>
-              {`
-                @keyframes progress {
-                  from { width: 0%; }
-                  to { width: 100%; }
-                }
-              `}
-            </style>
-
-            <button
-              onClick={() => navigate('/dashboard')}
-              style={{
-                padding: '14px 36px',
-                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '12px',
-                fontSize: '15px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
-                transition: 'all 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)';
-              }}
-            >
-              Go to Dashboard →
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

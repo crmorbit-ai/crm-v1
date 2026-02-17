@@ -63,9 +63,32 @@ const login = async (req, res) => {
     // Generate token
     const token = generateToken(user);
 
-    // Remove password from response
-    const userResponse = user.toObject();
-    delete userResponse.password;
+    // Create minimal user response (avoid sending huge populated objects)
+    const userResponse = {
+      _id: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      userType: user.userType,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      isProfileComplete: user.isProfileComplete !== false, // Default to true for existing users
+      lastLogin: user.lastLogin,
+      tenant: user.tenant ? {
+        _id: user.tenant._id,
+        organizationId: user.tenant.organizationId,
+        organizationName: user.tenant.organizationName,
+        logo: user.tenant.logo,
+        isActive: user.tenant.isActive
+      } : null,
+      roles: user.roles ? user.roles.map(r => ({
+        _id: r._id,
+        name: r.name,
+        slug: r.slug,
+        permissions: r.permissions
+      })) : []
+    };
 
     // Log activity
     await logActivity(
@@ -305,12 +328,38 @@ const getMe = async (req, res) => {
     }
 
     const user = await User.findById(req.user._id)
-      .populate('roles')
-      .populate('groups')
-      .populate('tenant')
-      .select('-password');
+      .populate('roles', 'name slug permissions level')
+      .populate('groups', 'name description')
+      .populate('tenant', 'organizationId organizationName logo isActive isSuspended subscription.status subscription.planName')
+      .select('-password -emailVerificationOTP -emailVerificationOTPExpire -resetPasswordOTP -resetPasswordOTPExpire -viewingPin -viewingPinOTP -viewingPinOTPExpiry');
 
-    successResponse(res, 200, 'User profile retrieved', user);
+    // Create minimal response
+    const userResponse = {
+      _id: user._id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+      userType: user.userType,
+      isActive: user.isActive,
+      emailVerified: user.emailVerified,
+      isProfileComplete: user.isProfileComplete !== false, // Default to true for existing users
+      lastLogin: user.lastLogin,
+      profilePicture: user.profilePicture,
+      tenant: user.tenant ? {
+        _id: user.tenant._id,
+        organizationId: user.tenant.organizationId,
+        organizationName: user.tenant.organizationName,
+        logo: user.tenant.logo,
+        isActive: user.tenant.isActive,
+        isSuspended: user.tenant.isSuspended,
+        subscription: user.tenant.subscription
+      } : null,
+      roles: user.roles || [],
+      groups: user.groups || []
+    };
+
+    successResponse(res, 200, 'User profile retrieved', userResponse);
   } catch (error) {
     console.error('Get me error:', error);
     errorResponse(res, 500, 'Server error');

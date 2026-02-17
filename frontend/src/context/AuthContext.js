@@ -127,8 +127,11 @@ export const AuthProvider = ({ children }) => {
   const hasPermission = (feature, action) => {
     if (!user) return false;
 
-    // SAAS_OWNER has all permissions
-    if (user.userType === 'SAAS_OWNER') return true;
+    // SAAS_OWNER and SAAS_ADMIN have all permissions
+    if (user.userType === 'SAAS_OWNER' || user.userType === 'SAAS_ADMIN') return true;
+
+    // TENANT_ADMIN has all permissions within their tenant
+    if (user.userType === 'TENANT_ADMIN') return true;
 
     // Check custom permissions
     if (user.customPermissions) {
@@ -141,9 +144,11 @@ export const AuthProvider = ({ children }) => {
     // Check role permissions
     if (user.roles) {
       for (const role of user.roles) {
-        const perm = role.permissions.find(p => p.feature === feature);
-        if (perm && (perm.actions.includes(action) || perm.actions.includes('manage'))) {
-          return true;
+        if (role.permissions) {
+          const perm = role.permissions.find(p => p.feature === feature);
+          if (perm && (perm.actions.includes(action) || perm.actions.includes('manage'))) {
+            return true;
+          }
         }
       }
     }

@@ -1,0 +1,694 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { userService } from '../services/userService';
+import { roleService } from '../services/roleService';
+import { groupService } from '../services/groupService';
+import DashboardLayout from '../components/layout/DashboardLayout';
+
+const FEATURES = [
+  // Access Management
+  { slug: 'user_management', name: 'Users', category: 'Access' },
+  { slug: 'role_management', name: 'Roles', category: 'Access' },
+  { slug: 'group_management', name: 'Groups', category: 'Access' },
+  // CRM
+  { slug: 'lead_management', name: 'Leads', category: 'CRM' },
+  { slug: 'contact_management', name: 'Contacts', category: 'CRM' },
+  { slug: 'account_management', name: 'Accounts', category: 'CRM' },
+  { slug: 'opportunity_management', name: 'Opportunities', category: 'CRM' },
+  { slug: 'data_center', name: 'Customers', category: 'CRM' },
+  // Sales & Finance
+  { slug: 'quotation_management', name: 'Quotations', category: 'Sales' },
+  { slug: 'invoice_management', name: 'Invoices', category: 'Sales' },
+  { slug: 'purchase_order_management', name: 'Purchase Orders', category: 'Sales' },
+  { slug: 'rfi_management', name: 'RFI', category: 'Sales' },
+  // Product
+  { slug: 'product_management', name: 'Products', category: 'Product' },
+  // Tasks
+  { slug: 'task_management', name: 'Tasks', category: 'Tasks' },
+  { slug: 'meeting_management', name: 'Meetings', category: 'Tasks' },
+  { slug: 'call_management', name: 'Calls', category: 'Tasks' },
+  { slug: 'email_management', name: 'Emails', category: 'Tasks' },
+  // Account
+  { slug: 'subscription_management', name: 'Subscription & Billing', category: 'Account' },
+  // Customization
+  { slug: 'field_management', name: 'Field Builder', category: 'Customization' },
+  // Data
+  { slug: 'audit_logs', name: 'Audit Logs', category: 'Data' },
+];
+const ACTIONS = ['create', 'read', 'update', 'delete', 'manage', 'import', 'export'];
+
+const TeamManagement = () => {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState('users');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
+  const [groups, setGroups] = useState([]);
+
+  const [showPanel, setShowPanel] = useState(false);
+  const [panelMode, setPanelMode] = useState('user');
+  const [editingItem, setEditingItem] = useState(null);
+
+  const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [] });
+  const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
+  const [groupForm, setGroupForm] = useState({ name: '', description: '', members: [] });
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [usersRes, rolesRes, groupsRes] = await Promise.all([
+        userService.getUsers({ limit: 100 }),
+        roleService.getRoles({ limit: 100 }),
+        groupService.getGroups({ limit: 100 })
+      ]);
+      setUsers(usersRes.users || []);
+      // Filter out system roles - only show custom roles created by tenant
+      const customRoles = (rolesRes.roles || []).filter(r => r.roleType !== 'system');
+      setRoles(customRoles);
+      setGroups(groupsRes.groups || []);
+    } catch (err) {
+      setError('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { loadData(); }, [loadData]);
+
+  const showMessage = (msg, isError = false) => {
+    if (isError) setError(msg); else setSuccess(msg);
+    setTimeout(() => { setError(''); setSuccess(''); }, 3000);
+  };
+
+  const closePanel = () => {
+    setShowPanel(false);
+    setEditingItem(null);
+  };
+
+  const openUserPanel = (u = null) => {
+    setPanelMode('user');
+    setEditingItem(u);
+    setUserForm(u ? { firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', userType: u.userType, phone: u.phone || '', roles: u.roles?.map(r => r._id) || [] }
+      : { firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [] });
+    setShowPanel(true);
+  };
+
+  const openRolePanel = (r = null) => {
+    setPanelMode('role');
+    setEditingItem(r);
+    setRoleForm(r ? { name: r.name, description: r.description || '', permissions: r.permissions || [], forUserTypes: r.forUserTypes || ['TENANT_USER', 'TENANT_MANAGER'] }
+      : { name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
+    setShowPanel(true);
+  };
+
+  const openGroupPanel = (g = null) => {
+    setPanelMode('group');
+    setEditingItem(g);
+    setGroupForm(g ? { name: g.name, description: g.description || '', members: g.members?.map(m => m._id) || [] }
+      : { name: '', description: '', members: [] });
+    setShowPanel(true);
+  };
+
+  // Handlers
+  const handleUserSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await userService.updateUser(editingItem._id, userForm);
+        showMessage('User updated!');
+      } else {
+        await userService.createUser({ ...userForm, tenant: user.tenant?._id });
+        showMessage('User created!');
+      }
+      closePanel();
+      loadData();
+    } catch (err) {
+      showMessage(err.message || 'Error', true);
+    }
+  };
+
+  const handleDeleteUser = async (u) => {
+    if (!window.confirm(`Delete ${u.firstName}?`)) return;
+    try {
+      await userService.deleteUser(u._id);
+      showMessage('Deleted!');
+      loadData();
+    } catch (err) { showMessage(err.message, true); }
+  };
+
+  const handleRoleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const data = {
+        ...roleForm,
+        slug: roleForm.name.toLowerCase().replace(/\s+/g, '_'),
+        forUserTypes: roleForm.forUserTypes || ['TENANT_USER', 'TENANT_MANAGER']
+      };
+      if (editingItem) {
+        await roleService.updateRole(editingItem._id, data);
+        showMessage('Role updated!');
+      } else {
+        await roleService.createRole(data);
+        showMessage('Role created!');
+      }
+      closePanel();
+      loadData();
+    } catch (err) { showMessage(err.message, true); }
+  };
+
+  const handleDeleteRole = async (r) => {
+    if (!window.confirm(`Delete "${r.name}"?`)) return;
+    try {
+      await roleService.deleteRole(r._id);
+      showMessage('Deleted!');
+      loadData();
+    } catch (err) { showMessage(err.message, true); }
+  };
+
+  const togglePermission = (feature, action) => {
+    setRoleForm(prev => {
+      const perms = [...prev.permissions];
+      const idx = perms.findIndex(p => p.feature === feature);
+      if (idx === -1) perms.push({ feature, actions: [action] });
+      else {
+        const actions = [...perms[idx].actions];
+        const aIdx = actions.indexOf(action);
+        if (aIdx === -1) actions.push(action); else actions.splice(aIdx, 1);
+        if (actions.length === 0) perms.splice(idx, 1);
+        else perms[idx] = { ...perms[idx], actions };
+      }
+      return { ...prev, permissions: perms };
+    });
+  };
+
+  const hasAction = (feature, action) => roleForm.permissions.find(p => p.feature === feature)?.actions?.includes(action) || false;
+
+  const handleGroupSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingItem) {
+        await groupService.updateGroup(editingItem._id, groupForm);
+        showMessage('Group updated!');
+      } else {
+        await groupService.createGroup(groupForm);
+        showMessage('Group created!');
+      }
+      closePanel();
+      loadData();
+    } catch (err) { showMessage(err.message, true); }
+  };
+
+  const handleDeleteGroup = async (g) => {
+    if (!window.confirm(`Delete "${g.name}"?`)) return;
+    try {
+      await groupService.deleteGroup(g._id);
+      showMessage('Deleted!');
+      loadData();
+    } catch (err) { showMessage(err.message, true); }
+  };
+
+  const getUserTypeLabel = (type) => {
+    const labels = { 'TENANT_USER': 'Tenant User', 'TENANT_MANAGER': 'Tenant Manager', 'TENANT_ADMIN': 'Tenant Admin' };
+    return labels[type] || type;
+  };
+
+  return (
+    <DashboardLayout>
+      {/* Responsive CSS */}
+      <style>{`
+        .tm-wrapper { display: flex; gap: 16px; padding: 16px; min-height: calc(100vh - 120px); }
+        .tm-main { flex: 1; min-width: 0; }
+        .tm-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .tm-table-wrapper { overflow-x: auto; }
+        .tm-panel {
+          width: 320px;
+          background: linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%);
+          border-radius: 8px;
+          border: 1px solid #e2e8f0;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          max-height: calc(100vh - 140px);
+          overflow: hidden;
+        }
+        @media (max-width: 768px) {
+          .tm-wrapper { flex-direction: column; padding: 12px; }
+          .tm-header { flex-direction: column; align-items: stretch; }
+          .tm-header-left { flex-direction: column; text-align: center; }
+          .tm-header-icon { margin: 0 auto; }
+          .tm-subtitle { display: none; }
+          .tm-add-btn { width: 100%; justify-content: center; }
+          .tm-stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+          .tm-stat-num { font-size: 18px; }
+          .tm-panel {
+            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            max-height: 100vh;
+            z-index: 1000;
+            border-radius: 0;
+          }
+          .tm-table { min-width: 600px; }
+          .tm-hide-mobile { display: none !important; }
+        }
+      `}</style>
+
+      <div className="tm-wrapper">
+        <div className="tm-main">
+          {/* Header */}
+          <div style={styles.headerCard} className="tm-header">
+            <div style={styles.headerLeft} className="tm-header-left">
+              <div style={styles.headerIcon} className="tm-header-icon">
+                {activeTab === 'users' ? '👥' : activeTab === 'roles' ? '🔐' : '👨‍👩‍👧‍👦'}
+              </div>
+              <div>
+                <h2 style={styles.title}>
+                  {activeTab === 'users' ? 'Team Members' : activeTab === 'roles' ? 'Roles & Permissions' : 'User Groups'}
+                </h2>
+                <p style={styles.subtitle} className="tm-subtitle">
+                  {activeTab === 'users' ? 'Add, edit and manage your team members' : activeTab === 'roles' ? 'Define roles and control feature access' : 'Organize users into groups for easy management'}
+                </p>
+              </div>
+            </div>
+            <button onClick={() => activeTab === 'users' ? openUserPanel() : activeTab === 'roles' ? openRolePanel() : openGroupPanel()} style={styles.addBtn} className="tm-add-btn">
+              <span style={{ fontSize: '16px' }}>+</span> Add {activeTab === 'users' ? 'User' : activeTab === 'roles' ? 'Role' : 'Group'}
+            </button>
+          </div>
+
+          {/* Alerts */}
+          {success && <div style={styles.success}>{success}</div>}
+          {error && <div style={styles.error}>{error}</div>}
+
+          {/* Stats */}
+          <div style={styles.statsGrid} className="tm-stats-grid">
+            <div style={{ ...styles.statCard, ...(activeTab === 'users' ? styles.activeStatCard : {}) }} onClick={() => setActiveTab('users')}>
+              <span style={styles.statNum} className="tm-stat-num">👥 {users.length}</span>
+              <span style={styles.statLabel}>Users</span>
+            </div>
+            <div style={{ ...styles.statCard, ...(activeTab === 'roles' ? styles.activeStatCard : {}) }} onClick={() => setActiveTab('roles')}>
+              <span style={styles.statNum} className="tm-stat-num">🔐 {roles.length}</span>
+              <span style={styles.statLabel}>Roles</span>
+            </div>
+            <div style={{ ...styles.statCard, ...(activeTab === 'groups' ? styles.activeStatCard : {}) }} onClick={() => setActiveTab('groups')}>
+              <span style={styles.statNum} className="tm-stat-num">👨‍👩‍👧‍👦 {groups.length}</span>
+              <span style={styles.statLabel}>Groups</span>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div style={styles.tableCard}>
+            <div className="tm-table-wrapper">
+            {loading ? <div style={styles.loading}>Loading...</div> : (
+              <table style={styles.table} className="tm-table">
+                <thead>
+                  {activeTab === 'users' && (
+                    <tr>
+                      <th style={styles.th}>User</th>
+                      <th style={styles.th} className="tm-hide-mobile">Email</th>
+                      <th style={styles.th}>Type</th>
+                      <th style={styles.th} className="tm-hide-mobile">Roles</th>
+                      <th style={styles.th}>Status</th>
+                      <th style={styles.th}>Actions</th>
+                    </tr>
+                  )}
+                  {activeTab === 'roles' && (
+                    <tr>
+                      <th style={styles.th}>Role</th>
+                      <th style={styles.th} className="tm-hide-mobile">Description</th>
+                      <th style={styles.th} className="tm-hide-mobile">Type</th>
+                      <th style={styles.th} className="tm-hide-mobile">Permissions</th>
+                      <th style={styles.th}>Actions</th>
+                    </tr>
+                  )}
+                  {activeTab === 'groups' && (
+                    <tr>
+                      <th style={styles.th}>Group</th>
+                      <th style={styles.th}>Description</th>
+                      <th style={styles.th}>Members</th>
+                      <th style={styles.th}>Actions</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody>
+                  {activeTab === 'users' && users.map(u => (
+                    <tr key={u._id} style={styles.tr}>
+                      <td style={styles.td}>
+                        <div style={styles.cellFlex}>
+                          <div style={styles.avatar}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
+                          <span style={styles.name}>{u.firstName} {u.lastName}</span>
+                        </div>
+                      </td>
+                      <td style={styles.td} className="tm-hide-mobile">{u.email}</td>
+                      <td style={styles.td}><span style={styles.badgeBlue}>{getUserTypeLabel(u.userType)}</span></td>
+                      <td style={styles.td} className="tm-hide-mobile">{u.roles?.map(r => r.name).join(', ') || '-'}</td>
+                      <td style={styles.td}><span style={u.isActive ? styles.badgeGreen : styles.badgeRed}>{u.isActive ? 'Active' : 'Inactive'}</span></td>
+                      <td style={styles.td}>
+                        <div style={styles.actions}>
+                          <button onClick={() => openUserPanel(u)} style={styles.actionBtn}>✏️</button>
+                          {u._id !== user._id && <button onClick={() => handleDeleteUser(u)} style={styles.actionBtnDanger}>🗑️</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {activeTab === 'roles' && roles.map(r => (
+                    <tr key={r._id} style={styles.tr}>
+                      <td style={styles.td}><span style={styles.name}>{r.name}</span></td>
+                      <td style={styles.td} className="tm-hide-mobile">{r.description || '-'}</td>
+                      <td style={styles.td} className="tm-hide-mobile"><span style={styles.badgePurple}>{r.roleType || 'Custom'}</span></td>
+                      <td style={styles.td} className="tm-hide-mobile"><span style={{ fontSize: '10px', color: '#64748b' }}>{r.permissions?.length || 0} permissions</span></td>
+                      <td style={styles.td}>
+                        <div style={styles.actions}>
+                          <button onClick={() => openRolePanel(r)} style={styles.actionBtn}>✏️</button>
+                          {r.roleType !== 'system' && <button onClick={() => handleDeleteRole(r)} style={styles.actionBtnDanger}>🗑️</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {activeTab === 'groups' && groups.map(g => (
+                    <tr key={g._id} style={styles.tr}>
+                      <td style={styles.td}><span style={styles.name}>{g.name}</span></td>
+                      <td style={styles.td} className="tm-hide-mobile">{g.description || '-'}</td>
+                      <td style={styles.td}><span style={styles.badgeGreen}>{g.members?.length || 0} members</span></td>
+                      <td style={styles.td}>
+                        <div style={styles.actions}>
+                          <button onClick={() => openGroupPanel(g)} style={styles.actionBtn}>✏️</button>
+                          <button onClick={() => handleDeleteGroup(g)} style={styles.actionBtnDanger}>🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            </div>
+            {!loading && ((activeTab === 'users' && users.length === 0) || (activeTab === 'roles' && roles.length === 0) || (activeTab === 'groups' && groups.length === 0)) && (
+              <div style={styles.empty}>No {activeTab} found</div>
+            )}
+          </div>
+        </div>
+
+        {/* Right Panel */}
+        {showPanel && (
+          <div className="tm-panel" style={styles.panel}>
+            <div style={styles.panelHeader}>
+              <h3 style={styles.panelTitle}>{editingItem ? 'Edit' : 'Add'} {panelMode === 'user' ? 'User' : panelMode === 'role' ? 'Role' : 'Group'}</h3>
+              <button onClick={closePanel} style={styles.closeBtn}>×</button>
+            </div>
+            <div style={styles.panelBody}>
+              {/* User Form */}
+              {panelMode === 'user' && (
+                <form onSubmit={handleUserSubmit}>
+                  <div style={styles.formGrid}>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>First Name</label>
+                      <input style={styles.input} value={userForm.firstName} onChange={e => setUserForm({ ...userForm, firstName: e.target.value })} required />
+                    </div>
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Last Name</label>
+                      <input style={styles.input} value={userForm.lastName} onChange={e => setUserForm({ ...userForm, lastName: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Email</label>
+                    <input type="email" style={styles.input} value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} required disabled={!!editingItem} />
+                  </div>
+                  {!editingItem && (
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Password</label>
+                      <input type="password" style={styles.input} value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} required minLength={6} />
+                    </div>
+                  )}
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>User Type</label>
+                    <select style={styles.input} value={userForm.userType} onChange={e => setUserForm({ ...userForm, userType: e.target.value, roles: [] })}>
+                      <option value="TENANT_USER">Tenant User</option>
+                      <option value="TENANT_MANAGER">Tenant Manager</option>
+                      <option value="TENANT_ADMIN">Tenant Admin</option>
+                    </select>
+                    <span style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', display: 'block' }}>
+                      {userForm.userType === 'TENANT_ADMIN' ? '⚡ Full access to all features' : userForm.userType === 'TENANT_MANAGER' ? '📊 Can manage team & view reports' : '👤 Access based on assigned roles'}
+                    </span>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Phone</label>
+                    <input style={styles.input} value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} />
+                  </div>
+                  {userForm.userType === 'TENANT_ADMIN' ? (
+                    <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fbbf24', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '11px', color: '#92400e' }}>⚡ <strong>Tenant Admin</strong> has full access. No roles needed.</span>
+                    </div>
+                  ) : (
+                    <>
+                      {roles.filter(r => r.forUserTypes?.includes(userForm.userType) || !r.forUserTypes).length > 0 ? (
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Assign Roles</label>
+                          <div style={styles.chipContainer}>
+                            {roles.filter(r => r.forUserTypes?.includes(userForm.userType) || !r.forUserTypes).map(r => (
+                              <label key={r._id} style={{ ...styles.chip, ...(userForm.roles.includes(r._id) ? styles.chipActive : {}) }}>
+                                <input type="checkbox" checked={userForm.roles.includes(r._id)} onChange={() => {
+                                  const newRoles = userForm.roles.includes(r._id) ? userForm.roles.filter(id => id !== r._id) : [...userForm.roles, r._id];
+                                  setUserForm({ ...userForm, roles: newRoles });
+                                }} style={{ display: 'none' }} />
+                                {r.name}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                          <span style={{ fontSize: '11px', color: '#64748b' }}>ℹ️ No roles available for {getUserTypeLabel(userForm.userType)}. Create a role first.</span>
+                        </div>
+                      )}
+                    </>
+                  )}
+                  <button type="submit" style={styles.submitBtn}>{editingItem ? 'Update' : 'Create'} User</button>
+                </form>
+              )}
+
+              {/* Role Form */}
+              {panelMode === 'role' && (
+                <form onSubmit={handleRoleSubmit}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Role Name</label>
+                    <input style={styles.input} value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} required placeholder="e.g., Sales Manager" />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Description</label>
+                    <input style={styles.input} value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} placeholder="Brief description" />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>For User Types</label>
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      {[{ value: 'TENANT_USER', label: 'User', color: '#3b82f6' }, { value: 'TENANT_MANAGER', label: 'Manager', color: '#8b5cf6' }].map(ut => (
+                        <label key={ut.value} style={{
+                          padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer',
+                          background: roleForm.forUserTypes?.includes(ut.value) ? ut.color : '#f1f5f9',
+                          color: roleForm.forUserTypes?.includes(ut.value) ? '#fff' : '#64748b',
+                          border: `1px solid ${roleForm.forUserTypes?.includes(ut.value) ? ut.color : '#e2e8f0'}`,
+                          display: 'flex', alignItems: 'center', gap: '4px'
+                        }}>
+                          <input type="checkbox" checked={roleForm.forUserTypes?.includes(ut.value)} onChange={() => {
+                            const types = roleForm.forUserTypes || [];
+                            const newTypes = types.includes(ut.value) ? types.filter(t => t !== ut.value) : [...types, ut.value];
+                            setRoleForm({ ...roleForm, forUserTypes: newTypes });
+                          }} style={{ display: 'none' }} />
+                          {ut.label}
+                        </label>
+                      ))}
+                    </div>
+                    <span style={{ fontSize: '9px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>Select which user types can be assigned this role</span>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Permissions</label>
+                    <div style={styles.permTable}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left', padding: '4px 6px', background: '#f8fafc', position: 'sticky', top: 0 }}>Module</th>
+                            {ACTIONS.map(a => <th key={a} style={{ padding: '4px 3px', background: '#f8fafc', fontSize: '8px', position: 'sticky', top: 0 }} title={a}>{a.slice(0, 1).toUpperCase()}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {['Access', 'CRM', 'Sales', 'Product', 'Tasks', 'Account', 'Customization', 'Data'].map(cat => (
+                            <React.Fragment key={cat}>
+                              <tr>
+                                <td colSpan={ACTIONS.length + 1} style={{ padding: '4px 6px', background: '#e2e8f0', fontWeight: '600', fontSize: '9px', color: '#475569' }}>{cat}</td>
+                              </tr>
+                              {FEATURES.filter(f => f.category === cat).map(f => (
+                                <tr key={f.slug}>
+                                  <td style={{ padding: '4px 6px', borderTop: '1px solid #f1f5f9', paddingLeft: '12px' }}>{f.name}</td>
+                                  {ACTIONS.map(a => (
+                                    <td key={a} style={{ padding: '3px', textAlign: 'center', borderTop: '1px solid #f1f5f9' }}>
+                                      <input type="checkbox" checked={hasAction(f.slug, a)} onChange={() => togglePermission(f.slug, a)} style={{ cursor: 'pointer', width: '12px', height: '12px' }} />
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </React.Fragment>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                  <button type="submit" style={styles.submitBtn}>{editingItem ? 'Update' : 'Create'} Role</button>
+                </form>
+              )}
+
+              {/* Group Form */}
+              {panelMode === 'group' && (
+                <form onSubmit={handleGroupSubmit}>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Group Name</label>
+                    <input style={styles.input} value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })} required placeholder="e.g., Sales Team" />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Description</label>
+                    <input style={styles.input} value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })} placeholder="Brief description" />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Members</label>
+                    <div style={styles.chipContainer}>
+                      {users.map(u => (
+                        <label key={u._id} style={{ ...styles.chip, ...(groupForm.members.includes(u._id) ? styles.chipActiveGreen : {}) }}>
+                          <input type="checkbox" checked={groupForm.members.includes(u._id)} onChange={() => {
+                            const newMembers = groupForm.members.includes(u._id) ? groupForm.members.filter(id => id !== u._id) : [...groupForm.members, u._id];
+                            setGroupForm({ ...groupForm, members: newMembers });
+                          }} style={{ display: 'none' }} />
+                          {u.firstName} {u.lastName}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <button type="submit" style={styles.submitBtn}>{editingItem ? 'Update' : 'Create'} Group</button>
+                </form>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </DashboardLayout>
+  );
+};
+
+const styles = {
+  wrapper: { display: 'flex', gap: '16px', padding: '16px', minHeight: 'calc(100vh - 120px)' },
+  headerCard: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+    padding: '16px 20px',
+    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+    borderRadius: '12px',
+    border: '1px solid #e2e8f0',
+    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+  },
+  headerLeft: { display: 'flex', alignItems: 'center', gap: '14px' },
+  headerIcon: {
+    width: '48px',
+    height: '48px',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '22px',
+    boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
+  },
+  title: { fontSize: '18px', fontWeight: '700', color: '#1e293b', margin: 0 },
+  subtitle: { fontSize: '12px', color: '#64748b', margin: '4px 0 0', maxWidth: '300px' },
+  addBtn: {
+    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+    color: '#fff',
+    border: 'none',
+    padding: '10px 18px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '13px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
+    transition: 'transform 0.2s, box-shadow 0.2s'
+  },
+  success: { background: '#dcfce7', color: '#16a34a', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '12px' },
+  error: { background: '#fef2f2', color: '#dc2626', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '12px' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' },
+  statCard: {
+    background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)',
+    padding: '14px',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s'
+  },
+  activeStatCard: {
+    background: 'linear-gradient(135deg, rgb(120, 245, 240) 0%, rgb(200, 255, 252) 100%)',
+    border: '2px solid #14b8a6',
+    boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)'
+  },
+  statNum: { fontSize: '24px', fontWeight: '700', color: '#1e293b' },
+  statLabel: { fontSize: '11px', color: '#64748b', textTransform: 'uppercase' },
+  tableCard: { background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' },
+  table: { width: '100%', borderCollapse: 'collapse' },
+  th: { textAlign: 'left', padding: '10px 12px', fontSize: '10px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
+  tr: { borderBottom: '1px solid #f1f5f9' },
+  td: { padding: '10px 12px', fontSize: '12px', color: '#1e293b' },
+  cellFlex: { display: 'flex', alignItems: 'center', gap: '8px' },
+  avatar: { width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '600', fontSize: '10px' },
+  name: { fontWeight: '600', fontSize: '12px' },
+  badgeBlue: { padding: '3px 8px', borderRadius: '4px', background: '#dbeafe', color: '#1d4ed8', fontSize: '10px', fontWeight: '500' },
+  badgeGreen: { padding: '3px 8px', borderRadius: '4px', background: '#dcfce7', color: '#16a34a', fontSize: '10px', fontWeight: '500' },
+  badgeRed: { padding: '3px 8px', borderRadius: '4px', background: '#fef2f2', color: '#dc2626', fontSize: '10px', fontWeight: '500' },
+  badgePurple: { padding: '3px 8px', borderRadius: '4px', background: '#f3e8ff', color: '#7c3aed', fontSize: '10px', fontWeight: '500' },
+  actions: { display: 'flex', gap: '4px' },
+  actionBtn: { background: '#f1f5f9', border: 'none', width: '26px', height: '26px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' },
+  actionBtnDanger: { background: '#fef2f2', border: 'none', width: '26px', height: '26px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' },
+  loading: { textAlign: 'center', padding: '30px', color: '#64748b', fontSize: '12px' },
+  empty: { textAlign: 'center', padding: '30px', color: '#94a3b8', fontSize: '12px' },
+  // Panel
+  panel: {
+    width: '320px',
+    background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0',
+    flexShrink: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    maxHeight: 'calc(100vh - 140px)',
+    overflow: 'hidden'
+  },
+  panelHeader: {
+    padding: '12px 14px',
+    borderBottom: '1px solid #e2e8f0',
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    background: 'rgba(255,255,255,0.5)'
+  },
+  panelTitle: { fontSize: '14px', fontWeight: '600', color: '#1e293b', margin: 0 },
+  closeBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b', padding: 0, lineHeight: 1 },
+  panelBody: { padding: '14px', flex: 1, overflowY: 'auto' },
+  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
+  formGroup: { marginBottom: '12px' },
+  label: { display: 'block', fontSize: '11px', fontWeight: '500', color: '#475569', marginBottom: '4px' },
+  input: { width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box', background: '#fff' },
+  chipContainer: { display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#f8fafc', maxHeight: '100px', overflowY: 'auto' },
+  chip: { padding: '4px 10px', borderRadius: '12px', fontSize: '10px', cursor: 'pointer', background: '#fff', border: '1px solid #e2e8f0', color: '#64748b' },
+  chipActive: { background: '#dbeafe', border: '1px solid #3b82f6', color: '#1d4ed8' },
+  chipActiveGreen: { background: '#dcfce7', border: '1px solid #16a34a', color: '#16a34a' },
+  permTable: { border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden', maxHeight: '350px', overflowY: 'auto' },
+  submitBtn: { width: '100%', padding: '10px', border: 'none', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', marginTop: '8px' }
+};
+
+export default TeamManagement;

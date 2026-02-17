@@ -22,6 +22,12 @@ const tenantSchema = new mongoose.Schema({
     trim: true
   },
 
+  // Legal & Branding
+  legalName: {
+    type: String,
+    trim: true
+  },
+
   // Contact Information
   contactEmail: {
     type: String,
@@ -33,7 +39,58 @@ const tenantSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
+  alternatePhone: {
+    type: String,
+    trim: true
+  },
+
+  // Key Contact Person
+  keyContact: {
+    name: { type: String, trim: true },
+    designation: { type: String, trim: true },
+    email: { type: String, trim: true, lowercase: true },
+    phone: { type: String, trim: true }
+  },
+
+  // Physical Address - Headquarters
+  headquarters: {
+    street: { type: String, trim: true },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    country: { type: String, trim: true },
+    zipCode: { type: String, trim: true }
+  },
+
+  // Digital Presence
+  website: {
+    type: String,
+    trim: true
+  },
+  socialMedia: {
+    linkedin: { type: String, trim: true },
+    twitter: { type: String, trim: true },
+    facebook: { type: String, trim: true },
+    instagram: { type: String, trim: true }
+  },
+
+  // Company Details
+  numberOfEmployees: {
+    type: String,
+    enum: ['1-10', '11-50', '51-200', '201-500', '501-1000', '1000+', ''],
+    default: ''
+  },
+  foundedYear: {
+    type: Number
+  },
+  taxId: {
+    type: String,
+    trim: true
+  },
+  registrationNumber: {
+    type: String,
+    trim: true
+  },
+
   // Business Details
   businessType: {
     type: String,
@@ -300,6 +357,8 @@ tenantSchema.methods.getTrialDaysRemaining = function() {
 
 // ============================================
 // PRE-SAVE HOOK: Auto-generate Organization ID
+// Format: U + first 2 letters of org name + 5 digit number
+// Example: UTe00001 (for "Test Company")
 // ============================================
 tenantSchema.pre('save', async function(next) {
   // Only generate if organizationId doesn't exist
@@ -307,16 +366,21 @@ tenantSchema.pre('save', async function(next) {
     try {
       const Tenant = this.constructor;
 
+      // Get first 2 letters of organization name (uppercase)
+      const orgPrefix = this.organizationName
+        ? this.organizationName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase()
+        : 'XX';
+
       // Get all existing organization IDs and find the max number
       const tenants = await Tenant.find({
-        organizationId: { $exists: true, $ne: null, $regex: /^UFS\d+$/ }
+        organizationId: { $exists: true, $ne: null, $regex: /^U[A-Z]{2}\d{5}$/ }
       })
         .select('organizationId')
         .lean();
 
       let maxNumber = 0;
       tenants.forEach(t => {
-        const match = t.organizationId.match(/UFS(\d+)/);
+        const match = t.organizationId.match(/^U[A-Z]{2}(\d{5})$/);
         if (match) {
           const num = parseInt(match[1], 10);
           if (num > maxNumber) maxNumber = num;
@@ -325,13 +389,16 @@ tenantSchema.pre('save', async function(next) {
 
       // Generate new unique organizationId
       const nextNumber = maxNumber + 1;
-      this.organizationId = `UFS${String(nextNumber).padStart(3, '0')}`;
+      this.organizationId = `U${orgPrefix}${String(nextNumber).padStart(5, '0')}`;
 
       console.log(`Generated Organization ID: ${this.organizationId}`);
     } catch (error) {
       console.error('Error generating organizationId:', error);
       // Fallback: use timestamp-based ID
-      this.organizationId = `UFS${Date.now().toString().slice(-6)}`;
+      const orgPrefix = this.organizationName
+        ? this.organizationName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase()
+        : 'XX';
+      this.organizationId = `U${orgPrefix}${Date.now().toString().slice(-5)}`;
     }
   }
   next();

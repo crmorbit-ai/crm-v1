@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const { protect, restrictTo } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
+const { requirePermission } = require('../middleware/rbac');
 const {
   getActivityLogs,
   getActivityStats,
@@ -13,18 +14,18 @@ const {
 
 router.use(protect);
 
-// Only TENANT_ADMIN, SAAS_ADMIN, SAAS_OWNER can access
-router.get('/stats', restrictTo('TENANT_ADMIN', 'SAAS_ADMIN', 'SAAS_OWNER'), getActivityStats);
-router.get('/export', restrictTo('TENANT_ADMIN', 'SAAS_ADMIN', 'SAAS_OWNER'), exportActivityLogs);
+// Use role-based permissions for audit_logs
+router.get('/stats', requirePermission('audit_logs', 'read'), getActivityStats);
+router.get('/export', requirePermission('audit_logs', 'export'), exportActivityLogs);
 
 // Audit Report Routes
-router.get('/audit-report/export', restrictTo('TENANT_ADMIN', 'SAAS_ADMIN', 'SAAS_OWNER'), exportAuditReport);
-router.get('/audit-report', restrictTo('TENANT_ADMIN', 'SAAS_ADMIN', 'SAAS_OWNER'), getAuditReport);
+router.get('/audit-report/export', requirePermission('audit_logs', 'export'), exportAuditReport);
+router.get('/audit-report', requirePermission('audit_logs', 'read'), getAuditReport);
 
 // Login Report Routes
-router.get('/login-report/export', restrictTo('TENANT_ADMIN', 'SAAS_ADMIN', 'SAAS_OWNER'), exportLoginReport);
-router.get('/login-report', restrictTo('TENANT_ADMIN', 'SAAS_ADMIN', 'SAAS_OWNER'), getLoginReport);
+router.get('/login-report/export', requirePermission('audit_logs', 'export'), exportLoginReport);
+router.get('/login-report', requirePermission('audit_logs', 'read'), getLoginReport);
 
-router.get('/', restrictTo('TENANT_ADMIN', 'SAAS_ADMIN', 'SAAS_OWNER'), getActivityLogs);
+router.get('/', requirePermission('audit_logs', 'read'), getActivityLogs);
 
 module.exports = router;

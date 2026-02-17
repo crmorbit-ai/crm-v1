@@ -133,6 +133,7 @@ const createRole = async (req, res) => {
       roleType,
       permissions: permissions || [],
       level: level || 1,
+      forUserTypes: req.body.forUserTypes || ['TENANT_USER', 'TENANT_MANAGER'],
       isActive: true
     });
 
@@ -174,7 +175,7 @@ const updateRole = async (req, res) => {
     }
 
     // Update fields
-    const allowedFields = ['name', 'description', 'permissions', 'level', 'isActive'];
+    const allowedFields = ['name', 'description', 'permissions', 'level', 'isActive', 'forUserTypes'];
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         role[field] = req.body[field];

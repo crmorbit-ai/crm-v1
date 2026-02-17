@@ -31,9 +31,34 @@ const profileService = {
     });
   },
 
-  // Update organization information
+  // Update organization information (including logo, contacts, address, digital presence)
   updateOrganization: async (data) => {
-    return await api.put('/profile/organization', data);
+    // Clean up empty nested objects
+    const cleanData = { ...data };
+
+    // Remove empty string values from nested objects
+    if (cleanData.socialMedia) {
+      Object.keys(cleanData.socialMedia).forEach(key => {
+        if (cleanData.socialMedia[key] === '') delete cleanData.socialMedia[key];
+      });
+      if (Object.keys(cleanData.socialMedia).length === 0) delete cleanData.socialMedia;
+    }
+
+    if (cleanData.headquarters) {
+      Object.keys(cleanData.headquarters).forEach(key => {
+        if (cleanData.headquarters[key] === '') delete cleanData.headquarters[key];
+      });
+      if (Object.keys(cleanData.headquarters).length === 0) delete cleanData.headquarters;
+    }
+
+    if (cleanData.keyContact) {
+      Object.keys(cleanData.keyContact).forEach(key => {
+        if (cleanData.keyContact[key] === '') delete cleanData.keyContact[key];
+      });
+      if (Object.keys(cleanData.keyContact).length === 0) delete cleanData.keyContact;
+    }
+
+    return await api.put('/profile/organization', cleanData);
   }
 };
 

@@ -282,8 +282,8 @@ const updateUser = async (req, res) => {
     // Fields that can be updated
     const allowedFields = ['firstName', 'lastName', 'phone', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions'];
 
-    // Only SAAS owners can change userType
-    if (req.body.userType && req.user.userType === 'SAAS_OWNER') {
+    // SAAS owners and TENANT_ADMIN can change userType
+    if (req.body.userType && (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN' || req.user.userType === 'TENANT_ADMIN')) {
       allowedFields.push('userType');
     }
 

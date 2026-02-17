@@ -14,7 +14,7 @@ const getProfile = async (req, res) => {
   try {
     // Get user with populated tenant and roles
     const user = await User.findById(req.user._id)
-      .populate('tenant', 'organizationId organizationName contactEmail contactPhone logo industry businessType subscription settings')
+      .populate('tenant', 'organizationId organizationName contactEmail contactPhone alternatePhone logo industry businessType subscription settings legalName website socialMedia numberOfEmployees foundedYear taxId registrationNumber headquarters keyContact')
       .populate('roles', 'name description')
       .populate('groups', 'name description')
       .select('-password -emailVerificationOTP -emailVerificationOTPExpire -resetPasswordOTP -resetPasswordOTPExpire');
@@ -205,8 +205,19 @@ const updateOrganization = async (req, res) => {
       organizationName,
       contactEmail,
       contactPhone,
+      alternatePhone,
       industry,
-      businessType
+      businessType,
+      legalName,
+      logo,
+      website,
+      socialMedia,
+      numberOfEmployees,
+      foundedYear,
+      taxId,
+      registrationNumber,
+      headquarters,
+      keyContact
     } = req.body;
 
     // Check if user has a tenant
@@ -231,12 +242,51 @@ const updateOrganization = async (req, res) => {
     // Check if profile was incomplete before
     const wasIncomplete = !tenant.organizationName || !tenant.contactEmail || !tenant.industry;
 
-    // Update allowed fields only (NOT organizationId)
+    // Update basic fields
     if (organizationName) tenant.organizationName = organizationName;
     if (contactEmail) tenant.contactEmail = contactEmail;
     if (contactPhone !== undefined) tenant.contactPhone = contactPhone;
+    if (alternatePhone !== undefined) tenant.alternatePhone = alternatePhone;
     if (industry !== undefined) tenant.industry = industry;
     if (businessType) tenant.businessType = businessType;
+
+    // Update new fields
+    if (legalName !== undefined) tenant.legalName = legalName;
+    if (logo !== undefined) tenant.logo = logo;
+    if (website !== undefined) tenant.website = website;
+    if (numberOfEmployees !== undefined) tenant.numberOfEmployees = numberOfEmployees;
+    if (foundedYear !== undefined) tenant.foundedYear = foundedYear;
+    if (taxId !== undefined) tenant.taxId = taxId;
+    if (registrationNumber !== undefined) tenant.registrationNumber = registrationNumber;
+
+    // Update nested objects
+    if (socialMedia) {
+      tenant.socialMedia = {
+        linkedin: socialMedia.linkedin || tenant.socialMedia?.linkedin || '',
+        twitter: socialMedia.twitter || tenant.socialMedia?.twitter || '',
+        facebook: socialMedia.facebook || tenant.socialMedia?.facebook || '',
+        instagram: socialMedia.instagram || tenant.socialMedia?.instagram || ''
+      };
+    }
+
+    if (headquarters) {
+      tenant.headquarters = {
+        street: headquarters.street || tenant.headquarters?.street || '',
+        city: headquarters.city || tenant.headquarters?.city || '',
+        state: headquarters.state || tenant.headquarters?.state || '',
+        country: headquarters.country || tenant.headquarters?.country || '',
+        zipCode: headquarters.zipCode || tenant.headquarters?.zipCode || ''
+      };
+    }
+
+    if (keyContact) {
+      tenant.keyContact = {
+        name: keyContact.name || tenant.keyContact?.name || '',
+        designation: keyContact.designation || tenant.keyContact?.designation || '',
+        email: keyContact.email || tenant.keyContact?.email || '',
+        phone: keyContact.phone || tenant.keyContact?.phone || ''
+      };
+    }
 
     await tenant.save();
 

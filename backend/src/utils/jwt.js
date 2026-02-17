@@ -6,11 +6,16 @@ const jwt = require('jsonwebtoken');
  * @returns {String} JWT token
  */
 const generateToken = (user) => {
+  // Only store tenant ID, not the full populated object
+  const tenantId = user.tenant
+    ? (user.tenant._id ? user.tenant._id.toString() : user.tenant.toString())
+    : null;
+
   const payload = {
     id: user._id,
     email: user.email,
     userType: user.userType,
-    tenant: user.tenant || null
+    tenant: tenantId
   };
 
   return jwt.sign(payload, process.env.JWT_SECRET, {

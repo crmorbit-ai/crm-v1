@@ -8,8 +8,13 @@
 
 
 const hasPermission = (user, feature, action) => {
-  // SAAS_OWNER has all permissions
-  if (user.userType === 'SAAS_OWNER') {
+  // SAAS_OWNER and SAAS_ADMIN have all permissions
+  if (user.userType === 'SAAS_OWNER' || user.userType === 'SAAS_ADMIN') {
+    return true;
+  }
+
+  // TENANT_ADMIN has all permissions within their tenant
+  if (user.userType === 'TENANT_ADMIN') {
     return true;
   }
 
@@ -122,17 +127,27 @@ const getUserHierarchyLevel = (userType) => {
  * @returns {Boolean}
  */
 const canManageUser = (currentUser, targetUser) => {
+  // SAAS users can manage anyone
+  if (currentUser.userType === 'SAAS_OWNER' || currentUser.userType === 'SAAS_ADMIN') {
+    return true;
+  }
+
+  // TENANT_ADMIN can manage all users in their tenant (including other admins)
+  if (currentUser.userType === 'TENANT_ADMIN') {
+    // Must be same tenant
+    if (currentUser.tenant && targetUser.tenant) {
+      return currentUser.tenant.toString() === targetUser.tenant.toString();
+    }
+    return false;
+  }
+
+  // For other user types, check hierarchy
   const currentLevel = getUserHierarchyLevel(currentUser.userType);
   const targetLevel = getUserHierarchyLevel(targetUser.userType);
 
   // Can't manage users of equal or higher level
   if (currentLevel <= targetLevel) {
     return false;
-  }
-
-  // SAAS users can manage anyone
-  if (currentUser.userType === 'SAAS_OWNER' || currentUser.userType === 'SAAS_ADMIN') {
-    return true;
   }
 
   // Tenant users can only manage users in their own tenant

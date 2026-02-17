@@ -45,6 +45,12 @@ const roleSchema = new mongoose.Schema({
     type: Number,
     default: 1
   },
+  // Which user types can be assigned this role
+  forUserTypes: [{
+    type: String,
+    enum: ['TENANT_USER', 'TENANT_MANAGER'],
+    default: ['TENANT_USER', 'TENANT_MANAGER']
+  }],
   isActive: {
     type: Boolean,
     default: true
