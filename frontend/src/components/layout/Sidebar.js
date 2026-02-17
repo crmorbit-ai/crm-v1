@@ -228,7 +228,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
 
                 {/* Access Management */}
                 <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'audit_logs']}>
-                  <NavItem to="/settings/team" label="Users" permission="user_management" />
+                  <NavItem to="/users" label="Users" permission="user_management" />
                   <NavItem to="/activity-logs" label="Audit Logs" permission="audit_logs" />
                 </NavSection>
 

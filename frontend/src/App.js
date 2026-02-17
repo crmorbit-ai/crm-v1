@@ -399,7 +399,7 @@ function AppRoutes() {
       } />
 
       {/* Settings Routes - Tenant Only */}
-      <Route path="/settings/team" element={
+      <Route path="/users" element={
         <ProtectedRoute requireTenant>
           <TeamManagement />
         </ProtectedRoute>
