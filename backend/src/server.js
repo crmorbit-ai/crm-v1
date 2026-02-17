@@ -27,7 +27,10 @@ const allowedOrigins = [
 // CORS Configuration
 const corsConfig = {
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+    if (!origin ||
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.texora.ai')) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
