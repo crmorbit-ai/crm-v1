@@ -739,8 +739,8 @@ const LandingPage = () => {
               <h4 className="font-bold text-lg mb-4">Product</h4>
               <ul className="space-y-3 text-gray-400">
                 <li><a href="#features" className="hover:text-white transition">Features</a></li>
-                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Security</a></li>
-                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Integrations</a></li>
+                <li><button onClick={() => navigate("/security")} className="hover:text-white transition text-left">Security</button></li>
+                <li><button onClick={() => navigate("/integrations")} className="hover:text-white transition text-left">Integrations</button></li>
               </ul>
             </div>
             <div>
@@ -780,8 +780,8 @@ const LandingPage = () => {
             <p className="text-gray-400">© 2026 Unified CRM. All rights reserved.</p>
             <div className="flex gap-6 text-gray-400">
               <a href="https://texora.ai/privacy-policy" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Privacy Policy</a>
-              <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Terms of Service</a>
-              <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Cookie Policy</a>
+              <a href="https://texora.ai/terms-of-service" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Terms of Service</a>
+              {/* <a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Cookie Policy</a> */}
             </div>
           </div>
         </div>

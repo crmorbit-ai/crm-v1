@@ -12,6 +12,8 @@ import CompleteProfile from './pages/CompleteProfile';
 import OAuthCallback from './pages/OAuthCallback';
 import LandingPage from './pages/LandingPage';
 import AboutUs from './pages/AboutUs';
+import Security from './pages/Security';
+import Integrations from './pages/Integrations';
 
 // Dashboard components
 import Dashboard from './pages/Dashboard';
@@ -472,8 +474,10 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
-      {/* About Us */}
+      {/* Public Info Pages */}
       <Route path="/about" element={<AboutUs />} />
+      <Route path="/security" element={<Security />} />
+      <Route path="/integrations" element={<Integrations />} />
 
       {/* Default redirect */}
       <Route path="/" element={
