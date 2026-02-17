@@ -31,8 +31,8 @@ process.on('uncaughtException', (error) => {
 app.use((req, res, next) => {
   const origin = req.headers.origin;
 
-  // Allow all Vercel deployments and localhost
-  if (origin && (origin.endsWith('.vercel.app') || origin.includes('localhost'))) {
+  // Allow all Vercel deployments, localhost, and texora.ai
+  if (origin && (origin.endsWith('.vercel.app') || origin.includes('localhost') || origin.endsWith('.texora.ai'))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
   } else if (!origin) {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -83,7 +83,7 @@ const corsOptions = {
       return callback(null, true);
     }
 
-    if (origin.endsWith('.vercel.app')) {
+    if (origin.endsWith('.vercel.app') || origin.endsWith('.texora.ai')) {
       return callback(null, true);
     }
 
