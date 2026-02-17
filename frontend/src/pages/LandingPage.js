@@ -6,7 +6,6 @@ const LandingPage = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeFeature, setActiveFeature] = useState(0);
   const [activeModule, setActiveModule] = useState(0);
-  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const heroRef = useRef(null);
 
   useEffect(() => {
@@ -15,15 +14,6 @@ const LandingPage = () => {
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  // Mouse tracking for 3D tilt effects
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      setMousePosition({ x: e.clientX, y: e.clientY });
-    };
-    window.addEventListener('mousemove', handleMouseMove);
-    return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
 
@@ -72,41 +62,6 @@ const LandingPage = () => {
     { number: "100%", label: "Customizable" },
     { number: "24/7", label: "Support Available" }
   ];
-
-  const testimonials = [
-    {
-      name: "M Shibli",
-      company: "Texora AI",
-      role: "CEO",
-      image: "👨‍💼",
-      text: "CRM Orbit transformed our sales process. We've seen a 40% increase in conversions within 3 months!"
-    },
-    {
-      name: "Arati kumari",
-      company: "Digital Marketing ",
-      role: "Marketing Head",
-      image: "👩‍💼",
-      text: "The best CRM we've used. Email integration and analytics are game-changers for our team."
-    },
-    {
-      name: "Anand kumar",
-      company: "StartUp Hub",
-      role: "Founder",
-      image: "👨‍💻",
-      text: "Perfect for startups! Easy to use, affordable, and scales with our growing business needs."
-    }
-  ];
-
-  // 3D Tilt effect calculator
-  const calculateTilt = (element, mouseX, mouseY) => {
-    if (!element) return { rotateX: 0, rotateY: 0 };
-    const rect = element.getBoundingClientRect();
-    const x = mouseX - rect.left - rect.width / 2;
-    const y = mouseY - rect.top - rect.height / 2;
-    const rotateY = (x / rect.width) * 20;
-    const rotateX = -(y / rect.height) * 20;
-    return { rotateX, rotateY };
-  };
 
   return (
     <div className="min-h-screen bg-[#0f172a]">
@@ -160,25 +115,6 @@ const LandingPage = () => {
         {/* Animated Grid Background */}
         <div className="absolute inset-0 grid-background"></div>
 
-        {/* Particle System */}
-        <div className="particles-container">
-          {Array.from({ length: 50 }).map((_, i) => (
-            <div
-              key={i}
-              className="particle"
-              style={{
-                left: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 10}s`,
-                animationDuration: `${10 + Math.random() * 20}s`
-              }}
-            />
-          ))}
-        </div>
-
-        {/* Morphing Blob Shapes */}
-        <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-br from-blue-400 to-purple-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph"></div>
-        <div className="absolute top-40 right-10 w-96 h-96 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph animation-delay-2000"></div>
-        <div className="absolute bottom-20 left-1/2 w-96 h-96 bg-gradient-to-br from-pink-400 to-blue-400 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-morph animation-delay-4000"></div>
 
         <div className="relative max-w-7xl mx-auto px-6">
           <div className="grid md:grid-cols-2 gap-12 items-center">
@@ -495,22 +431,6 @@ const LandingPage = () => {
 
       {/* Detailed Features Section */}
       <section className="py-24 bg-[#0f172a] relative overflow-hidden">
-        {/* Floating Particles */}
-        <div className="absolute inset-0">
-          {Array.from({ length: 15 }).map((_, i) => (
-            <div
-              key={i}
-              className="absolute w-1 h-1 bg-purple-500 rounded-full animate-particle-float opacity-50"
-              style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${5 + Math.random() * 10}s`
-              }}
-            />
-          ))}
-        </div>
-
         <div className="max-w-7xl mx-auto px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-16 items-center mb-24">
             <div>
