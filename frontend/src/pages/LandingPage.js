@@ -772,7 +772,7 @@ const LandingPage = () => {
                     Partner Login
                   </button>
                 </li>
-                <li><a href="https://texora.ai/" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">Partner Resources</a></li>
+                <li><button onClick={() => navigate("/partner-resources")} className="hover:text-white transition text-left">Partner Resources</button></li>
               </ul>
             </div>
           </div>

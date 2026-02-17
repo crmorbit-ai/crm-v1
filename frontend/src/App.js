@@ -14,6 +14,7 @@ import LandingPage from './pages/LandingPage';
 import AboutUs from './pages/AboutUs';
 import Security from './pages/Security';
 import Integrations from './pages/Integrations';
+import PartnerResources from './pages/PartnerResources';
 
 // Dashboard components
 import Dashboard from './pages/Dashboard';
@@ -478,6 +479,7 @@ function AppRoutes() {
       <Route path="/about" element={<AboutUs />} />
       <Route path="/security" element={<Security />} />
       <Route path="/integrations" element={<Integrations />} />
+      <Route path="/partner-resources" element={<PartnerResources />} />
 
       {/* Default redirect */}
       <Route path="/" element={
