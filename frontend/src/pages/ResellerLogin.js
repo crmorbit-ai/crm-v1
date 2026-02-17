@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../config/api.config';
-import '../styles/auth.css';
 
 const ResellerLogin = () => {
   const navigate = useNavigate();
@@ -50,7 +49,7 @@ const ResellerLogin = () => {
   };
 
   return (
-    <div className="auth-container" style={{
+    <div style={{
       background: '#0f172a',
       minHeight: '100vh',
       display: 'flex',
@@ -83,8 +82,8 @@ const ResellerLogin = () => {
         filter: 'blur(60px)',
         pointerEvents: 'none'
       }} />
-      <div className="auth-card" style={{
-        maxWidth: '420px',
+      <div style={{
+        maxWidth: '400px',
         width: '100%',
         position: 'relative',
         zIndex: 1
@@ -106,13 +105,13 @@ const ResellerLogin = () => {
               }}
             />
           </div>
-          <h1 className="auth-title" style={{
+          <h1 style={{
             marginBottom: '8px',
             fontSize: '22px',
             fontWeight: '500',
             color: '#ffffff'
           }}>Partner Login</h1>
-          <p className="auth-subtitle" style={{ marginBottom: '0', fontSize: '15px', color: '#9ca3af' }}>
+          <p style={{ marginBottom: '0', fontSize: '15px', color: '#9ca3af' }}>
             Access your reseller dashboard
           </p>
         </div>
@@ -132,8 +131,8 @@ const ResellerLogin = () => {
         )}
 
         <form onSubmit={handleSubmit}>
-          <div className="form-group" style={{ marginBottom: '12px' }}>
-            <label className="form-label" style={{
+          <div style={{ marginBottom: '12px' }}>
+            <label style={{
               fontSize: '14px',
               fontWeight: '600',
               color: '#e5e7eb',
@@ -143,7 +142,6 @@ const ResellerLogin = () => {
             <input
               type="email"
               name="email"
-              className="form-input"
               placeholder="partner@example.com"
               value={formData.email}
               onChange={handleChange}
@@ -171,8 +169,8 @@ const ResellerLogin = () => {
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '16px' }}>
-            <label className="form-label" style={{
+          <div style={{ marginBottom: '16px' }}>
+            <label style={{
               fontSize: '14px',
               fontWeight: '600',
               color: '#e5e7eb',
@@ -182,7 +180,6 @@ const ResellerLogin = () => {
             <input
               type="password"
               name="password"
-              className="form-input"
               placeholder="Enter your password"
               value={formData.password}
               onChange={handleChange}
@@ -211,7 +208,6 @@ const ResellerLogin = () => {
 
           <button
             type="submit"
-            className="btn btn-primary btn-block"
             disabled={loading}
             style={{
               width: '100%',
@@ -240,7 +236,7 @@ const ResellerLogin = () => {
             {loading ? 'Logging in...' : 'Log in'}
           </button>
 
-          <div className="auth-footer" style={{ marginTop: '16px', textAlign: 'center' }}>
+          <div style={{ marginTop: '16px', textAlign: 'center' }}>
             <p style={{ color: '#9ca3af', fontSize: '14px', marginBottom: '8px' }}>
               Not a partner yet?{' '}
               <button
