@@ -26,6 +26,7 @@ const Quotations = () => {
       const response = await quotationService.getQuotations(params);
       setQuotations(response.data || []);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to fetch quotations');
     } finally {
       setLoading(false);
@@ -43,6 +44,7 @@ const Quotations = () => {
         await quotationService.deleteQuotation(id);
         fetchQuotations();
       } catch (err) {
+        if (err?.isPermissionDenied) return;
         alert(err.message || 'Failed to delete quotation');
       }
     }

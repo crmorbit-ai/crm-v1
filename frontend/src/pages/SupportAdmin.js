@@ -57,6 +57,7 @@ const SupportAdmin = () => {
       loadTickets();
       loadStats();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       alert('Error updating status');
     }
   };
@@ -68,6 +69,7 @@ const SupportAdmin = () => {
       loadTicketDetails(selectedTicket._id);
       loadTickets();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       alert('Error assigning ticket');
     }
   };
@@ -81,6 +83,7 @@ const SupportAdmin = () => {
       setIsInternalNote(false);
       loadTicketDetails(selectedTicket._id);
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       alert('Error sending message');
     }
   };
@@ -93,6 +96,7 @@ const SupportAdmin = () => {
       loadTickets();
       loadStats();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       alert('Error closing ticket');
     }
   };

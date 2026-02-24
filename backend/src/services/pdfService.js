@@ -40,7 +40,7 @@ exports.generateQuotationPDF = async (quotation, tenant) => {
       // Header with company info
       doc.fontSize(24)
          .fillColor('#4361ee')
-         .text(tenant.companyName || 'UFS CRM', { align: 'left' });
+         .text(tenant.companyName || 'Unified CRM', { align: 'left' });
 
       doc.fontSize(10)
          .fillColor('#666666')
@@ -257,7 +257,7 @@ exports.generateInvoicePDF = async (invoice, tenant) => {
       // Header
       doc.fontSize(24)
          .fillColor('#4361ee')
-         .text(tenant.companyName || 'UFS CRM', { align: 'left' });
+         .text(tenant.companyName || 'Unified CRM', { align: 'left' });
 
       doc.fontSize(10)
          .fillColor('#666666')

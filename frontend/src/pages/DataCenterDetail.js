@@ -27,6 +27,7 @@ const DataCenterDetail = () => {
       const response = await dataCenterService.getCandidate(id);
       setCandidate(response.data);
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Error loading candidate:', error);
       alert('Failed to load candidate details');
     } finally {
@@ -45,6 +46,7 @@ const DataCenterDetail = () => {
       alert('Successfully moved to Leads!');
       navigate('/leads');
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Error moving to lead:', error);
       alert('Failed to move to leads');
     }

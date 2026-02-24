@@ -84,6 +84,7 @@ const Meetings = () => {
       const data = await response.json();
       if (data.success) setMeetings(data.data.meetings || []);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       console.error(err);
       setError('Failed to load meetings');
     } finally {
@@ -145,6 +146,7 @@ const Meetings = () => {
         setTimeout(() => setError(''), 5000);
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError('Failed to create meeting');
       setTimeout(() => setError(''), 5000);
     }

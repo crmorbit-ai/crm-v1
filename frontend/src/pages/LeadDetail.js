@@ -159,6 +159,7 @@ const LeadDetail = () => {
         setError('Failed to load lead');
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       console.error('Load lead error:', err);
       setError(err.message || 'Failed to load lead');
     } finally {
@@ -249,6 +250,7 @@ const LeadDetail = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to create task');
     }
   };
@@ -280,6 +282,7 @@ const LeadDetail = () => {
         setError(data.message || 'Failed to create meeting');
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError('Failed to create meeting');
     }
   };
@@ -311,6 +314,7 @@ const LeadDetail = () => {
         setError(data.message || 'Failed to log call');
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError('Failed to log call');
     }
   };
@@ -330,6 +334,7 @@ const LeadDetail = () => {
       loadNotes();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to create note');
     }
   };
@@ -371,6 +376,7 @@ const LeadDetail = () => {
       loadLead();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to update lead');
     }
   };
@@ -384,6 +390,7 @@ const LeadDetail = () => {
         navigate('/leads');
       }, 1500);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to delete lead');
     }
   };
@@ -458,6 +465,7 @@ const LeadDetail = () => {
         setError(response.message || 'Failed to convert lead');
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       console.error('Convert lead error:', err);
       setError(err.message || 'Failed to convert lead');
     }

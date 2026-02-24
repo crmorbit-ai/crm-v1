@@ -8,6 +8,10 @@ const USER_CACHE_KEY = 'cached_user';
 const CACHE_EXPIRY_KEY = 'user_cache_expiry';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
+// Session timeout — 24 hours
+const SESSION_START_KEY = 'session_start';
+const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in ms
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
@@ -52,10 +56,28 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
+      // Check session expiry on load
+      const sessionStart = localStorage.getItem(SESSION_START_KEY);
+      if (sessionStart && Date.now() - parseInt(sessionStart) > SESSION_DURATION) {
+        logout();
+        return;
+      }
       loadUser();
     } else {
       setLoading(false);
     }
+  }, [token]);
+
+  // Check session expiry every minute while app is open
+  useEffect(() => {
+    if (!token) return;
+    const interval = setInterval(() => {
+      const sessionStart = localStorage.getItem(SESSION_START_KEY);
+      if (sessionStart && Date.now() - parseInt(sessionStart) > SESSION_DURATION) {
+        logout();
+      }
+    }, 60 * 1000); // every 1 minute
+    return () => clearInterval(interval);
   }, [token]);
 
   const loadUser = async () => {
@@ -77,6 +99,7 @@ export const AuthProvider = ({ children }) => {
     setToken(token);
     setUser(user);
     localStorage.setItem('token', token);
+    localStorage.setItem(SESSION_START_KEY, String(Date.now()));
     cacheUser(user); // Cache user for instant load
     return response.data;
   };
@@ -103,6 +126,7 @@ export const AuthProvider = ({ children }) => {
     setToken(token);
     setUser(user);
     localStorage.setItem('token', token);
+    localStorage.setItem(SESSION_START_KEY, String(Date.now()));
     return { token, user, requiresProfileCompletion };
   };
 
@@ -121,6 +145,7 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     localStorage.removeItem('token');
+    localStorage.removeItem(SESSION_START_KEY);
     clearUserCache();
   };
 

@@ -8,6 +8,7 @@ const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
 const { sendLeadAssignmentEmail } = require('../utils/emailService');
+const { hasPermission } = require('../utils/permissions');
 
 /**
  * @desc    Get all leads
@@ -42,28 +43,31 @@ const getLeads = async (req, res) => {
     const Group = require('../models/Group');
 
     if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
-      // Get user's groups (members is simple array: [userId1, userId2, ...])
-      const userGroups = await Group.find({
-        members: req.user.id,  // ✅ FIXED: members is array of IDs, not objects
-        isActive: true
-      });
+      // Read-only users (viewers) who cannot create/update are observers — show all tenant leads
+      const isViewerOnly = !hasPermission(req.user, 'lead_management', 'create') &&
+                           !hasPermission(req.user, 'lead_management', 'update');
 
-      if (userGroups.length > 0) {
-        const groupIds = userGroups.map(g => g._id);
+      if (!isViewerOnly) {
+        // Active participants (can create/update) — show only their assigned leads
+        const userGroups = await Group.find({
+          members: req.user.id,
+          isActive: true
+        });
 
-        // User can see: 1) Leads assigned to them directly, OR
-        //              2) Leads assigned to their groups AND they are in assignedMembers
-        query.$or = [
-          { owner: req.user.id },                    // Assigned directly to user
-          {
-            assignedGroup: { $in: groupIds },        // Assigned to user's groups
-            assignedMembers: req.user.id             // 🆕 AND user is in assignedMembers
-          }
-        ];
-      } else {
-        // Not in any group - see only directly assigned leads
-        query.owner = req.user.id;
+        if (userGroups.length > 0) {
+          const groupIds = userGroups.map(g => g._id);
+          query.$or = [
+            { owner: req.user.id },
+            {
+              assignedGroup: { $in: groupIds },
+              assignedMembers: req.user.id
+            }
+          ];
+        } else {
+          query.owner = req.user.id;
+        }
       }
+      // isViewerOnly: no ownership filter — they see all tenant leads
     }
 
     // 🆕 Unassigned filter

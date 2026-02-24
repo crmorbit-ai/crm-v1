@@ -339,14 +339,23 @@ const Tenants = () => {
   const getStatusVariant = (s) => ({ active: 'success', trial: 'warning', suspended: 'danger' }[s] || 'default');
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A';
 
+  const getLogoUrl = (logoPath) => {
+    if (!logoPath) return null;
+    if (logoPath.startsWith('http') || logoPath.startsWith('data:')) return logoPath;
+    const base = API_URL.replace(/\/api$/, '');
+    return `${base}${logoPath}`;
+  };
+
   // Table columns - only show basic info, sensitive data in right panel after verification
   const columns = [
     {
       header: 'Company',
       render: (row) => (
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '13px' }}>
-            {row.organizationName?.charAt(0)?.toUpperCase() || '?'}
+          <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '600', fontSize: '13px', overflow: 'hidden', flexShrink: 0 }}>
+            {row.logo
+              ? <img src={getLogoUrl(row.logo)} alt={row.organizationName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
+              : row.organizationName?.charAt(0)?.toUpperCase() || '?'}
           </div>
           <div>
             <div style={{ fontWeight: '600', fontSize: '13px', color: '#1e293b' }}>{row.organizationName || 'N/A'}</div>
@@ -545,24 +554,40 @@ const Tenants = () => {
         {/* Right - Details (only if verified) */}
         {selectedTenant && isPinVerified && (
           <DetailPanel title="Tenant Details" onClose={() => setSelectedTenant(null)}>
-            {/* Header with Company Name */}
+            {/* Header with Logo + Company Name */}
             <div style={styles.detailHeader}>
-              <div style={styles.detailAvatar}>{selectedTenant.organizationName?.charAt(0)}</div>
+              <div style={{ ...styles.detailAvatar, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
+                {selectedTenant.logo
+                  ? <img
+                      src={getLogoUrl(selectedTenant.logo)}
+                      alt="logo"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }}
+                    />
+                  : null}
+                <span style={{ display: selectedTenant.logo ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 0, left: 0, fontSize: '18px', fontWeight: '700', color: '#fff' }}>
+                  {selectedTenant.organizationName?.charAt(0)}
+                </span>
+              </div>
               <div style={{ flex: 1 }}>
                 <div style={styles.detailName}>{selectedTenant.organizationName}</div>
+                {selectedTenant.legalName && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{selectedTenant.legalName}</div>}
                 <Badge variant={getStatusVariant(selectedTenant.subscription?.status)} style={{ marginTop: '4px' }}>
                   {selectedTenant.subscription?.status || 'N/A'}
                 </Badge>
               </div>
+              {selectedTenant.primaryColor && (
+                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: selectedTenant.primaryColor, border: '2px solid #e2e8f0', flexShrink: 0 }} title="Brand Color" />
+              )}
             </div>
 
-            {/* Org ID - Prominent Display */}
+            {/* Org ID */}
             <div style={styles.orgIdBox}>
               <div style={styles.orgIdLabel}>Organization ID</div>
               <div style={styles.orgIdValue}>{selectedTenant.organizationId || 'N/A'}</div>
             </div>
 
-            {/* Plan & Status Section */}
+            {/* Subscription */}
             <div style={styles.section}>
               <h4 style={styles.sectionTitle}>Subscription</h4>
               <div style={styles.planBox}>
@@ -579,6 +604,47 @@ const Tenants = () => {
               </div>
               <InfoRow label="Users" value={`${selectedTenant.userCount || 0} / ${selectedTenant.subscription?.maxUsers || '∞'}`} />
               <InfoRow label="Expires" value={formatDate(selectedTenant.subscription?.endDate)} />
+              <InfoRow label="Billing" value={selectedTenant.subscription?.billingCycle || 'N/A'} />
+            </div>
+
+            {/* Branding */}
+            {(selectedTenant.logo || selectedTenant.primaryColor) && (
+              <div style={styles.section}>
+                <h4 style={styles.sectionTitle}>Branding</h4>
+                {selectedTenant.logo && (
+                  <div style={{ marginBottom: '10px' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>Logo</div>
+                    <div style={{ width: '100px', height: '60px', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img
+                        src={getLogoUrl(selectedTenant.logo)}
+                        alt="Company Logo"
+                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        onError={e => { e.target.parentNode.innerHTML = '<span style="font-size:11px;color:#94a3b8">No logo</span>'; }}
+                      />
+                    </div>
+                  </div>
+                )}
+                {selectedTenant.primaryColor && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>Brand Color</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <div style={{ width: '20px', height: '20px', borderRadius: '4px', background: selectedTenant.primaryColor, border: '1px solid #e2e8f0' }} />
+                      <span style={{ fontSize: '11px', color: '#475569', fontFamily: 'monospace' }}>{selectedTenant.primaryColor}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Business Details */}
+            <div style={styles.section}>
+              <h4 style={styles.sectionTitle}>Business Details</h4>
+              <InfoRow label="Industry" value={selectedTenant.industry || 'N/A'} />
+              <InfoRow label="Business Type" value={selectedTenant.businessType || 'N/A'} />
+              <InfoRow label="Team Size" value={selectedTenant.numberOfEmployees || 'N/A'} />
+              {selectedTenant.foundedYear && <InfoRow label="Founded" value={selectedTenant.foundedYear} />}
+              {selectedTenant.taxId && <InfoRow label="Tax ID" value={selectedTenant.taxId} />}
+              {selectedTenant.registrationNumber && <InfoRow label="Reg. No." value={selectedTenant.registrationNumber} />}
             </div>
 
             {/* Contact Info */}
@@ -586,7 +652,29 @@ const Tenants = () => {
               <h4 style={styles.sectionTitle}>Contact Info</h4>
               <InfoRow label="Email" value={selectedTenant.contactEmail} />
               <InfoRow label="Phone" value={selectedTenant.contactPhone || 'N/A'} />
+              {selectedTenant.alternatePhone && <InfoRow label="Alt. Phone" value={selectedTenant.alternatePhone} />}
               <InfoRow label="Admin" value={selectedTenant.adminUser ? `${selectedTenant.adminUser.firstName} ${selectedTenant.adminUser.lastName}` : 'N/A'} />
+              {selectedTenant.website && <InfoRow label="Website" value={selectedTenant.website} />}
+            </div>
+
+            {/* Location */}
+            {(selectedTenant.headquarters?.city || selectedTenant.headquarters?.country) && (
+              <div style={styles.section}>
+                <h4 style={styles.sectionTitle}>Location</h4>
+                {selectedTenant.headquarters?.street && <InfoRow label="Street" value={selectedTenant.headquarters.street} />}
+                {selectedTenant.headquarters?.city && <InfoRow label="City" value={selectedTenant.headquarters.city} />}
+                {selectedTenant.headquarters?.state && <InfoRow label="State" value={selectedTenant.headquarters.state} />}
+                {selectedTenant.headquarters?.country && <InfoRow label="Country" value={selectedTenant.headquarters.country} />}
+                {selectedTenant.headquarters?.zipCode && <InfoRow label="ZIP" value={selectedTenant.headquarters.zipCode} />}
+              </div>
+            )}
+
+            {/* Preferences */}
+            <div style={styles.section}>
+              <h4 style={styles.sectionTitle}>Preferences</h4>
+              <InfoRow label="Timezone" value={selectedTenant.settings?.timezone || 'N/A'} />
+              <InfoRow label="Date Format" value={selectedTenant.settings?.dateFormat || 'N/A'} />
+              <InfoRow label="Currency" value={selectedTenant.settings?.currency || 'N/A'} />
             </div>
 
             {/* Other Info */}

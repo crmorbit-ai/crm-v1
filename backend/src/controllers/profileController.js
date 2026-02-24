@@ -327,10 +327,51 @@ const updateOrganization = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload organization logo
+ * @route   POST /api/profile/upload-logo
+ * @access  Private (TENANT_ADMIN only)
+ */
+const uploadLogo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    if (!req.user.tenant) {
+      return errorResponse(res, 'No organization associated with this user', 400);
+    }
+
+    const tenant = await Tenant.findById(req.user.tenant);
+    if (!tenant) {
+      return errorResponse(res, 'Organization not found', 404);
+    }
+
+    const logoPath = `/uploads/logos/${req.file.filename}`;
+    tenant.logo = logoPath;
+    await tenant.save();
+
+    await logActivity({
+      user: req.user._id,
+      tenant: req.user.tenant,
+      action: 'organization.logo_upload',
+      entity: 'Tenant',
+      entityId: tenant._id,
+      description: 'Organization logo updated'
+    });
+
+    return successResponse(res, { logo: logoPath }, 'Logo updated successfully');
+  } catch (error) {
+    console.error('Upload logo error:', error);
+    return errorResponse(res, 'Error uploading logo', 500);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   updatePassword,
   uploadProfilePicture,
-  updateOrganization
+  updateOrganization,
+  uploadLogo
 };

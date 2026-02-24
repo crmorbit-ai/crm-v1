@@ -5,9 +5,11 @@ const {
   updateProfile,
   updatePassword,
   uploadProfilePicture,
-  updateOrganization
+  updateOrganization,
+  uploadLogo
 } = require('../controllers/profileController');
 const { protect } = require('../middleware/auth');
+const upload = require('../config/multer');
 
 // ════════════════════════════════════════════════════════════════
 // PROFILE ROUTES
@@ -29,5 +31,8 @@ router.post('/upload-picture', uploadProfilePicture);
 
 // Update organization information
 router.put('/organization', updateOrganization);
+
+// Upload organization logo (multipart)
+router.post('/upload-logo', upload.single('logo'), uploadLogo);
 
 module.exports = router;

@@ -26,6 +26,7 @@ const RFIs = () => {
       const response = await rfiService.getRFIs(params);
       setRfis(response.data || []);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to fetch RFIs');
     } finally {
       setLoading(false);
@@ -43,6 +44,7 @@ const RFIs = () => {
         await rfiService.deleteRFI(id);
         fetchRFIs();
       } catch (err) {
+        if (err?.isPermissionDenied) return;
         alert(err.message || 'Failed to delete RFI');
       }
     }

@@ -23,9 +23,9 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
     console.log('✅ SMTP connection verified');
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: email,
-      subject: 'Password Reset OTP - UFS CRM',
+      subject: 'Password Reset OTP - Unified CRM',
       html: `
         <!DOCTYPE html>
         <html>
@@ -57,7 +57,7 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
               <p><strong>⏰ This OTP expires in 10 minutes.</strong></p>
             </div>
             <div class="footer">
-              <p>UFS CRM © ${new Date().getFullYear()}</p>
+              <p>Unified CRM © ${new Date().getFullYear()}</p>
             </div>
           </div>
         </body>
@@ -127,7 +127,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName) => 
       : `${durationMinutes} minutes`;
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: attendeeEmails.join(', '),
       subject: `📅 Meeting Invitation: ${meeting.title}`,
       html: `
@@ -242,7 +242,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName) => 
             </div>
             
             <div class="footer">
-              <p style="font-weight: 600; color: #1F2937;">UFS CRM</p>
+              <p style="font-weight: 600; color: #1F2937;">Unified CRM</p>
               <p>© ${new Date().getFullYear()} All rights reserved.</p>
               <p style="font-size: 12px; margin-top: 15px;">
                 This is an automated meeting invitation. Please do not reply.
@@ -280,7 +280,7 @@ const sendMeetingReminder = async (meeting, attendeeEmails) => {
     const startTime = meetingDate.toLocaleTimeString('en-IN', timeOptions);
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: attendeeEmails.join(', '),
       subject: `⏰ Reminder: Meeting "${meeting.title}" starts in 1 hour!`,
       html: `
@@ -321,7 +321,7 @@ const sendMeetingReminder = async (meeting, attendeeEmails) => {
               </p>
             </div>
             <div class="footer">
-              <p style="color: #6B7280; font-size: 13px;">UFS CRM © ${new Date().getFullYear()}</p>
+              <p style="color: #6B7280; font-size: 13px;">Unified CRM © ${new Date().getFullYear()}</p>
             </div>
           </div>
         </body>
@@ -352,7 +352,7 @@ const sendMeetingCancellation = async (meeting, attendeeEmails, reason = '') => 
     const formattedDate = meetingDate.toLocaleDateString('en-IN', dateOptions);
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: attendeeEmails.join(', '),
       subject: `❌ Meeting Cancelled: ${meeting.title}`,
       html: `
@@ -391,7 +391,7 @@ const sendMeetingCancellation = async (meeting, attendeeEmails, reason = '') => 
               </p>
             </div>
             <div class="footer">
-              <p style="color: #6B7280; font-size: 13px;">UFS CRM © ${new Date().getFullYear()}</p>
+              <p style="color: #6B7280; font-size: 13px;">Unified CRM © ${new Date().getFullYear()}</p>
             </div>
           </div>
         </body>
@@ -421,7 +421,7 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
     const loginUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: email,
       subject: `🎉 You've been invited to join ${organizationName}!`,
       html: `
@@ -472,7 +472,7 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
               </p>
 
               <p style="font-size: 15px; color: #4B5563; line-height: 1.8;">
-                We're excited to have you on board! Your account has been created and you can now access UFS CRM.
+                We're excited to have you on board! Your account has been created and you can now access Unified CRM.
                 Use the credentials below to sign in and get started.
               </p>
 
@@ -506,7 +506,7 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
             </div>
 
             <div class="footer">
-              <p style="font-weight: 600; color: #1F2937;">UFS CRM</p>
+              <p style="font-weight: 600; color: #1F2937;">Unified CRM</p>
               <p>© ${new Date().getFullYear()} All rights reserved.</p>
               <p style="font-size: 12px; margin-top: 15px;">
                 This is an automated invitation email. Please do not reply directly to this message.
@@ -541,9 +541,9 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
     console.log('✅ SMTP connection verified for signup verification');
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: email,
-      subject: 'Verify Your Email - UFS CRM',
+      subject: 'Verify Your Email - Unified CRM',
       html: `
         <!DOCTYPE html>
         <html>
@@ -569,7 +569,7 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
           <div class="container">
             <div class="header">
               <div class="logo">✉️</div>
-              <h1>Welcome to UFS CRM!</h1>
+              <h1>Welcome to Unified CRM!</h1>
               <p>Complete your registration by verifying your email</p>
             </div>
             <div class="content">
@@ -577,7 +577,7 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
                 Hello <strong>${userName || 'there'}</strong>,
               </p>
               <p class="welcome-text">
-                Thank you for registering with UFS CRM! To complete your registration and secure your account,
+                Thank you for registering with Unified CRM! To complete your registration and secure your account,
                 please verify your email address using the OTP code below:
               </p>
               <div class="otp-container">
@@ -590,11 +590,11 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
                 </p>
               </div>
               <p style="color: #6B7280; font-size: 14px; margin-top: 24px;">
-                Once verified, you'll be able to complete your profile and start using UFS CRM.
+                Once verified, you'll be able to complete your profile and start using Unified CRM.
               </p>
             </div>
             <div class="footer">
-              <p style="font-weight: 600; color: #1F2937;">UFS CRM</p>
+              <p style="font-weight: 600; color: #1F2937;">Unified CRM</p>
               <p>© ${new Date().getFullYear()} All rights reserved.</p>
               <p style="font-size: 12px; margin-top: 15px;">
                 This is an automated email. Please do not reply directly to this message.
@@ -650,9 +650,9 @@ const sendWelcomeEmail = async (email, userName, organizationName) => {
     console.log('✅ SMTP connection verified for welcome email');
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: email,
-      subject: `Welcome to UFS CRM! 🎉`,
+      subject: `Welcome to Unified CRM! 🎉`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -687,9 +687,9 @@ const sendWelcomeEmail = async (email, userName, organizationName) => {
           <div class="container">
             <div class="header">
               <div class="logo-container">
-                <img src="${process.env.FRONTEND_URL || 'https://crm-frontend-sooty-seven.vercel.app'}/ufsscrmlogo.png" alt="UFS CRM Logo" class="logo" />
+                <img src="${process.env.FRONTEND_URL || 'https://crm-frontend-sooty-seven.vercel.app'}/ufsscrmlogo.png" alt="Unified CRM Logo" class="logo" />
               </div>
-              <h1>Welcome to UFS CRM!</h1>
+              <h1>Welcome to Unified CRM!</h1>
               <p>Your journey to better customer relationships starts here</p>
             </div>
 
@@ -749,8 +749,8 @@ const sendWelcomeEmail = async (email, userName, organizationName) => {
             </div>
 
             <div class="footer">
-              <p class="footer-text"><strong>UFS CRM</strong> - Empowering Businesses</p>
-              <p class="footer-text">© ${new Date().getFullYear()} UFS CRM. All rights reserved.</p>
+              <p class="footer-text"><strong>Unified CRM</strong> - Empowering Businesses</p>
+              <p class="footer-text">© ${new Date().getFullYear()} Unified CRM. All rights reserved.</p>
               <div class="social-links">
                 <a href="#">Support</a> |
                 <a href="#">Documentation</a> |
@@ -807,7 +807,7 @@ const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, lead
     console.log('✅ SMTP connection verified for lead assignment email');
 
     const mailOptions = {
-      from: `"UFS CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: assignedUserEmail,
       subject: `🎯 New Lead Assigned: ${leadDetails.name}`,
       html: `
@@ -914,8 +914,8 @@ const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, lead
             </div>
 
             <div class="footer">
-              <p class="footer-text"><strong>UFS CRM</strong> - Lead Management System</p>
-              <p class="footer-text">© ${new Date().getFullYear()} UFS CRM. All rights reserved.</p>
+              <p class="footer-text"><strong>Unified CRM</strong> - Lead Management System</p>
+              <p class="footer-text">© ${new Date().getFullYear()} Unified CRM. All rights reserved.</p>
             </div>
           </div>
         </body>

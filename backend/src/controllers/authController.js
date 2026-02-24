@@ -7,7 +7,7 @@ const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-const { sendPasswordResetOTP, sendSignupVerificationOTP } = require('../utils/emailService');
+const { sendPasswordResetOTP, sendSignupVerificationOTP, sendWelcomeEmail } = require('../utils/emailService');
 const Role = require('../models/Role');
 const { seedStandardFields } = require('../utils/seedStandardFields');
 
@@ -250,7 +250,6 @@ const registerTenant = async (req, res) => {
       level: 100,
       isActive: true
     });
-
 
     // ============================================
     // 🔧 FIX: CREATE ADMIN USER WITH PROPER PASSWORD HANDLING
@@ -928,6 +927,11 @@ const completeProfile = async (req, res) => {
       .select('-password');
 
     console.log('✅ Profile completion successful for:', user.email);
+
+    // Send welcome email (non-blocking)
+    sendWelcomeEmail(user.email, `${user.firstName} ${user.lastName}`, tenant.organizationName).catch(err => {
+      console.error('⚠️ Welcome email failed (non-blocking):', err.message);
+    });
 
     successResponse(res, 200, 'Profile completed successfully!', updatedUser);
   } catch (error) {

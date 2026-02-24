@@ -294,6 +294,7 @@ const Leads = () => {
         setError(response?.message || 'Failed to load leads');
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.response?.data?.message || err.message || 'Failed to load leads');
     } finally {
       setLoading(false);
@@ -367,7 +368,7 @@ const Leads = () => {
       resetForm();
       loadLeads();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.response?.data?.message || 'Failed to create lead'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create lead'); }
   };
 
   const handleCreateProductFromLead = async (e) => {
@@ -384,7 +385,7 @@ const Leads = () => {
         await loadProducts();
         setTimeout(() => setSuccess(''), 3000);
       }
-    } catch (err) { setError(err.response?.data?.message || 'Failed to create product'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create product'); }
   };
 
   const handleCreateCategory = async (e) => {
@@ -398,7 +399,7 @@ const Leads = () => {
       setShowAddProductForm(true);
       await loadCategories();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.response?.data?.message || 'Failed to create category'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create category'); }
   };
 
   const handleGroupSelection = async (groupId) => {
@@ -410,7 +411,7 @@ const Leads = () => {
         setGroupMembers(groupData.members);
         setSelectedMembers(groupData.members.map(m => m._id));
       }
-    } catch (err) { setError('Failed to load group members'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError('Failed to load group members'); }
   };
 
   const handleBulkAssignToGroup = async () => {
@@ -430,7 +431,7 @@ const Leads = () => {
         await loadLeads();
         setTimeout(() => setSuccess(''), 3000);
       }
-    } catch (err) { setError(err.response?.data?.message || 'Failed to assign leads'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to assign leads'); }
   };
 
   const resetForm = () => {
@@ -598,7 +599,7 @@ const Leads = () => {
       setDetailTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
       loadDetailTasks(selectedLeadId);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to create task'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create task'); }
   };
 
   // Detail Panel - Create Meeting
@@ -619,7 +620,7 @@ const Leads = () => {
         loadDetailMeetings(selectedLeadId);
         setTimeout(() => setSuccess(''), 3000);
       } else { setError(data.message || 'Failed to create meeting'); }
-    } catch (err) { setError('Failed to create meeting'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError('Failed to create meeting'); }
   };
 
   // Detail Panel - Create Call
@@ -640,7 +641,7 @@ const Leads = () => {
         loadDetailCalls(selectedLeadId);
         setTimeout(() => setSuccess(''), 3000);
       } else { setError(data.message || 'Failed to log call'); }
-    } catch (err) { setError('Failed to log call'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError('Failed to log call'); }
   };
 
   // Detail Panel - Create Note
@@ -654,7 +655,7 @@ const Leads = () => {
       setDetailNoteData({ title: '', content: '' });
       loadDetailNotes(selectedLeadId);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to create note'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create note'); }
   };
 
   // Detail Panel - Edit Lead
@@ -697,7 +698,7 @@ const Leads = () => {
       if (response?.success) setSelectedLeadData(response.data);
       loadLeads();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to update lead'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to update lead'); }
   };
 
   const handleDetailEditChange = (e) => {
@@ -719,7 +720,7 @@ const Leads = () => {
       closeSidePanel();
       loadLeads();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to delete lead'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to delete lead'); }
   };
 
   // Detail Panel - Convert Lead
@@ -768,7 +769,7 @@ const Leads = () => {
         closeSidePanel();
         loadLeads();
       } else { setError(response.message || 'Failed to convert lead'); }
-    } catch (err) { setError(err.message || 'Failed to convert lead'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to convert lead'); }
   };
 
   const canUpdateLead = hasPermission('lead_management', 'update');
@@ -791,6 +792,7 @@ const Leads = () => {
       loadLeads();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.response?.data?.message || 'Failed to delete lead');
     }
   };

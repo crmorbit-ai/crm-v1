@@ -28,6 +28,7 @@ const InvoiceDetail = () => {
       const data = await response.json();
       setInvoice(data.data);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to fetch invoice');
     } finally {
       setLoading(false);
@@ -53,6 +54,7 @@ const InvoiceDetail = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       alert('Error downloading PDF: ' + err.message);
     } finally {
       setActionLoading(false);
@@ -72,6 +74,7 @@ const InvoiceDetail = () => {
       alert('Invoice sent successfully!');
       fetchInvoice();
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       alert('Error sending email: ' + err.message);
     } finally {
       setActionLoading(false);

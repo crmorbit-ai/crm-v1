@@ -214,7 +214,7 @@ exports.sendInvoice = async (req, res) => {
     }
 
     const emailService = require('../services/emailService');
-    const emailSubject = subject || `Invoice ${invoice.invoiceNumber} from ${tenant.companyName || 'UFS CRM'}`;
+    const emailSubject = subject || `Invoice ${invoice.invoiceNumber} from ${tenant.companyName || 'Unified CRM'}`;
     const emailMessage = message || `
       Dear ${invoice.customerName},
 
@@ -230,7 +230,7 @@ exports.sendInvoice = async (req, res) => {
       If you have any questions, please don't hesitate to contact us.
 
       Best regards,
-      ${tenant.companyName || 'UFS CRM'}
+      ${tenant.companyName || 'Unified CRM'}
     `;
 
     for (const email of emailList) {

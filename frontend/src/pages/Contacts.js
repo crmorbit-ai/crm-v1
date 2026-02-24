@@ -102,6 +102,7 @@ const Contacts = () => {
         setStats({ total: response.data.pagination?.total || 0, primary, withAccount, recent: contactsData.length });
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.response?.data?.message || 'Failed to load contacts');
     } finally {
       setLoading(false);
@@ -168,7 +169,7 @@ const Contacts = () => {
       resetForm();
       loadContacts();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.response?.data?.message || 'Failed to create contact'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create contact'); }
   };
 
   const resetForm = () => {
@@ -289,7 +290,7 @@ const Contacts = () => {
       setDetailTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
       loadDetailTasks(selectedContactId);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to create task'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create task'); }
   };
 
   const handleDetailCreateNote = async (e) => {
@@ -302,7 +303,7 @@ const Contacts = () => {
       setDetailNoteData({ title: '', content: '' });
       loadDetailNotes(selectedContactId);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to create note'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create note'); }
   };
 
   const openDetailEditForm = () => {
@@ -332,7 +333,7 @@ const Contacts = () => {
       if (response?.success) setSelectedContactData(response.data);
       loadContacts();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to update contact'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to update contact'); }
   };
 
   const handleDetailEditChange = (e) => {
@@ -348,7 +349,7 @@ const Contacts = () => {
       closeSidePanel();
       loadContacts();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to delete contact'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to delete contact'); }
   };
 
   const canCreateContact = hasPermission('contact_management', 'create');

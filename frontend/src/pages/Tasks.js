@@ -39,6 +39,7 @@ const Tasks = () => {
         setTasks(response.data.tasks || []);
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       console.error('Load tasks error:', err);
       setError('Failed to load tasks');
     } finally {
@@ -60,6 +61,7 @@ const Tasks = () => {
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError('Failed to create task');
     }
   };

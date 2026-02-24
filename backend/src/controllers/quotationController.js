@@ -433,7 +433,7 @@ exports.sendQuotationEmail = async (req, res) => {
       exists: require('fs').existsSync(pdfResult.filePath)
     });
 
-    const emailSubject = subject || `Quotation ${quotation.quotationNumber} from ${tenant.companyName || 'UFS CRM'}`;
+    const emailSubject = subject || `Quotation ${quotation.quotationNumber} from ${tenant.companyName || 'Unified CRM'}`;
     const emailMessage = message || `
       Dear ${quotation.customerName},
 
@@ -447,7 +447,7 @@ exports.sendQuotationEmail = async (req, res) => {
       If you have any questions, please don't hesitate to contact us.
 
       Best regards,
-      ${tenant.companyName || 'UFS CRM'}
+      ${tenant.companyName || 'Unified CRM'}
     `;
 
     for (const email of emailList) {

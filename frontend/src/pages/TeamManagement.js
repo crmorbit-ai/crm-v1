@@ -51,10 +51,40 @@ const TeamManagement = () => {
   const [showPanel, setShowPanel] = useState(false);
   const [panelMode, setPanelMode] = useState('user');
   const [editingItem, setEditingItem] = useState(null);
+  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
+  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
+  const [userStep, setUserStep] = useState(1);
+  const [subStep, setSubStep] = useState(null); // null | 'create-role' | 'create-group'
+  const [quickRoleForm, setQuickRoleForm] = useState({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
+  const [quickGroupForm, setQuickGroupForm] = useState({ name: '', description: '' });
 
-  const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [] });
+  const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [], groups: [] });
   const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
   const [groupForm, setGroupForm] = useState({ name: '', description: '', members: [] });
+  const [submitting, setSubmitting] = useState(false);
+
+  const VIEWER_PERMISSIONS = [
+    { feature: 'user_management', actions: ['read'] },
+    { feature: 'role_management', actions: ['read'] },
+    { feature: 'group_management', actions: ['read'] },
+    { feature: 'lead_management', actions: ['read'] },
+    { feature: 'contact_management', actions: ['read'] },
+    { feature: 'account_management', actions: ['read'] },
+    { feature: 'opportunity_management', actions: ['read'] },
+    { feature: 'data_center', actions: ['read'] },
+    { feature: 'quotation_management', actions: ['read'] },
+    { feature: 'invoice_management', actions: ['read'] },
+    { feature: 'purchase_order_management', actions: ['read'] },
+    { feature: 'rfi_management', actions: ['read'] },
+    { feature: 'product_management', actions: ['read'] },
+    { feature: 'task_management', actions: ['read'] },
+    { feature: 'meeting_management', actions: ['read'] },
+    { feature: 'call_management', actions: ['read'] },
+    { feature: 'email_management', actions: ['read'] },
+    { feature: 'subscription_management', actions: ['read'] },
+    { feature: 'field_management', actions: ['read'] },
+    { feature: 'audit_logs', actions: ['read'] },
+  ];
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -65,11 +95,52 @@ const TeamManagement = () => {
         groupService.getGroups({ limit: 100 })
       ]);
       setUsers(usersRes.users || []);
-      // Filter out system roles - only show custom roles created by tenant
       const customRoles = (rolesRes.roles || []).filter(r => r.roleType !== 'system');
-      setRoles(customRoles);
-      setGroups(groupsRes.groups || []);
+      const fetchedGroups = groupsRes.groups || [];
+
+      // Auto-seed defaults for tenants that don't have them yet
+      const needsViewerRole = !customRoles.some(r => r.name === 'Viewer');
+      const needsMonitoringGroup = !fetchedGroups.some(g => g.name === 'Monitoring Group');
+
+      const seeds = [];
+      if (needsViewerRole) {
+        seeds.push(
+          roleService.createRole({
+            name: 'Viewer',
+            slug: 'viewer',
+            description: 'Read-only access to all features',
+            permissions: VIEWER_PERMISSIONS,
+            forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
+            level: 1,
+          }).catch(() => {}) // silently skip if already exists
+        );
+      }
+      if (needsMonitoringGroup) {
+        seeds.push(
+          groupService.createGroup({
+            name: 'Monitoring Group',
+            slug: 'monitoring-group',
+            description: 'Default group for monitoring and oversight',
+            members: [],
+          }).catch(() => {})
+        );
+      }
+
+      if (seeds.length > 0) {
+        await Promise.all(seeds);
+        // Re-fetch to get the freshly created defaults
+        const [rolesRes2, groupsRes2] = await Promise.all([
+          roleService.getRoles({ limit: 100 }),
+          groupService.getGroups({ limit: 100 })
+        ]);
+        setRoles((rolesRes2.roles || []).filter(r => r.roleType !== 'system'));
+        setGroups(groupsRes2.groups || []);
+      } else {
+        setRoles(customRoles);
+        setGroups(fetchedGroups);
+      }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError('Failed to load data');
     } finally {
       setLoading(false);
@@ -86,13 +157,23 @@ const TeamManagement = () => {
   const closePanel = () => {
     setShowPanel(false);
     setEditingItem(null);
+    setShowRoleDropdown(false);
+    setShowGroupDropdown(false);
+    setSubmitting(false);
+    setUserStep(1);
+    setSubStep(null);
   };
 
   const openUserPanel = (u = null) => {
     setPanelMode('user');
     setEditingItem(u);
-    setUserForm(u ? { firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', userType: u.userType, phone: u.phone || '', roles: u.roles?.map(r => r._id) || [] }
-      : { firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [] });
+    setUserStep(1);
+    setSubStep(null);
+    setShowRoleDropdown(false);
+    setShowGroupDropdown(false);
+    const userGroups = u ? groups.filter(g => g.members?.some(m => (m._id || m) === u._id)).map(g => g._id) : [];
+    setUserForm(u ? { firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', userType: u.userType, phone: u.phone || '', roles: u.roles?.map(r => r._id) || [], groups: userGroups }
+      : { firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [], groups: [] });
     setShowPanel(true);
   };
 
@@ -115,18 +196,29 @@ const TeamManagement = () => {
   // Handlers
   const handleUserSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
     try {
+      let userId;
       if (editingItem) {
         await userService.updateUser(editingItem._id, userForm);
+        userId = editingItem._id;
         showMessage('User updated!');
       } else {
-        await userService.createUser({ ...userForm, tenant: user.tenant?._id });
+        const res = await userService.createUser({ ...userForm, tenant: user.tenant?._id });
+        userId = res.user?._id || res._id;
         showMessage('User created!');
+      }
+      if (userId) {
+        await userService.assignGroups(userId, userForm.groups);
       }
       closePanel();
       loadData();
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       showMessage(err.message || 'Error', true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -136,7 +228,7 @@ const TeamManagement = () => {
       await userService.deleteUser(u._id);
       showMessage('Deleted!');
       loadData();
-    } catch (err) { showMessage(err.message, true); }
+    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
   };
 
   const handleRoleSubmit = async (e) => {
@@ -156,7 +248,7 @@ const TeamManagement = () => {
       }
       closePanel();
       loadData();
-    } catch (err) { showMessage(err.message, true); }
+    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
   };
 
   const handleDeleteRole = async (r) => {
@@ -165,7 +257,7 @@ const TeamManagement = () => {
       await roleService.deleteRole(r._id);
       showMessage('Deleted!');
       loadData();
-    } catch (err) { showMessage(err.message, true); }
+    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
   };
 
   const togglePermission = (feature, action) => {
@@ -189,16 +281,17 @@ const TeamManagement = () => {
   const handleGroupSubmit = async (e) => {
     e.preventDefault();
     try {
+      const data = { ...groupForm, slug: groupForm.name.toLowerCase().replace(/\s+/g, '_') };
       if (editingItem) {
-        await groupService.updateGroup(editingItem._id, groupForm);
+        await groupService.updateGroup(editingItem._id, data);
         showMessage('Group updated!');
       } else {
-        await groupService.createGroup(groupForm);
+        await groupService.createGroup(data);
         showMessage('Group created!');
       }
       closePanel();
       loadData();
-    } catch (err) { showMessage(err.message, true); }
+    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
   };
 
   const handleDeleteGroup = async (g) => {
@@ -207,12 +300,68 @@ const TeamManagement = () => {
       await groupService.deleteGroup(g._id);
       showMessage('Deleted!');
       loadData();
-    } catch (err) { showMessage(err.message, true); }
+    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
   };
 
   const getUserTypeLabel = (type) => {
     const labels = { 'TENANT_USER': 'Tenant User', 'TENANT_MANAGER': 'Tenant Manager', 'TENANT_ADMIN': 'Tenant Admin' };
     return labels[type] || type;
+  };
+
+  const handleNextStep = () => {
+    if (!userForm.firstName.trim() || !userForm.lastName.trim() || !userForm.email.trim()) {
+      showMessage('Please fill in all required fields', true); return;
+    }
+    if (!editingItem && userForm.password.length < 6) {
+      showMessage('Password must be at least 6 characters', true); return;
+    }
+    setUserStep(2);
+  };
+
+  const toggleQuickPermission = (feature, action) => {
+    setQuickRoleForm(prev => {
+      const perms = [...prev.permissions];
+      const idx = perms.findIndex(p => p.feature === feature);
+      if (idx === -1) perms.push({ feature, actions: [action] });
+      else {
+        const actions = [...perms[idx].actions];
+        const aIdx = actions.indexOf(action);
+        if (aIdx === -1) actions.push(action); else actions.splice(aIdx, 1);
+        if (actions.length === 0) perms.splice(idx, 1);
+        else perms[idx] = { ...perms[idx], actions };
+      }
+      return { ...prev, permissions: perms };
+    });
+  };
+
+  const hasQuickAction = (feature, action) => quickRoleForm.permissions.find(p => p.feature === feature)?.actions?.includes(action) || false;
+
+  const handleQuickRoleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      const data = { ...quickRoleForm, slug: quickRoleForm.name.toLowerCase().replace(/\s+/g, '_') };
+      const res = await roleService.createRole(data);
+      const newId = res.role?._id || res._id;
+      await loadData();
+      if (newId) setUserForm(prev => ({ ...prev, roles: [...prev.roles, newId] }));
+      setSubStep(null);
+      setQuickRoleForm({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
+      showMessage('Role created and selected!');
+    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message || 'Error', true); }
+  };
+
+  const handleQuickGroupCreate = async (e) => {
+    e.preventDefault();
+    try {
+      const data = { ...quickGroupForm, slug: quickGroupForm.name.toLowerCase().replace(/\s+/g, '_') };
+      const res = await groupService.createGroup(data);
+      const newId = res.group?._id || res._id;
+      await loadData();
+      if (newId) setUserForm(prev => ({ ...prev, groups: [...prev.groups, newId] }));
+      setSubStep(null);
+      setQuickGroupForm({ name: '', description: '' });
+      showMessage('Group created and selected!');
+    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message || 'Error', true); }
   };
 
   return (
@@ -301,7 +450,258 @@ const TeamManagement = () => {
             </div>
           </div>
 
-          {/* Table */}
+          {/* Split layout: form left + table right */}
+          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+
+          {/* Left: Add/Edit User Form */}
+          {showPanel && panelMode === 'user' && (
+            <div style={styles.inlineFormCard}>
+              {/* Header */}
+              <div style={styles.modalHeader}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
+                    {editingItem ? 'Edit User' : 'Add New User'}
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#94a3b8' }}>
+                    {editingItem ? 'Update user information' : subStep === 'create-role' ? 'Step 2 — Create Role' : subStep === 'create-group' ? 'Step 2 — Create Group' : `Step ${userStep} of 2 — ${userStep === 1 ? 'Basic Information' : 'Roles & Groups'}`}
+                  </p>
+                </div>
+                <button onClick={closePanel} style={styles.closeBtn}>×</button>
+              </div>
+
+              {/* Step indicator (add only) */}
+              {!editingItem && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderBottom: '1px solid #f1f5f9' }}>
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff' }}>1</div>
+                  <div style={{ flex: 1, height: '2px', background: userStep === 2 ? '#3b82f6' : '#e2e8f0', borderRadius: '2px', transition: 'background 0.3s' }} />
+                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: userStep === 2 ? '#3b82f6' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: userStep === 2 ? '#fff' : '#94a3b8', transition: 'all 0.3s' }}>2</div>
+                </div>
+              )}
+
+              <div style={styles.inlineFormBody}>
+                {/* Step 1 */}
+                {(userStep === 1) && (
+                  <div style={styles.inlineFormGrid}>
+                    <div>
+                      <div style={styles.formGrid}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>First Name *</label>
+                          <input style={styles.input} value={userForm.firstName} onChange={e => setUserForm({ ...userForm, firstName: e.target.value })} placeholder="John" />
+                        </div>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Last Name *</label>
+                          <input style={styles.input} value={userForm.lastName} onChange={e => setUserForm({ ...userForm, lastName: e.target.value })} placeholder="Doe" />
+                        </div>
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Email *</label>
+                        <input type="email" style={styles.input} value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} placeholder="john@company.com" disabled={!!editingItem} />
+                      </div>
+                      {!editingItem && (
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Password *</label>
+                          <input type="password" style={styles.input} value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} placeholder="Min. 6 characters" />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>User Type</label>
+                        <select style={styles.input} value={userForm.userType} onChange={e => setUserForm({ ...userForm, userType: e.target.value, roles: [] })}>
+                          <option value="TENANT_USER">Tenant User</option>
+                          <option value="TENANT_MANAGER">Tenant Manager</option>
+                          <option value="TENANT_ADMIN">Tenant Admin</option>
+                        </select>
+                        <span style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', display: 'block' }}>
+                          {userForm.userType === 'TENANT_ADMIN' ? '⚡ Full access' : userForm.userType === 'TENANT_MANAGER' ? '📊 Manage team & reports' : '👤 Access via assigned roles'}
+                        </span>
+                      </div>
+                      <div style={styles.formGroup}>
+                        <label style={styles.label}>Phone</label>
+                        <input style={styles.input} value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} placeholder="+91 00000 00000" />
+                      </div>
+                      {!editingItem && (
+                        userForm.userType === 'TENANT_ADMIN'
+                          ? <button type="button" onClick={handleUserSubmit} disabled={submitting} style={{ ...styles.submitBtn, opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>{submitting ? 'Creating...' : 'Create User'}</button>
+                          : <button type="button" onClick={handleNextStep} style={styles.submitBtn}>Next: Assign Roles & Groups →</button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 2 (add) or roles/groups section (edit) */}
+                {(userStep === 2 || !!editingItem) && (
+                  <div style={styles.inlineFormGrid}>
+
+                    {/* Sub-step: Create Role inline */}
+                    {subStep === 'create-role' && (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <button type="button" onClick={() => { setSubStep(null); setQuickRoleForm({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] }); }} style={styles.subStepBack}>← Back</button>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Create New Role</div>
+                            <div style={{ fontSize: '10px', color: '#94a3b8' }}>Auto-selected after creation</div>
+                          </div>
+                        </div>
+                        <form onSubmit={handleQuickRoleCreate}>
+                          <div style={styles.formGroup}>
+                            <label style={styles.label}>Role Name *</label>
+                            <input style={styles.input} value={quickRoleForm.name} onChange={e => setQuickRoleForm({ ...quickRoleForm, name: e.target.value })} required placeholder="e.g., Sales Manager" />
+                          </div>
+                          <div style={styles.formGroup}>
+                            <label style={styles.label}>Description</label>
+                            <input style={styles.input} value={quickRoleForm.description} onChange={e => setQuickRoleForm({ ...quickRoleForm, description: e.target.value })} placeholder="Brief description" />
+                          </div>
+                          <div style={styles.formGroup}>
+                            <label style={styles.label}>For User Types</label>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                              {[{ value: 'TENANT_USER', label: 'User', color: '#3b82f6' }, { value: 'TENANT_MANAGER', label: 'Manager', color: '#8b5cf6' }].map(ut => (
+                                <label key={ut.value} style={{ padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', background: quickRoleForm.forUserTypes?.includes(ut.value) ? ut.color : '#f1f5f9', color: quickRoleForm.forUserTypes?.includes(ut.value) ? '#fff' : '#64748b', border: `1px solid ${quickRoleForm.forUserTypes?.includes(ut.value) ? ut.color : '#e2e8f0'}` }}>
+                                  <input type="checkbox" checked={quickRoleForm.forUserTypes?.includes(ut.value)} onChange={() => { const t = quickRoleForm.forUserTypes || []; setQuickRoleForm({ ...quickRoleForm, forUserTypes: t.includes(ut.value) ? t.filter(x => x !== ut.value) : [...t, ut.value] }); }} style={{ display: 'none' }} />
+                                  {ut.label}
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                          <div style={styles.formGroup}>
+                            <label style={styles.label}>Permissions</label>
+                            <div style={styles.permTable}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
+                                <thead>
+                                  <tr>
+                                    <th style={{ textAlign: 'left', padding: '4px 6px', background: '#f8fafc', position: 'sticky', top: 0 }}>Module</th>
+                                    {ACTIONS.map(a => <th key={a} style={{ padding: '4px 3px', background: '#f8fafc', fontSize: '8px', position: 'sticky', top: 0 }} title={a}>{a[0].toUpperCase()}</th>)}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {['Access', 'CRM', 'Sales', 'Product', 'Tasks', 'Account', 'Customization', 'Data'].map(cat => (
+                                    <React.Fragment key={cat}>
+                                      <tr><td colSpan={ACTIONS.length + 1} style={{ padding: '4px 6px', background: '#e2e8f0', fontWeight: '600', fontSize: '9px', color: '#475569' }}>{cat}</td></tr>
+                                      {FEATURES.filter(f => f.category === cat).map(f => (
+                                        <tr key={f.slug}>
+                                          <td style={{ padding: '4px 6px', borderTop: '1px solid #f1f5f9', paddingLeft: '12px' }}>{f.name}</td>
+                                          {ACTIONS.map(a => (
+                                            <td key={a} style={{ padding: '3px', textAlign: 'center', borderTop: '1px solid #f1f5f9' }}>
+                                              <input type="checkbox" checked={hasQuickAction(f.slug, a)} onChange={() => toggleQuickPermission(f.slug, a)} style={{ cursor: 'pointer', width: '12px', height: '12px' }} />
+                                            </td>
+                                          ))}
+                                        </tr>
+                                      ))}
+                                    </React.Fragment>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                          <button type="submit" style={styles.submitBtn}>Create Role</button>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Sub-step: Create Group inline */}
+                    {subStep === 'create-group' && (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                          <button type="button" onClick={() => { setSubStep(null); setQuickGroupForm({ name: '', description: '' }); }} style={styles.subStepBack}>← Back</button>
+                          <div>
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Create New Group</div>
+                            <div style={{ fontSize: '10px', color: '#94a3b8' }}>Auto-selected after creation</div>
+                          </div>
+                        </div>
+                        <form onSubmit={handleQuickGroupCreate}>
+                          <div style={styles.formGroup}>
+                            <label style={styles.label}>Group Name *</label>
+                            <input style={styles.input} value={quickGroupForm.name} onChange={e => setQuickGroupForm({ ...quickGroupForm, name: e.target.value })} required placeholder="e.g., Sales Team" />
+                          </div>
+                          <div style={styles.formGroup}>
+                            <label style={styles.label}>Description</label>
+                            <input style={styles.input} value={quickGroupForm.description} onChange={e => setQuickGroupForm({ ...quickGroupForm, description: e.target.value })} placeholder="Brief description" />
+                          </div>
+                          <button type="submit" style={styles.submitBtn}>Create Group</button>
+                        </form>
+                      </div>
+                    )}
+
+                    {/* Normal step 2: Role & Group selectors */}
+                    {!subStep && (
+                      <>
+                        {/* Roles */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label style={{ ...styles.label, marginBottom: 0 }}>Assign Role(s)</label>
+                            <button type="button" onClick={() => { setQuickRoleForm({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] }); setSubStep('create-role'); }} style={styles.createNewBtn}>+ Create new role</button>
+                          </div>
+                          <div style={{ position: 'relative' }}>
+                            <button type="button" onClick={() => { setShowRoleDropdown(p => !p); setShowGroupDropdown(false); }} style={styles.dropdownTrigger}>
+                              <span>{userForm.roles.length > 0 ? `${userForm.roles.length} role(s) selected` : 'Select roles...'}</span>
+                              <span>▾</span>
+                            </button>
+                            {showRoleDropdown && (
+                              <div style={styles.dropdownList}>
+                                {roles.length === 0
+                                  ? <div style={{ padding: '12px', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>No roles yet — create one above</div>
+                                  : roles.map(r => (
+                                    <label key={r._id} style={{ ...styles.dropdownItem, background: userForm.roles.includes(r._id) ? '#eff6ff' : '#fff' }}>
+                                      <input type="checkbox" checked={userForm.roles.includes(r._id)} onChange={() => { const n = userForm.roles.includes(r._id) ? userForm.roles.filter(i => i !== r._id) : [...userForm.roles, r._id]; setUserForm({ ...userForm, roles: n }); }} style={{ accentColor: '#3b82f6' }} />
+                                      <span style={{ color: userForm.roles.includes(r._id) ? '#1d4ed8' : '#1e293b', fontWeight: userForm.roles.includes(r._id) ? '600' : '400' }}>{r.name}</span>
+                                    </label>
+                                  ))}
+                              </div>
+                            )}
+                            {userForm.roles.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                {userForm.roles.map(id => { const r = roles.find(r => r._id === id); return r ? <span key={id} style={styles.tagBlue}>{r.name}<button type="button" onClick={() => setUserForm({ ...userForm, roles: userForm.roles.filter(i => i !== id) })} style={styles.tagX}>×</button></span> : null; })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Groups */}
+                        <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label style={{ ...styles.label, marginBottom: 0 }}>Add to Group(s) <span style={{ color: '#94a3b8', fontWeight: 400 }}>— optional</span></label>
+                            <button type="button" onClick={() => { setQuickGroupForm({ name: '', description: '' }); setSubStep('create-group'); }} style={styles.createNewBtn}>+ Create new group</button>
+                          </div>
+                          <div style={{ position: 'relative' }}>
+                            <button type="button" onClick={() => { setShowGroupDropdown(p => !p); setShowRoleDropdown(false); }} style={styles.dropdownTrigger}>
+                              <span>{userForm.groups.length > 0 ? `${userForm.groups.length} group(s) selected` : 'Select groups...'}</span>
+                              <span>▾</span>
+                            </button>
+                            {showGroupDropdown && (
+                              <div style={styles.dropdownList}>
+                                {groups.length === 0
+                                  ? <div style={{ padding: '12px', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>No groups yet — create one above</div>
+                                  : groups.map(g => (
+                                    <label key={g._id} style={{ ...styles.dropdownItem, background: userForm.groups.includes(g._id) ? '#f0fdf4' : '#fff' }}>
+                                      <input type="checkbox" checked={userForm.groups.includes(g._id)} onChange={() => { const n = userForm.groups.includes(g._id) ? userForm.groups.filter(i => i !== g._id) : [...userForm.groups, g._id]; setUserForm({ ...userForm, groups: n }); }} style={{ accentColor: '#16a34a' }} />
+                                      <span style={{ color: userForm.groups.includes(g._id) ? '#16a34a' : '#1e293b', fontWeight: userForm.groups.includes(g._id) ? '600' : '400' }}>{g.name}</span>
+                                    </label>
+                                  ))}
+                              </div>
+                            )}
+                            {userForm.groups.length > 0 && (
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                                {userForm.groups.map(id => { const g = groups.find(g => g._id === id); return g ? <span key={id} style={styles.tagGreen}>{g.name}<button type="button" onClick={() => setUserForm({ ...userForm, groups: userForm.groups.filter(i => i !== id) })} style={styles.tagX}>×</button></span> : null; })}
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
+                            {!editingItem && <button type="button" onClick={() => setUserStep(1)} disabled={submitting} style={styles.backBtn}>← Back</button>}
+                            <button type="button" onClick={handleUserSubmit} disabled={submitting} style={{ ...styles.submitBtn, flex: 1, marginTop: 0, opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>
+                              {submitting ? (editingItem ? 'Updating...' : 'Creating...') : (editingItem ? 'Update User' : 'Create User')}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Right: Table */}
+          <div style={{ flex: 1, minWidth: 0 }}>
           <div style={styles.tableCard}>
             <div className="tm-table-wrapper">
             {loading ? <div style={styles.loading}>Loading...</div> : (
@@ -391,86 +791,18 @@ const TeamManagement = () => {
               <div style={styles.empty}>No {activeTab} found</div>
             )}
           </div>
+          </div>{/* end table wrapper */}
+          </div>{/* end split layout */}
         </div>
 
-        {/* Right Panel */}
-        {showPanel && (
+        {/* Side Panel — Role & Group only */}
+        {showPanel && panelMode !== 'user' && (
           <div className="tm-panel" style={styles.panel}>
             <div style={styles.panelHeader}>
-              <h3 style={styles.panelTitle}>{editingItem ? 'Edit' : 'Add'} {panelMode === 'user' ? 'User' : panelMode === 'role' ? 'Role' : 'Group'}</h3>
+              <h3 style={styles.panelTitle}>{editingItem ? 'Edit' : 'Add'} {panelMode === 'role' ? 'Role' : 'Group'}</h3>
               <button onClick={closePanel} style={styles.closeBtn}>×</button>
             </div>
             <div style={styles.panelBody}>
-              {/* User Form */}
-              {panelMode === 'user' && (
-                <form onSubmit={handleUserSubmit}>
-                  <div style={styles.formGrid}>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>First Name</label>
-                      <input style={styles.input} value={userForm.firstName} onChange={e => setUserForm({ ...userForm, firstName: e.target.value })} required />
-                    </div>
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Last Name</label>
-                      <input style={styles.input} value={userForm.lastName} onChange={e => setUserForm({ ...userForm, lastName: e.target.value })} required />
-                    </div>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Email</label>
-                    <input type="email" style={styles.input} value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} required disabled={!!editingItem} />
-                  </div>
-                  {!editingItem && (
-                    <div style={styles.formGroup}>
-                      <label style={styles.label}>Password</label>
-                      <input type="password" style={styles.input} value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} required minLength={6} />
-                    </div>
-                  )}
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>User Type</label>
-                    <select style={styles.input} value={userForm.userType} onChange={e => setUserForm({ ...userForm, userType: e.target.value, roles: [] })}>
-                      <option value="TENANT_USER">Tenant User</option>
-                      <option value="TENANT_MANAGER">Tenant Manager</option>
-                      <option value="TENANT_ADMIN">Tenant Admin</option>
-                    </select>
-                    <span style={{ fontSize: '10px', color: '#64748b', marginTop: '4px', display: 'block' }}>
-                      {userForm.userType === 'TENANT_ADMIN' ? '⚡ Full access to all features' : userForm.userType === 'TENANT_MANAGER' ? '📊 Can manage team & view reports' : '👤 Access based on assigned roles'}
-                    </span>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Phone</label>
-                    <input style={styles.input} value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} />
-                  </div>
-                  {userForm.userType === 'TENANT_ADMIN' ? (
-                    <div style={{ padding: '12px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fbbf24', marginBottom: '12px' }}>
-                      <span style={{ fontSize: '11px', color: '#92400e' }}>⚡ <strong>Tenant Admin</strong> has full access. No roles needed.</span>
-                    </div>
-                  ) : (
-                    <>
-                      {roles.filter(r => r.forUserTypes?.includes(userForm.userType) || !r.forUserTypes).length > 0 ? (
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Assign Roles</label>
-                          <div style={styles.chipContainer}>
-                            {roles.filter(r => r.forUserTypes?.includes(userForm.userType) || !r.forUserTypes).map(r => (
-                              <label key={r._id} style={{ ...styles.chip, ...(userForm.roles.includes(r._id) ? styles.chipActive : {}) }}>
-                                <input type="checkbox" checked={userForm.roles.includes(r._id)} onChange={() => {
-                                  const newRoles = userForm.roles.includes(r._id) ? userForm.roles.filter(id => id !== r._id) : [...userForm.roles, r._id];
-                                  setUserForm({ ...userForm, roles: newRoles });
-                                }} style={{ display: 'none' }} />
-                                {r.name}
-                              </label>
-                            ))}
-                          </div>
-                        </div>
-                      ) : (
-                        <div style={{ padding: '12px', background: '#f1f5f9', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-                          <span style={{ fontSize: '11px', color: '#64748b' }}>ℹ️ No roles available for {getUserTypeLabel(userForm.userType)}. Create a role first.</span>
-                        </div>
-                      )}
-                    </>
-                  )}
-                  <button type="submit" style={styles.submitBtn}>{editingItem ? 'Update' : 'Create'} User</button>
-                </form>
-              )}
-
               {/* Role Form */}
               {panelMode === 'role' && (
                 <form onSubmit={handleRoleSubmit}>
@@ -572,6 +904,8 @@ const TeamManagement = () => {
           </div>
         )}
       </div>
+
+
     </DashboardLayout>
   );
 };
@@ -688,7 +1022,25 @@ const styles = {
   chipActive: { background: '#dbeafe', border: '1px solid #3b82f6', color: '#1d4ed8' },
   chipActiveGreen: { background: '#dcfce7', border: '1px solid #16a34a', color: '#16a34a' },
   permTable: { border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden', maxHeight: '350px', overflowY: 'auto' },
-  submitBtn: { width: '100%', padding: '10px', border: 'none', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', marginTop: '8px' }
+  submitBtn: { width: '100%', padding: '10px', border: 'none', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', marginTop: '8px' },
+  dropdownTrigger: { width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', background: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#1e293b', textAlign: 'left' },
+  dropdownList: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '160px', overflowY: 'auto' },
+  dropdownItem: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #f1f5f9' },
+  // Modal
+  overlay: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' },
+  modal: { background: '#fff', borderRadius: '14px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' },
+  modalHeader: { padding: '16px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 },
+  modalBody: { padding: '16px 18px', overflowY: 'auto', flex: 1 },
+  createNewBtn: { background: 'none', border: 'none', color: '#3b82f6', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: 0, whiteSpace: 'nowrap' },
+  backBtn: { padding: '9px 16px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#f8fafc', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
+  tagBlue: { padding: '2px 8px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '10px', fontSize: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' },
+  tagGreen: { padding: '2px 8px', background: '#dcfce7', color: '#16a34a', borderRadius: '10px', fontSize: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' },
+  tagX: { background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '12px', lineHeight: 1, opacity: 0.7 },
+  subStepBack: { padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#f8fafc', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
+  // Inline form card (below stats, above table)
+  inlineFormCard: { width: '360px', flexShrink: 0, background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', overflow: 'visible' },
+  inlineFormBody: { padding: '14px 16px' },
+  inlineFormGrid: { display: 'flex', flexDirection: 'column', gap: '0px' }
 };
 
 export default TeamManagement;

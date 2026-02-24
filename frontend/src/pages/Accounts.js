@@ -98,6 +98,7 @@ const Accounts = () => {
         setStats({ total: response.data.pagination?.total || 0, customers, prospects, partners });
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.response?.data?.message || 'Failed to load accounts');
     } finally {
       setLoading(false);
@@ -157,7 +158,7 @@ const Accounts = () => {
       resetForm();
       loadAccounts();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.response?.data?.message || 'Failed to create account'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create account'); }
   };
 
   const resetForm = () => {
@@ -268,7 +269,7 @@ const Accounts = () => {
       if (response?.success) setSelectedAccountData(response.data);
       loadAccounts();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to update account'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to update account'); }
   };
 
   const handleDetailEditChange = (e) => {
@@ -284,7 +285,7 @@ const Accounts = () => {
       closeSidePanel();
       loadAccounts();
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { setError(err.message || 'Failed to delete account'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to delete account'); }
   };
 
   const canCreateAccount = hasPermission('account_management', 'create');

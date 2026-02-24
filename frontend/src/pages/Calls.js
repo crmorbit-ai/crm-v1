@@ -89,6 +89,7 @@ const Calls = () => {
       const data = await response.json();
       if (data.success) setCalls(data.data.calls || []);
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       console.error(err);
       setError('Failed to load calls');
     } finally {
@@ -119,6 +120,7 @@ const Calls = () => {
         setError(data.message || 'Failed to log call');
       }
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError('Failed to log call');
     }
   };

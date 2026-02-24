@@ -31,6 +31,15 @@ const profileService = {
     });
   },
 
+  // Upload organization logo as file (multipart/form-data)
+  uploadLogo: async (file) => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    return await api.post('/profile/upload-logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+
   // Update organization information (including logo, contacts, address, digital presence)
   updateOrganization: async (data) => {
     // Clean up empty nested objects

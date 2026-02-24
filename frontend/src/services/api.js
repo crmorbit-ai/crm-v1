@@ -41,6 +41,13 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
 
+      // Handle 403 permission denied — show global toast
+      if (error.response.status === 403) {
+        const msg = error.response.data?.message || 'You do not have permission to perform this action';
+        window.dispatchEvent(new CustomEvent('app:permission-denied', { detail: { message: msg } }));
+        return Promise.reject({ ...(error.response.data || {}), isPermissionDenied: true });
+      }
+
       return Promise.reject(error.response.data);
     }
     return Promise.reject(error);

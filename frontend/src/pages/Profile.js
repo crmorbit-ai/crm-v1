@@ -270,28 +270,28 @@ const Profile = () => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith('image/')) { alert('Please upload an image file'); return; }
-    if (file.size > 2 * 1024 * 1024) { alert('Image size should be less than 2MB'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image size should be less than 5MB'); return; }
 
     try {
       setUploadingLogo(true);
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const logoData = reader.result;
-        setEditedOrg(prev => ({ ...prev, logo: logoData }));
+      // Show instant preview using object URL (no base64)
+      const previewUrl = URL.createObjectURL(file);
+      setEditedOrg(prev => ({ ...prev, _logoPreview: previewUrl }));
 
-        // Auto-save logo to backend
-        try {
-          await profileService.updateOrganization({ logo: logoData });
-          setTenant(prev => ({ ...prev, logo: logoData }));
-          alert('Logo updated successfully!');
-        } catch (err) {
-          console.error('Logo save error:', err);
-          alert('Error saving logo');
-        }
-        setUploadingLogo(false);
-      };
-      reader.readAsDataURL(file);
-    } catch (error) { console.error('Logo upload error:', error); alert('Error uploading logo'); setUploadingLogo(false); }
+      // Upload as multipart/form-data — no base64, no payload size issue
+      const response = await profileService.uploadLogo(file);
+      const savedLogoPath = response.data?.data?.logo || response.data?.logo;
+
+      setEditedOrg(prev => ({ ...prev, logo: savedLogoPath, _logoPreview: null }));
+      setTenant(prev => ({ ...prev, logo: savedLogoPath }));
+      alert('Logo updated successfully!');
+    } catch (err) {
+      console.error('Logo upload error:', err);
+      alert(err.response?.data?.message || 'Error uploading logo');
+      setEditedOrg(prev => ({ ...prev, _logoPreview: null }));
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   const handleOrgSave = async () => {
@@ -365,8 +365,15 @@ const Profile = () => {
                 onMouseEnter={(e) => (e.currentTarget.querySelector('.overlay').style.opacity = 1)}
                 onMouseLeave={(e) => (e.currentTarget.querySelector('.overlay').style.opacity = 0)}
               >
-                {(editedOrg.logo || tenant?.logo) ? (
-                  <img src={editedOrg.logo || tenant?.logo} alt="Logo" style={styles.logoImg} />
+                {(editedOrg._logoPreview || editedOrg.logo || tenant?.logo) ? (
+                  <img src={(() => {
+                    // Priority: instant preview > saved path > tenant path
+                    if (editedOrg._logoPreview) return editedOrg._logoPreview;
+                    const l = editedOrg.logo || tenant?.logo;
+                    if (!l) return null;
+                    if (l.startsWith('http') || l.startsWith('data:')) return l;
+                    return `${API_URL.replace(/\/api$/, '')}${l}`;
+                  })()} alt="Logo" style={styles.logoImg} />
                 ) : (
                   <span style={styles.logoInitials}>{getOrgInitials()}</span>
                 )}

@@ -111,6 +111,7 @@ const RFIForm = () => {
         dueDate: rfi.dueDate ? new Date(rfi.dueDate).toISOString().split('T')[0] : ''
       });
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to fetch RFI');
     } finally {
       setLoading(false);
@@ -170,6 +171,7 @@ const RFIForm = () => {
       }
       navigate('/rfi');
     } catch (err) {
+      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to save RFI');
     } finally {
       setLoading(false);

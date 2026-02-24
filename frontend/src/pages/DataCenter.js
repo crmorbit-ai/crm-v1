@@ -123,6 +123,7 @@ const DataCenter = () => {
 
       setStats({ total: response.data.pagination.total, available, immediate, thisWeek });
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Error loading candidates:', error);
       alert('Failed to load candidates');
     } finally {
@@ -215,6 +216,7 @@ const DataCenter = () => {
       if (fileInputRef.current) fileInputRef.current.value = '';
       loadCandidates();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Upload error:', error);
       alert('Failed to upload file. Please check the format.');
     } finally {
@@ -237,6 +239,7 @@ const DataCenter = () => {
       setShowMoveForm(false);
       loadCandidates();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Error moving to leads:', error);
       alert('Failed to move candidates to leads');
     }
@@ -253,6 +256,7 @@ const DataCenter = () => {
       setSelectedCandidates([]);
       loadCandidates();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Error deleting candidates:', error);
       alert('Failed to delete candidates');
     }
@@ -271,6 +275,7 @@ const DataCenter = () => {
       link.remove();
       window.URL.revokeObjectURL(url);
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Export error:', error);
       alert('Failed to export candidates');
     }
@@ -293,6 +298,7 @@ const DataCenter = () => {
       setShowCreateForm(false);
       loadCandidates();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Create candidate error:', error);
       alert(error.response?.data?.message || 'Failed to create candidate');
     }
@@ -355,6 +361,7 @@ const DataCenter = () => {
       closeSidePanel();
       loadCandidates();
     } catch (error) {
+      if (error?.isPermissionDenied) return;
       console.error('Error moving to lead:', error);
       alert('Failed to move to leads');
     }
