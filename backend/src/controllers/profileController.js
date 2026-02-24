@@ -4,6 +4,24 @@ const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const bcrypt = require('bcryptjs');
 const { sendWelcomeEmail } = require('../utils/emailService');
+const cloudinary = require('../config/cloudinary');
+
+// Helper: upload a file buffer to Cloudinary
+const uploadToCloudinary = (buffer, mimetype, folder, publicId) => {
+  return new Promise((resolve, reject) => {
+    const b64 = Buffer.from(buffer).toString('base64');
+    const dataURI = `data:${mimetype};base64,${b64}`;
+    cloudinary.uploader.upload(dataURI, {
+      folder,
+      public_id: publicId,
+      overwrite: true,
+      resource_type: 'image',
+    }, (error, result) => {
+      if (error) reject(error);
+      else resolve(result);
+    });
+  });
+};
 
 /**
  * @desc    Get current user profile with organization details
@@ -159,24 +177,26 @@ const updatePassword = async (req, res) => {
  */
 const uploadProfilePicture = async (req, res) => {
   try {
-    // This endpoint expects file upload via multer
-    // The actual file upload logic would be handled by multer middleware
-
     if (!req.file) {
       return errorResponse(res, 'Please upload an image file', 400);
     }
 
     const user = await User.findById(req.user._id);
-
     if (!user) {
       return errorResponse(res, 'User not found', 404);
     }
 
-    // Store file path or URL (depending on storage strategy)
-    user.profilePicture = req.file.path || `/uploads/${req.file.filename}`;
+    // Upload to Cloudinary — permanent URL, works on Vercel
+    const result = await uploadToCloudinary(
+      req.file.buffer,
+      req.file.mimetype,
+      'crm/profile-pictures',
+      `user-${req.user._id}`
+    );
+
+    user.profilePicture = result.secure_url;
     await user.save();
 
-    // Log activity
     await logActivity({
       user: req.user._id,
       tenant: req.user.tenant,
@@ -347,8 +367,15 @@ const uploadLogo = async (req, res) => {
       return errorResponse(res, 'Organization not found', 404);
     }
 
-    const logoPath = `/uploads/logos/${req.file.filename}`;
-    tenant.logo = logoPath;
+    // Upload to Cloudinary — permanent URL, works on Vercel
+    const result = await uploadToCloudinary(
+      req.file.buffer,
+      req.file.mimetype,
+      'crm/logos',
+      `tenant-${req.user.tenant}-logo`
+    );
+
+    tenant.logo = result.secure_url;
     await tenant.save();
 
     await logActivity({
@@ -360,7 +387,7 @@ const uploadLogo = async (req, res) => {
       description: 'Organization logo updated'
     });
 
-    return successResponse(res, { logo: logoPath }, 'Logo updated successfully');
+    return successResponse(res, { logo: result.secure_url }, 'Logo updated successfully');
   } catch (error) {
     console.error('Upload logo error:', error);
     return errorResponse(res, 'Error uploading logo', 500);

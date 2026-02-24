@@ -17,8 +17,18 @@ const {
   changePassword
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
-const upload = require('../config/multer'); // For logo uploads
+const multer = require('multer');
 const passport = require('../config/passport'); // For Google OAuth
+// Memory storage — logo goes to Cloudinary, no disk needed
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only image files are allowed'), false);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 // ════════════════════════════════════════════════════════════════
 // PUBLIC ROUTES

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
 const {
   getProfile,
   updateProfile,
@@ -9,7 +10,17 @@ const {
   uploadLogo
 } = require('../controllers/profileController');
 const { protect } = require('../middleware/auth');
-const upload = require('../config/multer');
+
+// Memory storage for image uploads — files go to Cloudinary, no disk needed
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (req, file, cb) => {
+    const allowed = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowed.includes(file.mimetype)) cb(null, true);
+    else cb(new Error('Only image files are allowed (JPEG, PNG, GIF, WebP)'), false);
+  },
+  limits: { fileSize: 5 * 1024 * 1024 } // 5 MB
+});
 
 // ════════════════════════════════════════════════════════════════
 // PROFILE ROUTES
@@ -27,12 +38,12 @@ router.route('/')
 router.put('/password', updatePassword);
 
 // Upload profile picture
-router.post('/upload-picture', uploadProfilePicture);
+router.post('/upload-picture', imageUpload.single('profilePicture'), uploadProfilePicture);
 
 // Update organization information
 router.put('/organization', updateOrganization);
 
-// Upload organization logo (multipart)
-router.post('/upload-logo', upload.single('logo'), uploadLogo);
+// Upload organization logo (multipart → Cloudinary)
+router.post('/upload-logo', imageUpload.single('logo'), uploadLogo);
 
 module.exports = router;

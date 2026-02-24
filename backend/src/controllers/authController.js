@@ -10,6 +10,18 @@ const bcrypt = require('bcryptjs');
 const { sendPasswordResetOTP, sendSignupVerificationOTP, sendWelcomeEmail } = require('../utils/emailService');
 const Role = require('../models/Role');
 const { seedStandardFields } = require('../utils/seedStandardFields');
+const cloudinary = require('../config/cloudinary');
+
+// Upload buffer to Cloudinary
+const uploadBufferToCloudinary = (buffer, mimetype, folder, publicId) => {
+  return new Promise((resolve, reject) => {
+    const b64 = Buffer.from(buffer).toString('base64');
+    const dataURI = `data:${mimetype};base64,${b64}`;
+    cloudinary.uploader.upload(dataURI, { folder, public_id: publicId, overwrite: true, resource_type: 'image' },
+      (error, result) => { if (error) reject(error); else resolve(result); }
+    );
+  });
+};
 
 /**
  * Generate 6-digit OTP
@@ -806,10 +818,19 @@ const completeProfile = async (req, res) => {
       return errorResponse(res, 400, 'Organization slug already exists. Please choose another.');
     }
 
-    // Handle logo upload (if provided)
+    // Handle logo upload (if provided) — upload to Cloudinary
     let logoPath = null;
     if (req.file) {
-      logoPath = `/uploads/logos/${req.file.filename}`;
+      try {
+        const result = await uploadBufferToCloudinary(
+          req.file.buffer, req.file.mimetype,
+          'crm/logos', `tenant-setup-${Date.now()}-logo`
+        );
+        logoPath = result.secure_url;
+      } catch (cloudErr) {
+        console.error('Logo upload to Cloudinary failed:', cloudErr);
+        // Continue without logo if upload fails
+      }
     }
 
     // Get Free subscription plan

@@ -5,39 +5,30 @@ const Tenant = require('../models/Tenant');
 const { logActivity } = require('../middleware/activityLogger');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs');
+const cloudinary = require('../config/cloudinary');
 
-// Use /tmp for Vercel serverless, uploads for local
-const getUploadsDir = () => {
-  if (process.env.VERCEL) {
-    return '/tmp/purchase-orders';
-  }
-  return path.join(__dirname, '../../uploads/purchase-orders');
+// Upload file buffer to Cloudinary (supports PDF, DOC, images)
+const uploadDocToCloudinary = (buffer, mimetype, originalname) => {
+  return new Promise((resolve, reject) => {
+    const b64 = Buffer.from(buffer).toString('base64');
+    const dataURI = `data:${mimetype};base64,${b64}`;
+    const ext = path.extname(originalname).toLowerCase().replace('.', '');
+    // Use 'raw' for documents (PDF/DOC/DOCX), 'image' for images
+    const resourceType = ['jpg', 'jpeg', 'png'].includes(ext) ? 'image' : 'raw';
+    cloudinary.uploader.upload(dataURI, {
+      folder: 'crm/purchase-orders',
+      public_id: `PO-${Date.now()}-${Math.round(Math.random() * 1e9)}`,
+      overwrite: true,
+      resource_type: resourceType,
+    }, (error, result) => {
+      if (error) reject(error);
+      else resolve(result);
+    });
+  });
 };
 
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    const uploadsDir = getUploadsDir();
-
-    // Create directory if it doesn't exist (try-catch to handle read-only filesystems)
-    try {
-      if (!fs.existsSync(uploadsDir)) {
-        fs.mkdirSync(uploadsDir, { recursive: true });
-      }
-      cb(null, uploadsDir);
-    } catch (error) {
-      console.error('Error creating upload directory:', error);
-      cb(error);
-    }
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, 'PO-' + uniqueSuffix + path.extname(file.originalname));
-  }
-});
-
 const upload = multer({
-  storage: storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /pdf|doc|docx|jpg|jpeg|png/;
@@ -85,9 +76,10 @@ exports.createPurchaseOrder = async (req, res) => {
     }
 
     if (req.file) {
+      const result = await uploadDocToCloudinary(req.file.buffer, req.file.mimetype, req.file.originalname);
       poData.poDocument = {
-        filename: req.file.filename,
-        path: req.file.path,
+        filename: req.file.originalname,
+        path: result.secure_url,
         uploadedAt: new Date()
       };
     }
@@ -226,14 +218,10 @@ exports.updatePurchaseOrder = async (req, res) => {
     }
 
     if (req.file) {
-      if (purchaseOrder.poDocument && purchaseOrder.poDocument.path) {
-        if (fs.existsSync(purchaseOrder.poDocument.path)) {
-          fs.unlinkSync(purchaseOrder.poDocument.path);
-        }
-      }
+      const result = await uploadDocToCloudinary(req.file.buffer, req.file.mimetype, req.file.originalname);
       req.body.poDocument = {
-        filename: req.file.filename,
-        path: req.file.path,
+        filename: req.file.originalname,
+        path: result.secure_url,
         uploadedAt: new Date()
       };
     }
@@ -278,12 +266,6 @@ exports.deletePurchaseOrder = async (req, res) => {
         success: false,
         message: 'Cannot delete purchase order that has been converted to invoice'
       });
-    }
-
-    if (purchaseOrder.poDocument && purchaseOrder.poDocument.path) {
-      if (fs.existsSync(purchaseOrder.poDocument.path)) {
-        fs.unlinkSync(purchaseOrder.poDocument.path);
-      }
     }
 
     await purchaseOrder.deleteOne();
@@ -487,18 +469,8 @@ exports.downloadPODocument = async (req, res) => {
       });
     }
 
-    if (!fs.existsSync(purchaseOrder.poDocument.path)) {
-      return res.status(404).json({
-        success: false,
-        message: 'Document file not found'
-      });
-    }
-
-    res.download(purchaseOrder.poDocument.path, purchaseOrder.poDocument.filename, (err) => {
-      if (err) {
-        console.error('Error downloading PO document:', err);
-      }
-    });
+    // Redirect to the Cloudinary URL for direct download
+    return res.redirect(purchaseOrder.poDocument.path);
   } catch (error) {
     console.error('Error downloading PO document:', error);
     res.status(500).json({
