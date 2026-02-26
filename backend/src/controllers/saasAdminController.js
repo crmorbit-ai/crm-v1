@@ -43,8 +43,11 @@ const getAllSaasAdmins = async (req, res) => {
       .populate('addedBy', 'firstName lastName email')
       .sort({ createdAt: -1 });
 
-    // Get primary owner email from env
-    const primaryEmail = process.env.SAAS_OWNER_EMAIL?.toLowerCase();
+    // All emails in SAAS_ADMIN_EMAILS are primary owners
+    const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e);
 
     const formattedAdmins = admins.map(admin => ({
       _id: admin._id,
@@ -58,7 +61,7 @@ const getAllSaasAdmins = async (req, res) => {
       createdAt: admin.createdAt,
       addedBy: admin.addedBy,
       authProvider: admin.authProvider,
-      isPrimary: admin.email.toLowerCase() === primaryEmail
+      isPrimary: saasAdminEmails.includes(admin.email.toLowerCase())
     }));
 
     successResponse(res, 200, 'SAAS Admins fetched', { admins: formattedAdmins });
@@ -423,8 +426,12 @@ const resetPassword = async (req, res) => {
  */
 const getMyProfile = async (req, res) => {
   try {
-    const primaryEmail = process.env.SAAS_OWNER_EMAIL?.toLowerCase();
-    const isPrimary = req.user.email.toLowerCase() === primaryEmail;
+    // All emails in SAAS_ADMIN_EMAILS are treated as primary owners
+    const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e);
+    const isPrimary = saasAdminEmails.includes(req.user.email.toLowerCase());
 
     successResponse(res, 200, 'Profile fetched', {
       user: {

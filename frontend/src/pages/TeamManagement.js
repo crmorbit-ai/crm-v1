@@ -58,33 +58,26 @@ const TeamManagement = () => {
   const [quickRoleForm, setQuickRoleForm] = useState({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
   const [quickGroupForm, setQuickGroupForm] = useState({ name: '', description: '' });
 
-  const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [], groups: [] });
+  const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', loginName: '', department: '', viewingPin: '', roles: [], groups: [] });
+  const [showPassword, setShowPassword] = useState(false);
+  const [showPin, setShowPin] = useState(false);
   const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
   const [groupForm, setGroupForm] = useState({ name: '', description: '', members: [] });
   const [submitting, setSubmitting] = useState(false);
 
-  const VIEWER_PERMISSIONS = [
-    { feature: 'user_management', actions: ['read'] },
-    { feature: 'role_management', actions: ['read'] },
-    { feature: 'group_management', actions: ['read'] },
-    { feature: 'lead_management', actions: ['read'] },
-    { feature: 'contact_management', actions: ['read'] },
-    { feature: 'account_management', actions: ['read'] },
-    { feature: 'opportunity_management', actions: ['read'] },
-    { feature: 'data_center', actions: ['read'] },
-    { feature: 'quotation_management', actions: ['read'] },
-    { feature: 'invoice_management', actions: ['read'] },
-    { feature: 'purchase_order_management', actions: ['read'] },
-    { feature: 'rfi_management', actions: ['read'] },
-    { feature: 'product_management', actions: ['read'] },
-    { feature: 'task_management', actions: ['read'] },
-    { feature: 'meeting_management', actions: ['read'] },
-    { feature: 'call_management', actions: ['read'] },
-    { feature: 'email_management', actions: ['read'] },
-    { feature: 'subscription_management', actions: ['read'] },
-    { feature: 'field_management', actions: ['read'] },
-    { feature: 'audit_logs', actions: ['read'] },
+  const ALL_FEATURES = [
+    'user_management', 'role_management', 'group_management',
+    'lead_management', 'contact_management', 'account_management',
+    'opportunity_management', 'data_center', 'quotation_management',
+    'invoice_management', 'purchase_order_management', 'rfi_management',
+    'product_management', 'task_management', 'meeting_management',
+    'call_management', 'email_management', 'subscription_management',
+    'field_management', 'audit_logs',
   ];
+
+  const USER_PERMISSIONS = ALL_FEATURES.map(f => ({ feature: f, actions: ['read'] }));
+  const MANAGER_PERMISSIONS = ALL_FEATURES.map(f => ({ feature: f, actions: ['create', 'read', 'update'] }));
+  const ADMIN_PERMISSIONS = ALL_FEATURES.map(f => ({ feature: f, actions: ['create', 'read', 'update', 'delete', 'manage'] }));
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -98,23 +91,49 @@ const TeamManagement = () => {
       const customRoles = (rolesRes.roles || []).filter(r => r.roleType !== 'system');
       const fetchedGroups = groupsRes.groups || [];
 
-      // Auto-seed defaults for tenants that don't have them yet
-      const needsViewerRole = !customRoles.some(r => r.name === 'Viewer');
+      // Auto-seed defaults: create if missing, update if exists (fixes wrong slugs)
+      const existingUser    = customRoles.find(r => r.name === 'User');
+      const existingManager = customRoles.find(r => r.name === 'Manager');
+      const existingAdmin   = customRoles.find(r => r.name === 'Admin');
       const needsMonitoringGroup = !fetchedGroups.some(g => g.name === 'Monitoring Group');
 
       const seeds = [];
-      if (needsViewerRole) {
-        seeds.push(
-          roleService.createRole({
-            name: 'Viewer',
-            slug: 'viewer',
-            description: 'Read-only access to all features',
-            permissions: VIEWER_PERMISSIONS,
-            forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
-            level: 1,
-          }).catch(() => {}) // silently skip if already exists
-        );
-      }
+
+      const upsertRole = (existing, createData) => {
+        if (existing) {
+          return roleService.updateRole(existing._id, {
+            permissions: createData.permissions,
+            forUserTypes: createData.forUserTypes,
+            level: createData.level,
+          }).catch(() => {});
+        }
+        return roleService.createRole(createData).catch(() => {});
+      };
+
+      seeds.push(upsertRole(existingUser, {
+        name: 'User',
+        slug: 'user',
+        description: 'Read-only access to all features',
+        permissions: USER_PERMISSIONS,
+        forUserTypes: ['TENANT_USER'],
+        level: 10,
+      }));
+      seeds.push(upsertRole(existingManager, {
+        name: 'Manager',
+        slug: 'manager',
+        description: 'Create, read and update access to all features',
+        permissions: MANAGER_PERMISSIONS,
+        forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
+        level: 50,
+      }));
+      seeds.push(upsertRole(existingAdmin, {
+        name: 'Admin',
+        slug: 'admin',
+        description: 'Full access to all features',
+        permissions: ADMIN_PERMISSIONS,
+        forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
+        level: 100,
+      }));
       if (needsMonitoringGroup) {
         seeds.push(
           groupService.createGroup({
@@ -126,19 +145,14 @@ const TeamManagement = () => {
         );
       }
 
-      if (seeds.length > 0) {
-        await Promise.all(seeds);
-        // Re-fetch to get the freshly created defaults
-        const [rolesRes2, groupsRes2] = await Promise.all([
-          roleService.getRoles({ limit: 100 }),
-          groupService.getGroups({ limit: 100 })
-        ]);
-        setRoles((rolesRes2.roles || []).filter(r => r.roleType !== 'system'));
-        setGroups(groupsRes2.groups || []);
-      } else {
-        setRoles(customRoles);
-        setGroups(fetchedGroups);
-      }
+      await Promise.all(seeds);
+      // Re-fetch to get latest roles/groups after upsert
+      const [rolesRes2, groupsRes2] = await Promise.all([
+        roleService.getRoles({ limit: 100 }),
+        groupService.getGroups({ limit: 100 })
+      ]);
+      setRoles((rolesRes2.roles || []).filter(r => r.roleType !== 'system'));
+      setGroups(groupsRes2.groups || []);
     } catch (err) {
       if (err?.isPermissionDenied) return;
       setError('Failed to load data');
@@ -172,8 +186,10 @@ const TeamManagement = () => {
     setShowRoleDropdown(false);
     setShowGroupDropdown(false);
     const userGroups = u ? groups.filter(g => g.members?.some(m => (m._id || m) === u._id)).map(g => g._id) : [];
-    setUserForm(u ? { firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', userType: u.userType, phone: u.phone || '', roles: u.roles?.map(r => r._id) || [], groups: userGroups }
-      : { firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', roles: [], groups: [] });
+    setShowPassword(false);
+    setShowPin(false);
+    setUserForm(u ? { firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', userType: u.userType, phone: u.phone || '', loginName: u.loginName || '', department: u.department || '', viewingPin: '', roles: u.roles?.map(r => r._id) || [], groups: userGroups }
+      : { firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', loginName: '', department: '', viewingPin: '', roles: [], groups: [] });
     setShowPanel(true);
   };
 
@@ -486,23 +502,142 @@ const TeamManagement = () => {
                       <div style={styles.formGrid}>
                         <div style={styles.formGroup}>
                           <label style={styles.label}>First Name *</label>
-                          <input style={styles.input} value={userForm.firstName} onChange={e => setUserForm({ ...userForm, firstName: e.target.value })} placeholder="John" />
+                          <input
+                            style={styles.input}
+                            value={userForm.firstName}
+                            onChange={e => {
+                              const fn = e.target.value;
+                              const generated = (fn + (userForm.lastName ? '.' + userForm.lastName : '')).toLowerCase().replace(/\s+/g, '');
+                              setUserForm(prev => ({ ...prev, firstName: fn, loginName: generated }));
+                            }}
+                            placeholder="John"
+                          />
                         </div>
                         <div style={styles.formGroup}>
                           <label style={styles.label}>Last Name *</label>
-                          <input style={styles.input} value={userForm.lastName} onChange={e => setUserForm({ ...userForm, lastName: e.target.value })} placeholder="Doe" />
+                          <input
+                            style={styles.input}
+                            value={userForm.lastName}
+                            onChange={e => {
+                              const ln = e.target.value;
+                              const generated = ((userForm.firstName ? userForm.firstName + '.' : '') + ln).toLowerCase().replace(/\s+/g, '');
+                              setUserForm(prev => ({ ...prev, lastName: ln, loginName: generated }));
+                            }}
+                            placeholder="Doe"
+                          />
                         </div>
+                      </div>
+                      <div style={styles.formGrid}>
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Email *</label>
+                          <input type="email" style={styles.input} value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} placeholder="john@company.com" disabled={!!editingItem} />
+                        </div>
+                        {!editingItem && (
+                          <div style={styles.formGroup}>
+                            <label style={styles.label}>Password *</label>
+                            <div style={{ position: 'relative' }}>
+                              <input
+                                type={showPassword ? 'text' : 'password'}
+                                style={{ ...styles.input, paddingRight: '36px' }}
+                                value={userForm.password}
+                                onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                                placeholder="Min. 6 characters"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowPassword(p => !p)}
+                                style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0', display: 'flex', alignItems: 'center' }}
+                                title={showPassword ? 'Hide password' : 'Show password'}
+                              >
+                                {showPassword ? (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                                    <line x1="1" y1="1" x2="23" y2="23"/>
+                                  </svg>
+                                ) : (
+                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                    <circle cx="12" cy="12" r="3"/>
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                       <div style={styles.formGroup}>
-                        <label style={styles.label}>Email *</label>
-                        <input type="email" style={styles.input} value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} placeholder="john@company.com" disabled={!!editingItem} />
+                        <label style={styles.label}>Login Name</label>
+                        <input
+                          style={{
+                            ...styles.input,
+                            borderColor: userForm.loginName && users.some(u => u.loginName === userForm.loginName && u._id !== editingItem?._id) ? '#ef4444' : undefined
+                          }}
+                          value={userForm.loginName}
+                          onChange={e => setUserForm({ ...userForm, loginName: e.target.value.toLowerCase().replace(/\s+/g, '') })}
+                          placeholder="john.doe"
+                        />
+                        {userForm.loginName && users.some(u => u.loginName === userForm.loginName && u._id !== editingItem?._id) && (
+                          <span style={{ fontSize: '10px', color: '#ef4444', marginTop: '3px', display: 'block' }}>
+                            This login name is already taken
+                          </span>
+                        )}
                       </div>
-                      {!editingItem && (
+                      <div style={styles.formGrid}>
                         <div style={styles.formGroup}>
-                          <label style={styles.label}>Password *</label>
-                          <input type="password" style={styles.input} value={userForm.password} onChange={e => setUserForm({ ...userForm, password: e.target.value })} placeholder="Min. 6 characters" />
+                          <label style={styles.label}>Department</label>
+                          <select style={styles.input} value={userForm.department} onChange={e => setUserForm({ ...userForm, department: e.target.value })}>
+                            <option value="">— Select Department —</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Human Resources">Human Resources</option>
+                            <option value="IT">IT</option>
+                            <option value="Customer Support">Customer Support</option>
+                            <option value="Product">Product</option>
+                            <option value="Legal">Legal</option>
+                            <option value="Administration">Administration</option>
+                          </select>
                         </div>
-                      )}
+                        <div style={styles.formGroup}>
+                          <label style={styles.label}>Set PIN (4 digits) {editingItem && <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 400 }}>— leave blank to keep existing</span>}</label>
+                          <div style={{ position: 'relative' }}>
+                            <input
+                              type={showPin ? 'text' : 'password'}
+                              style={{ ...styles.input, paddingRight: '36px', letterSpacing: showPin ? 'normal' : '4px' }}
+                              value={userForm.viewingPin}
+                              onChange={e => {
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
+                                setUserForm({ ...userForm, viewingPin: val });
+                              }}
+                              placeholder="4-digit PIN"
+                              maxLength={4}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPin(p => !p)}
+                              style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0', display: 'flex', alignItems: 'center' }}
+                            >
+                              {showPin ? (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                                  <line x1="1" y1="1" x2="23" y2="23"/>
+                                </svg>
+                              ) : (
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                                  <circle cx="12" cy="12" r="3"/>
+                                </svg>
+                              )}
+                            </button>
+                          </div>
+                          {userForm.viewingPin && userForm.viewingPin.length < 4 && (
+                            <span style={{ fontSize: '10px', color: '#f59e0b', marginTop: '3px', display: 'block' }}>PIN must be exactly 4 digits</span>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <div>
                       <div style={styles.formGroup}>

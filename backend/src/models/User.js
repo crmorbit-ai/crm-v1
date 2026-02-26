@@ -73,6 +73,14 @@ const userSchema = new mongoose.Schema({
   phone: {
     type: String
   },
+  loginName: {
+    type: String,
+    trim: true
+  },
+  department: {
+    type: String,
+    trim: true
+  },
   // For SAAS_OWNER and SAAS_ADMIN: their department/role in SAAS company
   saasRole: {
     type: String

@@ -46,8 +46,11 @@ const OAuthCallback = () => {
           // Update auth context
           setUser(userData);
 
+          // SAAS owners skip profile completion entirely
+          const isSaasOwner = userData.userType === 'SAAS_OWNER' || userData.userType === 'SAAS_ADMIN';
+
           // Check if profile completion is required
-          if (requiresProfileCompletion || !userData.isProfileComplete) {
+          if (!isSaasOwner && (requiresProfileCompletion || !userData.isProfileComplete)) {
             navigate('/complete-profile');
           } else {
             navigate('/dashboard');

@@ -132,10 +132,60 @@ app.use((err, req, res, next) => {
 // Start Server
 const PORT = process.env.PORT || 4000;
 
+// Fix all User/Manager/Admin roles with correct permissions on startup
+const fixDefaultRoles = async () => {
+  try {
+    const Role = require('./models/Role');
+    const ALL_FEATURES = [
+      'user_management', 'role_management', 'group_management',
+      'lead_management', 'contact_management', 'account_management',
+      'opportunity_management', 'data_center', 'quotation_management',
+      'invoice_management', 'purchase_order_management', 'rfi_management',
+      'product_management', 'task_management', 'meeting_management',
+      'call_management', 'email_management', 'subscription_management',
+      'field_management', 'audit_logs',
+    ];
+
+    const roleConfigs = [
+      {
+        name: 'User',
+        permissions: ALL_FEATURES.map(f => ({ feature: f, actions: ['read'] })),
+        forUserTypes: ['TENANT_USER'],
+        level: 10,
+      },
+      {
+        name: 'Manager',
+        permissions: ALL_FEATURES.map(f => ({ feature: f, actions: ['create', 'read', 'update'] })),
+        forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
+        level: 50,
+      },
+      {
+        name: 'Admin',
+        permissions: ALL_FEATURES.map(f => ({ feature: f, actions: ['create', 'read', 'update', 'delete', 'manage'] })),
+        forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
+        level: 100,
+      },
+    ];
+
+    for (const config of roleConfigs) {
+      const result = await Role.updateMany(
+        { name: config.name },
+        { $set: { permissions: config.permissions, forUserTypes: config.forUserTypes, level: config.level } }
+      );
+      if (result.modifiedCount > 0) {
+        console.log(`✅ Fixed ${result.modifiedCount} "${config.name}" role(s) with correct permissions`);
+      }
+    }
+  } catch (err) {
+    console.error('❌ fixDefaultRoles error:', err.message);
+  }
+};
+
 const startServer = async () => {
   try {
     await connectDB();
     await connectDataCenterDB();
+    await fixDefaultRoles();
 
     server.listen(PORT, async () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);

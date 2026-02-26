@@ -68,6 +68,26 @@ const login = async (req, res) => {
       return errorResponse(res, 401, 'Your organization account is suspended');
     }
 
+    // ============================================
+    // 🔐 SAAS ADMIN WHITELIST CHECK (same as protect middleware)
+    // ============================================
+    const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e);
+
+    const isInSaasWhitelist = saasAdminEmails.includes(user.email.toLowerCase());
+
+    if (isInSaasWhitelist && user.userType !== 'SAAS_OWNER') {
+      user.userType = 'SAAS_OWNER';
+      user.tenant = null;
+      console.log(`🔑 Login: ${user.email} upgraded to SAAS_OWNER`);
+    } else if (!isInSaasWhitelist && user.userType === 'SAAS_OWNER') {
+      user.userType = 'TENANT_ADMIN';
+      console.log(`🔒 Login: ${user.email} downgraded from SAAS_OWNER`);
+    }
+    // ============================================
+
     // Update last login
     user.lastLogin = new Date();
     await user.save();
@@ -692,6 +712,24 @@ const verifyEmailSignup = async (req, res) => {
       return errorResponse(res, 400, 'Invalid or expired OTP');
     }
 
+    // ============================================
+    // 🔐 SAAS ADMIN CHECK on email verification
+    // ============================================
+    const saasAdminEmailsList = (process.env.SAAS_ADMIN_EMAILS || '')
+      .split(',')
+      .map(e => e.trim().toLowerCase())
+      .filter(e => e);
+
+    const isSaasAdminEmail = saasAdminEmailsList.includes(user.email.toLowerCase());
+
+    if (isSaasAdminEmail) {
+      user.userType = 'SAAS_OWNER';
+      user.tenant = null;
+      user.isProfileComplete = true; // SAAS owners skip profile completion
+      console.log(`🔑 SAAS Owner verified email: ${user.email}`);
+    }
+    // ============================================
+
     // Verify email
     user.emailVerified = true;
     user.isPendingVerification = false;
@@ -896,45 +934,70 @@ const completeProfile = async (req, res) => {
 
     console.log('✅ Tenant created:', tenant.organizationName);
 
-    // Create Tenant Admin Role
-    const adminRole = await Role.create({
-      name: `${organizationName} - Admin`,
-      slug: `${slug}-admin`,
-      description: 'Full administrative access for tenant',
+    // All features list for building role permissions
+    const allFeatures = [
+      'user_management', 'role_management', 'group_management',
+      'lead_management', 'account_management', 'contact_management',
+      'opportunity_management', 'product_management', 'activity_management',
+      'task_management', 'meeting_management', 'call_management',
+      'note_management', 'email_management', 'data_center',
+      'quotations', 'invoices', 'rfi', 'purchase_orders', 'field_customization'
+    ];
+    const analyticsFeatures = ['report_management', 'advanced_analytics', 'api_access'];
+
+    // Create 3 Default Roles for every new tenant
+
+    // 1. User Role — Read Only
+    await Role.create({
+      name: 'User',
+      slug: `${slug}-user`,
+      description: 'Read-only access to all features',
       tenant: tenant._id,
       roleType: 'custom',
       permissions: [
-        { feature: 'user_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'role_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'group_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'lead_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'account_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'contact_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'opportunity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'product_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'activity_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'task_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'meeting_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'call_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'note_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'email_management', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'report_management', actions: ['read', 'manage'] },
-        { feature: 'advanced_analytics', actions: ['read', 'manage'] },
-        { feature: 'api_access', actions: ['read', 'manage'] },
-        { feature: 'data_center', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'quotations', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'invoices', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'rfi', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'purchase_orders', actions: ['create', 'read', 'update', 'delete', 'manage'] },
-        { feature: 'field_customization', actions: ['create', 'read', 'update', 'delete', 'manage'] }
+        ...allFeatures.map(f => ({ feature: f, actions: ['read'] })),
+        ...analyticsFeatures.map(f => ({ feature: f, actions: ['read'] }))
       ],
-      level: 100,
+      level: 10,
+      forUserTypes: ['TENANT_USER'],
       isActive: true
     });
 
-    console.log('✅ Admin role created');
+    // 2. Manager Role — Read + Write
+    await Role.create({
+      name: 'Manager',
+      slug: `${slug}-manager`,
+      description: 'Create, read and update access to all features',
+      tenant: tenant._id,
+      roleType: 'custom',
+      permissions: [
+        ...allFeatures.map(f => ({ feature: f, actions: ['create', 'read', 'update'] })),
+        ...analyticsFeatures.map(f => ({ feature: f, actions: ['read'] }))
+      ],
+      level: 50,
+      forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
+      isActive: true
+    });
 
-    // Update user
+    // 3. Admin Role — Full Access
+    const adminRole = await Role.create({
+      name: 'Admin',
+      slug: `${slug}-admin`,
+      description: 'Full access to all features',
+      tenant: tenant._id,
+      roleType: 'custom',
+      permissions: [
+        ...allFeatures.map(f => ({ feature: f, actions: ['create', 'read', 'update', 'delete', 'manage'] })),
+        ...analyticsFeatures.map(f => ({ feature: f, actions: ['read', 'manage'] }))
+      ],
+      level: 100,
+      forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
+      isActive: true
+    });
+
+    console.log('✅ 3 default roles created: User, Manager, Admin');
+
+    // Update user — assign Admin role to tenant owner
     user.tenant = tenant._id;
     user.roles = [adminRole._id];
     user.isProfileComplete = true;
@@ -1066,7 +1129,7 @@ const googleOAuthCallback = async (req, res) => {
       console.log('✅ New Google user created:', newUser.email);
 
       // Redirect to frontend with token and profile completion flag
-      return res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=true`);
+      return res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=${!isSaasAdmin}`);
     }
 
     // Existing user - populate tenant data before generating token

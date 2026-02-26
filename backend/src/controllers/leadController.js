@@ -43,12 +43,12 @@ const getLeads = async (req, res) => {
     const Group = require('../models/Group');
 
     if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
-      // Read-only users (viewers) who cannot create/update are observers — show all tenant leads
-      const isViewerOnly = !hasPermission(req.user, 'lead_management', 'create') &&
-                           !hasPermission(req.user, 'lead_management', 'update');
+      // Managers and above (role level >= 50) see all tenant leads
+      const isManager = req.user.userType === 'TENANT_MANAGER' ||
+                        (req.user.roles && req.user.roles.some(r => (r.level || 0) >= 50));
 
-      if (!isViewerOnly) {
-        // Active participants (can create/update) — show only their assigned leads
+      if (!isManager) {
+        // Regular users (level < 50) — show only their assigned leads
         const userGroups = await Group.find({
           members: req.user.id,
           isActive: true
@@ -67,7 +67,7 @@ const getLeads = async (req, res) => {
           query.owner = req.user.id;
         }
       }
-      // isViewerOnly: no ownership filter — they see all tenant leads
+      // isManager: no ownership filter — they see all tenant leads
     }
 
     // 🆕 Unassigned filter

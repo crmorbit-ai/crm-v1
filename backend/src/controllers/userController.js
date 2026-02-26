@@ -7,6 +7,7 @@ const { canManageUser } = require('../utils/permissions');
 const { logActivity } = require('../middleware/activityLogger');
 const { sendUserInvitationEmail } = require('../utils/emailService');
 const { trackChanges } = require('../utils/changeTracker');
+const bcrypt = require('bcryptjs');
 
 /**
  * @desc    Get all users (filtered by tenant for tenant admins)
@@ -116,7 +117,7 @@ const getUser = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, userType, tenant, roles, groups } = req.body;
+    const { email, password, firstName, lastName, userType, tenant, roles, groups, loginName, department, viewingPin } = req.body;
 
     // Validation
     if (!email || !password || !firstName || !lastName || !userType) {
@@ -205,6 +206,13 @@ const createUser = async (req, res) => {
       await tenantData.save();
     }
 
+    // Hash PIN if provided
+    let hashedPin = null;
+    if (viewingPin && /^\d{4}$/.test(viewingPin)) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPin = await bcrypt.hash(viewingPin, salt);
+    }
+
     // Create user data
     const userData = {
       email,
@@ -216,7 +224,10 @@ const createUser = async (req, res) => {
       roles: roles || [],
       groups: groups || [],
       isActive: true,
-      isProfileComplete: true  // Admin-created users don't need profile completion
+      isProfileComplete: true,  // Admin-created users don't need profile completion
+      ...(loginName && { loginName }),
+      ...(department && { department }),
+      ...(hashedPin && { viewingPin: hashedPin, isViewingPinSet: true })
     };
 
     const user = await User.create(userData);
@@ -280,7 +291,7 @@ const updateUser = async (req, res) => {
     }
 
     // Fields that can be updated
-    const allowedFields = ['firstName', 'lastName', 'phone', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions'];
+    const allowedFields = ['firstName', 'lastName', 'phone', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions', 'loginName', 'department'];
 
     // SAAS owners and TENANT_ADMIN can change userType
     if (req.body.userType && (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN' || req.user.userType === 'TENANT_ADMIN')) {
@@ -296,6 +307,13 @@ const updateUser = async (req, res) => {
         user[field] = req.body[field];
       }
     });
+
+    // Handle viewingPin update (hash if provided)
+    if (req.body.viewingPin && /^\d{4}$/.test(req.body.viewingPin)) {
+      const salt = await bcrypt.genSalt(10);
+      user.viewingPin = await bcrypt.hash(req.body.viewingPin, salt);
+      user.isViewingPinSet = true;
+    }
 
     await user.save();
 

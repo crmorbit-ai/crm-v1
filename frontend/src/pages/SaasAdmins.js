@@ -6,6 +6,7 @@ import SaasLayout from '../components/layout/SaasLayout';
 const SaasAdmins = () => {
   const [admins, setAdmins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isPrimaryLoading, setIsPrimaryLoading] = useState(true); // separate loading for primary check
   const [error, setError] = useState('');
   const [showPanel, setShowPanel] = useState(false);
   const [panelMode, setPanelMode] = useState('add'); // 'add' or 'reset'
@@ -29,25 +30,45 @@ const SaasAdmins = () => {
   };
 
   useEffect(() => {
-    checkIfPrimary();
-    fetchAdmins();
+    const init = async () => {
+      const primary = await checkIfPrimary();
+      if (primary) {
+        fetchAdmins();
+      } else {
+        setLoading(false); // no need to fetch if not primary
+      }
+    };
+    init();
   }, []);
 
   const checkIfPrimary = async () => {
     try {
+      setIsPrimaryLoading(true);
       const res = await axios.get(`${API_URL}/saas-admins/me`, { headers: getAuthHeader() });
-      setIsPrimary(res.data?.data?.user?.isPrimary || false);
-    } catch (err) { console.error(err); }
+      const primary = res.data?.data?.user?.isPrimary || false;
+      setIsPrimary(primary);
+      return primary;
+    } catch (err) {
+      console.error('Primary check failed:', err);
+      setIsPrimary(false);
+      return false;
+    } finally {
+      setIsPrimaryLoading(false);
+    }
   };
 
   const fetchAdmins = async () => {
     try {
       setLoading(true);
+      setError('');
       const res = await axios.get(`${API_URL}/saas-admins`, { headers: getAuthHeader() });
       setAdmins(res.data?.data?.admins || []);
     } catch (err) {
-      if (err.response?.status === 403) setError('Only Primary Owner can view admin list');
-      else setError(err.response?.data?.message || 'Failed to fetch admins');
+      if (err.response?.status === 403) {
+        // Not primary owner — this is expected, don't show error
+      } else {
+        setError(err.response?.data?.message || 'Failed to fetch admins');
+      }
     } finally { setLoading(false); }
   };
 
@@ -137,12 +158,27 @@ const SaasAdmins = () => {
     } catch (err) { alert(err.response?.data?.message || 'Failed'); }
   };
 
-  if (!isPrimary && !loading) {
+  // Show spinner while checking primary status
+  if (isPrimaryLoading) {
+    return (
+      <SaasLayout title="SAAS Admins">
+        <div style={styles.loading}>Checking access...</div>
+      </SaasLayout>
+    );
+  }
+
+  if (!isPrimary) {
     return (
       <SaasLayout title="SAAS Admins">
         <div style={styles.accessDenied}>
-          <h3>Access Denied</h3>
-          <p>Only Primary Owner can access this page.</p>
+          <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
+          <h3 style={{ color: '#1e293b', marginBottom: '8px' }}>Primary Owner Only</h3>
+          <p style={{ color: '#64748b', fontSize: '13px' }}>
+            Only the Primary Owner (<strong>{process.env.REACT_APP_PRIMARY_EMAIL || 'configured in .env'}</strong>) can manage SAAS Admins.
+          </p>
+          <p style={{ color: '#94a3b8', fontSize: '12px', marginTop: '8px' }}>
+            You are logged in as a Secondary Admin. Contact the Primary Owner for access.
+          </p>
         </div>
       </SaasLayout>
     );

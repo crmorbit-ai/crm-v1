@@ -19,12 +19,14 @@ const CompleteProfile = () => {
   const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
-    if (user?.isProfileComplete) {
+    const isSaasOwner = user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN';
+    if (isSaasOwner || user?.isProfileComplete) {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
 
-  if (user?.isProfileComplete) return null;
+  const isSaasOwner = user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN';
+  if (isSaasOwner || user?.isProfileComplete) return null;
 
   const industries = [
     'Technology', 'Healthcare', 'Finance & Banking', 'Manufacturing', 'Retail & E-commerce',

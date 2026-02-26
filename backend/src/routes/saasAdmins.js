@@ -27,10 +27,14 @@ router.use(protect);
 router.use(requireSaasAccess);
 
 // Middleware to check if user is Primary Owner
+// All emails in SAAS_ADMIN_EMAILS are treated as primary owners
 const requirePrimaryOwner = (req, res, next) => {
-  const primaryEmail = process.env.SAAS_OWNER_EMAIL?.toLowerCase();
+  const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(e => e);
 
-  if (req.user.email.toLowerCase() !== primaryEmail) {
+  if (!saasAdminEmails.includes(req.user.email.toLowerCase())) {
     return res.status(403).json({
       success: false,
       message: 'Only Primary Owner can perform this action'
