@@ -117,13 +117,15 @@ const createGroup = async (req, res) => {
       return errorResponse(res, 400, 'Group with this slug already exists');
     }
 
+    const { members } = req.body;
+
     const group = await Group.create({
       name,
       slug,
       description,
       tenant,
       parentGroup: parentGroup || null,
-      members: [],
+      members: members || [],
       roles: roles || [],
       groupPermissions: groupPermissions || [],
       isActive: true
@@ -163,7 +165,7 @@ const updateGroup = async (req, res) => {
     }
 
     // Update fields
-    const allowedFields = ['name', 'description', 'parentGroup', 'roles', 'groupPermissions', 'isActive'];
+    const allowedFields = ['name', 'description', 'parentGroup', 'members', 'roles', 'groupPermissions', 'isActive'];
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
         group[field] = req.body[field];

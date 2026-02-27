@@ -198,6 +198,12 @@ const leadSchema = new mongoose.Schema({
     trim: true
   }],
 
+  // Auto-incrementing lead number (unique per tenant)
+  leadNumber: {
+    type: Number,
+    index: true
+  },
+
   // DataCenter Reference (to track where this lead came from)
   dataCenterCandidateId: {
     type: mongoose.Schema.Types.ObjectId,

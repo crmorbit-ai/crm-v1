@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * DynamicField Component
- * Renders form fields dynamically based on field definition - Compact version
+ * Renders custom form fields with the same look/size as standard CRM fields.
  */
 const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = false }) => {
   const {
@@ -26,20 +26,25 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
     onChange(fieldName, selectedOptions);
   };
 
-  // Compact input styling
-  const inputProps = {
-    id: fieldName,
-    name: fieldName,
-    value: value || '',
-    onChange: handleChange,
-    disabled,
-    required: isRequired,
-    placeholder: placeholder || '',
-    className: `w-full px-2 py-1 text-xs border rounded focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-      error ? 'border-red-500' : 'border-gray-300'
-    } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`,
-    style: { fontSize: '11px', padding: '4px 6px' }
+  // Match standard field label style
+  const lStyle = {
+    display: 'block',
+    fontSize: '11px',
+    fontWeight: '700',
+    marginBottom: '5px',
+    textTransform: 'uppercase',
+    letterSpacing: '0.4px',
+    color: '#475569',
   };
+
+  // Match standard field input style
+  const inputStyle = {
+    padding: '8px 10px',
+    fontSize: '13px',
+    ...(error ? { borderColor: '#ef4444' } : {}),
+  };
+
+  const baseClass = disabled ? 'crm-form-input' : 'crm-form-input';
 
   const renderField = () => {
     switch (fieldType) {
@@ -49,8 +54,16 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
       case 'url':
         return (
           <input
-            type={fieldType === 'phone' ? 'tel' : fieldType === 'url' ? 'url' : fieldType}
-            {...inputProps}
+            type={fieldType === 'phone' ? 'tel' : fieldType}
+            id={fieldName}
+            name={fieldName}
+            value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            placeholder={placeholder || ''}
+            className={baseClass}
+            style={inputStyle}
             maxLength={validations?.maxLength}
             minLength={validations?.minLength}
             pattern={validations?.pattern}
@@ -60,10 +73,17 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
       case 'textarea':
         return (
           <textarea
-            {...inputProps}
+            id={fieldName}
+            name={fieldName}
+            value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            placeholder={placeholder || ''}
+            className={baseClass}
+            style={{ ...inputStyle, resize: 'vertical' }}
             rows={2}
             maxLength={validations?.maxLength}
-            minLength={validations?.minLength}
           />
         );
 
@@ -73,7 +93,15 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
         return (
           <input
             type="number"
-            {...inputProps}
+            id={fieldName}
+            name={fieldName}
+            value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            placeholder={placeholder || ''}
+            className={baseClass}
+            style={inputStyle}
             min={validations?.min}
             max={validations?.max}
             step={fieldType === 'currency' ? '0.01' : fieldType === 'percentage' ? '1' : 'any'}
@@ -84,7 +112,14 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
         return (
           <input
             type="date"
-            {...inputProps}
+            id={fieldName}
+            name={fieldName}
+            value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            className={baseClass}
+            style={inputStyle}
           />
         );
 
@@ -92,13 +127,20 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
         return (
           <input
             type="datetime-local"
-            {...inputProps}
+            id={fieldName}
+            name={fieldName}
+            value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            className={baseClass}
+            style={inputStyle}
           />
         );
 
       case 'checkbox':
         return (
-          <div className="flex items-center">
+          <div style={{ display: 'flex', alignItems: 'center', paddingTop: '4px' }}>
             <input
               type="checkbox"
               id={fieldName}
@@ -106,57 +148,51 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
               checked={value || false}
               onChange={handleChange}
               disabled={disabled}
-              className={`h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 rounded ${
-                disabled ? 'bg-gray-100 cursor-not-allowed' : ''
-              }`}
+              style={{ width: '16px', height: '16px', cursor: disabled ? 'not-allowed' : 'pointer' }}
             />
-            <label htmlFor={fieldName} className="ml-1 block text-xs text-gray-700" style={{ fontSize: '10px' }}>
+            <label htmlFor={fieldName} style={{ marginLeft: '8px', fontSize: '13px', fontWeight: '600', color: '#475569', cursor: 'pointer' }}>
               {placeholder || label}
             </label>
           </div>
         );
 
       case 'dropdown':
+      case 'select':
         return (
           <select
-            {...inputProps}
+            id={fieldName}
+            name={fieldName}
             value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            className="crm-form-select"
+            style={inputStyle}
           >
             <option value="">-- Select --</option>
             {options && options.map((option, index) => (
-              <option key={index} value={option.value}>
-                {option.label}
-              </option>
+              <option key={index} value={option.value}>{option.label}</option>
             ))}
           </select>
         );
 
       case 'radio':
         return (
-          <div className="flex flex-wrap gap-2">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', paddingTop: '4px' }}>
             {options && options.map((option, index) => (
-              <div key={index} className="flex items-center">
+              <label key={index} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: '#475569', cursor: 'pointer', fontWeight: '500' }}>
                 <input
                   type="radio"
-                  id={`${fieldName}_${option.value}`}
                   name={fieldName}
                   value={option.value}
                   checked={value === option.value}
                   onChange={handleChange}
                   disabled={disabled}
                   required={isRequired}
-                  className={`h-3 w-3 text-blue-600 focus:ring-blue-500 border-gray-300 ${
-                    disabled ? 'bg-gray-100 cursor-not-allowed' : ''
-                  }`}
+                  style={{ width: '15px', height: '15px' }}
                 />
-                <label
-                  htmlFor={`${fieldName}_${option.value}`}
-                  className="ml-1 text-xs text-gray-700"
-                  style={{ fontSize: '10px' }}
-                >
-                  {option.label}
-                </label>
-              </div>
+                {option.label}
+              </label>
             ))}
           </div>
         );
@@ -164,16 +200,19 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
       case 'multi_select':
         return (
           <select
-            {...inputProps}
+            id={fieldName}
+            name={fieldName}
             multiple
             onChange={handleMultiSelectChange}
             value={value || []}
+            disabled={disabled}
+            required={isRequired}
+            className="crm-form-select"
+            style={{ ...inputStyle, minHeight: '80px' }}
             size={Math.min(options?.length || 3, 4)}
           >
             {options && options.map((option, index) => (
-              <option key={index} value={option.value}>
-                {option.label}
-              </option>
+              <option key={index} value={option.value}>{option.label}</option>
             ))}
           </select>
         );
@@ -182,34 +221,40 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
         return (
           <input
             type="text"
-            {...inputProps}
+            id={fieldName}
+            name={fieldName}
+            value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            placeholder={placeholder || ''}
+            className={baseClass}
+            style={inputStyle}
           />
         );
     }
   };
 
+  // Checkbox renders its own label inline
+  if (fieldType === 'checkbox') {
+    return (
+      <div>
+        {renderField()}
+        {helpText && !error && <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px' }}>{helpText}</p>}
+        {error && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '3px' }}>{error}</p>}
+      </div>
+    );
+  }
+
   return (
-    <div style={{ marginBottom: '2px' }}>
-      {/* Label - Compact */}
-      {fieldType !== 'checkbox' && (
-        <label htmlFor={fieldName} className="block font-semibold text-gray-700" style={{ fontSize: '10px', marginBottom: '2px' }}>
-          {label}
-          {isRequired && <span className="text-red-500 ml-0.5">*</span>}
-        </label>
-      )}
-
-      {/* Field */}
+    <div>
+      <label htmlFor={fieldName} style={lStyle}>
+        {label}
+        {isRequired && <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>}
+      </label>
       {renderField()}
-
-      {/* Help Text - Compact */}
-      {helpText && !error && (
-        <p className="text-gray-500" style={{ fontSize: '9px', marginTop: '1px' }}>{helpText}</p>
-      )}
-
-      {/* Error Message - Compact */}
-      {error && (
-        <p className="text-red-500" style={{ fontSize: '9px', marginTop: '1px' }}>{error}</p>
-      )}
+      {helpText && !error && <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px' }}>{helpText}</p>}
+      {error && <p style={{ fontSize: '11px', color: '#ef4444', marginTop: '3px' }}>{error}</p>}
     </div>
   );
 };

@@ -9,8 +9,26 @@ import { noteService } from '../services/noteService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
-import { Mail, Phone, Building2, Briefcase, X, Edit, Trash2, FileText, CheckCircle2, Calendar, Star, User } from 'lucide-react';
+import { Mail, Phone, Building2, Briefcase, X, Edit, Trash2, FileText, CheckCircle2, Calendar, Star, User, Settings } from 'lucide-react';
+import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
+
+const DEFAULT_CONTACT_FIELDS = [
+  { fieldName: 'firstName', label: 'First Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'lastName', label: 'Last Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
+  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
+  { fieldName: 'mobile', label: 'Mobile', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
+  { fieldName: 'title', label: 'Job Title', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10 },
+  { fieldName: 'department', label: 'Department', fieldType: 'dropdown', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11, options: [{ label: 'Sales', value: 'Sales' }, { label: 'Marketing', value: 'Marketing' }, { label: 'Finance', value: 'Finance' }, { label: 'Operations', value: 'Operations' }, { label: 'IT', value: 'IT' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'mailingCity', label: 'City', fieldType: 'text', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
+  { fieldName: 'mailingState', label: 'State', fieldType: 'text', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 21 },
+  { fieldName: 'mailingCountry', label: 'Country', fieldType: 'text', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 22 },
+  { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
+];
+const CONT_DISABLED_KEY = 'crm_cont_std_disabled';
+const getContDisabled = () => { try { return JSON.parse(localStorage.getItem(CONT_DISABLED_KEY) || '[]'); } catch { return []; } };
+const CONTACT_SECTIONS = ['Basic Information', 'Professional Information', 'Mailing Address', 'Additional Information'];
 
 const Contacts = () => {
   const navigate = useNavigate();
@@ -36,6 +54,12 @@ const Contacts = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [stats, setStats] = useState({ total: 0, primary: 0, withAccount: 0, recent: 0 });
+
+  // Manage Fields
+  const [showManageFields, setShowManageFields] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
+  const [disabledStdFields, setDisabledStdFieldsState] = useState(getContDisabled);
+  const [togglingField, setTogglingField] = useState(null);
 
   // PIN Verification State
   const [isPinVerified, setIsPinVerified] = useState(false);
@@ -116,14 +140,50 @@ const Contacts = () => {
     } catch (err) { console.error('Load accounts error:', err); }
   };
 
+  const buildContFields = (disabled, customs) => [
+    ...DEFAULT_CONTACT_FIELDS.filter(f => !disabled.includes(f.fieldName)).map(f => ({ ...f, isActive: true, _isStd: true })),
+    ...customs.filter(f => f.isActive && f.showInCreate),
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
+  const allFieldDefs = [
+    ...DEFAULT_CONTACT_FIELDS.map(f => ({ ...f, isActive: !disabledStdFields.includes(f.fieldName), _isStd: true })),
+    ...customFieldDefs,
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
   const loadCustomFields = async () => {
     try {
-      const response = await fieldDefinitionService.getFieldDefinitions('Contact', false);
-      if (response && Array.isArray(response)) {
-        const createFields = response.filter(field => field.isActive && field.showInCreate).sort((a, b) => a.displayOrder - b.displayOrder);
-        setFieldDefinitions(createFields);
-      }
+      const response = await fieldDefinitionService.getFieldDefinitions('Contact', true);
+      const customs = (Array.isArray(response) ? response : []).filter(f => !f.isStandardField);
+      setCustomFieldDefs(customs);
+      setFieldDefinitions(buildContFields(disabledStdFields, customs));
     } catch (err) { console.error('Load field definitions error:', err); }
+  };
+
+  const handleToggleField = async (field) => {
+    setTogglingField(field.fieldName);
+    if (field._isStd) {
+      const newDisabled = disabledStdFields.includes(field.fieldName)
+        ? disabledStdFields.filter(n => n !== field.fieldName)
+        : [...disabledStdFields, field.fieldName];
+      localStorage.setItem(CONT_DISABLED_KEY, JSON.stringify(newDisabled));
+      setDisabledStdFieldsState(newDisabled);
+      setFieldDefinitions(buildContFields(newDisabled, customFieldDefs));
+    } else {
+      try {
+        await fieldDefinitionService.toggleFieldStatus(field._id, !field.isActive);
+        const updated = customFieldDefs.map(f => f._id === field._id ? { ...f, isActive: !f.isActive } : f);
+        setCustomFieldDefs(updated);
+        setFieldDefinitions(buildContFields(disabledStdFields, updated));
+      } catch (err) { console.error('Toggle error:', err); }
+    }
+    setTogglingField(null);
+  };
+
+  const handleAddCustomField = async (fieldData) => {
+    const created = await fieldDefinitionService.createFieldDefinition({ entityType: 'Contact', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData });
+    const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
+    setCustomFieldDefs(updated);
+    setFieldDefinitions(buildContFields(disabledStdFields, updated));
   };
 
   const groupFieldsBySection = (fields) => {
@@ -147,6 +207,7 @@ const Contacts = () => {
 
   const closeAllForms = () => {
     setShowCreateForm(false);
+    setShowManageFields(false);
   };
 
   const handleCreateContact = async (e) => {
@@ -441,39 +502,75 @@ const Contacts = () => {
                   <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
                   <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
                 </div>
-                <div style={{ marginLeft: 'auto' }}>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                  {hasPermission('field_management', 'read') && (
+                    <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                      <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
+                    </button>
+                  )}
                   {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Contact</button>}
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Manage Fields Panel */}
+          {showManageFields && (
+            <ManageFieldsPanel
+              allFieldDefs={allFieldDefs}
+              togglingField={togglingField}
+              onToggle={handleToggleField}
+              onClose={() => setShowManageFields(false)}
+              onAdd={handleAddCustomField}
+              canAdd={hasPermission('field_management', 'create')}
+              canToggle={hasPermission('field_management', 'update')}
+              entityLabel="Contact"
+              sections={CONTACT_SECTIONS}
+            />
+          )}
+
           {/* Inline Create Contact Form */}
           {showCreateForm && (
-            <div className="crm-card" style={{ marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
-                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Create New Contact</h3>
-                <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
+            <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,60,114,0.10)', border: '1px solid #e2e8f0' }}>
+              <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #3b82f6 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.2px' }}>Create New Contact</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Fill in the details to add a new contact</p>
+                </div>
+                <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>✕</button>
               </div>
-              <div style={{ padding: '10px' }}>
+              <div style={{ padding: '16px', background: '#fafeff' }}>
                 <form onSubmit={handleCreateContact}>
-                  <div style={{ marginBottom: '8px' }}>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '2px' }}>Account *</label>
-                    <select name="account" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px', maxWidth: '200px' }} value={formData.account} onChange={handleChange} required>
-                      <option value="">Select Account</option>
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: '#ecfeff', borderLeft: '3px solid #06b6d4' }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#06b6d4', flexShrink: 0 }} />
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#155e75', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Account</span>
+                    </div>
+                    <select name="account" className="crm-form-select" style={{ padding: '6px 10px', fontSize: '12px', maxWidth: '260px', borderRadius: '7px' }} value={formData.account} onChange={handleChange} required>
+                      <option value="">Select Account *</option>
                       {accounts.map(account => <option key={account._id} value={account._id}>{account.accountName}</option>)}
                     </select>
                   </div>
                   {(() => {
                     const groupedFields = groupFieldsBySection(fieldDefinitions);
-                    const sectionOrder = ['Basic Information', 'Contact Information', 'Address Information', 'Additional Information'];
-                    return sectionOrder.map(sectionName => {
+                    const sectionOrder = ['Basic Information', 'Professional Information', 'Mailing Address', 'Additional Information'];
+                    const palette = [
+                      { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
+                      { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
+                      { bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95' },
+                      { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
+                    ];
+                    return sectionOrder.map((sectionName, sIdx) => {
                       const sectionFields = groupedFields[sectionName];
                       if (!sectionFields || sectionFields.length === 0) return null;
+                      const c = palette[sIdx % palette.length];
                       return (
-                        <div key={sectionName} style={{ marginBottom: '8px' }}>
-                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase' }}>{sectionName}</h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                        <div key={sectionName} style={{ marginBottom: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: c.bg, borderLeft: `3px solid ${c.border}` }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c.border, flexShrink: 0 }} />
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: c.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
                             {sectionFields.map((field) => (
                               <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
                                 {renderDynamicField(field)}
@@ -484,9 +581,9 @@ const Contacts = () => {
                       );
                     });
                   })()}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-                    <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
-                    <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Create Contact</button>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                    <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                    <button type="submit" style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>Create Contact</button>
                   </div>
                 </form>
               </div>
@@ -660,34 +757,84 @@ const Contacts = () => {
                   <div style={{ padding: '16px' }}>
                     {detailActiveTab === 'overview' && (
                       <div>
-                        <div style={{ marginBottom: '16px' }}>
-                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Contact Information</h4>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {selectedContactData.email && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Mail className="h-4 w-4 text-blue-500" /><a href={`mailto:${selectedContactData.email}`} style={{ color: '#3B82F6' }}>{selectedContactData.email}</a></div>}
-                            {selectedContactData.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Phone className="h-4 w-4 text-green-500" /><a href={`tel:${selectedContactData.phone}`} style={{ color: '#059669' }}>{selectedContactData.phone}</a></div>}
-                            {selectedContactData.mobile && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Phone className="h-4 w-4 text-green-500" />{selectedContactData.mobile} (Mobile)</div>}
-                          </div>
-                        </div>
+                        {/* Account Link */}
                         {selectedContactData.account && (
-                          <div style={{ marginBottom: '16px' }}>
-                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Account</h4>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Building2 className="h-4 w-4 text-gray-500" />{selectedContactData.account.accountName}</div>
-                          </div>
-                        )}
-                        {(selectedContactData.title || selectedContactData.department || selectedContactData.leadSource) && (
-                          <div style={{ marginBottom: '16px' }}>
-                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Additional Information</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f9fafb', padding: '12px', borderRadius: '8px' }}>
-                              {selectedContactData.title && <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Job Title</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedContactData.title}</p></div>}
-                              {selectedContactData.department && <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Department</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedContactData.department}</p></div>}
-                              {selectedContactData.leadSource && <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Lead Source</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedContactData.leadSource}</p></div>}
+                          <div style={{ marginBottom: '12px', padding: '10px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #BFDBFE', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <Building2 className="h-4 w-4" style={{ color: '#1E40AF' }} />
+                            <div>
+                              <p style={{ fontSize: '9px', color: '#1E40AF', margin: 0, fontWeight: '600', textTransform: 'uppercase' }}>Account</p>
+                              <p style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: '#1e3c72' }}>{selectedContactData.account.accountName}</p>
                             </div>
                           </div>
                         )}
-                        {selectedContactData.description && (
-                          <div><h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Description</h4><p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5', margin: 0, background: '#f9fafb', padding: '10px', borderRadius: '6px' }}>{selectedContactData.description}</p></div>
-                        )}
-
+                        {(() => {
+                          const SYSTEM_KEYS = new Set(['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'updatedAt', 'createdAt', 'isActive', 'emailOptOut', 'doNotCall', 'customFields', 'account', 'relatedData', 'isPrimary']);
+                          const fmtKey = (fn) => fn.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+                          const fieldMap = {};
+                          DEFAULT_CONTACT_FIELDS.forEach(f => { fieldMap[f.fieldName] = { label: f.label, section: f.section, fieldType: f.fieldType }; });
+                          customFieldDefs.forEach(f => { fieldMap[f.fieldName] = { label: f.label, section: f.section, fieldType: f.fieldType }; });
+                          const grouped = {};
+                          Object.keys(selectedContactData).forEach(key => {
+                            if (SYSTEM_KEYS.has(key)) return;
+                            const val = selectedContactData[key];
+                            if (val === null || val === undefined || val === '') return;
+                            if (typeof val === 'object' && !Array.isArray(val)) return;
+                            const def = fieldMap[key];
+                            const section = def?.section || 'Additional Information';
+                            if (!grouped[section]) grouped[section] = [];
+                            grouped[section].push({ key, label: def?.label || fmtKey(key), fieldType: def?.fieldType || 'text', value: val });
+                          });
+                          if (selectedContactData.customFields && typeof selectedContactData.customFields === 'object') {
+                            Object.keys(selectedContactData.customFields).forEach(key => {
+                              const val = selectedContactData.customFields[key];
+                              if (val === null || val === undefined || val === '') return;
+                              if (typeof val === 'object' && !Array.isArray(val)) return;
+                              const def = fieldMap[key];
+                              const section = def?.section || 'Additional Information';
+                              if (!grouped[section]) grouped[section] = [];
+                              if (!grouped[section].find(f => f.key === key)) {
+                                grouped[section].push({ key, label: def?.label || fmtKey(key), fieldType: def?.fieldType || 'text', value: val });
+                              }
+                            });
+                          }
+                          const sectionOrder = ['Basic Information', 'Professional Information', 'Mailing Address', 'Additional Information', ...Object.keys(grouped).filter(s => !['Basic Information', 'Professional Information', 'Mailing Address', 'Additional Information'].includes(s))];
+                          return sectionOrder.map(section => {
+                            const fields = grouped[section];
+                            if (!fields || fields.length === 0) return null;
+                            return (
+                              <div key={section} style={{ marginBottom: '14px' }}>
+                                <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                                  {section}
+                                  <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                  {fields.map(({ key, label, fieldType, value }) => {
+                                    let display = value;
+                                    if (fieldType === 'currency') display = `₹${Number(value).toLocaleString()}`;
+                                    else if (fieldType === 'date') { try { display = new Date(value).toLocaleDateString(); } catch(e) { display = value; } }
+                                    else if (fieldType === 'checkbox') display = value ? 'Yes' : 'No';
+                                    else if (Array.isArray(value)) display = value.join(', ');
+                                    else display = value?.toString() || '-';
+                                    const isEmail = fieldType === 'email' || key === 'email';
+                                    const isPhone = fieldType === 'phone' || key === 'phone' || key === 'mobile';
+                                    const isUrl = fieldType === 'url' || key === 'website';
+                                    return (
+                                      <div key={key} style={{ background: '#f9fafb', padding: '8px 10px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                        <p style={{ fontSize: '9px', color: '#9CA3AF', marginBottom: '3px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</p>
+                                        {isEmail ? <a href={`mailto:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#3B82F6', wordBreak: 'break-all' }}>{display}</a>
+                                          : isPhone ? <a href={`tel:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#059669' }}>{display}</a>
+                                          : isUrl ? <a href={display} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: '500', color: '#7C3AED', wordBreak: 'break-all' }}>{display}</a>
+                                          : <p style={{ fontSize: '12px', fontWeight: '500', margin: 0, color: '#1e293b', wordBreak: 'break-word' }}>{display}</p>
+                                        }
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
                         {/* Related Deals/Opportunities */}
                         {selectedContactData.relatedData?.opportunities && (
                           <div style={{ marginTop: '16px' }}>
@@ -710,59 +857,6 @@ const Contacts = () => {
                             )}
                           </div>
                         )}
-
-                        {/* Custom Fields grouped by section */}
-                        {customFieldDefinitions.length > 0 && selectedContactData.customFields && Object.keys(selectedContactData.customFields).length > 0 && (() => {
-                          const groupedFields = groupFieldsBySection(customFieldDefinitions.filter(f => !f.isStandardField));
-                          const sections = Object.keys(groupedFields);
-
-                          const renderFieldValue = (field, value) => {
-                            if (!value) return null;
-                            let displayValue = value;
-
-                            if (field.fieldType === 'currency') {
-                              displayValue = `₹${Number(value).toLocaleString()}`;
-                            } else if (field.fieldType === 'percentage') {
-                              displayValue = `${value}%`;
-                            } else if (field.fieldType === 'date') {
-                              displayValue = new Date(value).toLocaleDateString();
-                            } else if (field.fieldType === 'datetime') {
-                              displayValue = new Date(value).toLocaleString();
-                            } else if (field.fieldType === 'checkbox') {
-                              displayValue = value ? 'Yes' : 'No';
-                            } else if (field.fieldType === 'multi_select' && Array.isArray(value)) {
-                              const selectedOptions = field.options?.filter(opt => value.includes(opt.value)) || [];
-                              displayValue = selectedOptions.map(opt => opt.label).join(', ');
-                            } else if (['dropdown', 'radio'].includes(field.fieldType)) {
-                              const selectedOption = field.options?.find(opt => opt.value === value);
-                              displayValue = selectedOption ? selectedOption.label : value;
-                            }
-
-                            return (
-                              <div key={field._id}>
-                                <p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>{field.label}</p>
-                                <p style={{ fontSize: '13px', fontWeight: '500', color: '#111827', margin: 0 }}>{displayValue || 'Not provided'}</p>
-                              </div>
-                            );
-                          };
-
-                          return sections.map(sectionName => {
-                            const fieldsWithValues = groupedFields[sectionName].filter(field => selectedContactData.customFields[field.fieldName]);
-                            if (fieldsWithValues.length === 0) return null;
-
-                            return (
-                              <div key={sectionName} style={{ marginTop: '16px' }}>
-                                <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ width: '3px', height: '12px', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', borderRadius: '2px' }}></span>
-                                  {sectionName}
-                                </h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f9fafb', padding: '12px', borderRadius: '8px' }}>
-                                  {fieldsWithValues.map((field) => renderFieldValue(field, selectedContactData.customFields[field.fieldName]))}
-                                </div>
-                              </div>
-                            );
-                          });
-                        })()}
                       </div>
                     )}
 

@@ -7,7 +7,36 @@ import fieldDefinitionService from '../services/fieldDefinitionService';
 import { useAuth } from '../context/AuthContext';
 import TooltipButton from '../components/common/TooltipButton';
 import DynamicField from '../components/DynamicField';
+import ManageFieldsPanel from '../components/ManageFieldsPanel';
+import { Settings } from 'lucide-react';
 import '../styles/crm.css';
+
+// ── Manage Fields: standard field definitions ──────────────────────────────
+const DEFAULT_PRODUCT_FIELDS = [
+  { fieldName: 'name',          label: 'Product Name',        fieldType: 'text',     section: 'Product Information', displayOrder: 1, required: true,  isActive: true },
+  { fieldName: 'articleNumber', label: 'Article Number / SKU',fieldType: 'text',     section: 'Product Information', displayOrder: 2, required: true,  isActive: true },
+  { fieldName: 'category',      label: 'Category',            fieldType: 'select',   section: 'Product Information', displayOrder: 3, required: true,  isActive: true },
+  { fieldName: 'price',         label: 'Price',               fieldType: 'number',   section: 'Product Information', displayOrder: 4, required: true,  isActive: true },
+  { fieldName: 'stock',         label: 'Stock Quantity',      fieldType: 'number',   section: 'Product Information', displayOrder: 5, required: false, isActive: true },
+  { fieldName: 'imageUrl',      label: 'Image URL',           fieldType: 'url',      section: 'Media & Status',      displayOrder: 6, required: false, isActive: true },
+  { fieldName: 'isActive',      label: 'Active Product',      fieldType: 'checkbox', section: 'Media & Status',      displayOrder: 7, required: false, isActive: true },
+  { fieldName: 'description',   label: 'Description',         fieldType: 'textarea', section: 'Description',         displayOrder: 8, required: false, isActive: true },
+];
+
+const PROD_DISABLED_KEY = 'crm_prod_std_disabled';
+const getProdDisabled = () => {
+  try { return JSON.parse(localStorage.getItem(PROD_DISABLED_KEY) || '[]'); } catch { return []; }
+};
+
+const PRODUCT_SECTIONS = ['Product Information', 'Media & Status', 'Description'];
+
+const buildProdFields = (disabled, customs) => {
+  const stdFields = DEFAULT_PRODUCT_FIELDS
+    .map(f => ({ ...f, isStandardField: true, isActive: !disabled.includes(f.fieldName) }))
+    .filter(f => f.isActive);
+  const activeCustoms = (customs || []).filter(f => f.isActive);
+  return [...stdFields, ...activeCustoms].sort((a, b) => a.displayOrder - b.displayOrder);
+};
 
 const Products = () => {
   const navigate = useNavigate();
@@ -60,6 +89,12 @@ const Products = () => {
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Manage Fields state
+  const [showManageFields, setShowManageFields] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
+  const [disabledStdFields, setDisabledStdFields] = useState([]);
+  const [togglingField, setTogglingField] = useState(null);
 
   useEffect(() => {
     loadProducts();
@@ -128,16 +163,69 @@ const Products = () => {
 
   const loadCustomFields = async () => {
     try {
-      const response = await fieldDefinitionService.getFieldDefinitions('Product', false);
+      const disabled = getProdDisabled();
+      setDisabledStdFields(disabled);
+      const response = await fieldDefinitionService.getFieldDefinitions('Product', true);
       if (response && Array.isArray(response)) {
-        const createFields = response
-          .filter(field => field.isActive && field.showInCreate)
-          .sort((a, b) => a.displayOrder - b.displayOrder);
-        setFieldDefinitions(createFields);
+        const customs = response.filter(f => !f.isStandardField);
+        setCustomFieldDefs(customs);
+        setFieldDefinitions(buildProdFields(disabled, customs));
+      } else {
+        setFieldDefinitions(buildProdFields(disabled, []));
       }
     } catch (err) {
       console.error('Load field definitions error:', err);
+      setFieldDefinitions(buildProdFields(getProdDisabled(), []));
     }
+  };
+
+  // allFieldDefs: all standard fields (with toggle state) + all custom fields
+  const allFieldDefs = [
+    ...DEFAULT_PRODUCT_FIELDS.map(f => ({
+      ...f,
+      isStandardField: true,
+      isActive: !disabledStdFields.includes(f.fieldName),
+    })),
+    ...customFieldDefs,
+  ];
+
+  const handleToggleField = async (field) => {
+    if (field.isStandardField) {
+      const current = getProdDisabled();
+      const newDisabled = current.includes(field.fieldName)
+        ? current.filter(n => n !== field.fieldName)
+        : [...current, field.fieldName];
+      localStorage.setItem(PROD_DISABLED_KEY, JSON.stringify(newDisabled));
+      setDisabledStdFields(newDisabled);
+      setFieldDefinitions(buildProdFields(newDisabled, customFieldDefs));
+    } else {
+      setTogglingField(field._id);
+      try {
+        await fieldDefinitionService.updateFieldDefinition(field._id, { isActive: !field.isActive });
+        const updatedCustoms = customFieldDefs.map(f =>
+          f._id === field._id ? { ...f, isActive: !f.isActive } : f
+        );
+        setCustomFieldDefs(updatedCustoms);
+        setFieldDefinitions(buildProdFields(disabledStdFields, updatedCustoms));
+      } finally {
+        setTogglingField(null);
+      }
+    }
+  };
+
+  const handleAddCustomField = async (fieldData) => {
+    const created = await fieldDefinitionService.createFieldDefinition({
+      entityType: 'Product',
+      isStandardField: false,
+      showInCreate: true,
+      showInEdit: true,
+      showInDetail: true,
+      ...fieldData,
+    });
+    const updated = [...customFieldDefs, { ...created, isActive: true }]
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+    setCustomFieldDefs(updated);
+    setFieldDefinitions(buildProdFields(disabledStdFields, updated));
   };
 
   // Group fields by section
@@ -182,26 +270,19 @@ const Products = () => {
     try {
       setError('');
 
-      // Separate standard fields from custom fields
-      const standardFields = {};
+      // Collect custom field values
       const customFields = {};
-
-      fieldDefinitions.forEach(field => {
+      customFieldDefs.filter(f => f.isActive).forEach(field => {
         const value = fieldValues[field.fieldName];
         if (value !== undefined && value !== null && value !== '') {
-          if (field.isStandardField) {
-            standardFields[field.fieldName] = value;
-          } else {
-            customFields[field.fieldName] = value;
-          }
+          customFields[field.fieldName] = value;
         }
       });
 
-      // Combine standard fields with form data and custom fields
+      // formData holds all standard field values
       const productData = {
         ...formData,
-        ...standardFields,
-        customFields: Object.keys(customFields).length > 0 ? customFields : undefined
+        ...(Object.keys(customFields).length > 0 ? { customFields } : {}),
       };
 
       if (editingProduct) {
@@ -255,6 +336,7 @@ const Products = () => {
     setEditingProduct(null);
     setShowCreateForm(true);
     setShowCreateCategoryForm(false);
+    setShowManageFields(false);
   };
 
   const handleCreateCategory = async (e) => {
@@ -416,32 +498,62 @@ const Products = () => {
                 + New Product
               </TooltipButton>
             )}
+            {hasPermission('field_management', 'read') && (
+              <button
+                className="crm-btn"
+                onClick={() => { setShowManageFields(v => !v); setShowCreateForm(false); setShowCreateCategoryForm(false); }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}
+              >
+                <Settings size={15} />
+                Manage Fields
+              </button>
+            )}
           </div>
         </div>
       </div>
 
+      {/* Manage Fields Panel */}
+      {showManageFields && (
+        <ManageFieldsPanel
+          allFieldDefs={allFieldDefs}
+          togglingField={togglingField}
+          onToggle={handleToggleField}
+          onClose={() => setShowManageFields(false)}
+          onAdd={handleAddCustomField}
+          canAdd={hasPermission('field_management', 'create')}
+          canToggle={hasPermission('field_management', 'update')}
+          entityLabel="Product"
+          sections={PRODUCT_SECTIONS}
+        />
+      )}
+
       {/* Inline Create/Edit Product Form */}
-      {showCreateForm && (
-        <div className="crm-card" style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>{editingProduct ? 'Edit Product' : 'Create New Product'}</h3>
-            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }}>✕</button>
-          </div>
-          <div style={{ padding: '16px' }}>
-            <form onSubmit={handleCreateProduct}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Product Name *</label>
-                  <input type="text" name="name" className="crm-form-input" value={formData.name} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+      {showCreateForm && (() => {
+        const palette = ['#3b82f6', '#8b5cf6', '#10b981'];
+        const renderStdField = (field) => {
+          const lStyle = { display: 'block', fontSize: '11px', fontWeight: '700', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.4px', color: '#475569' };
+          const iStyle = { padding: '8px 10px', fontSize: '13px' };
+          switch (field.fieldName) {
+            case 'name':
+              return (
+                <div key="name">
+                  <label style={lStyle}>Product Name {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                  <input type="text" name="name" className="crm-form-input" value={formData.name} onChange={handleChange} required style={iStyle} />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Article Number / SKU *</label>
-                  <input type="text" name="articleNumber" className="crm-form-input" value={formData.articleNumber} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+              );
+            case 'articleNumber':
+              return (
+                <div key="articleNumber">
+                  <label style={lStyle}>Article Number / SKU {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                  <input type="text" name="articleNumber" className="crm-form-input" value={formData.articleNumber} onChange={handleChange} required style={iStyle} />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Category *</label>
+              );
+            case 'category':
+              return (
+                <div key="category">
+                  <label style={lStyle}>Category {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
                   <div style={{ display: 'flex', gap: '4px' }}>
-                    <select name="category" className="crm-form-select" value={formData.category} onChange={handleChange} required style={{ padding: '8px 10px', fontSize: '13px', flex: 1 }}>
+                    <select name="category" className="crm-form-select" value={formData.category} onChange={handleChange} required style={{ ...iStyle, flex: 1 }}>
                       <option value="">Select Category</option>
                       {categories.map(cat => (
                         <option key={cat._id} value={cat.name}>{cat.name}</option>
@@ -452,58 +564,107 @@ const Products = () => {
                     )}
                   </div>
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Price *</label>
-                  <input type="number" name="price" className="crm-form-input" value={formData.price} onChange={handleChange} required min="0" step="0.01" style={{ padding: '8px 10px', fontSize: '13px' }} />
+              );
+            case 'price':
+              return (
+                <div key="price">
+                  <label style={lStyle}>Price {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
+                  <input type="number" name="price" className="crm-form-input" value={formData.price} onChange={handleChange} required min="0" step="0.01" style={iStyle} />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Stock Quantity</label>
-                  <input type="number" name="stock" className="crm-form-input" value={formData.stock} onChange={handleChange} min="0" style={{ padding: '8px 10px', fontSize: '13px' }} />
+              );
+            case 'stock':
+              return (
+                <div key="stock">
+                  <label style={lStyle}>Stock Quantity</label>
+                  <input type="number" name="stock" className="crm-form-input" value={formData.stock} onChange={handleChange} min="0" style={iStyle} />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Image URL</label>
-                  <input type="url" name="imageUrl" className="crm-form-input" value={formData.imageUrl} onChange={handleChange} style={{ padding: '8px 10px', fontSize: '13px' }} />
+              );
+            case 'imageUrl':
+              return (
+                <div key="imageUrl">
+                  <label style={lStyle}>Image URL</label>
+                  <input type="url" name="imageUrl" className="crm-form-input" value={formData.imageUrl} onChange={handleChange} style={iStyle} />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', paddingTop: '20px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '12px', fontWeight: '600' }}>
-                    <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} />
+              );
+            case 'isActive':
+              return (
+                <div key="isActive" style={{ display: 'flex', alignItems: 'center', paddingTop: '22px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: '600', color: '#475569' }}>
+                    <input type="checkbox" name="isActive" checked={formData.isActive} onChange={handleChange} style={{ width: '16px', height: '16px' }} />
                     Active Product
                   </label>
                 </div>
-                <div style={{ gridColumn: 'span 4' }}>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
-                  <textarea name="description" className="crm-form-input" value={formData.description} onChange={handleChange} rows="2" style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical' }} />
+              );
+            case 'description':
+              return (
+                <div key="description" style={{ gridColumn: 'span 4' }}>
+                  <label style={lStyle}>Description</label>
+                  <textarea name="description" className="crm-form-input" value={formData.description} onChange={handleChange} rows="2" style={{ ...iStyle, resize: 'vertical' }} />
                 </div>
+              );
+            default:
+              return null;
+          }
+        };
+
+        return (
+          <div className="crm-card" style={{ marginBottom: '16px', overflow: 'hidden', borderRadius: '16px', boxShadow: '0 8px 32px rgba(30,60,114,0.13)' }}>
+            {/* Gradient Header */}
+            <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '800', color: '#fff', letterSpacing: '0.3px' }}>
+                  {editingProduct ? 'Edit Product' : 'Create New Product'}
+                </h3>
+                <p style={{ margin: '3px 0 0', fontSize: '12px', color: 'rgba(255,255,255,0.75)' }}>
+                  Fill in the details below
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => { setShowCreateForm(false); resetForm(); }}
+                style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', color: '#fff', cursor: 'pointer', fontSize: '18px', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >✕</button>
+            </div>
 
-              {/* Dynamic Custom Fields */}
-              {(() => {
-                const standardFieldNames = ['name', 'articleNumber', 'category', 'price', 'stock', 'description', 'imageUrl', 'isActive'];
-                const customFields = fieldDefinitions.filter(field => !standardFieldNames.includes(field.fieldName));
-                if (customFields.length === 0) return null;
-
-                return (
-                  <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
-                    <h4 style={{ fontSize: '13px', fontWeight: '600', marginBottom: '12px' }}>Custom Fields</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-                      {customFields.map(field => (
-                        <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 4' } : {}}>
-                          {renderDynamicField(field)}
-                        </div>
-                      ))}
+            <div style={{ padding: '20px 24px' }}>
+              <form onSubmit={handleCreateProduct}>
+                {PRODUCT_SECTIONS.map((section, sIdx) => {
+                  const sectionFields = fieldDefinitions.filter(f => f.section === section);
+                  if (sectionFields.length === 0) return null;
+                  const color = palette[sIdx % palette.length];
+                  return (
+                    <div key={section} style={{ marginBottom: '20px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', paddingBottom: '8px', borderBottom: `2px solid ${color}20` }}>
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }}></span>
+                        <span style={{ fontSize: '12px', fontWeight: '800', color, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{section}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
+                        {sectionFields.map(field => {
+                          if (!field.isStandardField) {
+                            return (
+                              <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 4' } : {}}>
+                                {renderDynamicField(field)}
+                              </div>
+                            );
+                          }
+                          return renderStdField(field);
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })()}
+                  );
+                })}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
-                <button type="submit" className="crm-btn crm-btn-primary">{editingProduct ? 'Update Product' : 'Create Product'}</button>
-              </div>
-            </form>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '8px', paddingTop: '16px', borderTop: '2px solid #f1f5f9' }}>
+                  <button type="button" className="crm-btn crm-btn-outline" onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
+                  <button type="submit" style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '10px 24px', fontWeight: '700', cursor: 'pointer', fontSize: '14px' }}>
+                    {editingProduct ? 'Update Product' : 'Create Product'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Inline Create Category Form */}
       {showCreateCategoryForm && (

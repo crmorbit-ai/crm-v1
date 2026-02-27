@@ -358,6 +358,10 @@ const createLead = async (req, res) => {
 
     console.log('=== CREATING LEAD ===');
 
+    // Auto-assign lead number (max + 1 per tenant)
+    const lastLead = await Lead.findOne({ tenant }).sort({ leadNumber: -1 }).select('leadNumber');
+    const nextLeadNumber = (lastLead?.leadNumber || 0) + 1;
+
     // 🔥 Create lead with ALL fields directly at root level + system fields
     const leadData = {
       ...otherFields,  // All form fields go directly to root
@@ -367,7 +371,8 @@ const createLead = async (req, res) => {
       owner: req.body.owner || req.user._id,
       tenant,
       createdBy: req.user._id,
-      lastModifiedBy: req.user._id
+      lastModifiedBy: req.user._id,
+      leadNumber: nextLeadNumber
     };
 
     console.log('Lead data to create:', JSON.stringify(leadData, null, 2));
@@ -733,21 +738,54 @@ const convertLead = async (req, res) => {
 
     // Industry mapping for enum compatibility
     const industryMap = {
-      'IT': 'IT',
-      'Information Technology': 'Technology',
-      'Tech': 'Technology',
-      'Software': 'Technology',
-      'Telecom': 'Telecommunications',
-      'Food': 'Food & Beverage',
-      'Medical': 'Healthcare',
-      'Non-Profit': 'Not For Profit'
+      'it': 'IT',
+      'information technology': 'Technology',
+      'tech': 'Technology',
+      'technology': 'Technology',
+      'software': 'Technology',
+      'telecom': 'Telecommunications',
+      'telecommunications': 'Telecommunications',
+      'food': 'Food & Beverage',
+      'food & beverage': 'Food & Beverage',
+      'medical': 'Healthcare',
+      'healthcare': 'Healthcare',
+      'non-profit': 'Not For Profit',
+      'not for profit': 'Not For Profit',
+      'agriculture': 'Agriculture',
+      'apparel': 'Apparel',
+      'banking': 'Banking',
+      'biotechnology': 'Biotechnology',
+      'chemicals': 'Chemicals',
+      'communications': 'Communications',
+      'construction': 'Construction',
+      'consulting': 'Consulting',
+      'education': 'Education',
+      'electronics': 'Electronics',
+      'energy': 'Energy',
+      'engineering': 'Engineering',
+      'entertainment': 'Entertainment',
+      'environmental': 'Environmental',
+      'finance': 'Finance',
+      'government': 'Government',
+      'hospitality': 'Hospitality',
+      'insurance': 'Insurance',
+      'machinery': 'Machinery',
+      'manufacturing': 'Manufacturing',
+      'media': 'Media',
+      'recreation': 'Recreation',
+      'retail': 'Retail',
+      'shipping': 'Shipping',
+      'transportation': 'Transportation',
+      'utilities': 'Utilities',
+      'other': 'Other',
     };
 
     // Create Account
     if (createAccount && accountData) {
-      // Map industry if provided
-      if (accountData.industry && industryMap[accountData.industry]) {
-        accountData.industry = industryMap[accountData.industry];
+      // Map industry case-insensitively; clear any value not in Account enum
+      if (accountData.industry) {
+        const mapped = industryMap[accountData.industry.toLowerCase()];
+        accountData.industry = mapped || '';
       }
 
       account = await Account.create({

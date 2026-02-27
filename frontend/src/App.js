@@ -66,7 +66,6 @@ import SupportAdmin from './pages/SupportAdmin';
 import ProductCategories from './pages/ProductCategories';
 
 // Field Customization (Product Team)
-import FieldBuilder from './pages/FieldBuilder';
 
 // Quotation & Invoice Pages
 import Quotations from './pages/Quotations';
@@ -406,11 +405,6 @@ function AppRoutes() {
       } />
 
       {/* Admin/Product Team routes - Tenant Only */}
-      <Route path="/admin/field-builder" element={
-        <ProtectedRoute requireTenant>
-          <FieldBuilder />
-        </ProtectedRoute>
-      } />
 
       {/* SAAS Owner routes */}
       <Route path="/saas/dashboard" element={

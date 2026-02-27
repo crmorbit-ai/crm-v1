@@ -138,7 +138,8 @@ const createMeeting = async (req, res) => {
           // Send invitations if we have emails
           if (uniqueEmails.length > 0) {
             const organizerName = `${req.user.firstName} ${req.user.lastName}`;
-            await sendMeetingInvitation(meeting, uniqueEmails, organizerName);
+            const organizerEmail = req.user.email || '';
+            await sendMeetingInvitation(meeting, uniqueEmails, organizerName, organizerEmail);
             console.log('✅ Meeting invitations sent to:', uniqueEmails);
           } else {
             console.log('⚠️ No attendee emails found for meeting invitation');
@@ -275,7 +276,8 @@ const resendInvitation = async (req, res) => {
     }
     
     const organizerName = `${req.user.firstName} ${req.user.lastName}`;
-    const result = await sendMeetingInvitation(meeting, uniqueEmails, organizerName);
+    const organizerEmail = req.user.email || '';
+    const result = await sendMeetingInvitation(meeting, uniqueEmails, organizerName, organizerEmail);
     
     successResponse(res, 200, 'Invitation resent successfully', {
       sentTo: uniqueEmails,

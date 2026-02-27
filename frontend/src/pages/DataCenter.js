@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import PinVerification from '../components/common/PinVerification';
 import dataCenterService from '../services/dataCenterService';
@@ -7,10 +8,33 @@ import productService from '../services/productService';
 import BulkCommunication from '../components/BulkCommunication';
 import DynamicField from '../components/DynamicField';
 import fieldDefinitionService from '../services/fieldDefinitionService';
+import { Settings } from 'lucide-react';
+import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
+
+const DEFAULT_CUSTOMER_FIELDS = [
+  { fieldName: 'firstName', label: 'First Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'lastName', label: 'Last Name', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
+  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
+  { fieldName: 'currentDesignation', label: 'Current Designation', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10 },
+  { fieldName: 'currentCompany', label: 'Current Company', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11 },
+  { fieldName: 'totalExperience', label: 'Total Experience (yrs)', fieldType: 'number', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 12 },
+  { fieldName: 'skills', label: 'Skills', fieldType: 'text', section: 'Skills & Experience', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
+  { fieldName: 'location', label: 'Location', fieldType: 'text', section: 'Location & Availability', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
+  { fieldName: 'availability', label: 'Availability', fieldType: 'dropdown', section: 'Location & Availability', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 31, options: [{ label: 'Immediate', value: 'Immediate' }, { label: '15 Days', value: '15 Days' }, { label: '30 Days', value: '30 Days' }, { label: '45 Days', value: '45 Days' }, { label: '60 Days', value: '60 Days' }] },
+  { fieldName: 'currentCTC', label: 'Current CTC', fieldType: 'number', section: 'Salary Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 40 },
+  { fieldName: 'expectedCTC', label: 'Expected CTC', fieldType: 'number', section: 'Salary Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 41 },
+  { fieldName: 'status', label: 'Status', fieldType: 'dropdown', section: 'Status', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 50, options: [{ label: 'Available', value: 'Available' }, { label: 'Not Available', value: 'Not Available' }, { label: 'Placed', value: 'Placed' }] },
+  { fieldName: 'sourceWebsite', label: 'Source Website', fieldType: 'text', section: 'Source Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 60 },
+];
+const CUST_DISABLED_KEY = 'crm_cust_std_disabled';
+const getCustDisabled = () => { try { return JSON.parse(localStorage.getItem(CUST_DISABLED_KEY) || '[]'); } catch { return []; } };
+const CUSTOMER_SECTIONS = ['Basic Information', 'Professional Information', 'Skills & Experience', 'Location & Availability', 'Salary Information', 'Status', 'Source Information', 'Additional Information'];
 
 const DataCenter = () => {
   const navigate = useNavigate();
+  const { user, hasPermission } = useAuth();
   const fileInputRef = useRef(null);
 
   const [candidates, setCandidates] = useState([]);
@@ -54,6 +78,12 @@ const DataCenter = () => {
   const [fieldErrors, setFieldErrors] = useState({});
   const [displayColumns, setDisplayColumns] = useState([]);
   const [showColumnSelector, setShowColumnSelector] = useState(false);
+
+  // Manage Fields
+  const [showManageFields, setShowManageFields] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
+  const [disabledStdFields, setDisabledStdFieldsState] = useState(getCustDisabled);
+  const [togglingField, setTogglingField] = useState(null);
 
   // PIN Verification State
   const [isPinVerified, setIsPinVerified] = useState(false);
@@ -137,16 +167,52 @@ const DataCenter = () => {
     loadFieldDefinitions();
   }, [pagination.page, pagination.limit]);
 
+  const buildCustFields = (disabled, customs) => [
+    ...DEFAULT_CUSTOMER_FIELDS.filter(f => !disabled.includes(f.fieldName)).map(f => ({ ...f, isActive: true, _isStd: true })),
+    ...customs.filter(f => f.isActive && f.showInCreate),
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
+  const allFieldDefs = [
+    ...DEFAULT_CUSTOMER_FIELDS.map(f => ({ ...f, isActive: !disabledStdFields.includes(f.fieldName), _isStd: true })),
+    ...customFieldDefs,
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
   const loadFieldDefinitions = async () => {
     try {
-      const response = await fieldDefinitionService.getFieldDefinitions('Candidate', false);
-      if (response && Array.isArray(response)) {
-        const createFields = response.filter(field => field.isActive && field.showInCreate).sort((a, b) => a.displayOrder - b.displayOrder);
-        setFieldDefinitions(createFields);
-      }
+      const response = await fieldDefinitionService.getFieldDefinitions('Candidate', true);
+      const customs = (Array.isArray(response) ? response : []).filter(f => !f.isStandardField);
+      setCustomFieldDefs(customs);
+      setFieldDefinitions(buildCustFields(disabledStdFields, customs));
     } catch (error) {
       console.error('Load field definitions error:', error);
     }
+  };
+
+  const handleToggleField = async (field) => {
+    setTogglingField(field.fieldName);
+    if (field._isStd) {
+      const newDisabled = disabledStdFields.includes(field.fieldName)
+        ? disabledStdFields.filter(n => n !== field.fieldName)
+        : [...disabledStdFields, field.fieldName];
+      localStorage.setItem(CUST_DISABLED_KEY, JSON.stringify(newDisabled));
+      setDisabledStdFieldsState(newDisabled);
+      setFieldDefinitions(buildCustFields(newDisabled, customFieldDefs));
+    } else {
+      try {
+        await fieldDefinitionService.toggleFieldStatus(field._id, !field.isActive);
+        const updated = customFieldDefs.map(f => f._id === field._id ? { ...f, isActive: !f.isActive } : f);
+        setCustomFieldDefs(updated);
+        setFieldDefinitions(buildCustFields(disabledStdFields, updated));
+      } catch (err) { console.error('Toggle error:', err); }
+    }
+    setTogglingField(null);
+  };
+
+  const handleAddCustomField = async (fieldData) => {
+    const created = await fieldDefinitionService.createFieldDefinition({ entityType: 'Candidate', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData });
+    const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
+    setCustomFieldDefs(updated);
+    setFieldDefinitions(buildCustFields(disabledStdFields, updated));
   };
 
   const groupFieldsBySection = (fields) => {
@@ -227,6 +293,7 @@ const DataCenter = () => {
   const closeAllForms = () => {
     setShowMoveForm(false);
     setShowCreateForm(false);
+    setShowManageFields(false);
   };
 
   const handleMoveToLeads = async () => {
@@ -480,6 +547,11 @@ const DataCenter = () => {
       <div className="action-bar">
         <div className="action-bar-left">
           <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { closeAllForms(); setShowCreateForm(true); }}>Add Customer</button>
+          {hasPermission('field_management', 'read') && (
+            <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+              <Settings style={{ width: '13px', height: '13px' }} /> Manage Fields
+            </button>
+          )}
           <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setShowFilters(!showFilters)}>{showFilters ? 'Hide' : 'Show'} Filters</button>
           <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv,.xlsx,.xls" onChange={handleFileUpload} />
           <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>{uploading ? 'Uploading...' : 'Upload CSV'}</button>
@@ -501,43 +573,70 @@ const DataCenter = () => {
         )}
       </div>
 
+      {/* Manage Fields Panel */}
+      {showManageFields && (
+        <ManageFieldsPanel
+          allFieldDefs={allFieldDefs}
+          togglingField={togglingField}
+          onToggle={handleToggleField}
+          onClose={() => setShowManageFields(false)}
+          onAdd={handleAddCustomField}
+          canAdd={hasPermission('field_management', 'create')}
+          canToggle={hasPermission('field_management', 'update')}
+          entityLabel="Customer"
+          sections={CUSTOMER_SECTIONS}
+        />
+      )}
+
       {/* Inline Create Customer Form */}
       {showCreateForm && (
-        <div className="crm-card" style={{ marginBottom: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>Add New Customer</h3>
-            <button onClick={() => { setShowCreateForm(false); setFieldValues({}); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
+        <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,60,114,0.10)', border: '1px solid #e2e8f0' }}>
+          <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #3b82f6 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.2px' }}>Add New Customer</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Fill in the details to add a new customer record</p>
+            </div>
+            <button onClick={() => { setShowCreateForm(false); setFieldValues({}); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>✕</button>
           </div>
-          <div style={{ padding: '12px' }}>
+          <div style={{ padding: '16px', background: '#fafeff' }}>
             {(() => {
               const groupedFields = groupFieldsBySection(fieldDefinitions);
-              const sectionOrder = ['Basic Information', 'Professional Information', 'Skills & Qualifications', 'Location Information', 'Salary Information', 'Availability', 'Resume & Links', 'Source Information', 'Job Preferences', 'Status', 'Additional Information'];
-
-              return sectionOrder.map(sectionName => {
+              const sectionOrder = ['Basic Information', 'Professional Information', 'Skills & Experience', 'Location & Availability', 'Salary Information', 'Status', 'Source Information', 'Additional Information'];
+              const palette = [
+                { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
+                { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
+                { bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95' },
+                { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
+                { bg: '#ecfeff', border: '#06b6d4', text: '#155e75' },
+                { bg: '#fff1f2', border: '#f43f5e', text: '#9f1239' },
+                { bg: '#fdf4ff', border: '#a855f7', text: '#6b21a8' },
+                { bg: '#f8fafc', border: '#64748b', text: '#334155' },
+              ];
+              return sectionOrder.map((sectionName, sIdx) => {
                 const sectionFields = groupedFields[sectionName];
                 if (!sectionFields || sectionFields.length === 0) return null;
-
+                const c = palette[sIdx % palette.length];
                 return (
-                  <div key={sectionName} style={{ marginBottom: '10px' }}>
-                    <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase' }}>{sectionName}</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
-                      {sectionFields.map((field) => {
-                        const isFullWidth = field.fieldType === 'textarea';
-                        return (
-                          <div key={field._id} style={isFullWidth ? { gridColumn: 'span 3' } : {}}>
-                            {renderDynamicField(field)}
-                          </div>
-                        );
-                      })}
+                  <div key={sectionName} style={{ marginBottom: '14px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: c.bg, borderLeft: `3px solid ${c.border}` }}>
+                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c.border, flexShrink: 0 }} />
+                      <span style={{ fontSize: '11px', fontWeight: '700', color: c.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+                      {sectionFields.map((field) => (
+                        <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 3' } : {}}>
+                          {renderDynamicField(field)}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
               });
             })()}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '8px 12px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
-            <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => { setShowCreateForm(false); setFieldValues({}); }}>Cancel</button>
-            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={handleCreateCandidate}>Create</button>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#f8fafc' }}>
+            <button onClick={() => { setShowCreateForm(false); setFieldValues({}); }} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+            <button onClick={handleCreateCandidate} style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>Add Customer</button>
           </div>
         </div>
       )}

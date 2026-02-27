@@ -237,10 +237,6 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                   <NavItem to="/support" label="My Tickets" />
                 </NavSection>
 
-                {/* Customization */}
-                <NavSection title="Customization" section="customization" permissions={['field_management']}>
-                  <NavItem to="/admin/field-builder" label="Field Builder" permission="field_management" />
-                </NavSection>
               </>
             )}
           </nav>

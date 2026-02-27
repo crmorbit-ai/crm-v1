@@ -121,12 +121,12 @@ const AboutUs = () => {
                 technology to help businesses succeed.
               </p>
             </div>
-            <div className="bg-white/5 border border-white/10 rounded-3xl p-10 text-center backdrop-blur-lg">
-              <div className="text-8xl mb-6">🚀</div>
-              <h3 className="text-2xl font-bold text-white mb-2">Our Mission</h3>
-              <p className="text-gray-400">
-                Make customer management effortless and business growth inevitable.
-              </p>
+            <div className="bg-white/5 border border-white/10 rounded-3xl overflow-hidden backdrop-blur-lg">
+              <img
+                src="https://localcrm.com/wp-content/uploads/2024/04/About-us-localcrm.png"
+                alt="About Us"
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>

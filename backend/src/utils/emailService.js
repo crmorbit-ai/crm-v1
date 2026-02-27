@@ -102,7 +102,7 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
 /**
  * Send Meeting Invitation Email
  */
-const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName) => {
+const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName, organizerEmail = '') => {
   try {
     const transporter = createTransporter();
     await transporter.verify();
@@ -129,6 +129,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName) => 
     const mailOptions = {
       from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
       to: attendeeEmails.join(', '),
+      ...(organizerEmail ? { replyTo: `"${organizerName}" <${organizerEmail}>` } : {}),
       subject: `📅 Meeting Invitation: ${meeting.title}`,
       html: `
         <!DOCTYPE html>
@@ -162,6 +163,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName) => 
             .organizer-info { background: #EFF6FF; border-radius: 8px; padding: 16px; margin-top: 20px; }
             .organizer-label { font-size: 12px; color: #3B82F6; margin-bottom: 4px; }
             .organizer-name { font-size: 16px; color: #1E40AF; font-weight: 600; }
+            .organizer-email { font-size: 13px; color: #3B82F6; margin-top: 4px; }
           </style>
         </head>
         <body>
@@ -238,6 +240,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName) => 
               <div class="organizer-info">
                 <div class="organizer-label">Organized by</div>
                 <div class="organizer-name">${organizerName}</div>
+                ${organizerEmail ? `<div class="organizer-email">✉️ ${organizerEmail}</div>` : ''}
               </div>
             </div>
             
@@ -245,7 +248,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName) => 
               <p style="font-weight: 600; color: #1F2937;">Unified CRM</p>
               <p>© ${new Date().getFullYear()} All rights reserved.</p>
               <p style="font-size: 12px; margin-top: 15px;">
-                This is an automated meeting invitation. Please do not reply.
+                This is an automated meeting invitation.${organizerEmail ? ` To respond, reply to ${organizerName} at ${organizerEmail}.` : ' Please do not reply to this email.'}
               </p>
             </div>
           </div>

@@ -14,6 +14,7 @@ import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config/api.config';
 import TooltipButton from '../components/common/TooltipButton';
 import DynamicField from '../components/DynamicField';
+import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import BulkUploadForm from '../components/BulkUploadForm';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -60,7 +61,33 @@ import {
   PhoneCall,
   Clock,
   MapPin,
+  Settings,
+  ToggleLeft,
+  ToggleRight,
 } from 'lucide-react';
+
+// Standard lead fields — hardcoded, no seed needed
+const DEFAULT_LEAD_FIELDS = [
+  { fieldName: 'firstName', label: 'First Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'lastName', label: 'Last Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
+  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
+  { fieldName: 'company', label: 'Company', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
+  { fieldName: 'jobTitle', label: 'Job Title', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 6 },
+  { fieldName: 'website', label: 'Website', fieldType: 'url', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 7 },
+  { fieldName: 'leadStatus', label: 'Lead Status', fieldType: 'dropdown', section: 'Lead Details', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'New', value: 'New' }, { label: 'Contacted', value: 'Contacted' }, { label: 'Qualified', value: 'Qualified' }, { label: 'Unqualified', value: 'Unqualified' }, { label: 'Lost', value: 'Lost' }, { label: 'Converted', value: 'Converted' }] },
+  { fieldName: 'leadSource', label: 'Lead Source', fieldType: 'dropdown', section: 'Lead Details', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11, options: [{ label: 'Website', value: 'Website' }, { label: 'Social Media', value: 'Social Media' }, { label: 'Referral', value: 'Referral' }, { label: 'Campaign', value: 'Campaign' }, { label: 'Cold Call', value: 'Cold Call' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'industry', label: 'Industry', fieldType: 'text', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
+  { fieldName: 'city', label: 'City', fieldType: 'text', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
+  { fieldName: 'state', label: 'State', fieldType: 'text', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 31 },
+  { fieldName: 'country', label: 'Country', fieldType: 'text', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 32 },
+  { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 40 },
+];
+
+const STD_DISABLED_KEY = 'crm_lead_std_disabled';
+const getDisabledStdFields = () => { try { return JSON.parse(localStorage.getItem(STD_DISABLED_KEY) || '[]'); } catch { return []; } };
+const setDisabledStdFields = (arr) => localStorage.setItem(STD_DISABLED_KEY, JSON.stringify(arr));
+const LEAD_SECTIONS = ['Lead Details', 'Basic Information', 'Business Information', 'Address', 'Additional Information'];
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -135,6 +162,17 @@ const Leads = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
 
+  // Manage Fields Panel
+  const [showManageFields, setShowManageFields] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState([]); // DB custom fields only
+  const [disabledStdFields, setDisabledStdFieldsState] = useState(getDisabledStdFields);
+  const [togglingField, setTogglingField] = useState(null);
+  const [showAddFieldForm, setShowAddFieldForm] = useState(false);
+  const [savingField, setSavingField] = useState(false);
+  const [newFieldForm, setNewFieldForm] = useState({
+    label: '', fieldType: 'text', section: 'Additional Information', isRequired: false, afterField: '__end__'
+  });
+
   const [formData, setFormData] = useState({
     product: '',
     productDetails: { quantity: 1, requirements: '', estimatedBudget: '', priority: '', notes: '' }
@@ -175,20 +213,105 @@ const Leads = () => {
   };
 
   const loadGroups = async () => {
+    if (!hasPermission('group_management', 'read')) return;
     try {
       const data = await groupService.getGroups();
       setGroups(Array.isArray(data) ? data : data?.groups || []);
     } catch (err) { console.error('Load groups error:', err); }
   };
 
+  // Build the merged field list for the create form (enabled std + active custom)
+  const buildFieldDefinitions = (disabled, customDefs) => {
+    const stdFields = DEFAULT_LEAD_FIELDS
+      .filter(f => !disabled.includes(f.fieldName))
+      .map(f => ({ ...f, isActive: true, _isStd: true }));
+    const custFields = customDefs.filter(f => f.isActive && f.showInCreate);
+    return [...stdFields, ...custFields].sort((a, b) => a.displayOrder - b.displayOrder);
+  };
+
+  // All fields for Manage Fields panel (std with toggle state + all custom)
+  const allFieldDefs = [
+    ...DEFAULT_LEAD_FIELDS.map(f => ({ ...f, isActive: !disabledStdFields.includes(f.fieldName), _isStd: true })),
+    ...customFieldDefs,
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
   const loadCustomFields = async () => {
     try {
-      const response = await fieldDefinitionService.getFieldDefinitions('Lead', false);
-      if (response && Array.isArray(response)) {
-        const createFields = response.filter(field => field.isActive && field.showInCreate).sort((a, b) => a.displayOrder - b.displayOrder);
-        setFieldDefinitions(createFields);
-      }
+      const response = await fieldDefinitionService.getFieldDefinitions('Lead', true);
+      const customs = (Array.isArray(response) ? response : []).filter(f => !f.isStandardField);
+      setCustomFieldDefs(customs);
+      setFieldDefinitions(buildFieldDefinitions(disabledStdFields, customs));
     } catch (err) { console.error('Load field definitions error:', err); }
+  };
+
+  const handleToggleField = async (field) => {
+    setTogglingField(field.fieldName);
+    if (field._isStd) {
+      // Standard field — toggle in localStorage only, no API call
+      const newDisabled = disabledStdFields.includes(field.fieldName)
+        ? disabledStdFields.filter(n => n !== field.fieldName)
+        : [...disabledStdFields, field.fieldName];
+      setDisabledStdFields(newDisabled);
+      setDisabledStdFieldsState(newDisabled);
+      setFieldDefinitions(buildFieldDefinitions(newDisabled, customFieldDefs));
+    } else {
+      // Custom DB field — call API
+      try {
+        await fieldDefinitionService.toggleFieldStatus(field._id, !field.isActive);
+        const updated = customFieldDefs.map(f => f._id === field._id ? { ...f, isActive: !f.isActive } : f);
+        setCustomFieldDefs(updated);
+        setFieldDefinitions(buildFieldDefinitions(disabledStdFields, updated));
+      } catch (err) { console.error('Toggle field error:', err); }
+    }
+    setTogglingField(null);
+  };
+
+  const handleAddCustomField = async (e) => {
+    e.preventDefault();
+    if (!newFieldForm.label.trim()) return;
+    setSavingField(true);
+    try {
+      const fieldName = newFieldForm.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+      // Calculate displayOrder based on "after which field"
+      let displayOrder = 1000;
+      if (newFieldForm.afterField && newFieldForm.afterField !== '__end__') {
+        const afterF = allFieldDefs.find(f => (f._id || f.fieldName) === newFieldForm.afterField);
+        if (afterF) displayOrder = afterF.displayOrder + 0.5;
+      } else {
+        // End of selected section: find max displayOrder in that section
+        const sectionFields = allFieldDefs.filter(f => f.section === newFieldForm.section);
+        displayOrder = sectionFields.length > 0 ? Math.max(...sectionFields.map(f => f.displayOrder)) + 1 : 1000;
+      }
+      const created = await fieldDefinitionService.createFieldDefinition({
+        entityType: 'Lead',
+        fieldName,
+        label: newFieldForm.label.trim(),
+        fieldType: newFieldForm.fieldType,
+        section: newFieldForm.section,
+        isRequired: newFieldForm.isRequired,
+        isStandardField: false,
+        showInCreate: true,
+        showInEdit: true,
+        showInDetail: true,
+        displayOrder,
+      });
+      const newCustom = { ...created, isActive: true };
+      const updated = [...customFieldDefs, newCustom].sort((a, b) => a.displayOrder - b.displayOrder);
+      setCustomFieldDefs(updated);
+      setFieldDefinitions(buildFieldDefinitions(disabledStdFields, updated));
+      setNewFieldForm({ label: '', fieldType: 'text', section: 'Additional Information', isRequired: false, afterField: '__end__' });
+      setShowAddFieldForm(false);
+    } catch (err) { console.error('Create field error:', err); }
+    setSavingField(false);
+  };
+
+  const handleAddCustomFieldFromPanel = async (fieldData) => {
+    const created = await fieldDefinitionService.createFieldDefinition({
+      entityType: 'Lead', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData,
+    });
+    const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
+    setCustomFieldDefs(updated);
+    setFieldDefinitions(buildFieldDefinitions(disabledStdFields, updated));
   };
 
   // Masking functions for sensitive data (when PIN not verified)
@@ -212,24 +335,38 @@ const Leads = () => {
   // Check if field should be masked
   const sensitiveFields = ['email', 'phone', 'firstName', 'lastName', 'mobile', 'company'];
 
+  const maskGeneric = (value) => {
+    if (!value) return value;
+    const str = value.toString();
+    if (str.length <= 1) return '***';
+    return str[0] + '***';
+  };
+
   const getMaskedValue = (fieldName, value) => {
     if (isPinVerified || !value) return value;
     if (fieldName === 'email') return maskEmail(value);
     if (fieldName === 'phone' || fieldName === 'mobile') return maskPhone(value);
     if (fieldName === 'firstName' || fieldName === 'lastName') return maskName(value);
     if (fieldName === 'company') return maskName(value);
-    return value;
+    // Generic mask for all other fields
+    return maskGeneric(value);
   };
 
   const extractColumns = (leadsData) => {
     if (!leadsData?.length) return [];
     const allKeys = new Set();
-    const excludeKeys = ['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'createdAt', 'updatedAt', 'isActive', 'isConverted', 'convertedDate', 'convertedAccount', 'convertedContact', 'convertedOpportunity', 'emailVerified', 'emailVerificationStatus', 'emailVerificationDetails', 'phoneVerified', 'phoneVerificationStatus', 'phoneVerificationDetails', 'emailOptOut', 'doNotCall', 'assignedGroup', 'assignedMembers', 'assignmentChain', 'dataCenterCandidateId', 'product', 'productDetails', 'owner'];
+    const excludeKeys = ['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'createdAt', 'updatedAt', 'isActive', 'isConverted', 'convertedDate', 'convertedAccount', 'convertedContact', 'convertedOpportunity', 'emailVerified', 'emailVerificationStatus', 'emailVerificationDetails', 'phoneVerified', 'phoneVerificationStatus', 'phoneVerificationDetails', 'emailOptOut', 'doNotCall', 'assignedGroup', 'assignedMembers', 'assignmentChain', 'dataCenterCandidateId', 'product', 'productDetails', 'owner', 'customFields', 'tags', 'leadNumber', 'source', 'rating'];
 
     leadsData.forEach(lead => {
       Object.keys(lead).forEach(key => {
         if (!excludeKeys.includes(key) && lead[key] != null && lead[key] !== '') allKeys.add(key);
       });
+      // Expand individual custom field keys so they show as normal columns
+      if (lead.customFields && typeof lead.customFields === 'object') {
+        Object.keys(lead.customFields).forEach(key => {
+          if (lead.customFields[key] != null && lead.customFields[key] !== '') allKeys.add(key);
+        });
+      }
     });
 
     const columnsArray = Array.from(allKeys);
@@ -241,17 +378,27 @@ const Leads = () => {
     return columnsArray;
   };
 
-  const getFieldValue = (lead, fieldName) => lead[fieldName] ?? null;
+  // Check top-level first, then fall back to customFields sub-object
+  const getFieldValue = (lead, fieldName) => {
+    if (lead[fieldName] !== undefined) return lead[fieldName] ?? null;
+    if (lead.customFields && lead.customFields[fieldName] !== undefined) return lead.customFields[fieldName] ?? null;
+    return null;
+  };
 
   const formatFieldValue = (value) => {
     if (value == null || value === '') return '-';
     if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : '-';
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
-    if (typeof value === 'object') return JSON.stringify(value);
+    if (typeof value === 'object') return '-';
     return value.toString();
   };
 
-  const formatFieldName = (fieldName) => fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+  // Use custom field label if available, otherwise convert camelCase
+  const formatFieldName = (fieldName) => {
+    const customDef = customFieldDefs.find(f => f.fieldName === fieldName);
+    if (customDef) return customDef.label;
+    return fieldName.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase()).trim();
+  };
 
   const groupFieldsBySection = (fields) => {
     const grouped = {};
@@ -282,7 +429,7 @@ const Leads = () => {
         setPagination(prev => ({ ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0 }));
 
         const newColumns = extractColumns(leadsData);
-        if (newColumns.length > 0) setDisplayColumns([...new Set([...displayColumns, ...newColumns])]);
+        if (newColumns.length > 0) setDisplayColumns(newColumns);
 
         setStats({
           total: response.data.pagination?.total || 0,
@@ -338,6 +485,8 @@ const Leads = () => {
     setShowAddProductForm(false);
     setShowCreateCategoryForm(false);
     setShowAssignGroupForm(false);
+    setShowManageFields(false);
+    setShowAddFieldForm(false);
   };
 
   const handleCreateLead = async (e) => {
@@ -975,37 +1124,57 @@ const Leads = () => {
                 </button>
               )}
               {canImportLeads && <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>Bulk Upload</button>}
+              {hasPermission('field_management', 'read') && (
+                <button onClick={() => { closeAllForms(); setShowAddFieldForm(false); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                  <Settings className="h-4 w-4" /> Manage Fields
+                </button>
+              )}
               {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Lead</button>}
             </div>
           </div>
         </div>
       </div>
 
-      {/* Inline Create Lead Form - Compact */}
+      {/* Inline Create Lead Form */}
       {showCreateForm && (
-        <div className="crm-card" style={{ marginBottom: '10px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
-            <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Create New Lead</h3>
-            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+        <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,60,114,0.10)', border: '1px solid #e2e8f0' }}>
+          <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #3b82f6 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.2px' }}>Create New Lead</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Fill in the details to add a new lead</p>
+            </div>
+            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>✕</button>
           </div>
-          <div style={{ padding: '10px' }}>
+          <div style={{ padding: '16px', background: '#fafeff' }}>
             <form onSubmit={handleCreateLead}>
               {(() => {
                 const groupedFields = groupFieldsBySection(fieldDefinitions);
-                const sectionOrder = ['Basic Information', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information', 'Lead Details', 'Lead Classification'];
-
+                const sectionOrder = ['Lead Details', 'Basic Information', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information', 'Lead Classification'];
+                const palette = [
+                  { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
+                  { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
+                  { bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95' },
+                  { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
+                  { bg: '#ecfeff', border: '#06b6d4', text: '#155e75' },
+                  { bg: '#fff1f2', border: '#f43f5e', text: '#9f1239' },
+                  { bg: '#f8fafc', border: '#64748b', text: '#334155' },
+                ];
+                let colorIdx = 0;
                 return sectionOrder.map(sectionName => {
                   const sectionFields = groupedFields[sectionName];
                   if (!sectionFields?.length) return null;
-
+                  const c = palette[colorIdx++ % palette.length];
                   return (
-                    <div key={sectionName} style={{ marginBottom: '8px' }}>
-                      <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                    <div key={sectionName} style={{ marginBottom: '14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: c.bg, borderLeft: `3px solid ${c.border}` }}>
+                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c.border, flexShrink: 0 }} />
+                        <span style={{ fontSize: '11px', fontWeight: '700', color: c.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
                         {sectionName === 'Basic Information' && (
                           <div>
-                            <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '2px' }}>Lead Owner</label>
-                            <input type="text" value={`${user?.firstName} ${user?.lastName}`} disabled style={{ width: '100%', padding: '4px 6px', fontSize: '11px', border: '1px solid #e5e7eb', borderRadius: '4px', background: '#f9fafb', color: '#6b7280' }} />
+                            <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '3px' }}>Lead Owner</label>
+                            <input type="text" value={`${user?.firstName} ${user?.lastName}`} disabled style={{ width: '100%', padding: '5px 8px', fontSize: '11px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#f9fafb', color: '#6b7280' }} />
                           </div>
                         )}
                         {sectionFields.map((field) => (
@@ -1019,29 +1188,32 @@ const Leads = () => {
                 });
               })()}
 
-              <div style={{ marginBottom: '8px' }}>
-                <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Information</h4>
-                <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-end' }}>
-                  <div style={{ flex: 1, maxWidth: '200px' }}>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '2px' }}>Product (Optional)</label>
-                    <select name="product" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.product} onChange={handleChange}>
-                      <option value="">-None-</option>
+              <div style={{ marginBottom: '14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: '#fdf4ff', borderLeft: '3px solid #a855f7' }}>
+                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a855f7', flexShrink: 0 }} />
+                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Information</span>
+                </div>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                  <div style={{ flex: 1, maxWidth: '220px' }}>
+                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '3px' }}>Product (Optional)</label>
+                    <select name="product" className="crm-form-select" style={{ padding: '5px 8px', fontSize: '11px' }} value={formData.product} onChange={handleChange}>
+                      <option value="">— None —</option>
                       {products.map(product => (
                         <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
                       ))}
                     </select>
                   </div>
                   {canManageProducts && (
-                    <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 8px', fontSize: '10px' }} onClick={() => { setShowCreateForm(false); setShowAddProductForm(true); }}>
+                    <button type="button" style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #a855f7', background: '#fdf4ff', color: '#7e22ce', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }} onClick={() => { setShowCreateForm(false); setShowAddProductForm(true); }}>
                       + Add Product
                     </button>
                   )}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-                <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
-                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Save Lead</button>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>Save Lead</button>
               </div>
             </form>
           </div>
@@ -1190,6 +1362,21 @@ const Leads = () => {
         </div>
       )}
 
+      {/* Manage Fields Panel */}
+      {showManageFields && (
+        <ManageFieldsPanel
+          allFieldDefs={allFieldDefs}
+          togglingField={togglingField}
+          onToggle={handleToggleField}
+          onClose={() => { setShowManageFields(false); setShowAddFieldForm(false); }}
+          onAdd={handleAddCustomFieldFromPanel}
+          canAdd={hasPermission('field_management', 'create')}
+          canToggle={hasPermission('field_management', 'update')}
+          entityLabel="Lead"
+          sections={LEAD_SECTIONS}
+        />
+      )}
+
       {/* Lead List */}
       <div className="crm-card">
         <div className="crm-card-header">
@@ -1220,11 +1407,11 @@ const Leads = () => {
                 >
                   <div className="flex items-start gap-4 mb-4">
                     <div className="avatar">
-                      {lead.firstName?.[0]}{lead.lastName?.[0]}
+                      {maskName(lead.firstName)?.[0]}{maskName(lead.lastName)?.[0]}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-extrabold text-gray-800 text-lg truncate">{getMaskedValue('firstName', lead.firstName)} {getMaskedValue('lastName', lead.lastName)}</h3>
-                      <p className="text-sm text-gray-500 font-semibold truncate">{lead.jobTitle} {lead.company && `at ${getMaskedValue('company', lead.company)}`}</p>
+                      <h3 className="font-extrabold text-gray-800 text-lg truncate">{maskName(lead.firstName)} {maskName(lead.lastName)}</h3>
+                      <p className="text-sm text-gray-500 font-semibold truncate">{lead.jobTitle ? maskGeneric(lead.jobTitle) : ''} {lead.company ? `at ${maskName(lead.company)}` : ''}</p>
                     </div>
                     {canDeleteLead && (
                       <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDeleteLead(e, lead._id)}>
@@ -1234,12 +1421,10 @@ const Leads = () => {
                   </div>
                   <div className="flex gap-2 mb-4">
                     <Badge variant={getStatusBadgeVariant(lead.leadStatus)}>{lead.leadStatus || 'New'}</Badge>
-                    {lead.rating && <Badge variant="outline">{lead.rating}</Badge>}
                   </div>
                   <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-500" /><span className="truncate">{getMaskedValue('email', lead.email)}</span></div>
-                    {lead.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-green-500" /><span>{getMaskedValue('phone', lead.phone)}</span></div>}
-                    {lead.leadSource && <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-purple-500" /><span>{lead.leadSource}</span></div>}
+                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-500" /><span className="truncate">{maskEmail(lead.email)}</span></div>
+                    {lead.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-green-500" /><span>{maskPhone(lead.phone)}</span></div>}
                   </div>
                 </div>
               ))}
@@ -1254,6 +1439,7 @@ const Leads = () => {
                       onCheckedChange={(checked) => setSelectedLeads(checked ? leads.map(l => l._id) : [])}
                     />
                   </TableHead>
+                  <TableHead className="w-16 text-center font-bold">No.</TableHead>
                   {displayColumns.map((column) => (
                     <TableHead key={column}>{formatFieldName(column)}</TableHead>
                   ))}
@@ -1275,16 +1461,18 @@ const Leads = () => {
                         }}
                       />
                     </TableCell>
+                    <TableCell className="text-center">
+                      <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '13px' }}>
+                        {lead.leadNumber || '-'}
+                      </span>
+                    </TableCell>
                     {displayColumns.map((column) => (
                       <TableCell key={column}>
                         {column === 'leadStatus' ? (
                           <Badge variant={getStatusBadgeVariant(lead.leadStatus)}>{lead.leadStatus || 'New'}</Badge>
                         ) : (
                           <span className="truncate max-w-[200px] block">
-                            {sensitiveFields.includes(column)
-                              ? getMaskedValue(column, getFieldValue(lead, column)) || '-'
-                              : formatFieldValue(getFieldValue(lead, column))
-                            }
+                            {getMaskedValue(column, getFieldValue(lead, column)) || '-'}
                           </span>
                         )}
                       </TableCell>
@@ -1450,88 +1638,62 @@ const Leads = () => {
                     {/* Overview Tab */}
                     {detailActiveTab === 'overview' && (
                       <div>
-                        {/* Contact Info */}
-                        <div style={{ marginBottom: '16px' }}>
-                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Contact Information</h4>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {selectedLeadData.email && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Mail className="h-4 w-4 text-blue-500" /><a href={`mailto:${selectedLeadData.email}`} style={{ color: '#3B82F6' }}>{selectedLeadData.email}</a></div>}
-                            {selectedLeadData.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Phone className="h-4 w-4 text-green-500" /><a href={`tel:${selectedLeadData.phone}`} style={{ color: '#059669' }}>{selectedLeadData.phone}</a></div>}
-                            {selectedLeadData.website && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Globe className="h-4 w-4 text-purple-500" /><a href={selectedLeadData.website} target="_blank" rel="noopener noreferrer" style={{ color: '#7C3AED' }}>{selectedLeadData.website}</a></div>}
-                          </div>
-                        </div>
+                        {(() => {
+                          // Keys to NEVER show in detail panel
+                          const SYSTEM_KEYS = new Set(['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'updatedAt', 'isActive', 'isConverted', 'convertedDate', 'convertedAccount', 'convertedContact', 'convertedOpportunity', 'emailVerified', 'emailVerificationStatus', 'emailVerificationDetails', 'phoneVerified', 'phoneVerificationStatus', 'phoneVerificationDetails', 'emailOptOut', 'doNotCall', 'assignedGroup', 'assignedMembers', 'assignmentChain', 'dataCenterCandidateId', 'productDetails', 'owner', 'customFields', 'tags', 'leadNumber', 'source']);
 
-                        {/* Company Info */}
-                        {(selectedLeadData.company || selectedLeadData.industry) && (
-                          <div style={{ marginBottom: '16px' }}>
-                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Company Information</h4>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                              {selectedLeadData.company && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Building2 className="h-4 w-4 text-gray-500" />{selectedLeadData.company}</div>}
-                              {selectedLeadData.industry && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Briefcase className="h-4 w-4 text-gray-500" />{selectedLeadData.industry}</div>}
-                            </div>
-                          </div>
-                        )}
+                          // Build a field map: fieldName → { label, section, fieldType }
+                          const fieldMap = {};
+                          // From DEFAULT_LEAD_FIELDS
+                          DEFAULT_LEAD_FIELDS.forEach(f => { fieldMap[f.fieldName] = { label: f.label, section: f.section, fieldType: f.fieldType }; });
+                          // From Manage Fields custom defs (overrides if duplicate)
+                          customFieldDefs.forEach(f => { fieldMap[f.fieldName] = { label: f.label, section: f.section, fieldType: f.fieldType }; });
 
-                        {/* Lead Details */}
-                        <div style={{ marginBottom: '16px' }}>
-                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Lead Details</h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f9fafb', padding: '12px', borderRadius: '8px' }}>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Source</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.leadSource || '-'}</p></div>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Rating</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.rating || '-'}</p></div>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Created</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.createdAt ? new Date(selectedLeadData.createdAt).toLocaleDateString() : '-'}</p></div>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Status</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedLeadData.leadStatus || 'New'}</p></div>
-                          </div>
-                        </div>
-
-                        {/* Product Info */}
-                        {selectedLeadData.product && (
-                          <div style={{ marginBottom: '16px', padding: '12px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#1E40AF', marginBottom: '10px', textTransform: 'uppercase' }}>Product Information</h4>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                              <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Product</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>{selectedLeadData.product.name}</p></div>
-                              <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Article #</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>{selectedLeadData.product.articleNumber}</p></div>
-                              {selectedLeadData.productDetails?.quantity && <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Quantity</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0 }}>{selectedLeadData.productDetails.quantity}</p></div>}
-                              {selectedLeadData.productDetails?.estimatedBudget && <div><p style={{ fontSize: '10px', color: '#1E40AF', marginBottom: '2px' }}>Budget</p><p style={{ fontSize: '13px', fontWeight: '600', margin: 0, color: '#059669' }}>₹{Number(selectedLeadData.productDetails.estimatedBudget).toLocaleString()}</p></div>}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Description */}
-                        {selectedLeadData.description && (
-                          <div style={{ marginBottom: '16px' }}>
-                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Description</h4>
-                            <p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5', margin: 0, background: '#f9fafb', padding: '10px', borderRadius: '6px' }}>{selectedLeadData.description}</p>
-                          </div>
-                        )}
-
-                        {/* Custom Fields */}
-                        {customFieldDefinitions.length > 0 && selectedLeadData.customFields && Object.keys(selectedLeadData.customFields).length > 0 && (() => {
-                          const groupedFields = {};
-                          customFieldDefinitions.forEach(field => {
-                            const section = field.section || 'Additional Information';
-                            if (!groupedFields[section]) groupedFields[section] = [];
-                            groupedFields[section].push(field);
+                          // Collect all keys from lead that have a value
+                          const grouped = {};
+                          Object.keys(selectedLeadData).forEach(key => {
+                            if (SYSTEM_KEYS.has(key)) return;
+                            const val = selectedLeadData[key];
+                            if (val === null || val === undefined || val === '') return;
+                            if (typeof val === 'object' && !Array.isArray(val)) return;
+                            const def = fieldMap[key];
+                            const section = def?.section || 'Additional Information';
+                            if (!grouped[section]) grouped[section] = [];
+                            grouped[section].push({ key, label: def?.label || formatFieldName(key), fieldType: def?.fieldType || 'text', value: val });
                           });
 
-                          return Object.keys(groupedFields).map(sectionName => {
-                            const fieldsWithValues = groupedFields[sectionName].filter(field => selectedLeadData.customFields[field.fieldName]);
-                            if (fieldsWithValues.length === 0) return null;
+                          // Section render order
+                          const sectionOrder = ['Basic Information', 'Lead Details', 'Business Information', 'Address', 'Additional Information', ...Object.keys(grouped).filter(s => !['Basic Information','Lead Details','Business Information','Address','Additional Information'].includes(s))];
 
+                          return sectionOrder.map(section => {
+                            const fields = grouped[section];
+                            if (!fields || fields.length === 0) return null;
                             return (
-                              <div key={sectionName} style={{ marginBottom: '16px' }}>
-                                <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#1e3c72', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                  <span style={{ width: '3px', height: '12px', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', borderRadius: '2px' }}></span>
-                                  {sectionName}
+                              <div key={section} style={{ marginBottom: '14px' }}>
+                                <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                                  {section}
+                                  <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
                                 </h4>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', background: '#f9fafb', padding: '10px', borderRadius: '6px' }}>
-                                  {fieldsWithValues.map(field => {
-                                    let value = selectedLeadData.customFields[field.fieldName];
-                                    if (field.fieldType === 'currency') value = `₹${Number(value).toLocaleString()}`;
-                                    else if (field.fieldType === 'date') value = new Date(value).toLocaleDateString();
-                                    else if (field.fieldType === 'checkbox') value = value ? 'Yes' : 'No';
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                  {fields.map(({ key, label, fieldType, value }) => {
+                                    let display = value;
+                                    if (fieldType === 'currency') display = `₹${Number(value).toLocaleString()}`;
+                                    else if (fieldType === 'date') { try { display = new Date(value).toLocaleDateString(); } catch(e) { display = value; } }
+                                    else if (fieldType === 'checkbox') display = value ? 'Yes' : 'No';
+                                    else if (Array.isArray(value)) display = value.join(', ');
+                                    else display = value?.toString() || '-';
+                                    const isEmail = fieldType === 'email' || key === 'email';
+                                    const isPhone = fieldType === 'phone' || key === 'phone';
+                                    const isUrl = fieldType === 'url' || key === 'website';
                                     return (
-                                      <div key={field._id}>
-                                        <p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>{field.label}</p>
-                                        <p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{value}</p>
+                                      <div key={key} style={{ background: '#f9fafb', padding: '8px 10px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                        <p style={{ fontSize: '9px', color: '#9CA3AF', marginBottom: '3px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</p>
+                                        {isEmail ? <a href={`mailto:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#3B82F6', wordBreak: 'break-all' }}>{display}</a>
+                                          : isPhone ? <a href={`tel:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#059669' }}>{display}</a>
+                                          : isUrl ? <a href={display} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: '500', color: '#7C3AED', wordBreak: 'break-all' }}>{display}</a>
+                                          : <p style={{ fontSize: '12px', fontWeight: '500', margin: 0, color: '#1e293b', wordBreak: 'break-word' }}>{display}</p>
+                                        }
                                       </div>
                                     );
                                   })}
@@ -1540,6 +1702,19 @@ const Leads = () => {
                             );
                           });
                         })()}
+
+                        {/* Product Info */}
+                        {selectedLeadData.product && (
+                          <div style={{ marginBottom: '14px', padding: '10px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
+                            <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#1E40AF', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}><p style={{ fontSize: '9px', color: '#1E40AF', marginBottom: '2px', fontWeight: '600' }}>PRODUCT</p><p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>{selectedLeadData.product.name}</p></div>
+                              <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}><p style={{ fontSize: '9px', color: '#1E40AF', marginBottom: '2px', fontWeight: '600' }}>ARTICLE #</p><p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>{selectedLeadData.product.articleNumber}</p></div>
+                              {selectedLeadData.productDetails?.quantity && <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}><p style={{ fontSize: '9px', color: '#1E40AF', marginBottom: '2px', fontWeight: '600' }}>QTY</p><p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>{selectedLeadData.productDetails.quantity}</p></div>}
+                              {selectedLeadData.productDetails?.estimatedBudget && <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}><p style={{ fontSize: '9px', color: '#1E40AF', marginBottom: '2px', fontWeight: '600' }}>BUDGET</p><p style={{ fontSize: '12px', fontWeight: '600', margin: 0, color: '#059669' }}>₹{Number(selectedLeadData.productDetails.estimatedBudget).toLocaleString()}</p></div>}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 

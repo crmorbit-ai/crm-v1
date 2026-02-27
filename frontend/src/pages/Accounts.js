@@ -6,8 +6,26 @@ import { accountService } from '../services/accountService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
-import { Phone, Globe, Building2, X, Edit, Users, DollarSign, MapPin, Briefcase } from 'lucide-react';
+import { Phone, Globe, Building2, X, Edit, Users, DollarSign, MapPin, Briefcase, Settings } from 'lucide-react';
+import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
+
+const DEFAULT_ACCOUNT_FIELDS = [
+  { fieldName: 'accountName', label: 'Account Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'accountType', label: 'Account Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Vendor', value: 'Vendor' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
+  { fieldName: 'website', label: 'Website', fieldType: 'url', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
+  { fieldName: 'industry', label: 'Industry', fieldType: 'dropdown', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'Technology', value: 'Technology' }, { label: 'Healthcare', value: 'Healthcare' }, { label: 'Finance', value: 'Finance' }, { label: 'Manufacturing', value: 'Manufacturing' }, { label: 'Retail', value: 'Retail' }, { label: 'Education', value: 'Education' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'billingStreet', label: 'Street', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
+  { fieldName: 'billingCity', label: 'City', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 21 },
+  { fieldName: 'billingState', label: 'State', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 22 },
+  { fieldName: 'billingCountry', label: 'Country', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 23 },
+  { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
+];
+const ACCT_DISABLED_KEY = 'crm_acct_std_disabled';
+const getAcctDisabled = () => { try { return JSON.parse(localStorage.getItem(ACCT_DISABLED_KEY) || '[]'); } catch { return []; } };
+const ACCOUNT_SECTIONS = ['Basic Information', 'Business Information', 'Billing Address', 'Additional Information'];
 
 const Accounts = () => {
   const navigate = useNavigate();
@@ -34,6 +52,12 @@ const Accounts = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [stats, setStats] = useState({ total: 0, customers: 0, prospects: 0, partners: 0 });
+
+  // Manage Fields
+  const [showManageFields, setShowManageFields] = useState(false);
+  const [customFieldDefs, setCustomFieldDefs] = useState([]);
+  const [disabledStdFields, setDisabledStdFieldsState] = useState(getAcctDisabled);
+  const [togglingField, setTogglingField] = useState(null);
 
   // PIN Verification State
   const [isPinVerified, setIsPinVerified] = useState(false);
@@ -105,14 +129,50 @@ const Accounts = () => {
     }
   };
 
+  const buildAcctFields = (disabled, customs) => [
+    ...DEFAULT_ACCOUNT_FIELDS.filter(f => !disabled.includes(f.fieldName)).map(f => ({ ...f, isActive: true, _isStd: true })),
+    ...customs.filter(f => f.isActive && f.showInCreate),
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
+  const allFieldDefs = [
+    ...DEFAULT_ACCOUNT_FIELDS.map(f => ({ ...f, isActive: !disabledStdFields.includes(f.fieldName), _isStd: true })),
+    ...customFieldDefs,
+  ].sort((a, b) => a.displayOrder - b.displayOrder);
+
   const loadCustomFields = async () => {
     try {
-      const response = await fieldDefinitionService.getFieldDefinitions('Account', false);
-      if (response && Array.isArray(response)) {
-        const createFields = response.filter(field => field.isActive && field.showInCreate).sort((a, b) => a.displayOrder - b.displayOrder);
-        setFieldDefinitions(createFields);
-      }
+      const response = await fieldDefinitionService.getFieldDefinitions('Account', true);
+      const customs = (Array.isArray(response) ? response : []).filter(f => !f.isStandardField);
+      setCustomFieldDefs(customs);
+      setFieldDefinitions(buildAcctFields(disabledStdFields, customs));
     } catch (err) { console.error('Load field definitions error:', err); }
+  };
+
+  const handleToggleField = async (field) => {
+    setTogglingField(field.fieldName);
+    if (field._isStd) {
+      const newDisabled = disabledStdFields.includes(field.fieldName)
+        ? disabledStdFields.filter(n => n !== field.fieldName)
+        : [...disabledStdFields, field.fieldName];
+      localStorage.setItem(ACCT_DISABLED_KEY, JSON.stringify(newDisabled));
+      setDisabledStdFieldsState(newDisabled);
+      setFieldDefinitions(buildAcctFields(newDisabled, customFieldDefs));
+    } else {
+      try {
+        await fieldDefinitionService.toggleFieldStatus(field._id, !field.isActive);
+        const updated = customFieldDefs.map(f => f._id === field._id ? { ...f, isActive: !f.isActive } : f);
+        setCustomFieldDefs(updated);
+        setFieldDefinitions(buildAcctFields(disabledStdFields, updated));
+      } catch (err) { console.error('Toggle error:', err); }
+    }
+    setTogglingField(null);
+  };
+
+  const handleAddCustomField = async (fieldData) => {
+    const created = await fieldDefinitionService.createFieldDefinition({ entityType: 'Account', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData });
+    const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
+    setCustomFieldDefs(updated);
+    setFieldDefinitions(buildAcctFields(disabledStdFields, updated));
   };
 
   const groupFieldsBySection = (fields) => {
@@ -136,6 +196,7 @@ const Accounts = () => {
 
   const closeAllForms = () => {
     setShowCreateForm(false);
+    setShowManageFields(false);
   };
 
   const handleCreateAccount = async (e) => {
@@ -403,32 +464,65 @@ const Accounts = () => {
                   <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
                   <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
                 </div>
-                <div style={{ marginLeft: 'auto' }}>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                  {hasPermission('field_management', 'read') && (
+                    <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                      <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
+                    </button>
+                  )}
                   {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Account</button>}
                 </div>
               </div>
             </div>
           </div>
 
+          {/* Manage Fields Panel */}
+          {showManageFields && (
+            <ManageFieldsPanel
+              allFieldDefs={allFieldDefs}
+              togglingField={togglingField}
+              onToggle={handleToggleField}
+              onClose={() => setShowManageFields(false)}
+              onAdd={handleAddCustomField}
+              canAdd={hasPermission('field_management', 'create')}
+              canToggle={hasPermission('field_management', 'update')}
+              entityLabel="Account"
+              sections={ACCOUNT_SECTIONS}
+            />
+          )}
+
           {/* Inline Create Account Form */}
           {showCreateForm && (
-            <div className="crm-card" style={{ marginBottom: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
-                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Create New Account</h3>
-                <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
+            <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,60,114,0.10)', border: '1px solid #e2e8f0' }}>
+              <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #3b82f6 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.2px' }}>Create New Account</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Fill in the details to add a new account</p>
+                </div>
+                <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>✕</button>
               </div>
-              <div style={{ padding: '10px' }}>
+              <div style={{ padding: '16px', background: '#fafeff' }}>
                 <form onSubmit={handleCreateAccount}>
                   {(() => {
                     const groupedFields = groupFieldsBySection(fieldDefinitions);
-                    const sectionOrder = ['Basic Information', 'Business Information', 'Address Information', 'Additional Information'];
-                    return sectionOrder.map(sectionName => {
+                    const sectionOrder = ['Basic Information', 'Business Information', 'Billing Address', 'Additional Information'];
+                    const palette = [
+                      { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
+                      { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
+                      { bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95' },
+                      { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
+                    ];
+                    return sectionOrder.map((sectionName, sIdx) => {
                       const sectionFields = groupedFields[sectionName];
                       if (!sectionFields || sectionFields.length === 0) return null;
+                      const c = palette[sIdx % palette.length];
                       return (
-                        <div key={sectionName} style={{ marginBottom: '8px' }}>
-                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#374151', marginBottom: '6px', paddingBottom: '4px', borderBottom: '1px solid #e5e7eb', textTransform: 'uppercase' }}>{sectionName}</h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+                        <div key={sectionName} style={{ marginBottom: '14px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: c.bg, borderLeft: `3px solid ${c.border}` }}>
+                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c.border, flexShrink: 0 }} />
+                            <span style={{ fontSize: '11px', fontWeight: '700', color: c.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</span>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
                             {sectionFields.map((field) => (
                               <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
                                 {renderDynamicField(field)}
@@ -439,9 +533,9 @@ const Accounts = () => {
                       );
                     });
                   })()}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '8px', borderTop: '1px solid #e5e7eb' }}>
-                    <button type="button" className="crm-btn crm-btn-outline crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }} onClick={() => { setShowCreateForm(false); resetForm(); }}>Cancel</button>
-                    <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ padding: '4px 10px', fontSize: '11px' }}>Create Account</button>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
+                    <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                    <button type="submit" style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>Create Account</button>
                   </div>
                 </form>
               </div>
@@ -620,33 +714,86 @@ const Accounts = () => {
                   <div style={{ padding: '16px' }}>
                     {detailActiveTab === 'overview' && (
                       <div>
-                        {/* Contact Info */}
-                        <div style={{ marginBottom: '16px' }}>
-                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Contact Information</h4>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            {selectedAccountData.phone && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Phone className="h-4 w-4 text-green-500" /><a href={`tel:${selectedAccountData.phone}`} style={{ color: '#059669' }}>{selectedAccountData.phone}</a></div>}
-                            {selectedAccountData.website && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}><Globe className="h-4 w-4 text-blue-500" /><a href={selectedAccountData.website} target="_blank" rel="noopener noreferrer" style={{ color: '#3B82F6' }}>{selectedAccountData.website}</a></div>}
-                            {selectedAccountData.email && <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px' }}>{selectedAccountData.email}</div>}
-                          </div>
-                        </div>
-
-                        {/* Business Info */}
-                        <div style={{ marginBottom: '16px' }}>
-                          <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Business Information</h4>
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', background: '#f9fafb', padding: '12px', borderRadius: '8px' }}>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Type</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedAccountData.accountType}</p></div>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Industry</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedAccountData.industry || '-'}</p></div>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Employees</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0 }}>{selectedAccountData.numberOfEmployees || '-'}</p></div>
-                            <div><p style={{ fontSize: '10px', color: '#9CA3AF', marginBottom: '2px' }}>Annual Revenue</p><p style={{ fontSize: '13px', fontWeight: '500', margin: 0, color: '#059669' }}>{selectedAccountData.annualRevenue ? `₹${Number(selectedAccountData.annualRevenue).toLocaleString()}` : '-'}</p></div>
-                          </div>
-                        </div>
-
-                        {/* Address */}
+                        {(() => {
+                          const SYSTEM_KEYS = new Set(['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'updatedAt', 'createdAt', 'isActive', 'owner', 'customFields', 'billingAddress', 'shippingAddress', 'relatedData', 'parentAccount', 'accountNumber', 'rating', 'SICCode', 'tickerSymbol', 'ownership', 'fax']);
+                          const fmtKey = (fn) => fn.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
+                          const fieldMap = {};
+                          DEFAULT_ACCOUNT_FIELDS.forEach(f => { fieldMap[f.fieldName] = { label: f.label, section: f.section, fieldType: f.fieldType }; });
+                          fieldMap['annualRevenue'] = { label: 'Annual Revenue', section: 'Business Information', fieldType: 'currency' };
+                          fieldMap['numberOfEmployees'] = { label: 'Employees', section: 'Business Information', fieldType: 'text' };
+                          customFieldDefs.forEach(f => { fieldMap[f.fieldName] = { label: f.label, section: f.section, fieldType: f.fieldType }; });
+                          const grouped = {};
+                          Object.keys(selectedAccountData).forEach(key => {
+                            if (SYSTEM_KEYS.has(key)) return;
+                            const val = selectedAccountData[key];
+                            if (val === null || val === undefined || val === '') return;
+                            if (typeof val === 'object' && !Array.isArray(val)) return;
+                            const def = fieldMap[key];
+                            const section = def?.section || 'Additional Information';
+                            if (!grouped[section]) grouped[section] = [];
+                            grouped[section].push({ key, label: def?.label || fmtKey(key), fieldType: def?.fieldType || 'text', value: val });
+                          });
+                          if (selectedAccountData.customFields && typeof selectedAccountData.customFields === 'object') {
+                            Object.keys(selectedAccountData.customFields).forEach(key => {
+                              const val = selectedAccountData.customFields[key];
+                              if (val === null || val === undefined || val === '') return;
+                              if (typeof val === 'object' && !Array.isArray(val)) return;
+                              const def = fieldMap[key];
+                              const section = def?.section || 'Additional Information';
+                              if (!grouped[section]) grouped[section] = [];
+                              if (!grouped[section].find(f => f.key === key)) {
+                                grouped[section].push({ key, label: def?.label || fmtKey(key), fieldType: def?.fieldType || 'text', value: val });
+                              }
+                            });
+                          }
+                          const sectionOrder = ['Basic Information', 'Business Information', 'Additional Information', ...Object.keys(grouped).filter(s => !['Basic Information', 'Business Information', 'Additional Information'].includes(s))];
+                          return sectionOrder.map(section => {
+                            const fields = grouped[section];
+                            if (!fields || fields.length === 0) return null;
+                            return (
+                              <div key={section} style={{ marginBottom: '14px' }}>
+                                <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                                  {section}
+                                  <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                  {fields.map(({ key, label, fieldType, value }) => {
+                                    let display = value;
+                                    if (fieldType === 'currency') display = `₹${Number(value).toLocaleString()}`;
+                                    else if (fieldType === 'date') { try { display = new Date(value).toLocaleDateString(); } catch(e) { display = value; } }
+                                    else if (fieldType === 'checkbox') display = value ? 'Yes' : 'No';
+                                    else if (Array.isArray(value)) display = value.join(', ');
+                                    else display = value?.toString() || '-';
+                                    const isEmail = fieldType === 'email' || key === 'email';
+                                    const isPhone = fieldType === 'phone' || key === 'phone';
+                                    const isUrl = fieldType === 'url' || key === 'website';
+                                    return (
+                                      <div key={key} style={{ background: '#f9fafb', padding: '8px 10px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
+                                        <p style={{ fontSize: '9px', color: '#9CA3AF', marginBottom: '3px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</p>
+                                        {isEmail ? <a href={`mailto:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#3B82F6', wordBreak: 'break-all' }}>{display}</a>
+                                          : isPhone ? <a href={`tel:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#059669' }}>{display}</a>
+                                          : isUrl ? <a href={display} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: '500', color: '#7C3AED', wordBreak: 'break-all' }}>{display}</a>
+                                          : <p style={{ fontSize: '12px', fontWeight: '500', margin: 0, color: '#1e293b', wordBreak: 'break-word' }}>{display}</p>
+                                        }
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                        {/* Billing Address (nested object - rendered separately) */}
                         {selectedAccountData.billingAddress && (selectedAccountData.billingAddress.street || selectedAccountData.billingAddress.city) && (
-                          <div style={{ marginBottom: '16px' }}>
-                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Billing Address</h4>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '13px', background: '#f9fafb', padding: '12px', borderRadius: '8px' }}>
-                              <MapPin className="h-4 w-4 text-gray-500 mt-0.5" />
+                          <div style={{ marginBottom: '14px' }}>
+                            <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                              Billing Address
+                              <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
+                            </h4>
+                            <div style={{ background: '#f9fafb', padding: '10px', borderRadius: '6px', border: '1px solid #f1f5f9', display: 'flex', alignItems: 'flex-start', gap: '8px', fontSize: '12px', color: '#374151' }}>
+                              <MapPin className="h-4 w-4 text-gray-500" style={{ marginTop: '2px', flexShrink: 0 }} />
                               <div>
                                 {selectedAccountData.billingAddress.street && <div>{selectedAccountData.billingAddress.street}</div>}
                                 <div>{[selectedAccountData.billingAddress.city, selectedAccountData.billingAddress.state, selectedAccountData.billingAddress.zipCode].filter(Boolean).join(', ')}</div>
@@ -654,11 +801,6 @@ const Accounts = () => {
                               </div>
                             </div>
                           </div>
-                        )}
-
-                        {/* Description */}
-                        {selectedAccountData.description && (
-                          <div><h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase' }}>Description</h4><p style={{ fontSize: '13px', color: '#374151', lineHeight: '1.5', margin: 0, background: '#f9fafb', padding: '10px', borderRadius: '6px' }}>{selectedAccountData.description}</p></div>
                         )}
                       </div>
                     )}

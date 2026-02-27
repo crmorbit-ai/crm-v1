@@ -31,7 +31,7 @@ const FEATURES = [
   // Account
   { slug: 'subscription_management', name: 'Subscription & Billing', category: 'Account' },
   // Customization
-  { slug: 'field_management', name: 'Field Builder', category: 'Customization' },
+  { slug: 'field_management', name: 'Manage Fields', category: 'Customization' },
   // Data
   { slug: 'audit_logs', name: 'Audit Logs', category: 'Data' },
 ];
