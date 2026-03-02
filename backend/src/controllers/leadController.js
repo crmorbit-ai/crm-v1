@@ -106,9 +106,10 @@ const getLeads = async (req, res) => {
 
     const leads = await Lead.find(query)
       .populate('owner', 'firstName lastName email')
-      .populate('assignedGroup', 'name category') // 🆕 Populate group
+      .populate('assignedGroup', 'name category')
       .populate('tenant', 'organizationName')
       .populate('product', 'name articleNumber')
+      .populate('customer', 'accountName phone email industry contactPerson')
       .limit(limit * 1)
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 })
@@ -140,6 +141,7 @@ const getLead = async (req, res) => {
       .populate('owner', 'firstName lastName email')
       .populate('tenant', 'organizationName')
       .populate('product', 'name articleNumber category price')
+      .populate('customer', 'accountName phone email industry contactPerson')
       .populate('convertedAccount', 'accountName accountType')
       .populate('convertedContact', 'firstName lastName email')
       .populate('convertedOpportunity', 'opportunityName amount stage');

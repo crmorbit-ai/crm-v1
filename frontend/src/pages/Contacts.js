@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import PinVerification from '../components/common/PinVerification';
+
 import { contactService } from '../services/contactService';
 import { accountService } from '../services/accountService';
 import { taskService } from '../services/taskService';
@@ -14,8 +14,8 @@ import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
 
 const DEFAULT_CONTACT_FIELDS = [
-  { fieldName: 'firstName', label: 'First Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
-  { fieldName: 'lastName', label: 'Last Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
+  { fieldName: 'firstName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'lastName', label: 'Last Name', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
   { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
   { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
   { fieldName: 'mobile', label: 'Mobile', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
@@ -61,10 +61,6 @@ const Contacts = () => {
   const [disabledStdFields, setDisabledStdFieldsState] = useState(getContDisabled);
   const [togglingField, setTogglingField] = useState(null);
 
-  // PIN Verification State
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pendingContactId, setPendingContactId] = useState(null);
 
   // Split View Panel State
   const [selectedContactId, setSelectedContactId] = useState(null);
@@ -88,23 +84,6 @@ const Contacts = () => {
   const [detailTaskData, setDetailTaskData] = useState({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
   const [detailNoteData, setDetailNoteData] = useState({ title: '', content: '' });
 
-  // Masking functions for sensitive data (when PIN not verified)
-  const maskEmail = (email) => {
-    if (!email || isPinVerified) return email;
-    const [name, domain] = email.split('@');
-    if (!name || !domain) return '***@***.***';
-    return name[0] + '***@' + domain[0] + '***.' + domain.split('.').pop();
-  };
-
-  const maskPhone = (phone) => {
-    if (!phone || isPinVerified) return phone;
-    return phone.slice(0, 2) + '******' + phone.slice(-2);
-  };
-
-  const maskName = (name) => {
-    if (!name || isPinVerified) return name;
-    return name[0] + '***';
-  };
 
   useEffect(() => {
     loadContacts();
@@ -184,6 +163,18 @@ const Contacts = () => {
     const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
     setCustomFieldDefs(updated);
     setFieldDefinitions(buildContFields(disabledStdFields, updated));
+  };
+
+  const handleDeleteCustomField = async (field) => {
+    try {
+      await fieldDefinitionService.permanentDeleteFieldDefinition(field._id);
+      const updated = customFieldDefs.filter(f => f._id !== field._id);
+      setCustomFieldDefs(updated);
+      setFieldDefinitions(buildContFields(disabledStdFields, updated));
+    } catch (err) {
+      console.error('Delete field error:', err);
+      alert(err.message || 'Failed to delete field');
+    }
   };
 
   const groupFieldsBySection = (fields) => {
@@ -279,26 +270,9 @@ const Contacts = () => {
     finally { setLoadingDetail(false); }
   };
 
-  // Handle contact click - check PIN first
   const handleContactClick = (contactId) => {
     if (selectedContactId === contactId) return;
-
-    if (!isPinVerified) {
-      setPendingContactId(contactId);
-      setShowPinModal(true);
-      return;
-    }
     loadContactDetails(contactId);
-  };
-
-  // Handle PIN verification success
-  const handlePinVerified = () => {
-    setIsPinVerified(true);
-    setShowPinModal(false);
-    if (pendingContactId) {
-      loadContactDetails(pendingContactId);
-      setPendingContactId(null);
-    }
   };
 
   const loadDetailTasks = async (contactId) => {
@@ -419,15 +393,6 @@ const Contacts = () => {
 
   return (
     <DashboardLayout title="Contacts">
-      {/* PIN Verification Modal */}
-      <PinVerification
-        isOpen={showPinModal}
-        onClose={() => { setShowPinModal(false); setPendingContactId(null); }}
-        onVerified={handlePinVerified}
-        resourceType="contact"
-        resourceId={pendingContactId}
-        resourceName="Contact"
-      />
 
       {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
       {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
@@ -522,8 +487,10 @@ const Contacts = () => {
               onToggle={handleToggleField}
               onClose={() => setShowManageFields(false)}
               onAdd={handleAddCustomField}
+              onDelete={handleDeleteCustomField}
               canAdd={hasPermission('field_management', 'create')}
               canToggle={hasPermission('field_management', 'update')}
+              canDelete={hasPermission('field_management', 'delete')}
               entityLabel="Contact"
               sections={CONTACT_SECTIONS}
             />
@@ -615,13 +582,13 @@ const Contacts = () => {
                             {contact.firstName?.[0]}{contact.lastName?.[0]}
                           </div>
                           <div>
-                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{maskName(contact.firstName)} {maskName(contact.lastName)}</h3>
+                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{contact.firstName} {contact.lastName}</h3>
                             <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{contact.title || 'No title'}</p>
                           </div>
                         </div>
                         {contact.isPrimary && <span style={{ display: 'inline-block', padding: '2px 8px', background: '#DCFCE7', color: '#166534', borderRadius: '4px', fontSize: '10px', fontWeight: '600', marginBottom: '8px' }}>Primary</span>}
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          <div>{maskEmail(contact.email)}</div>
+                          <div>{contact.email}</div>
                           {contact.account && <div style={{ marginTop: '4px' }}>{contact.account.accountName}</div>}
                         </div>
                       </div>
@@ -648,14 +615,14 @@ const Contacts = () => {
                                   {contact.firstName?.[0]}{contact.lastName?.[0]}
                                 </div>
                                 <div>
-                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{maskName(contact.firstName)} {maskName(contact.lastName)}{contact.isPrimary && ' ⭐'}</div>
+                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{contact.firstName} {contact.lastName}{contact.isPrimary && ' ⭐'}</div>
                                   <div style={{ fontSize: '12px', color: '#64748b' }}>{contact.title || '-'}</div>
                                 </div>
                               </div>
                             </td>
                             <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.account?.accountName || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{maskEmail(contact.email)}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{maskPhone(contact.phone || contact.mobile) || '-'}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.email || '-'}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.phone || contact.mobile || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -720,9 +687,9 @@ const Contacts = () => {
                       </div>
                       <form onSubmit={handleDetailUpdateContact}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>First Name *</label><input type="text" name="firstName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.firstName || ''} onChange={handleDetailEditChange} required /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Last Name *</label><input type="text" name="lastName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.lastName || ''} onChange={handleDetailEditChange} required /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email *</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} required /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Name *</label><input type="text" name="firstName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.firstName || ''} onChange={handleDetailEditChange} required /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Last Name</label><input type="text" name="lastName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.lastName || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Title</label><input type="text" name="title" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.title || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Department</label><input type="text" name="department" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.department || ''} onChange={handleDetailEditChange} /></div>

@@ -86,7 +86,8 @@ const getAccount = async (req, res) => {
 const createAccount = async (req, res) => {
   try {
     const { accountName, accountType, industry, website, phone, fax, email, annualRevenue, numberOfEmployees,
-      billingAddress, shippingAddress, parentAccount, rating, ownership, tickerSymbol, SICCode, description } = req.body;
+      billingAddress, shippingAddress, parentAccount, rating, ownership, tickerSymbol, SICCode, description,
+      contactPerson, leadSource, gstNumber } = req.body;
     if (!accountName) return errorResponse(res, 400, 'Please provide account name');
     let tenant;
     if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
@@ -95,10 +96,13 @@ const createAccount = async (req, res) => {
     } else tenant = req.user.tenant;
     const existingAccount = await Account.findOne({ accountName, tenant, isActive: true });
     if (existingAccount) return errorResponse(res, 400, 'Account with this name already exists');
+    const lastAccount = await Account.findOne({ tenant }).sort({ accountNumber: -1 }).select('accountNumber');
+    const nextAccountNumber = (lastAccount?.accountNumber || 0) + 1;
     const account = await Account.create({
       accountName, accountType: accountType || 'Prospect', industry, website, phone, fax, email, annualRevenue,
       numberOfEmployees, billingAddress, shippingAddress, parentAccount, rating, ownership, tickerSymbol,
-      SICCode, description, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
+      SICCode, description, contactPerson, leadSource, gstNumber,
+      accountNumber: nextAccountNumber, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
     });
     await account.populate('owner', 'firstName lastName email');
     await logActivity(req, 'account.created', 'Account', account._id, { accountName: account.accountName, accountType: account.accountType });
@@ -121,10 +125,11 @@ const updateAccount = async (req, res) => {
     }
 
     const allowedFields = [
-      'accountName', 'accountType', 'industry', 'website', 'phone', 'fax', 
-      'email', 'annualRevenue', 'numberOfEmployees', 'billingAddress', 
-      'shippingAddress', 'parentAccount', 'rating', 'ownership', 
-      'tickerSymbol', 'SICCode', 'description', 'tags'
+      'accountName', 'accountType', 'industry', 'website', 'phone', 'fax',
+      'email', 'annualRevenue', 'numberOfEmployees', 'billingAddress',
+      'shippingAddress', 'parentAccount', 'rating', 'ownership',
+      'tickerSymbol', 'SICCode', 'description', 'tags',
+      'contactPerson', 'leadSource', 'gstNumber'
     ];
 
     // Track changes

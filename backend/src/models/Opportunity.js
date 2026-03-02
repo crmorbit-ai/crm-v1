@@ -21,17 +21,6 @@ const opportunitySchema = new mongoose.Schema({
   
   stage: {
     type: String,
-    enum: [
-      'Qualification',
-      'Needs Analysis', 
-      'Value Proposition',
-      'Id. Decision Makers',
-      'Perception Analysis',
-      'Proposal/Price Quote',
-      'Negotiation/Review',
-      'Closed Won',
-      'Closed Lost'
-    ],
     default: 'Qualification'
   },
   
@@ -44,28 +33,12 @@ const opportunitySchema = new mongoose.Schema({
   
   type: {
     type: String,
-    enum: ['New Business', 'Existing Business', 'New Customer', 'Existing Customer'],
     default: 'New Business'
   },
   
   leadSource: {
     type: String,
-    enum: [
-      '',
-      'Advertisement',
-      'Cold Call',
-      'Employee Referral',
-      'External Referral',
-      'Partner',
-      'Public Relations',
-      'Sales Mail Alias',
-      'Seminar Partner',
-      'Trade Show',
-      'Web Research',
-      'Website',
-      'Chat',
-      'Other'
-    ]
+    trim: true
   },
   
   nextStep: {

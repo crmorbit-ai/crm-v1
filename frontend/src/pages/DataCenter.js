@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import PinVerification from '../components/common/PinVerification';
+
 import dataCenterService from '../services/dataCenterService';
 import productService from '../services/productService';
 import BulkCommunication from '../components/BulkCommunication';
@@ -13,8 +13,8 @@ import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
 
 const DEFAULT_CUSTOMER_FIELDS = [
-  { fieldName: 'firstName', label: 'First Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
-  { fieldName: 'lastName', label: 'Last Name', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
+  { fieldName: 'customerName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'customerType', label: 'Customer Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Other', value: 'Other' }] },
   { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
   { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
   { fieldName: 'currentDesignation', label: 'Current Designation', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10 },
@@ -85,28 +85,6 @@ const DataCenter = () => {
   const [disabledStdFields, setDisabledStdFieldsState] = useState(getCustDisabled);
   const [togglingField, setTogglingField] = useState(null);
 
-  // PIN Verification State
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pendingCandidateId, setPendingCandidateId] = useState(null);
-
-  // Masking functions for sensitive data
-  const maskEmail = (email) => {
-    if (!email || isPinVerified) return email;
-    const [name, domain] = email.split('@');
-    if (!name || !domain) return '***@***.***';
-    return name[0] + '***@' + domain[0] + '***.' + domain.split('.').pop();
-  };
-
-  const maskPhone = (phone) => {
-    if (!phone || isPinVerified) return phone;
-    return phone.slice(0, 2) + '******' + phone.slice(-2);
-  };
-
-  const maskName = (name) => {
-    if (!name || isPinVerified) return name;
-    return name[0] + '***';
-  };
 
   const extractColumns = (candidatesData) => {
     if (!candidatesData || candidatesData.length === 0) return [];
@@ -394,23 +372,7 @@ const DataCenter = () => {
 
   const handleCandidateClick = (candidateId) => {
     if (selectedCandidateId === candidateId) return;
-
-    if (!isPinVerified) {
-      setPendingCandidateId(candidateId);
-      setShowPinModal(true);
-      return;
-    }
     loadCandidateDetails(candidateId);
-  };
-
-  // Handle PIN verification success
-  const handlePinVerified = () => {
-    setIsPinVerified(true);
-    setShowPinModal(false);
-    if (pendingCandidateId) {
-      loadCandidateDetails(pendingCandidateId);
-      setPendingCandidateId(null);
-    }
   };
 
   const closeSidePanel = () => {
@@ -484,8 +446,8 @@ const DataCenter = () => {
 
   const getDetailName = (candidate) => {
     if (!candidate) return 'Customer';
-    if (candidate.firstName || candidate.lastName) return `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim();
-    const nameFields = ['name', 'Name', 'fullName', 'customerName', 'companyName', 'company', 'title'];
+    if (candidate.customerName) return candidate.customerName;
+    const nameFields = ['name', 'Name', 'fullName', 'companyName', 'company', 'title'];
     for (const field of nameFields) {
       if (candidate[field] && String(candidate[field]).trim() && !isIdLikeValue(String(candidate[field]).trim())) {
         return String(candidate[field]).trim();
@@ -520,15 +482,6 @@ const DataCenter = () => {
 
   return (
     <DashboardLayout title="Customer Database">
-      {/* PIN Verification Modal */}
-      <PinVerification
-        isOpen={showPinModal}
-        onClose={() => { setShowPinModal(false); setPendingCandidateId(null); }}
-        onVerified={handlePinVerified}
-        resourceType="lead"
-        resourceId={pendingCandidateId}
-        resourceName="Customer Data"
-      />
 
       {/* Split View Container */}
       <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
@@ -721,7 +674,7 @@ const DataCenter = () => {
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} style={{ width: '16px', height: '16px' }} />
                       <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>{maskName(candidate.firstName)} {maskName(candidate.lastName)}</h3>
+                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>{candidate.customerName || getDetailName(candidate)}</h3>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{candidate.currentDesignation || 'N/A'}</p>
                       </div>
                     </div>
@@ -730,8 +683,8 @@ const DataCenter = () => {
                       <span className={`status-badge ${candidate.status === 'Available' ? 'success' : 'secondary'}`} style={{ fontSize: '10px', padding: '2px 6px' }}>{candidate.status}</span>
                     </div>
                     <div style={{ fontSize: '11px', color: '#64748b' }}>
-                      {candidate.email && <div style={{ marginBottom: '2px' }}>{maskEmail(candidate.email)}</div>}
-                      {candidate.phone && <div style={{ marginBottom: '2px' }}>{maskPhone(candidate.phone)}</div>}
+                      {candidate.email && <div style={{ marginBottom: '2px' }}>{candidate.email}</div>}
+                      {candidate.phone && <div style={{ marginBottom: '2px' }}>{candidate.phone}</div>}
                       <div>{candidate.totalExperience} yrs exp</div>
                     </div>
                     <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => handleCandidateClick(candidate._id)} style={{ width: '100%', marginTop: '8px', fontSize: '11px', padding: '4px' }}>View Profile</button>
@@ -758,16 +711,7 @@ const DataCenter = () => {
                           <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} onClick={(e) => e.stopPropagation()} style={{ width: '16px', height: '16px' }} />
                         </td>
                         {displayColumns.map((column) => {
-                          let value = formatFieldValue(getFieldValue(candidate, column));
-                          // Apply masking to sensitive columns
-                          const lowerCol = column.toLowerCase();
-                          if (lowerCol.includes('email') && value !== '-') {
-                            value = maskEmail(value);
-                          } else if ((lowerCol.includes('phone') || lowerCol.includes('mobile') || lowerCol.includes('contact')) && value !== '-') {
-                            value = maskPhone(value);
-                          } else if ((lowerCol === 'firstname' || lowerCol === 'lastname' || lowerCol === 'name') && value !== '-') {
-                            value = maskName(value);
-                          }
+                          const value = formatFieldValue(getFieldValue(candidate, column));
                           return (
                             <td key={column} style={{ padding: '8px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: '#475569' }}>
                               {value}

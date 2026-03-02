@@ -30,42 +30,7 @@ const accountSchema = new mongoose.Schema({
   
   industry: {
     type: String,
-    enum: [
-      '',
-      'Agriculture',
-      'Apparel',
-      'Banking',
-      'Biotechnology',
-      'Chemicals',
-      'Communications',
-      'Construction',
-      'Consulting',
-      'Education',
-      'Electronics',
-      'Energy',
-      'Engineering',
-      'Entertainment',
-      'Environmental',
-      'Finance',
-      'Food & Beverage',
-      'Government',
-      'Healthcare',
-      'Hospitality',
-      'Insurance',
-      'IT',
-      'Machinery',
-      'Manufacturing',
-      'Media',
-      'Not For Profit',
-      'Recreation',
-      'Retail',
-      'Shipping',
-      'Technology',
-      'Telecommunications',
-      'Transportation',
-      'Utilities',
-      'Other'
-    ]
+    trim: true
   },
   
   website: {
@@ -123,6 +88,12 @@ const accountSchema = new mongoose.Schema({
     ref: 'Account'
   },
   
+  // Contact Person
+  contactPerson: {
+    type: String,
+    trim: true
+  },
+
   // Additional Information
   rating: {
     type: String,
@@ -148,7 +119,17 @@ const accountSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  
+
+  leadSource: {
+    type: String,
+    trim: true
+  },
+
+  gstNumber: {
+    type: String,
+    trim: true
+  },
+
   // Owner and Tenant
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -178,6 +159,12 @@ const accountSchema = new mongoose.Schema({
     default: true
   },
   
+  // Auto-incrementing customer number (unique per tenant)
+  accountNumber: {
+    type: Number,
+    index: true
+  },
+
   // Tags
   tags: [{
     type: String,

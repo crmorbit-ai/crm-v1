@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import PinVerification from '../components/common/PinVerification';
+
 import { accountService } from '../services/accountService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -11,17 +11,22 @@ import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
 
 const DEFAULT_ACCOUNT_FIELDS = [
-  { fieldName: 'accountName', label: 'Account Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
-  { fieldName: 'accountType', label: 'Account Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Vendor', value: 'Vendor' }, { label: 'Other', value: 'Other' }] },
-  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
-  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
-  { fieldName: 'website', label: 'Website', fieldType: 'url', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
-  { fieldName: 'industry', label: 'Industry', fieldType: 'dropdown', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'Technology', value: 'Technology' }, { label: 'Healthcare', value: 'Healthcare' }, { label: 'Finance', value: 'Finance' }, { label: 'Manufacturing', value: 'Manufacturing' }, { label: 'Retail', value: 'Retail' }, { label: 'Education', value: 'Education' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'accountName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'accountType', label: 'Customer Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Vendor', value: 'Vendor' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'contactPerson', label: 'Contact Person', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
+  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
+  { fieldName: 'website', label: 'Website', fieldType: 'url', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 6 },
+  { fieldName: 'industry', label: 'Industry', fieldType: 'dropdown', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'Agriculture', value: 'Agriculture' }, { label: 'Automotive', value: 'Automotive' }, { label: 'Banking & Finance', value: 'Banking & Finance' }, { label: 'Construction', value: 'Construction' }, { label: 'Consulting', value: 'Consulting' }, { label: 'Education', value: 'Education' }, { label: 'Energy & Power', value: 'Energy & Power' }, { label: 'Food & Beverage', value: 'Food & Beverage' }, { label: 'Government', value: 'Government' }, { label: 'Healthcare', value: 'Healthcare' }, { label: 'Hospitality', value: 'Hospitality' }, { label: 'IT & Technology', value: 'IT & Technology' }, { label: 'Insurance', value: 'Insurance' }, { label: 'Logistics & Transport', value: 'Logistics & Transport' }, { label: 'Manufacturing', value: 'Manufacturing' }, { label: 'Media & Entertainment', value: 'Media & Entertainment' }, { label: 'Pharma & Life Sciences', value: 'Pharma & Life Sciences' }, { label: 'Real Estate', value: 'Real Estate' }, { label: 'Retail', value: 'Retail' }, { label: 'Telecom', value: 'Telecom' }, { label: 'Textile & Apparel', value: 'Textile & Apparel' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'annualRevenue', label: 'Annual Revenue', fieldType: 'currency', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11 },
+  { fieldName: 'numberOfEmployees', label: 'No. of Employees', fieldType: 'number', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 12 },
+  { fieldName: 'leadSource', label: 'Lead Source', fieldType: 'dropdown', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 13, options: [{ label: 'Website', value: 'Website' }, { label: 'Social Media', value: 'Social Media' }, { label: 'Referral', value: 'Referral' }, { label: 'Campaign', value: 'Campaign' }, { label: 'Cold Call', value: 'Cold Call' }, { label: 'Other', value: 'Other' }] },
   { fieldName: 'billingStreet', label: 'Street', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
   { fieldName: 'billingCity', label: 'City', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 21 },
   { fieldName: 'billingState', label: 'State', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 22 },
   { fieldName: 'billingCountry', label: 'Country', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 23 },
   { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
+  { fieldName: 'gstNumber', label: 'GST Number', fieldType: 'text', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 31 },
 ];
 const ACCT_DISABLED_KEY = 'crm_acct_std_disabled';
 const getAcctDisabled = () => { try { return JSON.parse(localStorage.getItem(ACCT_DISABLED_KEY) || '[]'); } catch { return []; } };
@@ -59,10 +64,6 @@ const Accounts = () => {
   const [disabledStdFields, setDisabledStdFieldsState] = useState(getAcctDisabled);
   const [togglingField, setTogglingField] = useState(null);
 
-  // PIN Verification State
-  const [isPinVerified, setIsPinVerified] = useState(false);
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pendingAccountId, setPendingAccountId] = useState(null);
 
   // Split View Panel State
   const [selectedAccountId, setSelectedAccountId] = useState(null);
@@ -71,23 +72,6 @@ const Accounts = () => {
   const [detailActiveTab, setDetailActiveTab] = useState('overview');
   const [customFieldDefinitions, setCustomFieldDefinitions] = useState([]);
 
-  // Masking functions for sensitive data
-  const maskEmail = (email) => {
-    if (!email || isPinVerified) return email;
-    const [name, domain] = email.split('@');
-    if (!name || !domain) return '***@***.***';
-    return name[0] + '***@' + domain[0] + '***.' + domain.split('.').pop();
-  };
-
-  const maskPhone = (phone) => {
-    if (!phone || isPinVerified) return phone;
-    return phone.slice(0, 2) + '******' + phone.slice(-2);
-  };
-
-  const maskName = (name) => {
-    if (!name || isPinVerified) return name;
-    return name[0] + '***';
-  };
 
   // Detail Panel Forms
   const [showDetailEditForm, setShowDetailEditForm] = useState(false);
@@ -175,6 +159,18 @@ const Accounts = () => {
     setFieldDefinitions(buildAcctFields(disabledStdFields, updated));
   };
 
+  const handleDeleteCustomField = async (field) => {
+    try {
+      await fieldDefinitionService.permanentDeleteFieldDefinition(field._id);
+      const updated = customFieldDefs.filter(f => f._id !== field._id);
+      setCustomFieldDefs(updated);
+      setFieldDefinitions(buildAcctFields(disabledStdFields, updated));
+    } catch (err) {
+      console.error('Delete field error:', err);
+      alert(err.message || 'Failed to delete field');
+    }
+  };
+
   const groupFieldsBySection = (fields) => {
     const grouped = {};
     fields.forEach(field => {
@@ -212,7 +208,15 @@ const Accounts = () => {
           else customFields[field.fieldName] = value;
         }
       });
-      const accountData = { ...formData, ...standardFields, customFields: Object.keys(customFields).length > 0 ? customFields : undefined };
+      // Transform flat billing fields → nested billingAddress object (backend expects nested)
+      const billingAddress = {};
+      const billingFieldMap = { billingStreet: 'street', billingCity: 'city', billingState: 'state', billingCountry: 'country', billingZipCode: 'zipCode' };
+      Object.entries(billingFieldMap).forEach(([flatKey, nestedKey]) => {
+        if (standardFields[flatKey]) { billingAddress[nestedKey] = standardFields[flatKey]; delete standardFields[flatKey]; }
+      });
+      if (Object.keys(billingAddress).length > 0) standardFields.billingAddress = billingAddress;
+
+      const accountData = { ...standardFields, customFields: Object.keys(customFields).length > 0 ? customFields : undefined };
       await accountService.createAccount(accountData);
       setSuccess('Account created successfully!');
       setShowCreateForm(false);
@@ -260,26 +264,9 @@ const Accounts = () => {
     finally { setLoadingDetail(false); }
   };
 
-  // Handle account click - check PIN first
   const handleAccountClick = (accountId) => {
     if (selectedAccountId === accountId) return;
-
-    if (!isPinVerified) {
-      setPendingAccountId(accountId);
-      setShowPinModal(true);
-      return;
-    }
     loadAccountDetails(accountId);
-  };
-
-  // Handle PIN verification success
-  const handlePinVerified = () => {
-    setIsPinVerified(true);
-    setShowPinModal(false);
-    if (pendingAccountId) {
-      loadAccountDetails(pendingAccountId);
-      setPendingAccountId(null);
-    }
   };
 
   const loadDetailCustomFields = async () => {
@@ -308,11 +295,15 @@ const Accounts = () => {
     setDetailEditData({
       accountName: selectedAccountData.accountName || '',
       accountType: selectedAccountData.accountType || 'Customer',
+      contactPerson: selectedAccountData.contactPerson || '',
       industry: selectedAccountData.industry || '',
       phone: selectedAccountData.phone || '',
       website: selectedAccountData.website || '',
+      email: selectedAccountData.email || '',
       annualRevenue: selectedAccountData.annualRevenue || '',
       numberOfEmployees: selectedAccountData.numberOfEmployees || '',
+      leadSource: selectedAccountData.leadSource || '',
+      gstNumber: selectedAccountData.gstNumber || '',
       description: selectedAccountData.description || ''
     });
     closeDetailForms();
@@ -360,15 +351,6 @@ const Accounts = () => {
 
   return (
     <DashboardLayout title="Accounts">
-      {/* PIN Verification Modal */}
-      <PinVerification
-        isOpen={showPinModal}
-        onClose={() => { setShowPinModal(false); setPendingAccountId(null); }}
-        onVerified={handlePinVerified}
-        resourceType="contact"
-        resourceId={pendingAccountId}
-        resourceName="Account"
-      />
 
       {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
       {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
@@ -452,11 +434,28 @@ const Accounts = () => {
                 </select>
                 <select name="industry" className="crm-form-select" value={filters.industry} onChange={handleFilterChange}>
                   <option value="">All Industries</option>
-                  <option value="Technology">Technology</option>
+                  <option value="Agriculture">Agriculture</option>
+                  <option value="Automotive">Automotive</option>
+                  <option value="Banking & Finance">Banking &amp; Finance</option>
+                  <option value="Construction">Construction</option>
+                  <option value="Consulting">Consulting</option>
+                  <option value="Education">Education</option>
+                  <option value="Energy & Power">Energy &amp; Power</option>
+                  <option value="Food & Beverage">Food &amp; Beverage</option>
+                  <option value="Government">Government</option>
                   <option value="Healthcare">Healthcare</option>
-                  <option value="Finance">Finance</option>
+                  <option value="Hospitality">Hospitality</option>
+                  <option value="IT & Technology">IT &amp; Technology</option>
+                  <option value="Insurance">Insurance</option>
+                  <option value="Logistics & Transport">Logistics &amp; Transport</option>
                   <option value="Manufacturing">Manufacturing</option>
+                  <option value="Media & Entertainment">Media &amp; Entertainment</option>
+                  <option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option>
+                  <option value="Real Estate">Real Estate</option>
                   <option value="Retail">Retail</option>
+                  <option value="Telecom">Telecom</option>
+                  <option value="Textile & Apparel">Textile &amp; Apparel</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
@@ -484,8 +483,10 @@ const Accounts = () => {
               onToggle={handleToggleField}
               onClose={() => setShowManageFields(false)}
               onAdd={handleAddCustomField}
+              onDelete={handleDeleteCustomField}
               canAdd={hasPermission('field_management', 'create')}
               canToggle={hasPermission('field_management', 'update')}
+              canDelete={hasPermission('field_management', 'delete')}
               entityLabel="Account"
               sections={ACCOUNT_SECTIONS}
             />
@@ -567,8 +568,8 @@ const Accounts = () => {
                             {getAccountTypeIcon(account.accountType)}
                           </div>
                           <div>
-                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{maskName(account.accountName)}</h3>
-                            <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>#{account.accountNumber}</p>
+                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{account.accountName}</h3>
+                            <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>#{String(account.accountNumber || 0).padStart(5, '0')}</p>
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
@@ -576,8 +577,8 @@ const Accounts = () => {
                           {account.industry && <span style={{ padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.industry}</span>}
                         </div>
                         <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          {account.phone && <div>{maskPhone(account.phone)}</div>}
-                          {account.website && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{isPinVerified ? account.website : '*****.***'}</div>}
+                          {account.phone && <div>{account.phone}</div>}
+                          {account.website && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</div>}
                         </div>
                       </div>
                     ))}
@@ -603,14 +604,14 @@ const Accounts = () => {
                                   {getAccountTypeIcon(account.accountType)}
                                 </div>
                                 <div>
-                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{maskName(account.accountName)}</div>
-                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>#{account.accountNumber}</div>
+                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{account.accountName}</div>
+                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>#{String(account.accountNumber || 0).padStart(5, '0')}</div>
                                 </div>
                               </div>
                             </td>
                             <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.accountType}</span></td>
                             <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.industry || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.phone ? maskPhone(account.phone) : '-'}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.phone || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
@@ -654,7 +655,7 @@ const Accounts = () => {
                       </div>
                       <div style={{ flex: 1 }}>
                         <h2 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0', color: '#1e3c72' }}>{selectedAccountData.accountName}</h2>
-                        <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>#{selectedAccountData.accountNumber}</p>
+                        <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>#{String(selectedAccountData.accountNumber || 0).padStart(5, '0')}</p>
                         <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                           <span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{selectedAccountData.accountType}</span>
                           {selectedAccountData.industry && <span style={{ padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{selectedAccountData.industry}</span>}
@@ -678,12 +679,17 @@ const Accounts = () => {
                       </div>
                       <form onSubmit={handleDetailUpdateAccount}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Account Name *</label><input type="text" name="accountName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountName || ''} onChange={handleDetailEditChange} required /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Type</label><select name="accountType" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountType || 'Customer'} onChange={handleDetailEditChange}><option value="Customer">Customer</option><option value="Prospect">Prospect</option><option value="Partner">Partner</option><option value="Vendor">Vendor</option></select></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Industry</label><select name="industry" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.industry || ''} onChange={handleDetailEditChange}><option value="">Select</option><option value="Technology">Technology</option><option value="Healthcare">Healthcare</option><option value="Finance">Finance</option><option value="Manufacturing">Manufacturing</option><option value="Retail">Retail</option></select></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Name *</label><input type="text" name="accountName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountName || ''} onChange={handleDetailEditChange} required /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Type</label><select name="accountType" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountType || 'Customer'} onChange={handleDetailEditChange}><option value="Customer">Customer</option><option value="Prospect">Prospect</option><option value="Partner">Partner</option><option value="Reseller">Reseller</option><option value="Vendor">Vendor</option><option value="Other">Other</option></select></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Contact Person</label><input type="text" name="contactPerson" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.contactPerson || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Website</label><input type="url" name="website" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.website || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Industry</label><select name="industry" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.industry || ''} onChange={handleDetailEditChange}><option value="">Select</option><option value="Agriculture">Agriculture</option><option value="Automotive">Automotive</option><option value="Banking & Finance">Banking &amp; Finance</option><option value="Construction">Construction</option><option value="Consulting">Consulting</option><option value="Education">Education</option><option value="Energy & Power">Energy &amp; Power</option><option value="Food & Beverage">Food &amp; Beverage</option><option value="Government">Government</option><option value="Healthcare">Healthcare</option><option value="Hospitality">Hospitality</option><option value="IT & Technology">IT &amp; Technology</option><option value="Insurance">Insurance</option><option value="Logistics & Transport">Logistics &amp; Transport</option><option value="Manufacturing">Manufacturing</option><option value="Media & Entertainment">Media &amp; Entertainment</option><option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option><option value="Real Estate">Real Estate</option><option value="Retail">Retail</option><option value="Telecom">Telecom</option><option value="Textile & Apparel">Textile &amp; Apparel</option><option value="Other">Other</option></select></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Employees</label><input type="number" name="numberOfEmployees" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.numberOfEmployees || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Annual Revenue</label><input type="number" name="annualRevenue" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.annualRevenue || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Lead Source</label><select name="leadSource" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.leadSource || ''} onChange={handleDetailEditChange}><option value="">Select</option><option value="Website">Website</option><option value="Social Media">Social Media</option><option value="Referral">Referral</option><option value="Campaign">Campaign</option><option value="Cold Call">Cold Call</option><option value="Other">Other</option></select></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>GST Number</label><input type="text" name="gstNumber" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.gstNumber || ''} onChange={handleDetailEditChange} /></div>
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                           <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailEditForm(false)}>Cancel</button>
@@ -715,7 +721,7 @@ const Accounts = () => {
                     {detailActiveTab === 'overview' && (
                       <div>
                         {(() => {
-                          const SYSTEM_KEYS = new Set(['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'updatedAt', 'createdAt', 'isActive', 'owner', 'customFields', 'billingAddress', 'shippingAddress', 'relatedData', 'parentAccount', 'accountNumber', 'rating', 'SICCode', 'tickerSymbol', 'ownership', 'fax']);
+                          const SYSTEM_KEYS = new Set(['_id', '__v', 'tenant', 'createdBy', 'lastModifiedBy', 'updatedAt', 'createdAt', 'isActive', 'owner', 'customFields', 'billingAddress', 'shippingAddress', 'relatedData', 'parentAccount', 'rating', 'SICCode', 'tickerSymbol', 'ownership', 'fax']);
                           const fmtKey = (fn) => fn.replace(/([A-Z])/g, ' $1').replace(/^./, s => s.toUpperCase()).trim();
                           const fieldMap = {};
                           DEFAULT_ACCOUNT_FIELDS.forEach(f => { fieldMap[f.fieldName] = { label: f.label, section: f.section, fieldType: f.fieldType }; });

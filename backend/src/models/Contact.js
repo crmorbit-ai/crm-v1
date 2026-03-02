@@ -59,19 +59,7 @@ const contactSchema = new mongoose.Schema({
   
   department: {
     type: String,
-    enum: [
-      'Executive Management',
-      'Sales',
-      'Marketing',
-      'Finance',
-      'Operations',
-      'Human Resources',
-      'IT',
-      'Customer Service',
-      'Legal',
-      'Research & Development',
-      'Other'
-    ]
+    trim: true
   },
   
   account: {
@@ -104,18 +92,7 @@ const contactSchema = new mongoose.Schema({
   // Additional Information
   leadSource: {
     type: String,
-    enum: [
-      'Advertisement',
-      'Cold Call',
-      'Employee Referral',
-      'External Referral',
-      'Partner',
-      'Public Relations',
-      'Trade Show',
-      'Web Research',
-      'Website',
-      'Other'
-    ]
+    trim: true
   },
   
   birthdate: {

@@ -191,16 +191,14 @@ const DataCenterDetail = () => {
 
   // Get name for header - check multiple possible field names
   const getName = () => {
-    // Check firstName + lastName combination
-    if (candidate.firstName || candidate.lastName) {
-      return `${candidate.firstName || ''} ${candidate.lastName || ''}`.trim();
-    }
+    // Check customerName first (primary field)
+    if (candidate.customerName) return candidate.customerName;
 
     // Check various possible name fields (case-insensitive search)
     const nameFields = [
       'name', 'Name', 'NAME',
       'fullName', 'FullName', 'fullname', 'full_name', 'Full Name', 'Full_Name',
-      'customerName', 'CustomerName', 'customer_name', 'Customer Name', 'Customer_Name',
+      'CustomerName', 'customer_name', 'Customer Name', 'Customer_Name',
       'contactName', 'ContactName', 'contact_name', 'Contact Name', 'Contact_Name',
       'clientName', 'ClientName', 'client_name', 'Client Name', 'Client_Name',
       'companyName', 'CompanyName', 'company_name', 'Company Name', 'Company_Name',

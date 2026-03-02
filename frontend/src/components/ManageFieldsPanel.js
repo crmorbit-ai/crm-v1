@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Settings, ToggleLeft, ToggleRight, Plus, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Settings, ToggleLeft, ToggleRight, Plus, ChevronDown, ChevronUp, X, Trash2 } from 'lucide-react';
 
 const FIELD_TYPES = [
   { value: 'text', label: 'Text' },
@@ -24,11 +24,13 @@ const SECTION_PALETTE = [
   { accent: '#64748b', light: '#f8fafc', chip: '#e2e8f0', chipText: '#334155' },
 ];
 
-const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onAdd, canAdd, canToggle, entityLabel, sections }) => {
+const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onAdd, onDelete, canAdd, canToggle, canDelete, entityLabel, sections }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ label: '', fieldType: 'text', section: sections[0] || 'Additional Information', isRequired: false, afterField: '__end__' });
   const [collapsedSections, setCollapsedSections] = useState({});
+  const [confirmDeleteField, setConfirmDeleteField] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const handleSectionChange = (section) => {
     setForm(p => ({ ...p, section, afterField: '__end__' }));
@@ -59,6 +61,14 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
     setForm({ label: '', fieldType: 'text', section: sections[0] || 'Additional Information', isRequired: false, afterField: '__end__' });
     setShowAddForm(false);
     setSaving(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDeleteField || !onDelete) return;
+    setDeleting(true);
+    await onDelete(confirmDeleteField);
+    setDeleting(false);
+    setConfirmDeleteField(null);
   };
 
   const sections_map = {};
@@ -180,38 +190,92 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
                 {/* Fields */}
                 {!isCollapsed && (
                   <div style={{ padding: '6px', background: '#fff', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '4px' }}>
-                    {fields.map(field => (
-                      <div
-                        key={field._id || field.fieldName}
-                        style={{
-                          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                          padding: '5px 8px', borderRadius: '6px',
-                          border: `1px solid ${field.isActive ? palette.chip : '#e5e7eb'}`,
-                          background: field.isActive ? palette.light : '#fafafa',
-                        }}
-                      >
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: '11px', fontWeight: '600', color: field.isActive ? '#1e293b' : '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {field.label}
-                            {field.isRequired && <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>}
+                    {fields.map(field => {
+                      const isCustom = !field.isStandardField && !field._isStd;
+                      const isConfirming = confirmDeleteField && (confirmDeleteField._id === field._id);
+
+                      // Confirmation state: replace row with confirm UI
+                      if (isConfirming) {
+                        return (
+                          <div
+                            key={field._id || field.fieldName}
+                            style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              padding: '5px 8px', borderRadius: '6px',
+                              border: '1px solid #fca5a5',
+                              background: '#fff1f2',
+                              gap: '4px',
+                            }}
+                          >
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#b91c1c', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              Delete "{field.label}"?
+                            </span>
+                            <button
+                              onClick={handleConfirmDelete}
+                              disabled={deleting}
+                              style={{ padding: '2px 7px', borderRadius: '4px', border: 'none', background: '#ef4444', color: '#fff', fontSize: '10px', fontWeight: '700', cursor: deleting ? 'not-allowed' : 'pointer' }}
+                            >
+                              {deleting ? '...' : 'Yes'}
+                            </button>
+                            <button
+                              onClick={() => setConfirmDeleteField(null)}
+                              disabled={deleting}
+                              style={{ padding: '2px 7px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '10px', fontWeight: '600', cursor: 'pointer' }}
+                            >
+                              No
+                            </button>
                           </div>
-                          <span style={{ fontSize: '9px', padding: '0px 5px', borderRadius: '3px', background: field.isActive ? palette.chip : '#e5e7eb', color: field.isActive ? palette.chipText : '#6b7280', fontWeight: '500' }}>
-                            {field.fieldType}
-                          </span>
-                        </div>
-                        <button
-                          onClick={() => canToggle && onToggle(field)}
-                          disabled={!canToggle || togglingField === field.fieldName}
-                          style={{ background: 'none', border: 'none', cursor: canToggle ? 'pointer' : 'not-allowed', padding: '1px', flexShrink: 0, opacity: (!canToggle || togglingField === field.fieldName) ? 0.35 : 1 }}
-                          title={!canToggle ? 'You need update permission to toggle fields' : field.isActive ? 'Disable field' : 'Enable field'}
+                        );
+                      }
+
+                      return (
+                        <div
+                          key={field._id || field.fieldName}
+                          style={{
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                            padding: '5px 8px', borderRadius: '6px',
+                            border: `1px solid ${field.isActive ? palette.chip : '#e5e7eb'}`,
+                            background: field.isActive ? palette.light : '#fafafa',
+                          }}
                         >
-                          {field.isActive
-                            ? <ToggleRight style={{ width: '20px', height: '20px', color: canToggle ? palette.accent : '#cbd5e1' }} />
-                            : <ToggleLeft style={{ width: '20px', height: '20px', color: '#cbd5e1' }} />
-                          }
-                        </button>
-                      </div>
-                    ))}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: '11px', fontWeight: '600', color: field.isActive ? '#1e293b' : '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {field.label}
+                              {field.isRequired && <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>}
+                            </div>
+                            <span style={{ fontSize: '9px', padding: '0px 5px', borderRadius: '3px', background: field.isActive ? palette.chip : '#e5e7eb', color: field.isActive ? palette.chipText : '#6b7280', fontWeight: '500' }}>
+                              {field.fieldType}
+                            </span>
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '2px', flexShrink: 0 }}>
+                            {/* Delete button — only for custom fields */}
+                            {isCustom && canDelete && (
+                              <button
+                                onClick={() => setConfirmDeleteField(field)}
+                                title="Delete this field"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center', color: '#ef4444', opacity: 0.6 }}
+                                onMouseEnter={e => e.currentTarget.style.opacity = 1}
+                                onMouseLeave={e => e.currentTarget.style.opacity = 0.6}
+                              >
+                                <Trash2 style={{ width: '13px', height: '13px' }} />
+                              </button>
+                            )}
+                            {/* Toggle button */}
+                            <button
+                              onClick={() => canToggle && onToggle(field)}
+                              disabled={!canToggle || togglingField === field.fieldName}
+                              style={{ background: 'none', border: 'none', cursor: canToggle ? 'pointer' : 'not-allowed', padding: '1px', opacity: (!canToggle || togglingField === field.fieldName) ? 0.35 : 1 }}
+                              title={!canToggle ? 'You need update permission to toggle fields' : field.isActive ? 'Disable field' : 'Enable field'}
+                            >
+                              {field.isActive
+                                ? <ToggleRight style={{ width: '20px', height: '20px', color: canToggle ? palette.accent : '#cbd5e1' }} />
+                                : <ToggleLeft style={{ width: '20px', height: '20px', color: '#cbd5e1' }} />
+                              }
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>

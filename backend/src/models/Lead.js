@@ -67,6 +67,13 @@ const leadSchema = new mongoose.Schema({
     default: false
   },
 
+  // Linked Customer (existing Account before conversion)
+  customer: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Account',
+    default: null
+  },
+
   // Conversion Information
   isConverted: {
     type: Boolean,
