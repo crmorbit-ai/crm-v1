@@ -44,6 +44,7 @@ import TeamManagement from './pages/TeamManagement';
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
 import SaasAdmins from './pages/SaasAdmins';
+import SaasNotifications from './pages/SaasNotifications';
 
 import Billings from './pages/Billings';
 
@@ -466,6 +467,12 @@ function AppRoutes() {
       <Route path="/saas/admins" element={
         <ProtectedRoute requireSaas>
           <SaasAdmins />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/saas/notifications" element={
+        <ProtectedRoute requireSaas>
+          <SaasNotifications />
         </ProtectedRoute>
       } />
 

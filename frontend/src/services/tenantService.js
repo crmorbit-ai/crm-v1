@@ -34,5 +34,20 @@ export const tenantService = {
   getTenantStats: async () => {
     const response = await api.get('/tenants/stats/overview');
     return response.data.data || response.data;
+  },
+
+  approveDeletion: async (id) => {
+    const response = await api.post(`/tenants/${id}/approve-deletion`);
+    return response.data.data || response.data;
+  },
+
+  rejectDeletion: async (id, rejectionReason) => {
+    const response = await api.post(`/tenants/${id}/reject-deletion`, { rejectionReason });
+    return response.data.data || response.data;
+  },
+
+  recoverTenant: async (id) => {
+    const response = await api.post(`/tenants/${id}/recover`);
+    return response.data.data || response.data;
   }
 };

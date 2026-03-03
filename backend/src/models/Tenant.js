@@ -290,6 +290,24 @@ const tenantSchema = new mongoose.Schema({
   suspensionReason: {
     type: String
   },
+
+  // Deletion Request (professional 45-day soft-delete flow)
+  deletionRequest: {
+    status: {
+      type: String,
+      enum: ['none', 'pending', 'approved', 'rejected'],
+      default: 'none'
+    },
+    requestedAt: { type: Date },
+    reason: { type: String, trim: true },
+    requestedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    approvedAt: { type: Date },
+    approvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    rejectedAt: { type: Date },
+    rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    rejectionReason: { type: String, trim: true },
+    permanentDeleteAt: { type: Date }  // approvedAt + 45 days
+  },
   
   // Branding
   logo: String,
@@ -413,5 +431,7 @@ tenantSchema.index({ 'subscription.status': 1 });
 tenantSchema.index({ 'subscription.endDate': 1 });
 tenantSchema.index({ reseller: 1 });
 tenantSchema.index({ organizationId: 1 });
+tenantSchema.index({ 'deletionRequest.status': 1 });
+tenantSchema.index({ 'deletionRequest.permanentDeleteAt': 1 });
 
 module.exports = mongoose.model('Tenant', tenantSchema);

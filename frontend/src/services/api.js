@@ -42,10 +42,18 @@ api.interceptors.response.use(
       }
 
       // Handle 403 permission denied — show global toast
+      // Exception: account deletion errors are NOT permission errors, pass them through silently
       if (error.response.status === 403) {
-        const msg = error.response.data?.message || 'You do not have permission to perform this action';
-        window.dispatchEvent(new CustomEvent('app:permission-denied', { detail: { message: msg } }));
-        return Promise.reject({ ...(error.response.data || {}), isPermissionDenied: true });
+        const responseData = error.response.data || {};
+        const errorCode = responseData?.errors?.code;
+        const isDeletionError = errorCode === 'ACCOUNT_DELETED' || errorCode === 'DELETION_PENDING';
+
+        if (!isDeletionError) {
+          const msg = responseData?.message || 'You do not have permission to perform this action';
+          window.dispatchEvent(new CustomEvent('app:permission-denied', { detail: { message: msg } }));
+        }
+
+        return Promise.reject({ ...responseData, isPermissionDenied: !isDeletionError });
       }
 
       return Promise.reject(error.response.data);

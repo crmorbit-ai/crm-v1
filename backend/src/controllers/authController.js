@@ -58,6 +58,36 @@ const login = async (req, res) => {
       return errorResponse(res, 401, 'Invalid credentials');
     }
 
+    // Check tenant deletion status BEFORE user.isActive check
+    // (deleted accounts have isActive:false but need a specific message)
+    if (user.tenant) {
+      const tenantDoc = user.tenant._id ? user.tenant : await require('../models/Tenant').findById(user.tenant).select('isActive isSuspended deletionRequest');
+      if (tenantDoc) {
+        const dr = tenantDoc.deletionRequest;
+        if (dr && dr.status === 'pending') {
+          return errorResponse(res, 403,
+            'Your deletion request is pending review. Our team will contact you shortly.',
+            { code: 'DELETION_PENDING', supportEmail: process.env.SUPPORT_EMAIL || '' }
+          );
+        }
+        if (dr && dr.status === 'approved' && !tenantDoc.isActive) {
+          const now = new Date();
+          const daysLeft = dr.permanentDeleteAt
+            ? Math.max(0, Math.ceil((new Date(dr.permanentDeleteAt) - now) / (1000 * 60 * 60 * 24)))
+            : 0;
+          return errorResponse(res, 403,
+            `Your account has been deleted. You have ${daysLeft} day(s) left to recover it.`,
+            {
+              code: 'ACCOUNT_DELETED',
+              daysLeft,
+              permanentDeleteAt: dr.permanentDeleteAt,
+              supportEmail: process.env.SUPPORT_EMAIL || ''
+            }
+          );
+        }
+      }
+    }
+
     // Check if user is active
     if (!user.isActive) {
       return errorResponse(res, 401, 'Account is deactivated');

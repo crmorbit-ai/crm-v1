@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { tenantService } from '../../services/tenantService';
 
 // Hook to detect screen size
 const useWindowSize = () => {
@@ -25,10 +26,28 @@ const SaasLayout = ({ children, title }) => {
   const location = useLocation();
   const { isMobile, isTablet } = useWindowSize();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pendingDeletions, setPendingDeletions] = useState(0);
+
+  // Fetch pending deletion request count for notification badge
+  useEffect(() => {
+    const fetchDeletionCount = async () => {
+      try {
+        const data = await tenantService.getTenantStats();
+        setPendingDeletions(data.pendingDeletionRequests || 0);
+      } catch (err) {
+        // silently fail — non-critical
+      }
+    };
+    fetchDeletionCount();
+    // Refresh every 2 minutes
+    const interval = setInterval(fetchDeletionCount, 120000);
+    return () => clearInterval(interval);
+  }, []);
 
   const navItems = [
     { path: '/saas/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/saas/tenants', label: 'Tenants', icon: '🏢' },
+    { path: '/saas/notifications', label: 'Notifications', icon: '🔔', badge: pendingDeletions },
     { path: '/saas/subscriptions', label: 'Subscriptions', icon: '💳' },
     { path: '/saas/billings', label: 'Billings', icon: '💰' },
     { path: '/saas/resellers', label: 'Resellers', icon: '🤝' },
@@ -131,6 +150,19 @@ const SaasLayout = ({ children, title }) => {
               >
                 <span>{item.icon}</span>
                 {item.label}
+                {item.badge > 0 && (
+                  <span style={{
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontSize: '11px',
+                    fontWeight: '700',
+                    padding: '1px 6px',
+                    borderRadius: '10px',
+                    minWidth: '18px',
+                    textAlign: 'center',
+                    lineHeight: '16px'
+                  }}>{item.badge}</span>
+                )}
               </Link>
             ))}
           </nav>
@@ -158,10 +190,27 @@ const SaasLayout = ({ children, title }) => {
                   color: isActive(item.path) ? '#3b82f6' : '#64748b',
                   textDecoration: 'none',
                   borderBottom: isActive(item.path) ? '2px solid #3b82f6' : '2px solid transparent',
-                  whiteSpace: 'nowrap'
+                  whiteSpace: 'nowrap',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
                 }}
               >
                 {item.label}
+                {item.badge > 0 && (
+                  <span style={{
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontSize: '10px',
+                    fontWeight: '700',
+                    padding: '1px 5px',
+                    borderRadius: '10px',
+                    minWidth: '16px',
+                    textAlign: 'center',
+                    lineHeight: '14px',
+                    animation: 'pulse 2s infinite'
+                  }}>{item.badge}</span>
+                )}
               </Link>
             ))}
           </div>

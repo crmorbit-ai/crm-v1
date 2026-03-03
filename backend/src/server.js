@@ -10,6 +10,7 @@ const connectDB = require('./config/database');
 const { connectDataCenterDB } = require('./config/database');
 const imapIdleService = require('./services/imapIdleService');
 const emailSyncJob = require('./jobs/emailSyncJob');
+const { startDeletionCleanupJob } = require('./jobs/deletionCleanup');
 
 // Initialize Express
 const app = express();
@@ -190,6 +191,7 @@ const startServer = async () => {
     server.listen(PORT, async () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);
       emailSyncJob.start();
+      startDeletionCleanupJob();
 
       try {
         await imapIdleService.startAllIdleConnections();

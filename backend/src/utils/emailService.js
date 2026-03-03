@@ -960,6 +960,205 @@ const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, lead
   }
 };
 
+// ============================================================
+// ORGANIZATION DELETION FLOW EMAILS
+// ============================================================
+
+/**
+ * Email to SAAS Admin when a tenant requests deletion
+ */
+const sendDeletionRequestNotification = async (saasAdminEmail, tenant, reason) => {
+  const transporter = createTransporter();
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+  const requestDate = new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 32px 40px; border-radius: 12px 12px 0 0;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700;">⚠️ Deletion Request Received</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">An organization has requested account deletion</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px 40px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none;">
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 24px;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; width: 160px;">Organization Name</td><td style="padding: 6px 0; color: #111827; font-size: 13px; font-weight: 600;">${tenant.organizationName}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Organization ID</td><td style="padding: 6px 0; color: #111827; font-size: 13px; font-weight: 600;">${tenant.organizationId || 'N/A'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Contact Email</td><td style="padding: 6px 0; color: #111827; font-size: 13px;">${tenant.contactEmail || 'N/A'}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px;">Request Date</td><td style="padding: 6px 0; color: #111827; font-size: 13px;">${requestDate}</td></tr>
+            <tr><td style="padding: 6px 0; color: #6b7280; font-size: 13px; vertical-align: top;">Reason</td><td style="padding: 6px 0; color: #374151; font-size: 13px;">${reason || 'No reason provided'}</td></tr>
+          </table>
+        </div>
+        <p style="color: #374151; font-size: 14px; line-height: 1.6;">Please review this request and take appropriate action. Contact the organization admin before approving.</p>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${frontendUrl}/saas/tenants" style="background: linear-gradient(135deg, #dc2626, #991b1b); color: #ffffff; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block;">View in Admin Dashboard</a>
+        </div>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 24px;">This is an automated notification from your CRM system.</p>
+      </div>
+    </div>`;
+
+  await transporter.sendMail({
+    from: `"CRM System" <${process.env.SMTP_USER}>`,
+    to: saasAdminEmail,
+    subject: `⚠️ Deletion Request: ${tenant.organizationName}`,
+    html
+  });
+
+  return { success: true };
+};
+
+/**
+ * Confirmation email to Tenant Admin after they submit a deletion request
+ */
+const sendDeletionRequestConfirmation = async (tenantEmail, orgName, firstName) => {
+  const transporter = createTransporter();
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER;
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+      <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 32px 40px; border-radius: 12px 12px 0 0;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700;">Deletion Request Received</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">${orgName}</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px 40px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #374151; font-size: 15px;">Hi ${firstName || 'Admin'},</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.7;">We have received your request to delete the organization <strong>${orgName}</strong>. Our team will review your request and get in touch with you.</p>
+        <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
+          <p style="color: #92400e; font-size: 13px; margin: 0; font-weight: 600;">What happens next?</p>
+          <ul style="color: #78350f; font-size: 13px; margin: 8px 0 0; padding-left: 20px; line-height: 1.8;">
+            <li>Our SAAS Admin will review your request</li>
+            <li>We may contact you for further clarification</li>
+            <li>You will receive an email once the request is approved or rejected</li>
+            <li>If approved, you will have <strong>45 days</strong> to recover your account</li>
+          </ul>
+        </div>
+        <p style="color: #374151; font-size: 14px;">If you have any questions or wish to cancel this request, please contact us at <a href="mailto:${supportEmail}" style="color: #dc2626;">${supportEmail}</a>.</p>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 32px;">This is an automated confirmation from your CRM system.</p>
+      </div>
+    </div>`;
+
+  await transporter.sendMail({
+    from: `"CRM Support" <${process.env.SMTP_USER}>`,
+    to: tenantEmail,
+    subject: `Deletion Request Received — ${orgName}`,
+    html
+  });
+
+  return { success: true };
+};
+
+/**
+ * Email to Tenant Admin when SAAS Admin approves the deletion
+ */
+const sendDeletionApprovedEmail = async (tenantEmail, orgName, permanentDeleteAt, firstName) => {
+  const transporter = createTransporter();
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER;
+  const deleteDate = new Date(permanentDeleteAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+      <div style="background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%); padding: 32px 40px; border-radius: 12px 12px 0 0;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700;">Account Deletion Approved</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">${orgName}</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px 40px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #374151; font-size: 15px;">Hi ${firstName || 'Admin'},</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.7;">Your request to delete the organization <strong>${orgName}</strong> has been approved. Your account has been deactivated and all data is scheduled for permanent deletion.</p>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
+          <p style="color: #991b1b; font-size: 14px; margin: 0; font-weight: 700; text-align: center;">Permanent deletion scheduled on: ${deleteDate}</p>
+        </div>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
+          <p style="color: #166534; font-size: 13px; margin: 0; font-weight: 600;">You have a 45-day recovery window</p>
+          <p style="color: #15803d; font-size: 13px; margin: 8px 0 0; line-height: 1.6;">If you change your mind, contact our support team before <strong>${deleteDate}</strong> and we will restore your account and all your data.</p>
+        </div>
+        <p style="color: #374151; font-size: 14px;">For recovery or any questions, contact us at <a href="mailto:${supportEmail}" style="color: #dc2626;">${supportEmail}</a>.</p>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 32px;">This is an automated notification from your CRM system.</p>
+      </div>
+    </div>`;
+
+  await transporter.sendMail({
+    from: `"CRM Support" <${process.env.SMTP_USER}>`,
+    to: tenantEmail,
+    subject: `Account Deletion Approved — ${orgName}`,
+    html
+  });
+
+  return { success: true };
+};
+
+/**
+ * Email to Tenant Admin when SAAS Admin rejects the deletion request
+ */
+const sendDeletionRejectedEmail = async (tenantEmail, orgName, rejectionReason, firstName) => {
+  const transporter = createTransporter();
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER;
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+      <div style="background: linear-gradient(135deg, #16a34a 0%, #14532d 100%); padding: 32px 40px; border-radius: 12px 12px 0 0;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700;">Deletion Request Rejected</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">${orgName} — Your account remains active</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px 40px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #374151; font-size: 15px;">Hi ${firstName || 'Admin'},</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.7;">Your deletion request for <strong>${orgName}</strong> has been reviewed and rejected. Your account remains fully active with all your data intact.</p>
+        ${rejectionReason ? `
+        <div style="background: #f8fafc; border-left: 4px solid #6b7280; border-radius: 0 8px 8px 0; padding: 16px 20px; margin: 20px 0;">
+          <p style="color: #374151; font-size: 13px; margin: 0; font-weight: 600;">Reason from Admin:</p>
+          <p style="color: #4b5563; font-size: 13px; margin: 8px 0 0;">${rejectionReason}</p>
+        </div>` : ''}
+        <p style="color: #374151; font-size: 14px;">If you still wish to delete your account or have any concerns, please contact us at <a href="mailto:${supportEmail}" style="color: #16a34a;">${supportEmail}</a>.</p>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 32px;">This is an automated notification from your CRM system.</p>
+      </div>
+    </div>`;
+
+  await transporter.sendMail({
+    from: `"CRM Support" <${process.env.SMTP_USER}>`,
+    to: tenantEmail,
+    subject: `Deletion Request Rejected — ${orgName}`,
+    html
+  });
+
+  return { success: true };
+};
+
+/**
+ * Email to Tenant Admin when SAAS Admin recovers their account
+ */
+const sendAccountRecoveredEmail = async (tenantEmail, orgName, firstName) => {
+  const transporter = createTransporter();
+  const supportEmail = process.env.SUPPORT_EMAIL || process.env.SMTP_USER;
+  const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+  const html = `
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc;">
+      <div style="background: linear-gradient(135deg, #16a34a 0%, #065f46 100%); padding: 32px 40px; border-radius: 12px 12px 0 0;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700;">🎉 Account Recovered Successfully</h1>
+        <p style="color: rgba(255,255,255,0.85); margin: 8px 0 0; font-size: 14px;">${orgName}</p>
+      </div>
+      <div style="background: #ffffff; padding: 32px 40px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #374151; font-size: 15px;">Hi ${firstName || 'Admin'},</p>
+        <p style="color: #374151; font-size: 14px; line-height: 1.7;">Great news! Your organization <strong>${orgName}</strong> has been successfully recovered. Your account is now fully active and all your data is intact.</p>
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px 20px; margin: 20px 0;">
+          <p style="color: #166534; font-size: 13px; margin: 0;">✅ All your leads, contacts, accounts and data are preserved<br>✅ All team members have been reactivated<br>✅ You can log in immediately</p>
+        </div>
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${frontendUrl}/login" style="background: linear-gradient(135deg, #16a34a, #065f46); color: #ffffff; padding: 12px 32px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px; display: inline-block;">Login to Your Account</a>
+        </div>
+        <p style="color: #374151; font-size: 14px;">If you have any questions, contact us at <a href="mailto:${supportEmail}" style="color: #16a34a;">${supportEmail}</a>.</p>
+        <p style="color: #9ca3af; font-size: 12px; text-align: center; margin-top: 32px;">This is an automated notification from your CRM system.</p>
+      </div>
+    </div>`;
+
+  await transporter.sendMail({
+    from: `"CRM Support" <${process.env.SMTP_USER}>`,
+    to: tenantEmail,
+    subject: `Account Recovered — ${orgName}`,
+    html
+  });
+
+  return { success: true };
+};
+
 module.exports = {
   sendPasswordResetOTP,
   sendSignupVerificationOTP,
@@ -968,5 +1167,10 @@ module.exports = {
   sendMeetingCancellation,
   sendUserInvitationEmail,
   sendWelcomeEmail,
-  sendLeadAssignmentEmail
+  sendLeadAssignmentEmail,
+  sendDeletionRequestNotification,
+  sendDeletionRequestConfirmation,
+  sendDeletionApprovedEmail,
+  sendDeletionRejectedEmail,
+  sendAccountRecoveredEmail
 };

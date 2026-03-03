@@ -7,7 +7,7 @@ import SaasLayout, { StatCard, Card, Badge, Button, Table, DetailPanel, InfoRow,
 
 const Tenants = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [stats, setStats] = useState({ total: 0, active: 0, trial: 0, suspended: 0 });
+  const [stats, setStats] = useState({ total: 0, active: 0, trial: 0, suspended: 0, deletionRequested: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,7 +108,11 @@ const Tenants = () => {
       setError(null);
       // Load all tenants for client-side filtering
       const data = await tenantService.getTenants({ page: 1, limit: 1000 });
-      setAllTenants(data.tenants || data || []);
+      const tenantList = data.tenants || data || [];
+      setAllTenants(tenantList);
+      // Count deletion requests from loaded data
+      const deletionCount = tenantList.filter(t => t.deletionRequest?.status === 'pending').length;
+      setStats(prev => ({ ...prev, deletionRequested: deletionCount }));
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load tenants');
     } finally { setLoading(false); }
@@ -288,6 +292,49 @@ const Tenants = () => {
     setPinError('');
   };
 
+  // Deletion request handlers
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [deletionActionLoading, setDeletionActionLoading] = useState(false);
+
+  const handleApproveDeletion = async (id) => {
+    if (!window.confirm('Are you sure you want to APPROVE this deletion request? The tenant will lose access immediately and their data will be deleted after 45 days.')) return;
+    try {
+      setDeletionActionLoading(true);
+      await tenantService.approveDeletion(id);
+      setSelectedTenant(null);
+      loadTenants();
+      loadStats();
+      alert('Deletion request approved. Tenant has been notified via email.');
+    } catch (err) { alert(err.response?.data?.message || 'Failed to approve deletion'); }
+    finally { setDeletionActionLoading(false); }
+  };
+
+  const handleRejectDeletion = async (id) => {
+    try {
+      setDeletionActionLoading(true);
+      await tenantService.rejectDeletion(id, rejectReason);
+      setShowRejectModal(false);
+      setRejectReason('');
+      setSelectedTenant(null);
+      loadTenants();
+      alert('Deletion request rejected. Tenant has been notified via email.');
+    } catch (err) { alert(err.response?.data?.message || 'Failed to reject deletion'); }
+    finally { setDeletionActionLoading(false); }
+  };
+
+  const handleRecoverTenant = async (id) => {
+    if (!window.confirm('Recover this tenant account? They will regain full access immediately.')) return;
+    try {
+      setDeletionActionLoading(true);
+      await tenantService.recoverTenant(id);
+      setSelectedTenant(null);
+      loadTenants();
+      alert('Account recovered successfully. Tenant has been notified via email.');
+    } catch (err) { alert(err.response?.data?.message || 'Failed to recover tenant'); }
+    finally { setDeletionActionLoading(false); }
+  };
+
   const handleSuspend = async (id) => {
     if (!window.confirm('Suspend this tenant?')) return;
     try {
@@ -321,7 +368,9 @@ const Tenants = () => {
       t.organizationId?.toLowerCase().includes(searchTerm.toLowerCase());
 
     const status = getTenantStatus(t);
-    const matchesStatus = filterStatus === 'all' || status === filterStatus;
+    const matchesStatus = filterStatus === 'all'
+      || status === filterStatus
+      || (filterStatus === 'deletion_requested' && t.deletionRequest?.status === 'pending');
 
     return matchesSearch && matchesStatus;
   });
@@ -369,7 +418,17 @@ const Tenants = () => {
       align: 'center',
       render: (row) => {
         const status = getTenantStatus(row);
-        return <Badge variant={getStatusVariant(status)}>{status}</Badge>;
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+            <Badge variant={getStatusVariant(status)}>{status}</Badge>
+            {row.deletionRequest?.status === 'pending' && (
+              <span style={{ background: '#fef2f2', color: '#dc2626', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }}>🗑 DEL REQ</span>
+            )}
+            {row.deletionRequest?.status === 'approved' && (
+              <span style={{ background: '#fef2f2', color: '#991b1b', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }}>⏳ DELETING</span>
+            )}
+          </div>
+        );
       }
     },
     {
@@ -430,12 +489,47 @@ const Tenants = () => {
         </div>
       </div>
 
+      {/* Pending Deletion Requests Alert Banner */}
+      {stats.deletionRequested > 0 && (
+        <div style={{
+          background: 'linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%)',
+          border: '1.5px solid #fecaca',
+          borderRadius: '10px',
+          padding: '12px 18px',
+          marginBottom: '14px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '22px' }}>🔔</span>
+            <div>
+              <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: '#dc2626' }}>
+                {stats.deletionRequested} Pending Deletion Request{stats.deletionRequested > 1 ? 's' : ''}
+              </p>
+              <p style={{ margin: 0, fontSize: '12px', color: '#b91c1c' }}>
+                Organization{stats.deletionRequested > 1 ? 's' : ''} requesting account deletion — action required
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setFilterStatus('deletion_requested')}
+            style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', padding: '7px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+          >
+            Review Requests →
+          </button>
+        </div>
+      )}
+
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '16px' }}>
         <StatCard icon="🏢" value={stats.total} label="Total" onClick={() => setFilterStatus('all')} active={filterStatus === 'all'} />
         <StatCard icon="✅" value={stats.active} label="Active" onClick={() => setFilterStatus('active')} active={filterStatus === 'active'} />
         <StatCard icon="⏳" value={stats.trial} label="Trial" onClick={() => setFilterStatus('trial')} active={filterStatus === 'trial'} />
         <StatCard icon="🚫" value={stats.suspended} label="Suspended" onClick={() => setFilterStatus('suspended')} active={filterStatus === 'suspended'} />
+        <StatCard icon="🗑️" value={stats.deletionRequested} label="Deletion Req." onClick={() => setFilterStatus('deletion_requested')} active={filterStatus === 'deletion_requested'} />
       </div>
 
       {/* Main Content */}
@@ -461,6 +555,7 @@ const Tenants = () => {
                 <option value="active">Active</option>
                 <option value="trial">Trial</option>
                 <option value="suspended">Suspended</option>
+                <option value="deletion_requested">Deletion Requested</option>
               </select>
             </div>
 
@@ -683,6 +778,65 @@ const Tenants = () => {
               <InfoRow label="Created" value={formatDate(selectedTenant.createdAt)} />
               <InfoRow label="Slug" value={selectedTenant.slug || 'N/A'} />
             </div>
+
+            {/* Deletion Request Section */}
+            {selectedTenant.deletionRequest?.status && selectedTenant.deletionRequest.status !== 'none' && (
+              <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '16px', marginBottom: '12px' }}>
+                <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '700', color: '#dc2626' }}>
+                  🗑️ Deletion Request
+                </h4>
+                <InfoRow label="Status" value={
+                  <span style={{
+                    background: selectedTenant.deletionRequest.status === 'pending' ? '#fef3c7' : selectedTenant.deletionRequest.status === 'approved' ? '#fef2f2' : '#f0fdf4',
+                    color: selectedTenant.deletionRequest.status === 'pending' ? '#92400e' : selectedTenant.deletionRequest.status === 'approved' ? '#dc2626' : '#16a34a',
+                    padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase'
+                  }}>{selectedTenant.deletionRequest.status}</span>
+                } />
+                {selectedTenant.deletionRequest.requestedAt && (
+                  <InfoRow label="Requested" value={formatDate(selectedTenant.deletionRequest.requestedAt)} />
+                )}
+                {selectedTenant.deletionRequest.reason && (
+                  <InfoRow label="Reason" value={selectedTenant.deletionRequest.reason} />
+                )}
+                {selectedTenant.deletionRequest.permanentDeleteAt && (
+                  <InfoRow label="Permanent Delete" value={formatDate(selectedTenant.deletionRequest.permanentDeleteAt)} />
+                )}
+                {selectedTenant.deletionRequest.rejectionReason && (
+                  <InfoRow label="Rejection Reason" value={selectedTenant.deletionRequest.rejectionReason} />
+                )}
+
+                {selectedTenant.deletionRequest.status === 'pending' && (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                    <button
+                      onClick={() => handleApproveDeletion(selectedTenant._id)}
+                      disabled={deletionActionLoading}
+                      style={{ flex: 1, padding: '8px', background: '#dc2626', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      ✅ Approve Deletion
+                    </button>
+                    <button
+                      onClick={() => setShowRejectModal(true)}
+                      disabled={deletionActionLoading}
+                      style={{ flex: 1, padding: '8px', background: '#fff', border: '1.5px solid #dc2626', borderRadius: '6px', color: '#dc2626', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      ❌ Reject
+                    </button>
+                  </div>
+                )}
+
+                {selectedTenant.deletionRequest.status === 'approved' && (
+                  <div style={{ marginTop: '12px' }}>
+                    <button
+                      onClick={() => handleRecoverTenant(selectedTenant._id)}
+                      disabled={deletionActionLoading}
+                      style={{ width: '100%', padding: '9px', background: '#16a34a', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+                    >
+                      🔄 Recover Account
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div style={styles.actionBtns}>
               {selectedTenant.subscription?.status === 'suspended' ? (
@@ -962,6 +1116,40 @@ const Tenants = () => {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {/* Reject Deletion Modal */}
+      {showRejectModal && (
+        <div style={styles.modalOverlay} onClick={() => setShowRejectModal(false)}>
+          <div style={{ ...styles.modal, maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>❌</div>
+              <h3 style={styles.modalTitle}>Reject Deletion Request</h3>
+              <p style={{ ...styles.modalSubtitle, marginBottom: 0 }}>The tenant will be notified via email.</p>
+            </div>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
+                Rejection Reason (optional)
+              </label>
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                placeholder="Explain why the request is being rejected..."
+                rows={3}
+                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              />
+            </div>
+            <div style={styles.modalActions}>
+              <button onClick={() => { setShowRejectModal(false); setRejectReason(''); }} style={styles.cancelBtn}>Cancel</button>
+              <button
+                onClick={() => handleRejectDeletion(selectedTenant._id)}
+                disabled={deletionActionLoading}
+                style={{ ...styles.submitBtn, background: '#dc2626' }}
+              >
+                {deletionActionLoading ? 'Rejecting...' : 'Reject Request'}
+              </button>
+            </div>
           </div>
         </div>
       )}

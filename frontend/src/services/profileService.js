@@ -68,6 +68,11 @@ const profileService = {
     }
 
     return await api.put('/profile/organization', cleanData);
+  },
+
+  // Request organization deletion
+  requestDeletion: async (reason) => {
+    return await api.post('/tenants/request-deletion', { reason });
   }
 };
 

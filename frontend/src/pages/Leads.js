@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
+import { Country, State, City } from 'country-state-city';
 
 import { leadService } from '../services/leadService';
 import { accountService } from '../services/accountService';
@@ -71,7 +72,8 @@ import {
 const DEFAULT_LEAD_FIELDS = [
   { fieldName: 'customerName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
   { fieldName: 'customerType', label: 'Customer Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Other', value: 'Other' }] },
-  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'email', label: 'Personal Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'companyEmail', label: 'Company Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3.5 },
   { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
   { fieldName: 'alternatePhone', label: 'Alternate Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
   { fieldName: 'company', label: 'Company', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 6 },
@@ -89,18 +91,244 @@ const DEFAULT_LEAD_FIELDS = [
   { fieldName: 'region', label: 'Region', fieldType: 'text', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 21 },
   { fieldName: 'numberOfEmployees', label: 'No. of Employees', fieldType: 'number', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 22 },
   { fieldName: 'annualRevenue', label: 'Annual Revenue', fieldType: 'currency', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 23 },
-  { fieldName: 'city', label: 'City', fieldType: 'text', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
-  { fieldName: 'state', label: 'State', fieldType: 'text', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 31 },
-  { fieldName: 'country', label: 'Country', fieldType: 'text', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 32 },
+  { fieldName: 'country', label: 'Country', fieldType: 'dropdown', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
+  { fieldName: 'state', label: 'State', fieldType: 'dropdown', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 31 },
+  { fieldName: 'city', label: 'City', fieldType: 'dropdown', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 32 },
   { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 40 },
   { fieldName: 'requirements', label: 'Requirements', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 41 },
   { fieldName: 'competitor', label: 'Competitor', fieldType: 'text', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 42 },
+  // Social Media
+  { fieldName: 'linkedIn', label: 'LinkedIn', fieldType: 'url', section: 'Social Media', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 50, placeholder: 'https://linkedin.com/in/username' },
+  { fieldName: 'twitter', label: 'Twitter / X', fieldType: 'text', section: 'Social Media', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 51, placeholder: '@username' },
+  { fieldName: 'facebook', label: 'Facebook', fieldType: 'url', section: 'Social Media', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 52, placeholder: 'https://facebook.com/username' },
+  { fieldName: 'instagram', label: 'Instagram', fieldType: 'text', section: 'Social Media', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 53, placeholder: '@username' },
+  { fieldName: 'whatsApp', label: 'WhatsApp', fieldType: 'phone', section: 'Social Media', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 54 },
 ];
 
 const STD_DISABLED_KEY = 'crm_lead_std_disabled';
 const getDisabledStdFields = () => { try { return JSON.parse(localStorage.getItem(STD_DISABLED_KEY) || '[]'); } catch { return []; } };
 const setDisabledStdFields = (arr) => localStorage.setItem(STD_DISABLED_KEY, JSON.stringify(arr));
-const LEAD_SECTIONS = ['Lead Details', 'Basic Information', 'Business Information', 'Address', 'Additional Information'];
+const LEAD_SECTIONS = ['Lead Details', 'Basic Information', 'Business Information', 'Address', 'Additional Information', 'Social Media'];
+
+// --- Continent mapping for country grouping ---
+const OCEANIA_CODES = new Set(['AU','FJ','KI','MH','FM','NR','NZ','PW','PG','WS','SB','TO','TV','VU','CK','NU','TK','WF','PF','NC','GU','MP','AS','UM','PN']);
+const getContinent = (country) => {
+  if (OCEANIA_CODES.has(country.isoCode)) return 'Oceania';
+  const tz = (country.timezones && country.timezones[0] && country.timezones[0].zoneName) || '';
+  const prefix = tz.split('/')[0];
+  const map = { Africa:'Africa', America:'Americas', Asia:'Asia', Atlantic:'Europe', Europe:'Europe', Indian:'Asia', Pacific:'Oceania', Arctic:'Europe', Australia:'Oceania' };
+  return map[prefix] || 'Other';
+};
+const CONTINENT_ORDER = ['Asia', 'Europe', 'Americas', 'Africa', 'Oceania', 'Other'];
+
+// Build grouped countries once (module level for performance)
+const ALL_COUNTRIES = Country.getAllCountries();
+const GROUPED_COUNTRIES = (() => {
+  const g = {};
+  ALL_COUNTRIES.forEach(c => {
+    const cont = getContinent(c);
+    if (!g[cont]) g[cont] = [];
+    g[cont].push(c);
+  });
+  return g;
+})();
+
+const CONTINENT_ICONS = { Asia:'🌏', Europe:'🌍', Americas:'🌎', Africa:'🌍', Oceania:'🌏', Other:'🌐' };
+
+// Custom Country Dropdown — accordion style (continent → countries)
+const CountryCascadeSelect = ({ value, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  const [expandedCont, setExpandedCont] = React.useState(null);
+  const ref = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  // Auto-expand continent of selected country when opening
+  React.useEffect(() => {
+    if (open && value) {
+      const cont = getContinent(ALL_COUNTRIES.find(c => c.name === value) || {});
+      setExpandedCont(cont);
+    }
+    if (!open) setExpandedCont(null);
+  }, [open, value]);
+
+  const selectedCountry = ALL_COUNTRIES.find(c => c.name === value);
+
+  const handleSelect = (country) => {
+    onChange(country);
+    setOpen(false);
+  };
+
+  const triggerStyle = {
+    width: '100%', padding: '8px 10px', fontSize: '13px',
+    border: '1px solid #e2e8f0', borderRadius: '6px',
+    background: '#fff', textAlign: 'left', cursor: 'pointer',
+    display: 'flex', alignItems: 'center', gap: '7px', outline: 'none',
+    color: value ? '#1e293b' : '#94a3b8',
+    boxSizing: 'border-box',
+  };
+
+  return (
+    <div ref={ref} style={{ position: 'relative' }}>
+      <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>Country</label>
+
+      {/* Trigger — same compact height as state/city selects */}
+      <button type="button" onClick={() => setOpen(o => !o)} style={triggerStyle}>
+        {selectedCountry
+          ? <><span style={{ fontSize:'15px', lineHeight:1 }}>{selectedCountry.flag}</span><span style={{ flex:1, fontSize:'13px' }}>{selectedCountry.name}</span></>
+          : <span style={{ flex:1 }}>-- Select Country --</span>
+        }
+        <span style={{ color:'#94a3b8', fontSize:'10px', marginLeft:'auto' }}>{open ? '▲' : '▼'}</span>
+      </button>
+
+      {/* Dropdown panel */}
+      {open && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#fff', border:'1px solid #e2e8f0', borderRadius:'7px', boxShadow:'0 6px 20px rgba(0,0,0,0.13)', marginTop:'3px', overflow:'hidden', width:'100%' }}>
+          <div style={{ maxHeight:'280px', overflowY:'auto' }}>
+            {CONTINENT_ORDER.map(cont => {
+              const countries = GROUPED_COUNTRIES[cont];
+              if (!countries?.length) return null;
+              const isExpanded = expandedCont === cont;
+              return (
+                <div key={cont}>
+                  {/* Continent header row */}
+                  <div
+                    onMouseDown={(e) => { e.preventDefault(); setExpandedCont(isExpanded ? null : cont); }}
+                    style={{ padding:'7px 10px', cursor:'pointer', display:'flex', alignItems:'center', gap:'7px', background: isExpanded ? '#eff6ff' : '#f8fafc', borderBottom:'1px solid #f1f5f9', userSelect:'none' }}
+                  >
+                    <span style={{ fontSize:'14px' }}>{CONTINENT_ICONS[cont]}</span>
+                    <span style={{ flex:1, fontSize:'12px', fontWeight:'700', color: isExpanded ? '#1d4ed8' : '#374151', letterSpacing:'0.2px' }}>{cont}</span>
+                    <span style={{ fontSize:'10px', color:'#94a3b8', marginRight:'2px' }}>{countries.length}</span>
+                    <span style={{ fontSize:'10px', color: isExpanded ? '#3b82f6' : '#94a3b8' }}>{isExpanded ? '▼' : '▶'}</span>
+                  </div>
+
+                  {/* Countries under this continent */}
+                  {isExpanded && countries.map(c => (
+                    <div
+                      key={c.isoCode}
+                      onMouseDown={() => handleSelect(c)}
+                      style={{ padding:'6px 10px 6px 28px', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px', fontSize:'12px', background: value === c.name ? '#dbeafe' : '#fff', color: value === c.name ? '#1d4ed8' : '#1e293b', fontWeight: value === c.name ? '600' : '400', borderBottom:'1px solid #f8fafc' }}
+                      onMouseEnter={e => { if (value !== c.name) e.currentTarget.style.background = '#f0f9ff'; }}
+                      onMouseLeave={e => { if (value !== c.name) e.currentTarget.style.background = '#fff'; }}
+                    >
+                      <span style={{ fontSize:'14px', lineHeight:1 }}>{c.flag}</span>
+                      <span>{c.name}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// State custom dropdown — same style/size as country
+const StateCascadeSelect = ({ value, countryIso, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  const states = countryIso ? State.getStatesOfCountry(countryIso) : [];
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const triggerStyle = {
+    width:'100%', padding:'8px 10px', fontSize:'13px',
+    border:'1px solid #e2e8f0', borderRadius:'6px',
+    background: !countryIso ? '#f9fafb' : '#fff',
+    textAlign:'left', cursor: !countryIso ? 'not-allowed' : 'pointer',
+    display:'flex', alignItems:'center', gap:'7px', outline:'none',
+    color: value ? '#1e293b' : '#94a3b8', boxSizing:'border-box',
+  };
+
+  return (
+    <div ref={ref} style={{ position:'relative' }}>
+      <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>State</label>
+      <button type="button" disabled={!countryIso} onClick={() => countryIso && setOpen(o => !o)} style={triggerStyle}>
+        <span style={{ flex:1 }}>{value || (countryIso ? '-- Select State --' : '-- Select Country First --')}</span>
+        <span style={{ color:'#94a3b8', fontSize:'10px', marginLeft:'auto' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#fff', border:'1px solid #e2e8f0', borderRadius:'7px', boxShadow:'0 6px 20px rgba(0,0,0,0.13)', marginTop:'3px', overflow:'hidden' }}>
+          <div style={{ maxHeight:'280px', overflowY:'auto' }}>
+            {states.map(s => (
+              <div
+                key={s.isoCode}
+                onMouseDown={() => { onChange(s.name, s.isoCode); setOpen(false); }}
+                style={{ padding:'7px 12px', cursor:'pointer', display:'flex', alignItems:'center', fontSize:'12px', background: value === s.name ? '#dbeafe' : '#fff', color: value === s.name ? '#1d4ed8' : '#1e293b', fontWeight: value === s.name ? '600' : '400', borderBottom:'1px solid #f8fafc' }}
+                onMouseEnter={e => { if (value !== s.name) e.currentTarget.style.background = '#f0f9ff'; }}
+                onMouseLeave={e => { if (value !== s.name) e.currentTarget.style.background = '#fff'; }}
+              >
+                {s.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// City custom dropdown — same style/size as country
+const CityCascadeSelect = ({ value, countryIso, stateIso, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  const cities = (countryIso && stateIso) ? City.getCitiesOfState(countryIso, stateIso) : [];
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  const triggerStyle = {
+    width:'100%', padding:'8px 10px', fontSize:'13px',
+    border:'1px solid #e2e8f0', borderRadius:'6px',
+    background: !stateIso ? '#f9fafb' : '#fff',
+    textAlign:'left', cursor: !stateIso ? 'not-allowed' : 'pointer',
+    display:'flex', alignItems:'center', gap:'7px', outline:'none',
+    color: value ? '#1e293b' : '#94a3b8', boxSizing:'border-box',
+  };
+
+  return (
+    <div ref={ref} style={{ position:'relative' }}>
+      <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>City</label>
+      <button type="button" disabled={!stateIso} onClick={() => stateIso && setOpen(o => !o)} style={triggerStyle}>
+        <span style={{ flex:1 }}>{value || (stateIso ? '-- Select City --' : '-- Select State First --')}</span>
+        <span style={{ color:'#94a3b8', fontSize:'10px', marginLeft:'auto' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#fff', border:'1px solid #e2e8f0', borderRadius:'7px', boxShadow:'0 6px 20px rgba(0,0,0,0.13)', marginTop:'3px', overflow:'hidden' }}>
+          <div style={{ maxHeight:'280px', overflowY:'auto' }}>
+            {cities.map((c, idx) => (
+              <div
+                key={idx}
+                onMouseDown={() => { onChange(c.name); setOpen(false); }}
+                style={{ padding:'7px 12px', cursor:'pointer', display:'flex', alignItems:'center', fontSize:'12px', background: value === c.name ? '#dbeafe' : '#fff', color: value === c.name ? '#1d4ed8' : '#1e293b', fontWeight: value === c.name ? '600' : '400', borderBottom:'1px solid #f8fafc' }}
+                onMouseEnter={e => { if (value !== c.name) e.currentTarget.style.background = '#f0f9ff'; }}
+                onMouseLeave={e => { if (value !== c.name) e.currentTarget.style.background = '#fff'; }}
+              >
+                {c.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const Leads = () => {
   const navigate = useNavigate();
@@ -172,6 +400,9 @@ const Leads = () => {
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+  // Cascading country/state/city ISO codes for create form
+  const [selectedCountryIso, setSelectedCountryIso] = useState('');
+  const [selectedStateIso, setSelectedStateIso] = useState('');
 
   // Manage Fields Panel
   const [showManageFields, setShowManageFields] = useState(false);
@@ -633,6 +864,8 @@ const Leads = () => {
     setPhoneVerification({ status: 'pending', message: '', isValid: null });
     setFieldValues({});
     setFieldErrors({});
+    setSelectedCountryIso('');
+    setSelectedStateIso('');
   };
 
   const resetProductForm = () => {
@@ -999,6 +1232,50 @@ const Leads = () => {
     const isEmail = field.fieldName === 'email';
     const isPhone = field.fieldName === 'phone';
 
+    // Country cascading dropdown — custom component with flag + continent grouping
+    if (field.fieldName === 'country') {
+      return (
+        <CountryCascadeSelect
+          value={fieldValues['country'] || ''}
+          onChange={(countryObj) => {
+            handleFieldChange('country', countryObj.name);
+            setSelectedCountryIso(countryObj.isoCode);
+            // Reset state and city when country changes
+            handleFieldChange('state', '');
+            handleFieldChange('city', '');
+            setSelectedStateIso('');
+          }}
+        />
+      );
+    }
+
+    // State cascading dropdown — custom, same style as country
+    if (field.fieldName === 'state') {
+      return (
+        <StateCascadeSelect
+          value={fieldValues['state'] || ''}
+          countryIso={selectedCountryIso}
+          onChange={(stateName, stateIso) => {
+            handleFieldChange('state', stateName);
+            setSelectedStateIso(stateIso);
+            handleFieldChange('city', '');
+          }}
+        />
+      );
+    }
+
+    // City cascading dropdown — custom, same style as country
+    if (field.fieldName === 'city') {
+      return (
+        <CityCascadeSelect
+          value={fieldValues['city'] || ''}
+          countryIso={selectedCountryIso}
+          stateIso={selectedStateIso}
+          onChange={(cityName) => handleFieldChange('city', cityName)}
+        />
+      );
+    }
+
     return (
       <div className="relative">
         <DynamicField
@@ -1204,7 +1481,13 @@ const Leads = () => {
                           </div>
                         )}
                         {sectionFields.map((field) => (
-                          <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
+                          <div key={field._id} style={
+                            (field.fieldName === 'description' || field.fieldName === 'requirements')
+                              ? { gridColumn: 'span 6' }
+                              : field.fieldType === 'textarea'
+                                ? { gridColumn: 'span 2' }
+                                : {}
+                          }>
                             {renderDynamicField(field)}
                           </div>
                         ))}

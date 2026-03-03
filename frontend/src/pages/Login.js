@@ -16,6 +16,8 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [errorCode, setErrorCode] = useState(null); // 'ACCOUNT_DELETED' | 'DELETION_PENDING' | null
+  const [errorMeta, setErrorMeta] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
@@ -33,6 +35,8 @@ const Login = () => {
       [e.target.name]: e.target.value
     });
     setError('');
+    setErrorCode(null);
+    setErrorMeta(null);
   };
 
   const handleSubmit = async (e) => {
@@ -70,7 +74,14 @@ const Login = () => {
         : '/dashboard';
       window.location.href = defaultRoute;
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      // api.js interceptor strips err.response.data and rejects with the data object directly
+      // So err itself IS the response data: { message, errors, ... }
+      const code = err?.errors?.code || err?.response?.data?.errors?.code || null;
+      const meta = err?.errors || err?.response?.data?.errors || null;
+      const message = err?.message || err?.response?.data?.message || 'Invalid email or password';
+      setError(message);
+      setErrorCode(code);
+      setErrorMeta(meta);
       setLoading(false);
     }
   };
@@ -166,7 +177,7 @@ const Login = () => {
         </div>
 
         {/* Error */}
-        {error && (
+        {error && !errorCode && (
           <div style={{
             padding: '12px 16px',
             background: 'rgba(239, 68, 68, 0.1)',
@@ -177,6 +188,56 @@ const Login = () => {
             fontSize: '14px'
           }}>
             {error}
+          </div>
+        )}
+
+        {/* Account Deleted — special card */}
+        {errorCode === 'ACCOUNT_DELETED' && (
+          <div style={{
+            padding: '16px 18px',
+            background: 'rgba(220, 38, 38, 0.1)',
+            border: '1px solid rgba(220, 38, 38, 0.4)',
+            borderRadius: '8px',
+            marginBottom: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '18px' }}>🚫</span>
+              <span style={{ color: '#fca5a5', fontWeight: '700', fontSize: '14px' }}>Account Deleted</span>
+            </div>
+            <p style={{ color: '#f87171', fontSize: '13px', margin: '0 0 6px' }}>{error}</p>
+            {errorMeta?.supportEmail && (
+              <p style={{ color: '#fca5a5', fontSize: '12px', margin: '0' }}>
+                To recover your account, contact:{' '}
+                <a href={`mailto:${errorMeta.supportEmail}`} style={{ color: '#f87171', fontWeight: '600' }}>
+                  {errorMeta.supportEmail}
+                </a>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Deletion Pending — special card */}
+        {errorCode === 'DELETION_PENDING' && (
+          <div style={{
+            padding: '16px 18px',
+            background: 'rgba(245, 158, 11, 0.1)',
+            border: '1px solid rgba(245, 158, 11, 0.4)',
+            borderRadius: '8px',
+            marginBottom: '16px'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+              <span style={{ fontSize: '18px' }}>⏳</span>
+              <span style={{ color: '#fcd34d', fontWeight: '700', fontSize: '14px' }}>Deletion Request Pending</span>
+            </div>
+            <p style={{ color: '#fbbf24', fontSize: '13px', margin: '0 0 6px' }}>{error}</p>
+            {errorMeta?.supportEmail && (
+              <p style={{ color: '#fcd34d', fontSize: '12px', margin: '0' }}>
+                To cancel this request, contact:{' '}
+                <a href={`mailto:${errorMeta.supportEmail}`} style={{ color: '#fbbf24', fontWeight: '600' }}>
+                  {errorMeta.supportEmail}
+                </a>
+              </p>
+            )}
           </div>
         )}
 

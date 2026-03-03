@@ -3,6 +3,13 @@ const User = require('../models/User');
 const Subscription = require('../models/Subscription');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
+const {
+  sendDeletionRequestNotification,
+  sendDeletionRequestConfirmation,
+  sendDeletionApprovedEmail,
+  sendDeletionRejectedEmail,
+  sendAccountRecoveredEmail
+} = require('../utils/emailService');
 
 /**
  * @desc    Get all tenants (SAAS owner view)
@@ -34,6 +41,10 @@ const getTenants = async (req, res) => {
 
     if (isSuspended !== undefined) {
       query.isSuspended = isSuspended === 'true';
+    }
+
+    if (req.query.deletionStatus) {
+      query['deletionRequest.status'] = req.query.deletionStatus;
     }
 
     // Get total count
@@ -269,6 +280,7 @@ const getTenantStats = async (req, res) => {
     });
     const suspendedTenants = await Tenant.countDocuments({ isSuspended: true });
     const trialTenants = await Tenant.countDocuments({ 'subscription.status': 'trial' });
+    const pendingDeletionRequests = await Tenant.countDocuments({ 'deletionRequest.status': 'pending' });
 
     // Tenants by plan
     const tenantsByPlan = await Tenant.aggregate([
@@ -303,10 +315,222 @@ const getTenantStats = async (req, res) => {
       suspendedTenants,
       trialTenants,
       recentTenants,
-      tenantsByPlan: planStats
+      tenantsByPlan: planStats,
+      pendingDeletionRequests
     });
   } catch (error) {
     console.error('Get tenant stats error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Tenant requests account deletion
+ * @route   POST /api/tenants/request-deletion
+ * @access  Private (TENANT_ADMIN only)
+ */
+const requestDeletion = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const tenant = await Tenant.findById(req.user.tenant);
+
+    if (!tenant) {
+      return errorResponse(res, 404, 'Organization not found');
+    }
+
+    if (tenant.deletionRequest && tenant.deletionRequest.status === 'pending') {
+      return errorResponse(res, 400, 'Deletion request is already pending. Please wait for SAAS Admin response.');
+    }
+
+    if (tenant.deletionRequest && tenant.deletionRequest.status === 'approved') {
+      return errorResponse(res, 400, 'Your account is already scheduled for deletion.');
+    }
+
+    tenant.deletionRequest = {
+      status: 'pending',
+      requestedAt: new Date(),
+      reason: reason || '',
+      requestedBy: req.user._id
+    };
+
+    await tenant.save();
+
+    // Get tenant admin email for confirmation
+    const tenantAdmin = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' }).select('email firstName');
+
+    // Send email to SAAS Admin
+    const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+    for (const adminEmail of saasAdminEmails) {
+      sendDeletionRequestNotification(adminEmail, tenant, reason).catch(err =>
+        console.error('Failed to send deletion notification to SAAS admin:', err)
+      );
+    }
+
+    // Send confirmation to tenant admin
+    if (tenantAdmin) {
+      sendDeletionRequestConfirmation(tenantAdmin.email, tenant.organizationName, tenantAdmin.firstName).catch(err =>
+        console.error('Failed to send deletion confirmation to tenant:', err)
+      );
+    }
+
+    await logActivity(req, 'tenant.deletion_requested', 'Tenant', tenant._id, { reason });
+
+    successResponse(res, 200, 'Deletion request submitted successfully. SAAS Admin will contact you shortly.', {
+      deletionRequest: tenant.deletionRequest
+    });
+  } catch (error) {
+    console.error('Request deletion error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    SAAS Admin approves deletion request
+ * @route   POST /api/tenants/:id/approve-deletion
+ * @access  Private (SAAS_OWNER / SAAS_ADMIN only)
+ */
+const approveDeletion = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+
+    if (!tenant) {
+      return errorResponse(res, 404, 'Tenant not found');
+    }
+
+    if (!tenant.deletionRequest || tenant.deletionRequest.status !== 'pending') {
+      return errorResponse(res, 400, 'No pending deletion request found for this organization.');
+    }
+
+    const permanentDeleteAt = new Date();
+    permanentDeleteAt.setDate(permanentDeleteAt.getDate() + 45);
+
+    tenant.deletionRequest.status = 'approved';
+    tenant.deletionRequest.approvedAt = new Date();
+    tenant.deletionRequest.approvedBy = req.user._id;
+    tenant.deletionRequest.permanentDeleteAt = permanentDeleteAt;
+    tenant.isActive = false;
+
+    await tenant.save();
+
+    // Block all tenant users
+    await User.updateMany({ tenant: tenant._id }, { isActive: false });
+
+    // Get tenant admin email
+    const tenantAdmin = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' }).select('email firstName');
+    if (tenantAdmin) {
+      sendDeletionApprovedEmail(tenantAdmin.email, tenant.organizationName, permanentDeleteAt, tenantAdmin.firstName).catch(err =>
+        console.error('Failed to send deletion approval email:', err)
+      );
+    }
+
+    await logActivity(req, 'tenant.deletion_approved', 'Tenant', tenant._id, {
+      permanentDeleteAt,
+      approvedBy: req.user._id
+    });
+
+    successResponse(res, 200, 'Deletion request approved. Account will be permanently deleted after 45 days.', {
+      deletionRequest: tenant.deletionRequest
+    });
+  } catch (error) {
+    console.error('Approve deletion error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    SAAS Admin rejects deletion request
+ * @route   POST /api/tenants/:id/reject-deletion
+ * @access  Private (SAAS_OWNER / SAAS_ADMIN only)
+ */
+const rejectDeletion = async (req, res) => {
+  try {
+    const { rejectionReason } = req.body;
+    const tenant = await Tenant.findById(req.params.id);
+
+    if (!tenant) {
+      return errorResponse(res, 404, 'Tenant not found');
+    }
+
+    if (!tenant.deletionRequest || tenant.deletionRequest.status !== 'pending') {
+      return errorResponse(res, 400, 'No pending deletion request found for this organization.');
+    }
+
+    tenant.deletionRequest.status = 'rejected';
+    tenant.deletionRequest.rejectedAt = new Date();
+    tenant.deletionRequest.rejectedBy = req.user._id;
+    tenant.deletionRequest.rejectionReason = rejectionReason || '';
+
+    await tenant.save();
+
+    // Get tenant admin email
+    const tenantAdmin = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' }).select('email firstName');
+    if (tenantAdmin) {
+      sendDeletionRejectedEmail(tenantAdmin.email, tenant.organizationName, rejectionReason, tenantAdmin.firstName).catch(err =>
+        console.error('Failed to send deletion rejection email:', err)
+      );
+    }
+
+    await logActivity(req, 'tenant.deletion_rejected', 'Tenant', tenant._id, {
+      rejectionReason,
+      rejectedBy: req.user._id
+    });
+
+    successResponse(res, 200, 'Deletion request rejected. Organization account remains active.', {
+      deletionRequest: tenant.deletionRequest
+    });
+  } catch (error) {
+    console.error('Reject deletion error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    SAAS Admin recovers a deleted organization within 45-day window
+ * @route   POST /api/tenants/:id/recover
+ * @access  Private (SAAS_OWNER / SAAS_ADMIN only)
+ */
+const recoverTenant = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+
+    if (!tenant) {
+      return errorResponse(res, 404, 'Tenant not found');
+    }
+
+    if (!tenant.deletionRequest || tenant.deletionRequest.status !== 'approved') {
+      return errorResponse(res, 400, 'This organization does not have an approved deletion request.');
+    }
+
+    if (tenant.deletionRequest.permanentDeleteAt && new Date() > tenant.deletionRequest.permanentDeleteAt) {
+      return errorResponse(res, 400, 'Recovery window has expired. This organization cannot be recovered.');
+    }
+
+    // Reset deletion request and reactivate
+    tenant.deletionRequest = { status: 'none' };
+    tenant.isActive = true;
+
+    await tenant.save();
+
+    // Reactivate all tenant users
+    await User.updateMany({ tenant: tenant._id }, { isActive: true });
+
+    // Get tenant admin email
+    const tenantAdmin = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' }).select('email firstName');
+    if (tenantAdmin) {
+      sendAccountRecoveredEmail(tenantAdmin.email, tenant.organizationName, tenantAdmin.firstName).catch(err =>
+        console.error('Failed to send account recovery email:', err)
+      );
+    }
+
+    await logActivity(req, 'tenant.recovered', 'Tenant', tenant._id, {
+      recoveredBy: req.user._id
+    });
+
+    successResponse(res, 200, 'Organization account recovered successfully. All users have been reactivated.', {
+      tenant
+    });
+  } catch (error) {
+    console.error('Recover tenant error:', error);
     errorResponse(res, 500, 'Server error');
   }
 };
@@ -318,5 +542,9 @@ module.exports = {
   suspendTenant,
   activateTenant,
   deleteTenant,
-  getTenantStats
+  getTenantStats,
+  requestDeletion,
+  approveDeletion,
+  rejectDeletion,
+  recoverTenant
 };
