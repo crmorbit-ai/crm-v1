@@ -569,7 +569,7 @@ const Accounts = () => {
                           </div>
                           <div>
                             <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{account.accountName}</h3>
-                            <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>#{String(account.accountNumber || 0).padStart(5, '0')}</p>
+                            <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{account.accountNumber ? `#${String(account.accountNumber).padStart(5, '0')}` : ''}</p>
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
@@ -605,7 +605,7 @@ const Accounts = () => {
                                 </div>
                                 <div>
                                   <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{account.accountName}</div>
-                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>#{String(account.accountNumber || 0).padStart(5, '0')}</div>
+                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>{account.accountNumber ? `#${String(account.accountNumber).padStart(5, '0')}` : ''}</div>
                                 </div>
                               </div>
                             </td>
@@ -655,7 +655,7 @@ const Accounts = () => {
                       </div>
                       <div style={{ flex: 1 }}>
                         <h2 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0', color: '#1e3c72' }}>{selectedAccountData.accountName}</h2>
-                        <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>#{String(selectedAccountData.accountNumber || 0).padStart(5, '0')}</p>
+                        <p style={{ color: '#666', fontSize: '12px', margin: 0 }}>{selectedAccountData.accountNumber ? `#${String(selectedAccountData.accountNumber).padStart(5, '0')}` : ''}</p>
                         <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                           <span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{selectedAccountData.accountType}</span>
                           {selectedAccountData.industry && <span style={{ padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{selectedAccountData.industry}</span>}

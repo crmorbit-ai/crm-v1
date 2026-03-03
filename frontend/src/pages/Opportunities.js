@@ -211,7 +211,7 @@ const Opportunities = () => {
 
                         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',paddingTop:'6px',borderTop:'1px solid #F3F4F6'}}>
                           <span style={{fontSize:'10px',color:'#9CA3AF'}}>
-                            {new Date(opp.closeDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short'})}
+                            {opp.closeDate ? new Date(opp.closeDate).toLocaleDateString('en-GB',{day:'2-digit',month:'short'}) : '—'}
                           </span>
                           {opp.owner && (
                             <span style={{fontSize:'10px',color:'white',background:'#6B7280',padding:'2px 5px',borderRadius:'8px'}}>

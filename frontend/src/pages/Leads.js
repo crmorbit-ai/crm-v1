@@ -389,7 +389,8 @@ const Leads = () => {
   const [detailMeetingData, setDetailMeetingData] = useState({ title: '', from: '', to: '', location: '', meetingType: 'Online', description: '' });
   const [detailCallData, setDetailCallData] = useState({ subject: '', callStartTime: '', callDuration: '', callType: 'Outbound', callPurpose: 'Follow-up', callResult: 'Completed', description: '' });
   const [detailNoteData, setDetailNoteData] = useState({ title: '', content: '' });
-  const [detailConversionData, setDetailConversionData] = useState({ createAccount: true, createContact: true, createOpportunity: false, accountName: '', opportunityName: '', opportunityAmount: '', closeDate: '' });
+  const getDefaultCloseDate = () => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; };
+  const [detailConversionData, setDetailConversionData] = useState({ createAccount: true, createContact: true, createOpportunity: false, accountName: '', opportunityName: '', opportunityAmount: '', closeDate: getDefaultCloseDate() });
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showBulkUploadForm, setShowBulkUploadForm] = useState(false);
@@ -1172,7 +1173,7 @@ const Leads = () => {
         opportunityData: detailConversionData.createOpportunity ? {
           opportunityName: `${lead.customerName || lead.company || ''} - Opportunity`,
           amount: lead.estimatedDealValue || 0,
-          closeDate: lead.expectedCloseDate || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d; })(),
+          closeDate: detailConversionData.closeDate || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })(),
           stage: 'Qualification',
           probability: 50,
           type: 'New Business',
@@ -1966,6 +1967,19 @@ const Leads = () => {
                             <div><div style={{ fontWeight: '600' }}>Opportunity</div><div style={{ fontSize: '10px', color: '#64748b' }}>₹{selectedLeadData.estimatedDealValue || '0'}</div></div>
                           </label>
                         </div>
+                        {detailConversionData.createOpportunity && (
+                          <div style={{ marginBottom: '10px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Close Date</label>
+                            <input
+                              type="date"
+                              name="closeDate"
+                              value={detailConversionData.closeDate}
+                              onChange={handleDetailConversionChange}
+                              className="crm-form-input"
+                              style={{ padding: '6px 10px', fontSize: '13px', width: '100%', boxSizing: 'border-box' }}
+                            />
+                          </div>
+                        )}
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                           <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailConvertForm(false)}>Cancel</button>
                           <button type="submit" className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '12px', padding: '6px 16px', fontWeight: '600' }}>Convert Now</button>
