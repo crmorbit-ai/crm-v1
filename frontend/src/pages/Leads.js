@@ -110,6 +110,15 @@ const getDisabledStdFields = () => { try { return JSON.parse(localStorage.getIte
 const setDisabledStdFields = (arr) => localStorage.setItem(STD_DISABLED_KEY, JSON.stringify(arr));
 const LEAD_SECTIONS = ['Lead Details', 'Basic Information', 'Business Information', 'Address', 'Additional Information', 'Social Media'];
 
+const WIZARD_STEPS = [
+  { label: 'Lead Details',  icon: '🎯', desc: 'Status, source & priority',   sections: ['Lead Details'] },
+  { label: 'Basic Info',    icon: '👤', desc: 'Contact & company details',    sections: ['Basic Information'], includeOwner: true, includeCustomer: true },
+  { label: 'Business',      icon: '🏢', desc: 'Industry & revenue info',      sections: ['Business Information'] },
+  { label: 'Address',       icon: '📍', desc: 'Location details',             sections: ['Address'] },
+  { label: 'Social Media',  icon: '🔗', desc: 'Online presence & handles',    sections: ['Social Media'] },
+  { label: 'Additional',    icon: '📋', desc: 'Notes & product',             sections: ['Additional Information', 'Communication Preferences', 'Lead Classification'], includeProduct: true },
+];
+
 // --- Continent mapping for country grouping ---
 const OCEANIA_CODES = new Set(['AU','FJ','KI','MH','FM','NR','NZ','PW','PG','WS','SB','TO','TV','VU','CK','NU','TK','WF','PF','NC','GU','MP','AS','UM','PN']);
 const getContinent = (country) => {
@@ -393,6 +402,7 @@ const Leads = () => {
   const [detailConversionData, setDetailConversionData] = useState({ createAccount: true, createContact: true, createOpportunity: false, accountName: '', opportunityName: '', opportunityAmount: '', closeDate: getDefaultCloseDate() });
 
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [wizardStep, setWizardStep] = useState(0);
   const [showBulkUploadForm, setShowBulkUploadForm] = useState(false);
   const [showAddProductForm, setShowAddProductForm] = useState(false);
   const [showCreateCategoryForm, setShowCreateCategoryForm] = useState(false);
@@ -759,7 +769,8 @@ const Leads = () => {
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
-    if (creating) return; // prevent double-submit
+    if (wizardStep !== WIZARD_STEPS.length - 1) return; // only submit on last step
+    if (creating) return;
     setCreating(true);
     try {
       setError('');
@@ -794,6 +805,36 @@ const Leads = () => {
     } finally {
       setCreating(false);
     }
+  };
+
+  // Validate required fields in current wizard step
+  const validateCurrentStep = () => {
+    const step = WIZARD_STEPS[wizardStep];
+    const groupedFields = groupFieldsBySection(fieldDefinitions);
+    const errors = {};
+    let hasError = false;
+    step.sections.forEach(sectionName => {
+      (groupedFields[sectionName] || []).forEach(field => {
+        if (field.isRequired) {
+          const val = fieldValues[field.fieldName];
+          if (val === undefined || val === null || String(val).trim() === '') {
+            errors[field.fieldName] = `${field.label} is required`;
+            hasError = true;
+          }
+        }
+      });
+    });
+    if (hasError) setFieldErrors(prev => ({ ...prev, ...errors }));
+    return !hasError;
+  };
+
+  // Returns true if current step has at least one required field
+  const currentStepHasRequired = () => {
+    const step = WIZARD_STEPS[wizardStep];
+    const groupedFields = groupFieldsBySection(fieldDefinitions);
+    return step.sections.some(sectionName =>
+      (groupedFields[sectionName] || []).some(f => f.isRequired)
+    );
   };
 
   const handleCreateProductFromLead = async (e) => {
@@ -1291,6 +1332,17 @@ const Leads = () => {
     );
   };
 
+  // Status color palettes used across table + grid
+  const SC = {
+    'New':         { bg: 'linear-gradient(135deg,#312e81,#6366f1)', pill:'#ede9fe', pillTxt:'#5b21b6', dot:'#6366f1' },
+    'Contacted':   { bg: 'linear-gradient(135deg,#4c1d95,#8b5cf6)', pill:'#f3e8ff', pillTxt:'#7c3aed', dot:'#8b5cf6' },
+    'Qualified':   { bg: 'linear-gradient(135deg,#064e3b,#10b981)', pill:'#d1fae5', pillTxt:'#065f46', dot:'#10b981' },
+    'Unqualified': { bg: 'linear-gradient(135deg,#7f1d1d,#ef4444)', pill:'#fee2e2', pillTxt:'#991b1b', dot:'#ef4444' },
+    'Lost':        { bg: 'linear-gradient(135deg,#374151,#6b7280)', pill:'#f1f5f9', pillTxt:'#475569', dot:'#6b7280' },
+    'Converted':   { bg: 'linear-gradient(135deg,#065f46,#059669)', pill:'#d1fae5', pillTxt:'#065f46', dot:'#059669' },
+  };
+  const getSC = (status) => SC[status] || { bg:'linear-gradient(135deg,#1e3c72,#3b82f6)', pill:'#dbeafe', pillTxt:'#1e40af', dot:'#3b82f6' };
+
   return (
     <DashboardLayout title="Leads">
 
@@ -1378,170 +1430,250 @@ const Leads = () => {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="crm-card mb-6">
-        <div className="p-4">
-          <div className="mb-4">
-            <Input
-              placeholder="Search leads..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="w-full"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
-            <select className="crm-form-select" value={filters.leadStatus} onChange={(e) => handleFilterChange('leadStatus', e.target.value)}>
-              <option value="">All Statuses</option>
-              <option value="New">New</option>
-              <option value="Contacted">Contacted</option>
-              <option value="Qualified">Qualified</option>
-              <option value="Unqualified">Unqualified</option>
-              <option value="Lost">Lost</option>
-            </select>
-            <select className="crm-form-select" value={filters.leadSource} onChange={(e) => handleFilterChange('leadSource', e.target.value)}>
-              <option value="">All Sources</option>
-              <option value="Website">Website</option>
-              <option value="Referral">Referral</option>
-              <option value="Campaign">Campaign</option>
-              <option value="Cold Call">Cold Call</option>
-              <option value="Social Media">Social Media</option>
-            </select>
-            <select className="crm-form-select" value={filters.rating} onChange={(e) => handleFilterChange('rating', e.target.value)}>
-              <option value="">All Ratings</option>
-              <option value="Hot">Hot</option>
-              <option value="Warm">Warm</option>
-              <option value="Cold">Cold</option>
-            </select>
-          </div>
-
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
-              <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
-            </div>
-
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginLeft: 'auto' }}>
-              {selectedLeads.length > 0 && (
-                <button className="crm-btn crm-btn-secondary" onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}>
-                  Assign {selectedLeads.length} to Group
-                </button>
-              )}
-              {canImportLeads && <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>Bulk Upload</button>}
-              {hasPermission('field_management', 'read') && (
-                <button onClick={() => { closeAllForms(); setShowAddFieldForm(false); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
-                  <Settings className="h-4 w-4" /> Manage Fields
-                </button>
-              )}
-              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Lead</button>}
-            </div>
-          </div>
+      {/* ── FILTER BAR ── */}
+      <div style={{ background:'white', borderRadius:'14px', padding:'12px 16px', marginBottom:'16px', border:'1.5px solid #e2e8f0', boxShadow:'0 2px 8px rgba(0,0,0,0.04)', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center' }}>
+        {/* Search */}
+        <div style={{ position:'relative', flex:'1', minWidth:'200px', maxWidth:'280px' }}>
+          <span style={{ position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)', fontSize:'13px', pointerEvents:'none', color:'#94a3b8' }}>🔍</span>
+          <input type="text" placeholder="Search leads..." value={filters.search}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+            onFocus={e => { e.target.style.borderColor='#6366f1'; e.target.style.background='#fff'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
+            onBlur={e => { e.target.style.borderColor='#e2e8f0'; e.target.style.background='#f8fafc'; e.target.style.boxShadow='none'; }}
+            style={{ width:'100%', padding:'9px 12px 9px 34px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', outline:'none', boxSizing:'border-box', transition:'all 0.2s', color:'#374151' }} />
         </div>
+        {/* Status */}
+        <select value={filters.leadStatus} onChange={(e) => handleFilterChange('leadStatus', e.target.value)}
+          style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
+          <option value="">All Status</option>
+          <option value="New">New</option>
+          <option value="Contacted">Contacted</option>
+          <option value="Qualified">Qualified</option>
+          <option value="Unqualified">Unqualified</option>
+          <option value="Lost">Lost</option>
+        </select>
+        {/* Source */}
+        <select value={filters.leadSource} onChange={(e) => handleFilterChange('leadSource', e.target.value)}
+          style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
+          <option value="">All Sources</option>
+          <option value="Website">Website</option>
+          <option value="Referral">Referral</option>
+          <option value="Campaign">Campaign</option>
+          <option value="Cold Call">Cold Call</option>
+          <option value="Social Media">Social Media</option>
+        </select>
+        {/* Rating */}
+        <select value={filters.rating} onChange={(e) => handleFilterChange('rating', e.target.value)}
+          style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
+          <option value="">All Ratings</option>
+          <option value="Hot">🔥 Hot</option>
+          <option value="Warm">🌤 Warm</option>
+          <option value="Cold">❄️ Cold</option>
+        </select>
+        <div style={{ flex:1 }} />
+        {/* View toggle */}
+        <div style={{ display:'flex', background:'#f1f5f9', borderRadius:'10px', padding:'3px', border:'1.5px solid #e2e8f0' }}>
+          {[['table', <List className="h-3.5 w-3.5" />, 'List'], ['grid', <LayoutGrid className="h-3.5 w-3.5" />, 'Grid']].map(([mode, icon, lbl]) => (
+            <button key={mode} onClick={() => setViewMode(mode)}
+              style={{ display:'flex', alignItems:'center', gap:'5px', padding:'6px 13px', borderRadius:'8px', border:'none', fontSize:'12px', fontWeight:'600', cursor:'pointer', transition:'all 0.18s', background: viewMode === mode ? 'white' : 'transparent', color: viewMode === mode ? '#0f172a' : '#94a3b8', boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+              {icon} {lbl}
+            </button>
+          ))}
+        </div>
+        {/* Bulk assign */}
+        {selectedLeads.length > 0 && (
+          <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
+            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(245,158,11,0.3)' }}>
+            <Users className="h-4 w-4" /> Assign {selectedLeads.length}
+          </button>
+        )}
+        {/* Action buttons */}
+        {canImportLeads && (
+          <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>
+            <Upload className="h-4 w-4 mr-1" /> Bulk Upload
+          </button>
+        )}
+        {hasPermission('field_management', 'read') && (
+          <button onClick={() => { closeAllForms(); setShowAddFieldForm(false); setShowManageFields(v => !v); }}
+            style={{ display:'flex', alignItems:'center', gap:'6px', background:'linear-gradient(135deg,#4A90E2 0%,#2c5364 100%)', color:'#fff', border:'none', borderRadius:'8px', padding:'8px 16px', fontWeight:'600', cursor:'pointer', fontSize:'13px' }}>
+            <Settings className="h-4 w-4" /> Manage Fields
+          </button>
+        )}
+        {canCreateLead && (
+          <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setWizardStep(0); setShowCreateForm(true); }}>
+            + New Lead
+          </button>
+        )}
       </div>
 
       {/* Inline Create Lead Form */}
       {showCreateForm && (
-        <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,60,114,0.10)', border: '1px solid #e2e8f0' }}>
-          <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #3b82f6 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.2px' }}>Create New Lead</h3>
-              <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Fill in the details to add a new lead</p>
-            </div>
-            <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>✕</button>
-          </div>
-          <div style={{ padding: '16px', background: '#fafeff' }}>
-            <form onSubmit={handleCreateLead}>
-              {(() => {
-                const groupedFields = groupFieldsBySection(fieldDefinitions);
-                const sectionOrder = ['Lead Details', 'Basic Information', 'Business Information', 'Communication Preferences', 'Social Media', 'Address', 'Additional Information', 'Lead Classification'];
-                const palette = [
-                  { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
-                  { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
-                  { bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95' },
-                  { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
-                  { bg: '#ecfeff', border: '#06b6d4', text: '#155e75' },
-                  { bg: '#fff1f2', border: '#f43f5e', text: '#9f1239' },
-                  { bg: '#f8fafc', border: '#64748b', text: '#334155' },
-                ];
-                let colorIdx = 0;
-                return sectionOrder.map(sectionName => {
-                  const sectionFields = groupedFields[sectionName];
-                  if (!sectionFields?.length) return null;
-                  const c = palette[colorIdx++ % palette.length];
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1050, background: 'rgba(8,12,28,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
+          <div style={{ display: 'flex', width: '100%', maxWidth: '880px', height: '600px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+
+            {/* ── LEFT SIDEBAR ── */}
+            <div style={{ width: '220px', flexShrink: 0, background: 'linear-gradient(180deg, #0f172a 0%, #1a2d5a 60%, #1e3c72 100%)', display: 'flex', flexDirection: 'column', padding: '28px 0 20px' }}>
+
+              {/* Brand */}
+              <div style={{ padding: '0 22px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🎯</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#fff', lineHeight: 1.3 }}>New Lead</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Fill step by step</div>
+              </div>
+
+              {/* Steps list */}
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
+                {WIZARD_STEPS.map((step, idx) => {
+                  const isDone = idx < wizardStep;
+                  const isActive = idx === wizardStep;
                   return (
-                    <div key={sectionName} style={{ marginBottom: '14px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: c.bg, borderLeft: `3px solid ${c.border}` }}>
-                        <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c.border, flexShrink: 0 }} />
-                        <span style={{ fontSize: '11px', fontWeight: '700', color: c.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</span>
+                    <div key={step.label} onClick={() => { if (isDone) setWizardStep(idx); }}
+                      onMouseEnter={e => { if (isDone && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
+                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 22px', cursor: isDone ? 'pointer' : 'default', background: isActive ? 'rgba(59,130,246,0.18)' : 'transparent', borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', transition: 'all 0.2s' }}>
+                      {/* Circle */}
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isDone ? '13px' : '11px', fontWeight: '700',
+                        background: isDone ? '#10b981' : isActive ? '#3b82f6' : 'rgba(255,255,255,0.06)',
+                        color: isDone || isActive ? '#fff' : 'rgba(255,255,255,0.3)',
+                        boxShadow: isActive ? '0 0 0 3px rgba(59,130,246,0.3)' : 'none' }}>
+                        {isDone ? '✓' : idx + 1}
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
-                        {sectionName === 'Basic Information' && (
-                          <div>
-                            <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '3px' }}>Lead Owner</label>
-                            <input type="text" value={`${user?.firstName} ${user?.lastName}`} disabled style={{ width: '100%', padding: '5px 8px', fontSize: '11px', border: '1px solid #e5e7eb', borderRadius: '6px', background: '#f9fafb', color: '#6b7280' }} />
-                          </div>
-                        )}
-                        {sectionFields.map((field) => (
-                          <div key={field._id} style={
-                            (field.fieldName === 'description' || field.fieldName === 'requirements')
-                              ? { gridColumn: 'span 6' }
-                              : field.fieldType === 'textarea'
-                                ? { gridColumn: 'span 2' }
-                                : {}
-                          }>
-                            {renderDynamicField(field)}
-                          </div>
-                        ))}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: isActive ? '700' : '500', color: isActive ? '#fff' : isDone ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)', lineHeight: 1.3 }}>{step.icon} {step.label}</div>
+                        <div style={{ fontSize: '10px', color: isActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.desc}</div>
                       </div>
                     </div>
                   );
-                });
-              })()}
-
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: '#f0fdf4', borderLeft: '3px solid #16a34a' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#15803d', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Customer (Existing)</span>
-                </div>
-                <div style={{ maxWidth: '340px' }}>
-                  <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '3px' }}>Link to Customer (Optional)</label>
-                  <select name="customer" className="crm-form-select" style={{ padding: '5px 8px', fontSize: '11px', width: '100%' }} value={formData.customer} onChange={handleChange}>
-                    <option value="">— None —</option>
-                    {customers.map(c => (
-                      <option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>
-                    ))}
-                  </select>
-                </div>
+                })}
               </div>
 
-              <div style={{ marginBottom: '14px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: '#fdf4ff', borderLeft: '3px solid #a855f7' }}>
-                  <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#a855f7', flexShrink: 0 }} />
-                  <span style={{ fontSize: '11px', fontWeight: '700', color: '#6b21a8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Product Information</span>
+              {/* Progress */}
+              <div style={{ padding: '16px 22px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Progress</span>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#3b82f6' }}>{Math.round(((wizardStep) / WIZARD_STEPS.length) * 100)}%</span>
                 </div>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
-                  <div style={{ flex: 1, maxWidth: '220px' }}>
-                    <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#374151', marginBottom: '3px' }}>Product (Optional)</label>
-                    <select name="product" className="crm-form-select" style={{ padding: '5px 8px', fontSize: '11px' }} value={formData.product} onChange={handleChange}>
-                      <option value="">— None —</option>
-                      {products.map(product => (
-                        <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
-                      ))}
-                    </select>
+                <div style={{ height: '4px', borderRadius: '99px', background: 'rgba(255,255,255,0.08)' }}>
+                  <div style={{ height: '100%', borderRadius: '99px', background: 'linear-gradient(90deg, #3b82f6, #6366f1)', width: `${Math.round((wizardStep / WIZARD_STEPS.length) * 100)}%`, transition: 'width 0.35s ease' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* ── RIGHT PANEL ── */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0 }}>
+
+              {/* Right Header */}
+              <div style={{ padding: '22px 28px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '20px' }}>{WIZARD_STEPS[wizardStep].icon}</span>
+                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>{WIZARD_STEPS[wizardStep].label}</h3>
                   </div>
-                  {canManageProducts && (
-                    <button type="button" style={{ padding: '5px 12px', borderRadius: '7px', border: '1px solid #a855f7', background: '#fdf4ff', color: '#7e22ce', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }} onClick={() => { setShowCreateForm(false); setShowAddProductForm(true); }}>
-                      + Add Product
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>{WIZARD_STEPS[wizardStep].desc}</p>
+                </div>
+                <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
+                  onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#1e293b'; e.currentTarget.style.transform = 'scale(1.08)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#64748b'; e.currentTarget.style.transform = 'scale(1)'; }}
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '15px', flexShrink: 0, transition: 'all 0.2s' }}>✕</button>
+              </div>
+
+              {/* Fields */}
+              <form onSubmit={handleCreateLead} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+                  {(() => {
+                    const step = WIZARD_STEPS[wizardStep];
+                    const groupedFields = groupFieldsBySection(fieldDefinitions);
+                    return (
+                      <div>
+                        {step.sections.map(sectionName => {
+                          const sectionFields = groupedFields[sectionName];
+                          const hasOwner = step.includeOwner && sectionName === 'Basic Information';
+                          if (!sectionFields?.length && !hasOwner) return null;
+                          return (
+                            <div key={sectionName}>
+                              {step.sections.length > 1 && sectionFields?.length > 0 && (
+                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: '12px', paddingBottom: '6px', borderBottom: '1px solid #f8fafc' }}>{sectionName}</div>
+                              )}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '12px' }}>
+                                {hasOwner && (
+                                  <div>
+                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Lead Owner</label>
+                                    <input type="text" value={`${user?.firstName || ''} ${user?.lastName || ''}`} disabled
+                                      style={{ width: '100%', padding: '9px 12px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', color: '#94a3b8', boxSizing: 'border-box' }} />
+                                  </div>
+                                )}
+                                {sectionFields?.map((field) => (
+                                  <div key={field._id || field.fieldName} style={(field.fieldName === 'description' || field.fieldName === 'requirements') ? { gridColumn: 'span 2' } : {}}>
+                                    {renderDynamicField(field)}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {step.includeCustomer && (
+                          <div style={{ marginTop: '4px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🔗 Link to Customer (Optional)</label>
+                            <select name="customer" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.customer} onChange={handleChange}>
+                              <option value="">— None —</option>
+                              {customers.map(c => (
+                                <option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        {step.includeProduct && (
+                          <div style={{ marginTop: '12px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>📦 Product (Optional)</label>
+                            <select name="product" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.product} onChange={handleChange}>
+                              <option value="">— None —</option>
+                              {products.map(product => (
+                                <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* Footer */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 28px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', flexShrink: 0 }}>
+                  <button type="button"
+                    onClick={() => { if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
+                    style={{ padding: '9px 20px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                    {wizardStep === 0 ? 'Cancel' : '← Back'}
+                  </button>
+
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    {WIZARD_STEPS.map((_, idx) => (
+                      <div key={idx} style={{ width: idx === wizardStep ? '18px' : '6px', height: '6px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
+                    ))}
+                  </div>
+
+                  {wizardStep < WIZARD_STEPS.length - 1 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {!currentStepHasRequired() && (
+                        <button type="button" onClick={() => { setFieldErrors({}); setWizardStep(s => s + 1); }}
+                          style={{ padding: '9px 16px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
+                          Skip
+                        </button>
+                      )}
+                      <button type="button" onClick={() => { if (validateCurrentStep()) { setFieldErrors({}); setWizardStep(s => s + 1); } }}
+                        style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 3px 10px rgba(30,60,114,0.3)' }}>
+                        Continue →
+                      </button>
+                    </div>
+                  ) : (
+                    <button type="button" onClick={handleCreateLead} disabled={creating}
+                      style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 3px 10px rgba(16,185,129,0.35)' }}>
+                      {creating ? 'Saving...' : '✓ Save Lead'}
                     </button>
                   )}
                 </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-                <button type="submit" disabled={creating} style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(30,60,114,0.25)' }}>{creating ? 'Saving...' : 'Save Lead'}</button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
@@ -1705,147 +1837,221 @@ const Leads = () => {
         />
       )}
 
-      {/* Lead List */}
-      <div className="crm-card">
-        <div className="crm-card-header">
-          <h2 className="crm-card-title flex items-center gap-2">
-            <Target className="h-5 w-5" />
-            {viewMode === 'grid' ? 'Lead Cards' : 'Lead List'} ({pagination.total})
-          </h2>
+      {/* ── LEAD LIST ── */}
+      <div style={{ background:'white', borderRadius:'16px', border:'1.5px solid #e2e8f0', boxShadow:'0 2px 12px rgba(0,0,0,0.06)', overflow:'hidden' }}>
+        {/* Card header */}
+        <div style={{ padding:'14px 20px', borderBottom:'1.5px solid #f1f5f9', display:'flex', alignItems:'center', justifyContent:'space-between', background:'linear-gradient(135deg,#fafbff,#f8fafc)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+            <div style={{ width:'32px', height:'32px', borderRadius:'9px', background:'linear-gradient(135deg,#1e3c72,#3b82f6)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <Target className="h-4 w-4" style={{ color:'#fff' }} />
+            </div>
+            <span style={{ fontSize:'14px', fontWeight:'700', color:'#0f172a' }}>{viewMode === 'grid' ? 'Lead Cards' : 'Lead List'}</span>
+            <span style={{ fontSize:'12px', fontWeight:'700', background:'#ede9fe', color:'#5b21b6', padding:'2px 9px', borderRadius:'99px' }}>{pagination.total}</span>
+          </div>
+          {selectedLeads.length > 0 && (
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'5px 12px', background:'#eff6ff', borderRadius:'8px', border:'1px solid #93c5fd' }}>
+              <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e40af' }}>{selectedLeads.length} selected</span>
+              <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
+                style={{ padding:'4px 10px', borderRadius:'6px', border:'none', background:'#3b82f6', color:'#fff', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>
+                Assign to Group
+              </button>
+            </div>
+          )}
         </div>
-        <div className="p-4">
-          {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+
+        {loading ? (
+          <div style={{ display:'flex', justifyContent:'center', alignItems:'center', padding:'70px' }}>
+            <Loader2 className="h-8 w-8 animate-spin" style={{ color:'#6366f1' }} />
+          </div>
+        ) : leads.length === 0 ? (
+          <div style={{ textAlign:'center', padding:'70px 20px' }}>
+            <div style={{ width:'72px', height:'72px', borderRadius:'50%', background:'linear-gradient(135deg,#ede9fe,#dbeafe)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 20px', boxShadow:'0 4px 20px rgba(99,102,241,0.15)' }}>
+              <Target className="h-9 w-9" style={{ color:'#6366f1' }} />
             </div>
-          ) : leads.length === 0 ? (
-            <div style={{ padding: '60px', textAlign: 'center' }}>
-              <div style={{ fontSize: '64px', marginBottom: '16px' }}>T</div>
-              <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No leads found</p>
-              <p style={{ color: '#64748b', marginBottom: '24px' }}>Create your first lead to get started!</p>
-              {canCreateLead && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateForm(true); }}>+ Create First Lead</button>}
-            </div>
-          ) : viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {leads.map((lead) => (
-                <div
-                  key={lead._id}
-                  className={`grid-card ${selectedLeadId === lead._id ? 'ring-2 ring-purple-500 bg-purple-50' : ''}`}
-                  onClick={() => handleLeadClick(lead._id)}
-                >
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className="avatar">
-                      {lead.customerName?.[0] || '?'}
+            <p style={{ fontSize:'18px', fontWeight:'700', color:'#0f172a', marginBottom:'8px' }}>No leads found</p>
+            <p style={{ color:'#94a3b8', marginBottom:'24px', fontSize:'14px' }}>Create your first lead to start managing your pipeline!</p>
+            {canCreateLead && (
+              <button onClick={() => { resetForm(); setWizardStep(0); setShowCreateForm(true); }}
+                style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'10px 24px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#1e3c72,#3b82f6)', color:'#fff', fontSize:'14px', fontWeight:'700', cursor:'pointer', boxShadow:'0 4px 16px rgba(59,130,246,0.35)' }}>
+                <Plus className="h-4 w-4" /> Create First Lead
+              </button>
+            )}
+          </div>
+        ) : viewMode === 'grid' ? (
+          /* ── GRID VIEW ── */
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(270px, 1fr))', gap:'16px', padding:'20px' }}>
+            {leads.map((lead) => {
+              const sc = getSC(lead.leadStatus);
+              const isSelected = selectedLeadId === lead._id;
+              return (
+                <div key={lead._id} onClick={() => handleLeadClick(lead._id)}
+                  onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.boxShadow='0 12px 32px rgba(0,0,0,0.12)'; } }}
+                  onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.transform=''; e.currentTarget.style.boxShadow='0 2px 12px rgba(0,0,0,0.06)'; } }}
+                  style={{ background: isSelected ? '#fafbff' : 'white', borderRadius:'14px', border: isSelected ? '2px solid #6366f1' : '1.5px solid #e5e7eb', boxShadow: isSelected ? '0 6px 24px rgba(99,102,241,0.18)' : '0 2px 12px rgba(0,0,0,0.06)', cursor:'pointer', overflow:'hidden', transition:'all 0.22s', position:'relative' }}>
+                  {/* Status bar */}
+                  <div style={{ height:'4px', background: sc.bg }} />
+                  <div style={{ padding:'16px' }}>
+                    {/* Top: avatar + name + status + delete */}
+                    <div style={{ display:'flex', alignItems:'flex-start', gap:'11px', marginBottom:'12px' }}>
+                      <div style={{ width:'42px', height:'42px', borderRadius:'11px', background: sc.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px', fontWeight:'800', color:'#fff', flexShrink:0, boxShadow:'0 3px 10px rgba(0,0,0,0.15)' }}>
+                        {(lead.customerName?.[0] || '?').toUpperCase()}
+                      </div>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <h3 style={{ margin:'0 0 2px', fontSize:'14px', fontWeight:'800', color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.customerName}</h3>
+                        <p style={{ margin:0, fontSize:'11px', color:'#94a3b8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {[lead.jobTitle, lead.company].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <div style={{ display:'flex', alignItems:'center', gap:'4px', flexShrink:0 }}>
+                        <span style={{ fontSize:'10px', fontWeight:'700', background: sc.pill, color: sc.pillTxt, padding:'3px 8px', borderRadius:'99px', whiteSpace:'nowrap' }}>{lead.leadStatus || 'New'}</span>
+                        {canDeleteLead && (
+                          <button onClick={(e) => handleDeleteLead(e, lead._id)}
+                            onMouseEnter={e => { e.currentTarget.style.opacity='1'; e.currentTarget.style.background='#fee2e2'; }}
+                            onMouseLeave={e => { e.currentTarget.style.opacity='0.5'; e.currentTarget.style.background='transparent'; }}
+                            style={{ background:'transparent', border:'none', cursor:'pointer', color:'#ef4444', padding:'3px', borderRadius:'5px', display:'flex', alignItems:'center', opacity:0.5, transition:'all 0.15s' }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-extrabold text-gray-800 text-lg truncate">{lead.customerName}</h3>
-                      <p className="text-sm text-gray-500 font-semibold truncate">{lead.jobTitle || ''} {lead.company ? `at ${lead.company}` : ''}</p>
+                    {/* Contact info */}
+                    <div style={{ display:'flex', flexDirection:'column', gap:'5px', marginBottom:'12px' }}>
+                      {lead.email && (
+                        <div style={{ display:'flex', alignItems:'center', gap:'7px', fontSize:'12px', color:'#475569' }}>
+                          <Mail className="h-3 w-3" style={{ color:'#3b82f6', flexShrink:0 }} />
+                          <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.email}</span>
+                        </div>
+                      )}
+                      {lead.phone && (
+                        <div style={{ display:'flex', alignItems:'center', gap:'7px', fontSize:'12px', color:'#475569' }}>
+                          <Phone className="h-3 w-3" style={{ color:'#10b981', flexShrink:0 }} />
+                          <span>{lead.phone}</span>
+                        </div>
+                      )}
+                      {lead.leadSource && (
+                        <div style={{ display:'flex', alignItems:'center', gap:'7px', fontSize:'12px', color:'#475569' }}>
+                          <Globe className="h-3 w-3" style={{ color:'#8b5cf6', flexShrink:0 }} />
+                          <span>{lead.leadSource}</span>
+                        </div>
+                      )}
                     </div>
-                    {canDeleteLead && (
-                      <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDeleteLead(e, lead._id)}>
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                  <div className="flex gap-2 mb-4">
-                    <Badge variant={getStatusBadgeVariant(lead.leadStatus)}>{lead.leadStatus || 'New'}</Badge>
-                  </div>
-                  <div className="space-y-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-500" /><span className="truncate">{lead.email}</span></div>
-                    {lead.phone && <div className="flex items-center gap-2"><Phone className="h-4 w-4 text-green-500" /><span>{lead.phone}</span></div>}
-                    {/* Dynamic custom fields in displayOrder */}
-                    {allFieldDefs
-                      .filter(f => f.isActive && !f._isStd && !['customerName','email','phone','leadStatus','jobTitle','company'].includes(f.fieldName))
-                      .sort((a, b) => a.displayOrder - b.displayOrder)
-                      .map(f => {
-                        const val = getFieldValue(lead, f.fieldName);
-                        if (val == null || val === '') return null;
-                        return (
-                          <div key={f.fieldName} className="flex items-center gap-2">
-                            <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600', flexShrink: 0 }}>{f.label}:</span>
-                            <span className="truncate" style={{ fontSize: '12px' }}>{formatFieldValue(val)}</span>
-                          </div>
-                        );
-                      })
-                    }
+                    {/* Footer */}
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:'10px', borderTop:'1px solid #f1f5f9' }}>
+                      {lead.estimatedDealValue
+                        ? <span style={{ fontSize:'13px', fontWeight:'800', color:'#0f172a' }}>${Number(lead.estimatedDealValue).toLocaleString()}</span>
+                        : <span style={{ fontSize:'12px', color:'#cbd5e1' }}>No deal value</span>}
+                      {lead.expectedCloseDate && (
+                        <div style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', color:'#94a3b8' }}>
+                          <Calendar className="h-3 w-3" />
+                          {new Date(lead.expectedCloseDate).toLocaleDateString('en-GB', { day:'2-digit', month:'short' })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-12">
-                    <Checkbox
-                      checked={selectedLeads.length === leads.length && leads.length > 0}
-                      onCheckedChange={(checked) => setSelectedLeads(checked ? leads.map(l => l._id) : [])}
-                    />
-                  </TableHead>
-                  <TableHead className="w-16 text-center font-bold">No.</TableHead>
-                  {displayColumns.map((column) => (
-                    <TableHead key={column}>{formatFieldName(column)}</TableHead>
+              );
+            })}
+          </div>
+        ) : (
+          /* ── TABLE VIEW ── */
+          <div style={{ overflowX:'auto' }}>
+            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
+              <thead>
+                <tr style={{ background:'linear-gradient(135deg,#f8fafc,#f1f5f9)', borderBottom:'2px solid #e2e8f0' }}>
+                  <th style={{ padding:'12px 16px', width:'44px' }}>
+                    <Checkbox checked={selectedLeads.length === leads.length && leads.length > 0} onCheckedChange={(checked) => setSelectedLeads(checked ? leads.map(l => l._id) : [])} />
+                  </th>
+                  <th style={{ padding:'12px 16px', textAlign:'left', fontSize:'11px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', width:'60px' }}>#</th>
+                  {displayColumns.map((col) => (
+                    <th key={col} style={{ padding:'12px 16px', textAlign:'left', fontSize:'11px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', whiteSpace:'nowrap' }}>{formatFieldName(col)}</th>
                   ))}
-                  {canDeleteLead && <TableHead className="w-16">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leads.map((lead) => (
-                  <TableRow
-                    key={lead._id}
-                    className={`cursor-pointer hover:bg-muted/50 ${selectedLeadId === lead._id ? 'bg-purple-50 border-l-4 border-l-purple-500' : ''}`}
-                    onClick={() => handleLeadClick(lead._id)}
-                  >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedLeads.includes(lead._id)}
-                        onCheckedChange={(checked) => {
-                          setSelectedLeads(checked ? [...selectedLeads, lead._id] : selectedLeads.filter(id => id !== lead._id));
-                        }}
-                      />
-                    </TableCell>
-                    <TableCell className="text-center">
-                      <span style={{ fontWeight: '700', color: '#1e3c72', fontSize: '13px' }}>
-                        {lead.leadNumber || '-'}
-                      </span>
-                    </TableCell>
-                    {displayColumns.map((column) => (
-                      <TableCell key={column}>
-                        {column === 'leadStatus' ? (
-                          <Badge variant={getStatusBadgeVariant(lead.leadStatus)}>{lead.leadStatus || 'New'}</Badge>
-                        ) : (
-                          <span className="truncate max-w-[200px] block">
-                            {getMaskedValue(column, getFieldValue(lead, column)) || '-'}
-                          </span>
-                        )}
-                      </TableCell>
-                    ))}
-                    {canDeleteLead && (
-                      <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={(e) => handleDeleteLead(e, lead._id)}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
+                  {canDeleteLead && <th style={{ padding:'12px 16px', width:'52px' }} />}
+                </tr>
+              </thead>
+              <tbody>
+                {leads.map((lead) => {
+                  const sc = getSC(lead.leadStatus);
+                  const isSelected = selectedLeadId === lead._id;
+                  return (
+                    <tr key={lead._id} onClick={() => handleLeadClick(lead._id)}
+                      onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.background='#f8fafc'; } }}
+                      onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background='white'; } }}
+                      style={{ cursor:'pointer', background: isSelected ? '#fafbff' : 'white', borderBottom:'1px solid #f1f5f9', borderLeft: isSelected ? '3px solid #6366f1' : '3px solid transparent', transition:'all 0.15s' }}>
+                      <td style={{ padding:'11px 16px' }} onClick={e => e.stopPropagation()}>
+                        <Checkbox checked={selectedLeads.includes(lead._id)} onCheckedChange={(checked) => setSelectedLeads(checked ? [...selectedLeads, lead._id] : selectedLeads.filter(id => id !== lead._id))} />
+                      </td>
+                      <td style={{ padding:'11px 16px' }}>
+                        <span style={{ fontSize:'11px', fontWeight:'700', color:'#94a3b8', background:'#f1f5f9', padding:'2px 7px', borderRadius:'5px' }}>{lead.leadNumber || '—'}</span>
+                      </td>
+                      {displayColumns.map((col) => (
+                        <td key={col} style={{ padding:'11px 16px', maxWidth:'200px' }}>
+                          {col === 'customerName' ? (
+                            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                              <div style={{ width:'34px', height:'34px', borderRadius:'9px', background: sc.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'800', color:'#fff', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)' }}>
+                                {String(getFieldValue(lead, 'customerName') || '?')[0].toUpperCase()}
+                              </div>
+                              <div style={{ minWidth:0 }}>
+                                <div style={{ fontSize:'13px', fontWeight:'700', color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{getFieldValue(lead, 'customerName') || '—'}</div>
+                                {lead.company && <div style={{ fontSize:'11px', color:'#94a3b8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.company}</div>}
+                              </div>
+                            </div>
+                          ) : col === 'leadStatus' ? (
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: sc.pill, color: sc.pillTxt }}>
+                              <span style={{ width:'6px', height:'6px', borderRadius:'50%', background: sc.dot, flexShrink:0 }} />{lead.leadStatus || 'New'}
+                            </span>
+                          ) : col === 'priority' ? (
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700',
+                              background: lead.priority === 'High' ? '#fee2e2' : lead.priority === 'Medium' ? '#fef3c7' : '#f0fdf4',
+                              color: lead.priority === 'High' ? '#991b1b' : lead.priority === 'Medium' ? '#92400e' : '#166534' }}>
+                              {lead.priority === 'High' ? '🔴' : lead.priority === 'Medium' ? '🟡' : '🟢'} {lead.priority || '—'}
+                            </span>
+                          ) : (
+                            <span style={{ fontSize:'13px', color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block' }}>
+                              {getMaskedValue(col, getFieldValue(lead, col)) || <span style={{ color:'#cbd5e1' }}>—</span>}
+                            </span>
+                          )}
+                        </td>
+                      ))}
+                      {canDeleteLead && (
+                        <td style={{ padding:'11px 16px' }} onClick={e => e.stopPropagation()}>
+                          <button onClick={(e) => handleDeleteLead(e, lead._id)}
+                            onMouseEnter={e => { e.currentTarget.style.background='#ef4444'; e.currentTarget.style.color='#fff'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background='#fee2e2'; e.currentTarget.style.color='#ef4444'; }}
+                            style={{ background:'#fee2e2', border:'none', borderRadius:'7px', padding:'6px 7px', cursor:'pointer', color:'#ef4444', display:'flex', alignItems:'center', transition:'all 0.15s' }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-          {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-4 border-t">
-              <Button variant="outline" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>
-                <ChevronLeft className="h-4 w-4 mr-1" />Previous
-              </Button>
-              <span className="text-sm font-bold text-gray-700">Page {pagination.page} of {pagination.pages}</span>
-              <Button variant="outline" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>
-                Next<ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+        {/* ── PAGINATION ── */}
+        {pagination.pages > 1 && (
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', borderTop:'1.5px solid #f1f5f9', background:'#fafbff' }}>
+            <span style={{ fontSize:'13px', color:'#64748b', fontWeight:'600' }}>
+              Page <strong style={{ color:'#0f172a' }}>{pagination.page}</strong> of {pagination.pages} &nbsp;·&nbsp; {pagination.total} leads
+            </span>
+            <div style={{ display:'flex', gap:'8px' }}>
+              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}
+                onMouseEnter={e => { if (pagination.page !== 1) { e.currentTarget.style.background='#1e3c72'; e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='#1e3c72'; } }}
+                onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.color= pagination.page === 1 ? '#cbd5e1' : '#374151'; e.currentTarget.style.borderColor='#e2e8f0'; }}
+                style={{ display:'flex', alignItems:'center', gap:'4px', padding:'7px 15px', borderRadius:'9px', border:'1.5px solid #e2e8f0', background:'white', color: pagination.page === 1 ? '#cbd5e1' : '#374151', fontSize:'13px', fontWeight:'600', cursor: pagination.page === 1 ? 'not-allowed' : 'pointer', transition:'all 0.15s' }}>
+                <ChevronLeft className="h-4 w-4" /> Prev
+              </button>
+              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}
+                onMouseEnter={e => { if (pagination.page !== pagination.pages) { e.currentTarget.style.background='#1e3c72'; e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='#1e3c72'; } }}
+                onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.color= pagination.page === pagination.pages ? '#cbd5e1' : '#374151'; e.currentTarget.style.borderColor='#e2e8f0'; }}
+                style={{ display:'flex', alignItems:'center', gap:'4px', padding:'7px 15px', borderRadius:'9px', border:'1.5px solid #e2e8f0', background:'white', color: pagination.page === pagination.pages ? '#cbd5e1' : '#374151', fontSize:'13px', fontWeight:'600', cursor: pagination.page === pagination.pages ? 'not-allowed' : 'pointer', transition:'all 0.15s' }}>
+                Next <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
         </div>

@@ -190,9 +190,13 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
 
                 <div className="my-3 border-t border-white/20" />
 
-                {/* Lead Management */}
-                <NavSection title="Lead Management" section="leadManagement" permissions={['data_center', 'lead_management', 'contact_management', 'account_management', 'opportunity_management']}>
+                {/* Sales */}
+                <NavSection title="Sales" section="sales" permissions={['data_center']}>
                   <NavItem to="/data-center" label="Customers" permission="data_center" />
+                </NavSection>
+
+                {/* Lead Management */}
+                <NavSection title="Lead Management" section="leadManagement" permissions={['lead_management', 'contact_management', 'account_management', 'opportunity_management']}>
                   <NavItem to="/leads" label="Leads" permission="lead_management" />
                   <NavItem to="/contacts" label="Contacts" permission="contact_management" />
                   <NavItem to="/accounts" label="Accounts" permission="account_management" />

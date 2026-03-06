@@ -167,7 +167,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
             disabled={disabled}
             required={isRequired}
             className="crm-form-select"
-            style={inputStyle}
+            style={{ ...inputStyle, width: '100%', boxSizing: 'border-box', borderRadius: '6px', border: '1px solid #e2e8f0' }}
           >
             <option value="">-- Select --</option>
             {options && options.map((option, index) => (

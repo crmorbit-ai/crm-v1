@@ -29,6 +29,7 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({ label: '', fieldType: 'text', section: sections[0] || 'Additional Information', isRequired: false, afterField: '__end__' });
   const [collapsedSections, setCollapsedSections] = useState({});
+  const [addBtnHover, setAddBtnHover] = useState(false);
   const [confirmDeleteField, setConfirmDeleteField] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -116,20 +117,6 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
           </span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {canAdd && (
-            <button
-              onClick={() => setShowAddForm(v => !v)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: '4px',
-                padding: '5px 11px', borderRadius: '7px', cursor: 'pointer',
-                background: showAddForm ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
-                border: '1px solid rgba(255,255,255,0.35)',
-                color: '#fff', fontSize: '11px', fontWeight: '600',
-              }}
-            >
-              <Plus style={{ width: '12px', height: '12px' }} /> Add Field
-            </button>
-          )}
           <button
             onClick={onClose}
             style={{
@@ -146,7 +133,71 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
       {/* Body: split layout when form is open */}
       <div style={{ display: 'flex', minHeight: 0 }}>
 
-        {/* Left: Fields List */}
+        {/* Left: Add Field Form (slides in) */}
+        {showAddForm && (
+          <div style={{
+            flex: '0 0 280px',
+            borderRight: '1px solid #e2e8f0',
+            background: 'linear-gradient(160deg, #f8fafc 0%, #eff6ff 100%)',
+            padding: '12px',
+            overflowY: 'auto',
+            maxHeight: '340px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
+              <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e3c72' }}>Add New Field</span>
+              <button onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
+                <X style={{ width: '14px', height: '14px' }} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Field Label *</label>
+                <input
+                  className="crm-form-input"
+                  style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
+                  placeholder="e.g. Budget Range"
+                  value={form.label}
+                  onChange={e => setForm(p => ({ ...p, label: e.target.value }))}
+                  required
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Field Type</label>
+                <select className="crm-form-select" style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} value={form.fieldType} onChange={e => setForm(p => ({ ...p, fieldType: e.target.value }))}>
+                  {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Section</label>
+                <select className="crm-form-select" style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} value={form.section} onChange={e => handleSectionChange(e.target.value)}>
+                  {sections.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Place After</label>
+                <select className="crm-form-select" style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} value={form.afterField} onChange={e => setForm(p => ({ ...p, afterField: e.target.value }))}>
+                  <option value="__end__">— End of section</option>
+                  {allFieldDefs.filter(f => f.section === form.section).map(f => (
+                    <option key={f._id || f.fieldName} value={f._id || f.fieldName}>After: {f.label}</option>
+                  ))}
+                </select>
+              </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px', color: '#374151', fontWeight: '500' }}>
+                <input type="checkbox" checked={form.isRequired} onChange={e => setForm(p => ({ ...p, isRequired: e.target.checked }))} style={{ width: '13px', height: '13px', accentColor: '#3b82f6' }} />
+                Required field
+              </label>
+              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                <button type="button" onClick={() => setShowAddForm(false)} style={{ flex: 1, padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={saving} style={{ flex: 1, padding: '6px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer' }}>
+                  {saving ? 'Saving...' : 'Save Field'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
+        {/* Right: Fields List */}
         <div style={{
           flex: showAddForm ? '1 1 55%' : '1 1 100%',
           padding: '10px',
@@ -154,6 +205,29 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
           maxHeight: '340px',
           transition: 'flex 0.2s',
         }}>
+          {canAdd && !showAddForm && (
+            <button
+              onClick={() => setShowAddForm(true)}
+              onMouseEnter={() => setAddBtnHover(true)}
+              onMouseLeave={() => setAddBtnHover(false)}
+              style={{
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '6px',
+                marginBottom: '10px', padding: '6px 14px', borderRadius: '8px',
+                cursor: 'pointer', fontSize: '12px', fontWeight: '700',
+                background: addBtnHover
+                  ? 'linear-gradient(135deg, #f59e0b 0%, #ef4444 50%, #ec4899 100%)'
+                  : 'linear-gradient(135deg, #6366f1 0%, #a855f7 50%, #ec4899 100%)',
+                border: 'none', color: '#fff',
+                boxShadow: addBtnHover
+                  ? '0 3px 12px rgba(239,68,68,0.45)'
+                  : '0 2px 8px rgba(99,102,241,0.4)',
+                transition: 'all 0.25s ease',
+                transform: addBtnHover ? 'translateY(-1px)' : 'translateY(0)',
+              }}
+            >
+              <Plus style={{ width: '13px', height: '13px' }} /> Add Field
+            </button>
+          )}
           {orderedSections.map((section, idx) => {
             const fields = sections_map[section];
             const palette = SECTION_PALETTE[idx % SECTION_PALETTE.length];
@@ -283,111 +357,6 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
           })}
         </div>
 
-        {/* Right: Add Field Form (slides in) */}
-        {showAddForm && (
-          <div style={{
-            flex: '0 0 280px',
-            borderLeft: '1px solid #e2e8f0',
-            background: 'linear-gradient(160deg, #f8fafc 0%, #eff6ff 100%)',
-            padding: '12px',
-            overflowY: 'auto',
-            maxHeight: '340px',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
-              <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e3c72' }}>Add New Field</span>
-              <button onClick={() => setShowAddForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', display: 'flex' }}>
-                <X style={{ width: '14px', height: '14px' }} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Field Label *</label>
-                <input
-                  className="crm-form-input"
-                  style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
-                  placeholder="e.g. Budget Range"
-                  value={form.label}
-                  onChange={e => setForm(p => ({ ...p, label: e.target.value }))}
-                  required
-                  autoFocus
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Field Type</label>
-                <select
-                  className="crm-form-select"
-                  style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
-                  value={form.fieldType}
-                  onChange={e => setForm(p => ({ ...p, fieldType: e.target.value }))}
-                >
-                  {FIELD_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Section</label>
-                <select
-                  className="crm-form-select"
-                  style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
-                  value={form.section}
-                  onChange={e => handleSectionChange(e.target.value)}
-                >
-                  {sections.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '9px', fontWeight: '700', color: '#374151', marginBottom: '3px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Place After</label>
-                <select
-                  className="crm-form-select"
-                  style={{ padding: '5px 8px', fontSize: '12px', width: '100%', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }}
-                  value={form.afterField}
-                  onChange={e => setForm(p => ({ ...p, afterField: e.target.value }))}
-                >
-                  <option value="__end__">— End of section</option>
-                  {allFieldDefs.filter(f => f.section === form.section).map(f => (
-                    <option key={f._id || f.fieldName} value={f._id || f.fieldName}>
-                      After: {f.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '11px', color: '#374151', fontWeight: '500' }}>
-                <input
-                  type="checkbox"
-                  checked={form.isRequired}
-                  onChange={e => setForm(p => ({ ...p, isRequired: e.target.checked }))}
-                  style={{ width: '13px', height: '13px', accentColor: '#3b82f6' }}
-                />
-                Required field
-              </label>
-
-              <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowAddForm(false)}
-                  style={{ flex: 1, padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  style={{
-                    flex: 1, padding: '6px', borderRadius: '6px', border: 'none',
-                    background: saving ? '#94a3b8' : 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
-                    color: '#fff', fontSize: '11px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {saving ? 'Saving...' : 'Save Field'}
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
       </div>
     </div>
   );

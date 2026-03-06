@@ -124,6 +124,11 @@
   height: 2.5rem;
 }
 
+.auth-card input:hover,
+.auth-card select:hover {
+  border-color: hsl(var(--ring) / 0.5);
+}
+
 .auth-card input:focus,
 .auth-card select:focus {
   outline: none;
