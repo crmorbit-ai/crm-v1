@@ -32,6 +32,14 @@ const CUST_DISABLED_KEY = 'crm_cust_std_disabled';
 const getCustDisabled = () => { try { return JSON.parse(localStorage.getItem(CUST_DISABLED_KEY) || '[]'); } catch { return []; } };
 const CUSTOMER_SECTIONS = ['Basic Information', 'Professional Information', 'Skills & Experience', 'Location & Availability', 'Salary Information', 'Status', 'Source Information', 'Additional Information'];
 
+const CUSTOMER_WIZARD_STEPS = [
+  { label: 'Basic Info',     icon: '👤', desc: 'Name, type & contact',           sections: ['Basic Information'] },
+  { label: 'Professional',   icon: '💼', desc: 'Designation, company & experience', sections: ['Professional Information'] },
+  { label: 'Skills',         icon: '🛠️', desc: 'Skills & experience',              sections: ['Skills & Experience'] },
+  { label: 'Location',       icon: '📍', desc: 'Location & availability',          sections: ['Location & Availability'] },
+  { label: 'Salary & More',  icon: '💰', desc: 'CTC, status & source',            sections: ['Salary Information', 'Status', 'Source Information', 'Additional Information'] },
+];
+
 const DataCenter = () => {
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
@@ -84,6 +92,11 @@ const DataCenter = () => {
   const [customFieldDefs, setCustomFieldDefs] = useState([]);
   const [disabledStdFields, setDisabledStdFieldsState] = useState(getCustDisabled);
   const [togglingField, setTogglingField] = useState(null);
+
+  const [wizardStep, setWizardStep] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [detailPanelWidth, setDetailPanelWidth] = useState(42);
+  const [detailExpanded, setDetailExpanded] = useState(false);
 
 
   const extractColumns = (candidatesData) => {
@@ -327,6 +340,8 @@ const DataCenter = () => {
   };
 
   const handleCreateCandidate = async () => {
+    if (creating) return;
+    setCreating(true);
     try {
       const candidateData = {};
       fieldDefinitions.forEach(field => {
@@ -341,12 +356,13 @@ const DataCenter = () => {
       setFieldValues({});
       setFieldErrors({});
       setShowCreateForm(false);
+      setWizardStep(0);
       loadCandidates();
     } catch (error) {
       if (error?.isPermissionDenied) return;
       console.error('Create candidate error:', error);
       alert(error.response?.data?.message || 'Failed to create candidate');
-    }
+    } finally { setCreating(false); }
   };
 
   const getAvailabilityColor = (availability) => {
@@ -375,7 +391,27 @@ const DataCenter = () => {
     loadCandidateDetails(candidateId);
   };
 
+  const handleDividerDrag = (e) => {
+    e.preventDefault();
+    const container = document.getElementById('datacenter-split-container');
+    if (!container) return;
+    const startX = e.clientX;
+    const startWidth = detailPanelWidth;
+    const containerW = container.getBoundingClientRect().width;
+    const onMove = (mv) => {
+      const delta = ((mv.clientX - startX) / containerW) * 100;
+      setDetailPanelWidth(Math.max(25, Math.min(65, startWidth + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
   const closeSidePanel = () => {
+    setDetailExpanded(false);
     setSelectedCandidateId(null);
     setSelectedCandidateData(null);
     setShowDetailMoveForm(false);
@@ -483,12 +519,106 @@ const DataCenter = () => {
   return (
     <DashboardLayout title="Customer Database">
 
-      {/* Split View Container */}
-      <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
-        {/* Left Side - Data List */}
-        <div style={{ flex: selectedCandidateId ? '0 0 55%' : '1 1 100%', minWidth: 0, overflow: 'auto' }}>
 
-      {/* Statistics Cards */}
+      {/* ── WIZARD OVERLAY ── */}
+      {showCreateForm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1050, background: 'rgba(8,12,28,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
+          <div style={{ display: 'flex', width: '100%', maxWidth: '880px', height: '600px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ width: '220px', flexShrink: 0, background: 'linear-gradient(180deg,#0f172a 0%,#1a2d5a 60%,#1e3c72 100%)', display: 'flex', flexDirection: 'column', padding: '28px 0 20px' }}>
+              <div style={{ padding: '0 22px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>👤</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>New Customer</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Fill step by step</div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
+                {CUSTOMER_WIZARD_STEPS.map((step, idx) => {
+                  const isDone = idx < wizardStep; const isActive = idx === wizardStep;
+                  return (
+                    <div key={step.label} onClick={() => { if (isDone) setWizardStep(idx); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 22px', cursor: isDone ? 'pointer' : 'default', background: isActive ? 'rgba(59,130,246,0.18)' : 'transparent', borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', transition: 'all 0.2s' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isDone ? '13px' : '11px', fontWeight: '700', background: isDone ? '#10b981' : isActive ? '#3b82f6' : 'rgba(255,255,255,0.06)', color: (isDone || isActive) ? '#fff' : 'rgba(255,255,255,0.3)', boxShadow: isActive ? '0 0 0 3px rgba(59,130,246,0.3)' : 'none' }}>{isDone ? '✓' : idx + 1}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: isActive ? '700' : '500', color: isActive ? '#fff' : isDone ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)' }}>{step.icon} {step.label}</div>
+                        <div style={{ fontSize: '10px', color: isActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)', marginTop: '1px' }}>{step.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ padding: '16px 22px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Progress</span>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#3b82f6' }}>{Math.round((wizardStep / CUSTOMER_WIZARD_STEPS.length) * 100)}%</span>
+                </div>
+                <div style={{ height: '4px', borderRadius: '99px', background: 'rgba(255,255,255,0.08)' }}>
+                  <div style={{ height: '100%', borderRadius: '99px', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', width: `${Math.round((wizardStep / CUSTOMER_WIZARD_STEPS.length) * 100)}%`, transition: 'width 0.35s ease' }} />
+                </div>
+              </div>
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0 }}>
+              <div style={{ padding: '22px 28px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '20px' }}>{CUSTOMER_WIZARD_STEPS[wizardStep].icon}</span>
+                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>{CUSTOMER_WIZARD_STEPS[wizardStep].label}</h3>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>{CUSTOMER_WIZARD_STEPS[wizardStep].desc}</p>
+                </div>
+                <button onClick={() => { setShowCreateForm(false); setFieldValues({}); setWizardStep(0); }}
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '15px' }}>✕</button>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+                {(() => {
+                  const step = CUSTOMER_WIZARD_STEPS[wizardStep];
+                  const grouped = groupFieldsBySection(fieldDefinitions);
+                  return (
+                    <div>
+                      {step.sections.map(sectionName => {
+                        const fields = grouped[sectionName];
+                        if (!fields?.length) return null;
+                        return (
+                          <div key={sectionName}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                              {fields.map(field => (
+                                <div key={field.fieldName} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
+                                  {renderDynamicField(field)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 28px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', flexShrink: 0 }}>
+                <button type="button" onClick={() => { if (wizardStep > 0) setWizardStep(s => s - 1); else { setShowCreateForm(false); setFieldValues({}); setWizardStep(0); } }}
+                  style={{ padding: '9px 20px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                  {wizardStep === 0 ? 'Cancel' : '← Back'}
+                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {CUSTOMER_WIZARD_STEPS.map((_, idx) => (
+                    <div key={idx} style={{ width: idx === wizardStep ? '18px' : '6px', height: '6px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
+                  ))}
+                </div>
+                {wizardStep < CUSTOMER_WIZARD_STEPS.length - 1 ? (
+                  <button type="button" onClick={() => setWizardStep(s => s + 1)}
+                    style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 3px 10px rgba(30,60,114,0.3)' }}>
+                    Continue →
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleCreateCandidate} disabled={creating}
+                    style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 3px 10px rgba(16,185,129,0.35)' }}>
+                    {creating ? 'Saving...' : '✓ Save Customer'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="stats-grid">
         <div className="stat-card"><div className="stat-label">Total Candidates</div><div className="stat-value">{stats.total}</div><div className="stat-change">Complete database</div></div>
         <div className="stat-card"><div className="stat-label">Available Now</div><div className="stat-value">{stats.available}</div><div className="stat-change positive">Ready to hire</div></div>
@@ -526,227 +656,20 @@ const DataCenter = () => {
         )}
       </div>
 
-      {/* Manage Fields Panel */}
-      {showManageFields && (
-        <ManageFieldsPanel
-          allFieldDefs={allFieldDefs}
-          togglingField={togglingField}
-          onToggle={handleToggleField}
-          onClose={() => setShowManageFields(false)}
-          onAdd={handleAddCustomField}
-          canAdd={hasPermission('field_management', 'create')}
-          canToggle={hasPermission('field_management', 'update')}
-          entityLabel="Customer"
-          sections={CUSTOMER_SECTIONS}
-        />
-      )}
+      {/* Split Container */}
+      <div id="datacenter-split-container" style={{ display: 'flex', height: 'calc(100vh - 280px)', overflow: 'hidden', position: 'relative' }}>
 
-      {/* Inline Create Customer Form */}
-      {showCreateForm && (
-        <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,60,114,0.10)', border: '1px solid #e2e8f0' }}>
-          <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #3b82f6 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <div>
-              <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.2px' }}>Add New Customer</h3>
-              <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Fill in the details to add a new customer record</p>
-            </div>
-            <button onClick={() => { setShowCreateForm(false); setFieldValues({}); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>✕</button>
-          </div>
-          <div style={{ padding: '16px', background: '#fafeff' }}>
-            {(() => {
-              const groupedFields = groupFieldsBySection(fieldDefinitions);
-              const sectionOrder = ['Basic Information', 'Professional Information', 'Skills & Experience', 'Location & Availability', 'Salary Information', 'Status', 'Source Information', 'Additional Information'];
-              const palette = [
-                { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
-                { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
-                { bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95' },
-                { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
-                { bg: '#ecfeff', border: '#06b6d4', text: '#155e75' },
-                { bg: '#fff1f2', border: '#f43f5e', text: '#9f1239' },
-                { bg: '#fdf4ff', border: '#a855f7', text: '#6b21a8' },
-                { bg: '#f8fafc', border: '#64748b', text: '#334155' },
-              ];
-              return sectionOrder.map((sectionName, sIdx) => {
-                const sectionFields = groupedFields[sectionName];
-                if (!sectionFields || sectionFields.length === 0) return null;
-                const c = palette[sIdx % palette.length];
-                return (
-                  <div key={sectionName} style={{ marginBottom: '14px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: c.bg, borderLeft: `3px solid ${c.border}` }}>
-                      <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c.border, flexShrink: 0 }} />
-                      <span style={{ fontSize: '11px', fontWeight: '700', color: c.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</span>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
-                      {sectionFields.map((field) => (
-                        <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 3' } : {}}>
-                          {renderDynamicField(field)}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              });
-            })()}
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '12px 16px', borderTop: '1px solid #e5e7eb', background: '#f8fafc' }}>
-            <button onClick={() => { setShowCreateForm(false); setFieldValues({}); }} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-            <button onClick={handleCreateCandidate} style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>Add Customer</button>
-          </div>
-        </div>
-      )}
-
-      {/* Inline Move to Leads Form */}
-      {showMoveForm && (
-        <div className="crm-card" style={{ marginBottom: '12px', border: '2px solid #86EFAC' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', borderBottom: '1px solid #e5e7eb', background: '#DCFCE7' }}>
-            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#166534' }}>Move {selectedCandidates.length} Candidates to Leads</h3>
-            <button onClick={() => setShowMoveForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
-          </div>
-          <div style={{ padding: '12px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Lead Status</label>
-                <select value={moveForm.leadStatus} onChange={(e) => setMoveForm({ ...moveForm, leadStatus: e.target.value })} className="crm-form-select" style={{ padding: '6px 8px', fontSize: '12px' }}>
-                  <option value="New">New</option>
-                  <option value="Contacted">Contacted</option>
-                  <option value="Qualified">Qualified</option>
-                </select>
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Lead Source</label>
-                <input type="text" value={moveForm.leadSource} onChange={(e) => setMoveForm({ ...moveForm, leadSource: e.target.value })} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} />
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '4px' }}>Rating</label>
-                <select value={moveForm.rating} onChange={(e) => setMoveForm({ ...moveForm, rating: e.target.value })} className="crm-form-select" style={{ padding: '6px 8px', fontSize: '12px' }}>
-                  <option value="Hot">Hot</option>
-                  <option value="Warm">Warm</option>
-                  <option value="Cold">Cold</option>
-                </select>
-              </div>
-            </div>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', padding: '8px 12px', borderTop: '1px solid #e5e7eb', background: '#f9fafb' }}>
-            <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setShowMoveForm(false)}>Cancel</button>
-            <button className="crm-btn crm-btn-success crm-btn-sm" onClick={handleMoveToLeads}>Confirm & Move</button>
-          </div>
-        </div>
-      )}
-
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="filters-container" style={{ padding: '12px', marginBottom: '12px' }}>
-          <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>Advanced Search Filters</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Search</label><input type="text" name="search" placeholder="Name, email..." value={filters.search} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Skills</label><input type="text" name="skills" placeholder="React, Node..." value={filters.skills} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Min Exp</label><input type="number" name="experience_min" placeholder="0" value={filters.experience_min} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Max Exp</label><input type="number" name="experience_max" placeholder="10" value={filters.experience_max} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Location</label><input type="text" name="location" placeholder="Delhi..." value={filters.location} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Availability</label><select name="availability" value={filters.availability} onChange={handleFilterChange} className="crm-form-select" style={{ padding: '6px 8px', fontSize: '12px' }}><option value="">All</option><option value="Immediate">Immediate</option><option value="15 Days">15 Days</option><option value="30 Days">30 Days</option></select></div>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={applyFilters}>Apply</button>
-            <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={clearFilters}>Clear</button>
-          </div>
-        </div>
-      )}
-
-      {/* Candidates Display */}
-      <div className="crm-card">
-        <div className="crm-card-header" style={{ padding: '10px 16px' }}>
-          <h2 className="crm-card-title" style={{ fontSize: '14px' }}>{viewMode === 'grid' ? 'Candidate Cards' : 'Candidate List'} ({pagination.total})</h2>
-        </div>
-
-        {loading ? (
-          <div style={{ padding: '40px', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }}></div><p style={{ marginTop: '12px', color: '#64748b', fontSize: '13px' }}>Loading...</p></div>
-        ) : candidates.length === 0 ? (
-          <div style={{ padding: '40px', textAlign: 'center' }}>
-            <p style={{ fontSize: '16px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No candidates found</p>
-            <p style={{ color: '#64748b', marginBottom: '16px', fontSize: '13px' }}>Upload a CSV/Excel file to get started</p>
-            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => fileInputRef.current?.click()}>Upload Candidates</button>
-          </div>
-        ) : (
-          <>
-            {viewMode === 'grid' ? (
-              <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
-                {candidates.map(candidate => (
-                  <div key={candidate._id} onClick={() => handleCandidateClick(candidate._id)} style={{ background: '#fff', borderRadius: '8px', padding: '12px', border: selectedCandidateId === candidate._id ? '2px solid #1e3c72' : selectedCandidates.includes(candidate._id) ? '2px solid #4A90E2' : '1px solid #e5e7eb', cursor: 'pointer' }}>
-                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                      <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} style={{ width: '16px', height: '16px' }} />
-                      <div style={{ flex: 1 }}>
-                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>{candidate.customerName || getDetailName(candidate)}</h3>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{candidate.currentDesignation || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                      <span className={`status-badge ${getAvailabilityColor(candidate.availability)}`} style={{ fontSize: '10px', padding: '2px 6px' }}>{candidate.availability}</span>
-                      <span className={`status-badge ${candidate.status === 'Available' ? 'success' : 'secondary'}`} style={{ fontSize: '10px', padding: '2px 6px' }}>{candidate.status}</span>
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>
-                      {candidate.email && <div style={{ marginBottom: '2px' }}>{candidate.email}</div>}
-                      {candidate.phone && <div style={{ marginBottom: '2px' }}>{candidate.phone}</div>}
-                      <div>{candidate.totalExperience} yrs exp</div>
-                    </div>
-                    <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => handleCandidateClick(candidate._id)} style={{ width: '100%', marginTop: '8px', fontSize: '11px', padding: '4px' }}>View Profile</button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
-                  <thead>
-                    <tr>
-                      <th style={{ width: '40px', padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
-                        <input type="checkbox" checked={selectedCandidates.length === candidates.length && candidates.length > 0} onChange={handleSelectAll} style={{ width: '16px', height: '16px' }} />
-                      </th>
-                      {displayColumns.map((column) => (
-                        <th key={column} style={{ padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{formatFieldName(column)}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {candidates.map(candidate => (
-                      <tr key={candidate._id} onClick={(e) => { if (e.target.type !== 'checkbox') handleCandidateClick(candidate._id); }} style={{ background: selectedCandidateId === candidate._id ? '#E0F2FE' : selectedCandidates.includes(candidate._id) ? '#EFF6FF' : '#fff', cursor: 'pointer', border: '1px solid #e5e7eb' }}>
-                        <td style={{ padding: '8px' }}>
-                          <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} onClick={(e) => e.stopPropagation()} style={{ width: '16px', height: '16px' }} />
-                        </td>
-                        {displayColumns.map((column) => {
-                          const value = formatFieldValue(getFieldValue(candidate, column));
-                          return (
-                            <td key={column} style={{ padding: '8px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: '#475569' }}>
-                              {value}
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            {pagination.pages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #e5e7eb' }}>
-                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === 1} onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}>← Prev</button>
-                <span style={{ fontWeight: '600', color: '#1e3c72', fontSize: '12px' }}>Page {pagination.page} of {pagination.pages}</span>
-                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === pagination.pages} onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}>Next →</button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-        </div>
-        {/* End Left Side */}
-
-        {/* Right Side - Candidate Detail Panel */}
+        {/* LEFT: Detail Panel */}
         {selectedCandidateId && (
-          <div style={{ flex: '0 0 45%', background: 'white', borderLeft: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
             {/* Panel Header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <h3 style={{ margin: 0, color: '#1e3c72', fontSize: '15px', fontWeight: '600' }}>Customer Details</h3>
-              <button onClick={closeSidePanel} style={{ background: 'rgba(30,60,114,0.1)', border: 'none', borderRadius: '6px', padding: '6px 8px', color: '#1e3c72', cursor: 'pointer', fontSize: '14px' }}>✕</button>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={() => setDetailExpanded(v => !v)} style={{ background: 'rgba(30,60,114,0.08)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', color: '#1e3c72' }}>{detailExpanded ? '↙ Collapse' : '↗ Expand'}</button>
+                <button onClick={closeSidePanel} style={{ background: 'rgba(30,60,114,0.1)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px', color: '#1e3c72' }}>✕</button>
+              </div>
             </div>
-
             {/* Panel Content */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {loadingDetail ? (
@@ -839,6 +762,134 @@ const DataCenter = () => {
             </div>
           </div>
         )}
+
+        {/* Drag Divider */}
+        {selectedCandidateId && !detailExpanded && (
+          <div onMouseDown={handleDividerDrag} style={{ width: '6px', cursor: 'col-resize', background: 'transparent', flexShrink: 0, position: 'relative', zIndex: 1, userSelect: 'none' }}>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '4px', height: '40px', borderRadius: '2px', background: '#cbd5e1' }} />
+          </div>
+        )}
+
+        {/* RIGHT: Filters + List */}
+        <div style={{ flex: selectedCandidateId && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%', minWidth: 0, overflow: 'auto', padding: '0 0 20px 0' }}>
+      {/* Manage Fields Panel */}
+      {showManageFields && (
+        <ManageFieldsPanel
+          allFieldDefs={allFieldDefs}
+          togglingField={togglingField}
+          onToggle={handleToggleField}
+          onClose={() => setShowManageFields(false)}
+          onAdd={handleAddCustomField}
+          canAdd={hasPermission('field_management', 'create')}
+          canToggle={hasPermission('field_management', 'update')}
+          entityLabel="Customer"
+          sections={CUSTOMER_SECTIONS}
+        />
+      )}
+      {/* Filters Panel */}
+      {showFilters && (
+        <div className="filters-container" style={{ padding: '12px', marginBottom: '12px' }}>
+          <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>Advanced Search Filters</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Search</label><input type="text" name="search" placeholder="Name, email..." value={filters.search} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Skills</label><input type="text" name="skills" placeholder="React, Node..." value={filters.skills} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Min Exp</label><input type="number" name="experience_min" placeholder="0" value={filters.experience_min} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Max Exp</label><input type="number" name="experience_max" placeholder="10" value={filters.experience_max} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Location</label><input type="text" name="location" placeholder="Delhi..." value={filters.location} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Availability</label><select name="availability" value={filters.availability} onChange={handleFilterChange} className="crm-form-select" style={{ padding: '6px 8px', fontSize: '12px' }}><option value="">All</option><option value="Immediate">Immediate</option><option value="15 Days">15 Days</option><option value="30 Days">30 Days</option></select></div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={applyFilters}>Apply</button>
+            <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={clearFilters}>Clear</button>
+          </div>
+        </div>
+      )}
+      {/* Candidates Display */}
+      <div className="crm-card">
+        <div className="crm-card-header" style={{ padding: '10px 16px' }}>
+          <h2 className="crm-card-title" style={{ fontSize: '14px' }}>{viewMode === 'grid' ? 'Candidate Cards' : 'Candidate List'} ({pagination.total})</h2>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }}></div><p style={{ marginTop: '12px', color: '#64748b', fontSize: '13px' }}>Loading...</p></div>
+        ) : candidates.length === 0 ? (
+          <div style={{ padding: '40px', textAlign: 'center' }}>
+            <p style={{ fontSize: '16px', fontWeight: '600', color: '#1e3c72', marginBottom: '8px' }}>No candidates found</p>
+            <p style={{ color: '#64748b', marginBottom: '16px', fontSize: '13px' }}>Upload a CSV/Excel file to get started</p>
+            <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => fileInputRef.current?.click()}>Upload Candidates</button>
+          </div>
+        ) : (
+          <>
+            {viewMode === 'grid' ? (
+              <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+                {candidates.map(candidate => (
+                  <div key={candidate._id} onClick={() => handleCandidateClick(candidate._id)} style={{ background: '#fff', borderRadius: '8px', padding: '12px', border: selectedCandidateId === candidate._id ? '2px solid #1e3c72' : selectedCandidates.includes(candidate._id) ? '2px solid #4A90E2' : '1px solid #e5e7eb', cursor: 'pointer' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                      <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} style={{ width: '16px', height: '16px' }} />
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>{candidate.customerName || getDetailName(candidate)}</h3>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{candidate.currentDesignation || 'N/A'}</p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                      <span className={`status-badge ${getAvailabilityColor(candidate.availability)}`} style={{ fontSize: '10px', padding: '2px 6px' }}>{candidate.availability}</span>
+                      <span className={`status-badge ${candidate.status === 'Available' ? 'success' : 'secondary'}`} style={{ fontSize: '10px', padding: '2px 6px' }}>{candidate.status}</span>
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#64748b' }}>
+                      {candidate.email && <div style={{ marginBottom: '2px' }}>{candidate.email}</div>}
+                      {candidate.phone && <div style={{ marginBottom: '2px' }}>{candidate.phone}</div>}
+                      <div>{candidate.totalExperience} yrs exp</div>
+                    </div>
+                    <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => handleCandidateClick(candidate._id)} style={{ width: '100%', marginTop: '8px', fontSize: '11px', padding: '4px' }}>View Profile</button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px', padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
+                        <input type="checkbox" checked={selectedCandidates.length === candidates.length && candidates.length > 0} onChange={handleSelectAll} style={{ width: '16px', height: '16px' }} />
+                      </th>
+                      {displayColumns.map((column) => (
+                        <th key={column} style={{ padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{formatFieldName(column)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candidates.map(candidate => (
+                      <tr key={candidate._id} onClick={(e) => { if (e.target.type !== 'checkbox') handleCandidateClick(candidate._id); }} style={{ background: selectedCandidateId === candidate._id ? '#E0F2FE' : selectedCandidates.includes(candidate._id) ? '#EFF6FF' : '#fff', cursor: 'pointer', border: '1px solid #e5e7eb' }}>
+                        <td style={{ padding: '8px' }}>
+                          <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} onClick={(e) => e.stopPropagation()} style={{ width: '16px', height: '16px' }} />
+                        </td>
+                        {displayColumns.map((column) => {
+                          const value = formatFieldValue(getFieldValue(candidate, column));
+                          return (
+                            <td key={column} style={{ padding: '8px', maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '12px', color: '#475569' }}>
+                              {value}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {pagination.pages > 1 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #e5e7eb' }}>
+                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === 1} onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}>← Prev</button>
+                <span style={{ fontWeight: '600', color: '#1e3c72', fontSize: '12px' }}>Page {pagination.page} of {pagination.pages}</span>
+                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === pagination.pages} onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}>Next →</button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+        </div>
+
       </div>
     </DashboardLayout>
   );

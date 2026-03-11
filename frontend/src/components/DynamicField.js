@@ -81,8 +81,8 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
             required={isRequired}
             placeholder={placeholder || ''}
             className={baseClass}
-            style={{ ...inputStyle, resize: 'vertical', minHeight: '100px' }}
-            rows={5}
+            style={{ ...inputStyle, resize: 'vertical', minHeight: '160px' }}
+            rows={7}
             maxLength={validations?.maxLength}
           />
         );

@@ -32,6 +32,13 @@ const ACCT_DISABLED_KEY = 'crm_acct_std_disabled';
 const getAcctDisabled = () => { try { return JSON.parse(localStorage.getItem(ACCT_DISABLED_KEY) || '[]'); } catch { return []; } };
 const ACCOUNT_SECTIONS = ['Basic Information', 'Business Information', 'Billing Address', 'Additional Information'];
 
+const ACCOUNT_WIZARD_STEPS = [
+  { label: 'Basic Info',  icon: '🏢', desc: 'Name, type & contact',    sections: ['Basic Information'] },
+  { label: 'Business',    icon: '💼', desc: 'Industry & revenue info',  sections: ['Business Information'] },
+  { label: 'Address',     icon: '📍', desc: 'Billing address',          sections: ['Billing Address'] },
+  { label: 'Additional',  icon: '📋', desc: 'Description & GST',        sections: ['Additional Information'] },
+];
+
 const Accounts = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -64,6 +71,10 @@ const Accounts = () => {
   const [disabledStdFields, setDisabledStdFieldsState] = useState(getAcctDisabled);
   const [togglingField, setTogglingField] = useState(null);
 
+  const [wizardStep, setWizardStep] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [detailPanelWidth, setDetailPanelWidth] = useState(42);
+  const [detailExpanded, setDetailExpanded] = useState(false);
 
   // Split View Panel State
   const [selectedAccountId, setSelectedAccountId] = useState(null);
@@ -196,7 +207,9 @@ const Accounts = () => {
   };
 
   const handleCreateAccount = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
+    if (creating) return;
+    setCreating(true);
     try {
       setError('');
       const standardFields = {};
@@ -220,10 +233,12 @@ const Accounts = () => {
       await accountService.createAccount(accountData);
       setSuccess('Account created successfully!');
       setShowCreateForm(false);
+      setWizardStep(0);
       resetForm();
       loadAccounts();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create account'); }
+    finally { setCreating(false); }
   };
 
   const resetForm = () => {
@@ -284,7 +299,27 @@ const Accounts = () => {
     setShowDetailDeleteConfirm(false);
   };
 
+  const handleDividerDrag = (e) => {
+    e.preventDefault();
+    const container = document.getElementById('accounts-split-container');
+    if (!container) return;
+    const startX = e.clientX;
+    const startWidth = detailPanelWidth;
+    const containerW = container.getBoundingClientRect().width;
+    const onMove = (mv) => {
+      const delta = ((mv.clientX - startX) / containerW) * 100;
+      setDetailPanelWidth(Math.max(25, Math.min(65, startWidth + delta)));
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
   const closeSidePanel = () => {
+    setDetailExpanded(false);
     setSelectedAccountId(null);
     setSelectedAccountData(null);
     closeDetailForms();
@@ -355,12 +390,108 @@ const Accounts = () => {
       {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
       {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
-      {/* Split View Container */}
-      <div style={{ display: 'flex', gap: '0', height: 'calc(100vh - 150px)', overflow: 'hidden' }}>
-        {/* Left Side */}
-        <div style={{ flex: selectedAccountId ? '0 0 55%' : '1 1 100%', minWidth: 0, overflow: 'auto' }}>
 
-          {/* Stats - Clickable */}
+      {/* ── WIZARD OVERLAY ── */}
+      {showCreateForm && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 1050, background: 'rgba(8,12,28,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
+          <div style={{ display: 'flex', width: '100%', maxWidth: '880px', height: '600px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
+            {/* Sidebar */}
+            <div style={{ width: '220px', flexShrink: 0, background: 'linear-gradient(180deg,#0f172a 0%,#1a2d5a 60%,#1e3c72 100%)', display: 'flex', flexDirection: 'column', padding: '28px 0 20px' }}>
+              <div style={{ padding: '0 22px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🏢</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>New Account</div>
+                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Fill step by step</div>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
+                {ACCOUNT_WIZARD_STEPS.map((step, idx) => {
+                  const isDone = idx < wizardStep; const isActive = idx === wizardStep;
+                  return (
+                    <div key={step.label} onClick={() => { if (isDone) setWizardStep(idx); }}
+                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 22px', cursor: isDone ? 'pointer' : 'default', background: isActive ? 'rgba(59,130,246,0.18)' : 'transparent', borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', transition: 'all 0.2s' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isDone ? '13px' : '11px', fontWeight: '700', background: isDone ? '#10b981' : isActive ? '#3b82f6' : 'rgba(255,255,255,0.06)', color: (isDone || isActive) ? '#fff' : 'rgba(255,255,255,0.3)', boxShadow: isActive ? '0 0 0 3px rgba(59,130,246,0.3)' : 'none' }}>{isDone ? '✓' : idx + 1}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '12px', fontWeight: isActive ? '700' : '500', color: isActive ? '#fff' : isDone ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)' }}>{step.icon} {step.label}</div>
+                        <div style={{ fontSize: '10px', color: isActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)', marginTop: '1px' }}>{step.desc}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ padding: '16px 22px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Progress</span>
+                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#3b82f6' }}>{Math.round((wizardStep / ACCOUNT_WIZARD_STEPS.length) * 100)}%</span>
+                </div>
+                <div style={{ height: '4px', borderRadius: '99px', background: 'rgba(255,255,255,0.08)' }}>
+                  <div style={{ height: '100%', borderRadius: '99px', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', width: `${Math.round((wizardStep / ACCOUNT_WIZARD_STEPS.length) * 100)}%`, transition: 'width 0.35s ease' }} />
+                </div>
+              </div>
+            </div>
+            {/* Right Panel */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0 }}>
+              <div style={{ padding: '22px 28px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                    <span style={{ fontSize: '20px' }}>{ACCOUNT_WIZARD_STEPS[wizardStep].icon}</span>
+                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>{ACCOUNT_WIZARD_STEPS[wizardStep].label}</h3>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>{ACCOUNT_WIZARD_STEPS[wizardStep].desc}</p>
+                </div>
+                <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
+                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '15px' }}>✕</button>
+              </div>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
+                {(() => {
+                  const step = ACCOUNT_WIZARD_STEPS[wizardStep];
+                  const grouped = groupFieldsBySection(fieldDefinitions);
+                  return (
+                    <div>
+                      {step.sections.map(sectionName => {
+                        const fields = grouped[sectionName];
+                        if (!fields?.length) return null;
+                        return (
+                          <div key={sectionName}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+                              {fields.map(field => (
+                                <div key={field.fieldName} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
+                                  {renderDynamicField(field)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 28px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', flexShrink: 0 }}>
+                <button type="button" onClick={() => { if (wizardStep > 0) setWizardStep(s => s - 1); else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
+                  style={{ padding: '9px 20px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                  {wizardStep === 0 ? 'Cancel' : '← Back'}
+                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {ACCOUNT_WIZARD_STEPS.map((_, idx) => (
+                    <div key={idx} style={{ width: idx === wizardStep ? '18px' : '6px', height: '6px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
+                  ))}
+                </div>
+                {wizardStep < ACCOUNT_WIZARD_STEPS.length - 1 ? (
+                  <button type="button" onClick={() => setWizardStep(s => s + 1)}
+                    style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 3px 10px rgba(30,60,114,0.3)' }}>
+                    Continue →
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleCreateAccount} disabled={creating}
+                    style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 3px 10px rgba(16,185,129,0.35)' }}>
+                    {creating ? 'Saving...' : '✓ Save Account'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
           <div className="stats-grid">
             <div
               className="stat-card"
@@ -420,227 +551,20 @@ const Accounts = () => {
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="crm-card" style={{ marginBottom: '24px' }}>
-            <div style={{ padding: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
-                <input type="text" name="search" placeholder="Search accounts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
-                <select name="accountType" className="crm-form-select" value={filters.accountType} onChange={handleFilterChange}>
-                  <option value="">All Types</option>
-                  <option value="Customer">Customer</option>
-                  <option value="Prospect">Prospect</option>
-                  <option value="Partner">Partner</option>
-                  <option value="Vendor">Vendor</option>
-                </select>
-                <select name="industry" className="crm-form-select" value={filters.industry} onChange={handleFilterChange}>
-                  <option value="">All Industries</option>
-                  <option value="Agriculture">Agriculture</option>
-                  <option value="Automotive">Automotive</option>
-                  <option value="Banking & Finance">Banking &amp; Finance</option>
-                  <option value="Construction">Construction</option>
-                  <option value="Consulting">Consulting</option>
-                  <option value="Education">Education</option>
-                  <option value="Energy & Power">Energy &amp; Power</option>
-                  <option value="Food & Beverage">Food &amp; Beverage</option>
-                  <option value="Government">Government</option>
-                  <option value="Healthcare">Healthcare</option>
-                  <option value="Hospitality">Hospitality</option>
-                  <option value="IT & Technology">IT &amp; Technology</option>
-                  <option value="Insurance">Insurance</option>
-                  <option value="Logistics & Transport">Logistics &amp; Transport</option>
-                  <option value="Manufacturing">Manufacturing</option>
-                  <option value="Media & Entertainment">Media &amp; Entertainment</option>
-                  <option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option>
-                  <option value="Real Estate">Real Estate</option>
-                  <option value="Retail">Retail</option>
-                  <option value="Telecom">Telecom</option>
-                  <option value="Textile & Apparel">Textile &amp; Apparel</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
-                  <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
-                </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                  {hasPermission('field_management', 'read') && (
-                    <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
-                      <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
-                    </button>
-                  )}
-                  {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Account</button>}
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* Split Container */}
+      <div id="accounts-split-container" style={{ display: 'flex', height: 'calc(100vh - 280px)', overflow: 'hidden', position: 'relative' }}>
 
-          {/* Manage Fields Panel */}
-          {showManageFields && (
-            <ManageFieldsPanel
-              allFieldDefs={allFieldDefs}
-              togglingField={togglingField}
-              onToggle={handleToggleField}
-              onClose={() => setShowManageFields(false)}
-              onAdd={handleAddCustomField}
-              onDelete={handleDeleteCustomField}
-              canAdd={hasPermission('field_management', 'create')}
-              canToggle={hasPermission('field_management', 'update')}
-              canDelete={hasPermission('field_management', 'delete')}
-              entityLabel="Account"
-              sections={ACCOUNT_SECTIONS}
-            />
-          )}
-
-          {/* Inline Create Account Form */}
-          {showCreateForm && (
-            <div style={{ marginBottom: '16px', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 24px rgba(30,60,114,0.10)', border: '1px solid #e2e8f0' }}>
-              <div style={{ background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 60%, #3b82f6 100%)', padding: '14px 18px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#fff', letterSpacing: '0.2px' }}>Create New Account</h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Fill in the details to add a new account</p>
-                </div>
-                <button onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.25)', borderRadius: '8px', cursor: 'pointer', width: '30px', height: '30px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '16px' }}>✕</button>
-              </div>
-              <div style={{ padding: '16px', background: '#fafeff' }}>
-                <form onSubmit={handleCreateAccount}>
-                  {(() => {
-                    const groupedFields = groupFieldsBySection(fieldDefinitions);
-                    const sectionOrder = ['Basic Information', 'Business Information', 'Billing Address', 'Additional Information'];
-                    const palette = [
-                      { bg: '#eff6ff', border: '#3b82f6', text: '#1d4ed8' },
-                      { bg: '#f0fdf4', border: '#10b981', text: '#065f46' },
-                      { bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95' },
-                      { bg: '#fffbeb', border: '#f59e0b', text: '#92400e' },
-                    ];
-                    return sectionOrder.map((sectionName, sIdx) => {
-                      const sectionFields = groupedFields[sectionName];
-                      if (!sectionFields || sectionFields.length === 0) return null;
-                      const c = palette[sIdx % palette.length];
-                      return (
-                        <div key={sectionName} style={{ marginBottom: '14px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', padding: '5px 10px', borderRadius: '7px', background: c.bg, borderLeft: `3px solid ${c.border}` }}>
-                            <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: c.border, flexShrink: 0 }} />
-                            <span style={{ fontSize: '11px', fontWeight: '700', color: c.text, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{sectionName}</span>
-                          </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '8px' }}>
-                            {sectionFields.map((field) => (
-                              <div key={field._id} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
-                                {renderDynamicField(field)}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
-                    <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }} style={{ padding: '8px 20px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-                    <button type="submit" style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>Create Account</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Account List */}
-          <div className="crm-card">
-            <div className="crm-card-header">
-              <h2 className="crm-card-title">{viewMode === 'grid' ? 'Account Cards' : 'Account List'} ({pagination.total})</h2>
-            </div>
-
-            {loading ? (
-              <div style={{ padding: '60px', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }}></div></div>
-            ) : accounts.length === 0 ? (
-              <div style={{ padding: '60px', textAlign: 'center' }}>
-                <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72' }}>No accounts found</p>
-                {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateForm(true); }}>+ Create First Account</button>}
-              </div>
-            ) : (
-              <>
-                {viewMode === 'grid' ? (
-                  <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-                    {accounts.map((account) => (
-                      <div key={account._id} onClick={() => handleAccountClick(account._id)}
-                        style={{ background: '#ffffff', borderRadius: '12px', padding: '20px', cursor: 'pointer', border: selectedAccountId === account._id ? '2px solid #1e3c72' : '2px solid #e5e7eb', transition: 'all 0.2s' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
-                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '700', color: '#1e3c72' }}>
-                            {getAccountTypeIcon(account.accountType)}
-                          </div>
-                          <div>
-                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{account.accountName}</h3>
-                            <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{account.accountNumber ? `#${String(account.accountNumber).padStart(5, '0')}` : ''}</p>
-                          </div>
-                        </div>
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
-                          <span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.accountType}</span>
-                          {account.industry && <span style={{ padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.industry}</span>}
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          {account.phone && <div>{account.phone}</div>}
-                          {account.website && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</div>}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ background: '#f9fafb' }}>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Account</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Type</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Industry</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Phone</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {accounts.map((account) => (
-                          <tr key={account._id} onClick={() => handleAccountClick(account._id)}
-                            style={{ cursor: 'pointer', borderBottom: '1px solid #e5e7eb', background: selectedAccountId === account._id ? '#EFF6FF' : 'white' }}>
-                            <td style={{ padding: '12px 16px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>
-                                  {getAccountTypeIcon(account.accountType)}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{account.accountName}</div>
-                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>{account.accountNumber ? `#${String(account.accountNumber).padStart(5, '0')}` : ''}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.accountType}</span></td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.industry || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.phone || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-
-                {pagination.pages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid #e5e7eb' }}>
-                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>← Previous</button>
-                    <span style={{ fontWeight: '600', color: '#1e3c72', fontSize: '13px' }}>Page {pagination.page} of {pagination.pages}</span>
-                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>Next →</button>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-        </div>
-        {/* End Left Side */}
-
-        {/* Right Side - Account Detail Panel */}
+        {/* LEFT: Detail Panel */}
         {selectedAccountId && (
-          <div style={{ flex: '0 0 45%', background: 'white', borderLeft: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
             {/* Panel Header */}
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <h3 style={{ margin: 0, color: '#1e3c72', fontSize: '15px', fontWeight: '600' }}>Account Details</h3>
-              <button onClick={closeSidePanel} style={{ background: 'rgba(30,60,114,0.1)', border: 'none', borderRadius: '6px', padding: '4px', color: '#1e3c72', cursor: 'pointer' }}><X className="h-5 w-5" /></button>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button onClick={() => setDetailExpanded(v => !v)} style={{ background: 'rgba(30,60,114,0.08)', border: 'none', borderRadius: '6px', padding: '4px 8px', cursor: 'pointer', fontSize: '11px', fontWeight: '600', color: '#1e3c72' }}>{detailExpanded ? '↙ Collapse' : '↗ Expand'}</button>
+                <button onClick={closeSidePanel} style={{ background: 'rgba(30,60,114,0.1)', border: 'none', borderRadius: '6px', padding: '4px', color: '#1e3c72', cursor: 'pointer' }}><X className="h-5 w-5" /></button>
+              </div>
             </div>
-
             {/* Panel Content */}
             <div style={{ flex: 1, overflowY: 'auto' }}>
               {loadingDetail ? (
@@ -935,6 +859,175 @@ const Accounts = () => {
             </div>
           </div>
         )}
+
+        {/* Drag Divider */}
+        {selectedAccountId && !detailExpanded && (
+          <div onMouseDown={handleDividerDrag} style={{ width: '6px', cursor: 'col-resize', background: 'transparent', flexShrink: 0, position: 'relative', zIndex: 1, userSelect: 'none' }}>
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '4px', height: '40px', borderRadius: '2px', background: '#cbd5e1' }} />
+          </div>
+        )}
+
+        {/* RIGHT: Filters + List */}
+        <div style={{ flex: selectedAccountId && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%', minWidth: 0, overflow: 'auto', padding: '0 0 20px 0' }}>
+          {/* Filters */}
+          <div className="crm-card" style={{ marginBottom: '24px' }}>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+                <input type="text" name="search" placeholder="Search accounts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
+                <select name="accountType" className="crm-form-select" value={filters.accountType} onChange={handleFilterChange}>
+                  <option value="">All Types</option>
+                  <option value="Customer">Customer</option>
+                  <option value="Prospect">Prospect</option>
+                  <option value="Partner">Partner</option>
+                  <option value="Vendor">Vendor</option>
+                </select>
+                <select name="industry" className="crm-form-select" value={filters.industry} onChange={handleFilterChange}>
+                  <option value="">All Industries</option>
+                  <option value="Agriculture">Agriculture</option>
+                  <option value="Automotive">Automotive</option>
+                  <option value="Banking & Finance">Banking &amp; Finance</option>
+                  <option value="Construction">Construction</option>
+                  <option value="Consulting">Consulting</option>
+                  <option value="Education">Education</option>
+                  <option value="Energy & Power">Energy &amp; Power</option>
+                  <option value="Food & Beverage">Food &amp; Beverage</option>
+                  <option value="Government">Government</option>
+                  <option value="Healthcare">Healthcare</option>
+                  <option value="Hospitality">Hospitality</option>
+                  <option value="IT & Technology">IT &amp; Technology</option>
+                  <option value="Insurance">Insurance</option>
+                  <option value="Logistics & Transport">Logistics &amp; Transport</option>
+                  <option value="Manufacturing">Manufacturing</option>
+                  <option value="Media & Entertainment">Media &amp; Entertainment</option>
+                  <option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option>
+                  <option value="Real Estate">Real Estate</option>
+                  <option value="Retail">Retail</option>
+                  <option value="Telecom">Telecom</option>
+                  <option value="Textile & Apparel">Textile &amp; Apparel</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
+                  <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
+                </div>
+                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
+                  {hasPermission('field_management', 'read') && (
+                    <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                      <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
+                    </button>
+                  )}
+                  {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Account</button>}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Manage Fields Panel */}
+          {showManageFields && (
+            <ManageFieldsPanel
+              allFieldDefs={allFieldDefs}
+              togglingField={togglingField}
+              onToggle={handleToggleField}
+              onClose={() => setShowManageFields(false)}
+              onAdd={handleAddCustomField}
+              onDelete={handleDeleteCustomField}
+              canAdd={hasPermission('field_management', 'create')}
+              canToggle={hasPermission('field_management', 'update')}
+              canDelete={hasPermission('field_management', 'delete')}
+              entityLabel="Account"
+              sections={ACCOUNT_SECTIONS}
+            />
+          )}
+          {/* Account List */}
+          <div className="crm-card">
+            <div className="crm-card-header">
+              <h2 className="crm-card-title">{viewMode === 'grid' ? 'Account Cards' : 'Account List'} ({pagination.total})</h2>
+            </div>
+
+            {loading ? (
+              <div style={{ padding: '60px', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }}></div></div>
+            ) : accounts.length === 0 ? (
+              <div style={{ padding: '60px', textAlign: 'center' }}>
+                <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72' }}>No accounts found</p>
+                {canCreateAccount && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateForm(true); }}>+ Create First Account</button>}
+              </div>
+            ) : (
+              <>
+                {viewMode === 'grid' ? (
+                  <div style={{ padding: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
+                    {accounts.map((account) => (
+                      <div key={account._id} onClick={() => handleAccountClick(account._id)}
+                        style={{ background: '#ffffff', borderRadius: '12px', padding: '20px', cursor: 'pointer', border: selectedAccountId === account._id ? '2px solid #1e3c72' : '2px solid #e5e7eb', transition: 'all 0.2s' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                          <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', fontWeight: '700', color: '#1e3c72' }}>
+                            {getAccountTypeIcon(account.accountType)}
+                          </div>
+                          <div>
+                            <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{account.accountName}</h3>
+                            <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{account.accountNumber ? `#${String(account.accountNumber).padStart(5, '0')}` : ''}</p>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '10px', flexWrap: 'wrap' }}>
+                          <span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.accountType}</span>
+                          {account.industry && <span style={{ padding: '2px 8px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.industry}</span>}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#64748b' }}>
+                          {account.phone && <div>{account.phone}</div>}
+                          {account.website && <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{account.website}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: '#f9fafb' }}>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Account</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Type</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Industry</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Phone</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {accounts.map((account) => (
+                          <tr key={account._id} onClick={() => handleAccountClick(account._id)}
+                            style={{ cursor: 'pointer', borderBottom: '1px solid #e5e7eb', background: selectedAccountId === account._id ? '#EFF6FF' : 'white' }}>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>
+                                  {getAccountTypeIcon(account.accountType)}
+                                </div>
+                                <div>
+                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{account.accountName}</div>
+                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>{account.accountNumber ? `#${String(account.accountNumber).padStart(5, '0')}` : ''}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.accountType}</span></td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.industry || '-'}</td>
+                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.phone || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {pagination.pages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid #e5e7eb' }}>
+                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>← Previous</button>
+                    <span style={{ fontWeight: '600', color: '#1e3c72', fontSize: '13px' }}>Page {pagination.page} of {pagination.pages}</span>
+                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>Next →</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+
       </div>
     </DashboardLayout>
   );
