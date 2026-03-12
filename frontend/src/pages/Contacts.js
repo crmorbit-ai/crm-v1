@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Country, State, City } from 'country-state-city';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +10,7 @@ import { noteService } from '../services/noteService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
-import { Mail, Phone, Building2, Briefcase, X, Edit, Trash2, FileText, CheckCircle2, Calendar, Star, User, Settings } from 'lucide-react';
+import { Mail, Phone, Building2, Briefcase, X, Edit, Trash2, FileText, CheckCircle2, Calendar, Star, User, Settings, List, LayoutGrid } from 'lucide-react';
 import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
 
@@ -21,14 +22,162 @@ const DEFAULT_CONTACT_FIELDS = [
   { fieldName: 'mobile', label: 'Mobile', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
   { fieldName: 'title', label: 'Job Title', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10 },
   { fieldName: 'department', label: 'Department', fieldType: 'dropdown', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11, options: [{ label: 'Sales', value: 'Sales' }, { label: 'Marketing', value: 'Marketing' }, { label: 'Finance', value: 'Finance' }, { label: 'Operations', value: 'Operations' }, { label: 'IT', value: 'IT' }, { label: 'Other', value: 'Other' }] },
-  { fieldName: 'mailingCity', label: 'City', fieldType: 'text', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
-  { fieldName: 'mailingState', label: 'State', fieldType: 'text', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 21 },
-  { fieldName: 'mailingCountry', label: 'Country', fieldType: 'text', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 22 },
+  { fieldName: 'mailingCity', label: 'City', fieldType: 'dropdown', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
+  { fieldName: 'mailingState', label: 'State', fieldType: 'dropdown', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 21 },
+  { fieldName: 'mailingCountry', label: 'Country', fieldType: 'dropdown', section: 'Mailing Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 22 },
   { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
 ];
 const CONT_DISABLED_KEY = 'crm_cont_std_disabled';
 const getContDisabled = () => { try { return JSON.parse(localStorage.getItem(CONT_DISABLED_KEY) || '[]'); } catch { return []; } };
 const CONTACT_SECTIONS = ['Basic Information', 'Professional Information', 'Mailing Address', 'Additional Information'];
+
+
+// --- Country/State/City cascade helpers ---
+const LOC_OCEANIA_CODES = new Set(['AU','FJ','KI','MH','FM','NR','NZ','PW','PG','WS','SB','TO','TV','VU','CK','NU','TK','WF','PF','NC','GU','MP','AS','UM','PN']);
+const locGetContinent = (country) => {
+  if (LOC_OCEANIA_CODES.has(country.isoCode)) return 'Oceania';
+  const tz = (country.timezones && country.timezones[0] && country.timezones[0].zoneName) || '';
+  const prefix = tz.split('/')[0];
+  const map = { Africa:'Africa', America:'Americas', Asia:'Asia', Atlantic:'Europe', Europe:'Europe', Indian:'Asia', Pacific:'Oceania', Arctic:'Europe', Australia:'Oceania' };
+  return map[prefix] || 'Other';
+};
+const LOC_CONTINENT_ORDER = ['Asia', 'Europe', 'Americas', 'Africa', 'Oceania', 'Other'];
+const LOC_ALL_COUNTRIES = Country.getAllCountries();
+const LOC_GROUPED_COUNTRIES = (() => {
+  const g = {};
+  LOC_ALL_COUNTRIES.forEach(c => { const cont = locGetContinent(c); if (!g[cont]) g[cont] = []; g[cont].push(c); });
+  return g;
+})();
+const LOC_CONTINENT_ICONS = { Asia:'🌏', Europe:'🌍', Americas:'🌎', Africa:'🌍', Oceania:'🌏', Other:'🌐' };
+
+const LocCountrySelect = ({ value, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  const [expandedCont, setExpandedCont] = React.useState(null);
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  React.useEffect(() => {
+    if (open && value) { const c = LOC_ALL_COUNTRIES.find(c => c.name === value); if (c) setExpandedCont(locGetContinent(c)); }
+    if (!open) setExpandedCont(null);
+  }, [open, value]);
+  const sel = LOC_ALL_COUNTRIES.find(c => c.name === value);
+  const triggerStyle = { width:'100%', padding:'8px 10px', fontSize:'13px', border:'1px solid #e2e8f0', borderRadius:'6px', background:'#fff', textAlign:'left', cursor:'pointer', display:'flex', alignItems:'center', gap:'7px', outline:'none', color: value ? '#1e293b' : '#94a3b8', boxSizing:'border-box' };
+  return (
+    <div ref={ref} style={{ position:'relative' }}>
+      <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>Country</label>
+      <button type="button" onClick={() => setOpen(o => !o)} style={triggerStyle}>
+        {sel ? <><span style={{ fontSize:'15px', lineHeight:1 }}>{sel.flag}</span><span style={{ flex:1, fontSize:'13px' }}>{sel.name}</span></> : <span style={{ flex:1 }}>-- Select Country --</span>}
+        <span style={{ color:'#94a3b8', fontSize:'10px', marginLeft:'auto' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#fff', border:'1px solid #e2e8f0', borderRadius:'7px', boxShadow:'0 6px 20px rgba(0,0,0,0.13)', marginTop:'3px', overflow:'hidden' }}>
+          <div style={{ maxHeight:'280px', overflowY:'auto' }}>
+            {LOC_CONTINENT_ORDER.map(cont => {
+              const countries = LOC_GROUPED_COUNTRIES[cont];
+              if (!countries?.length) return null;
+              const isExp = expandedCont === cont;
+              return (
+                <div key={cont}>
+                  <div onMouseDown={(e) => { e.preventDefault(); setExpandedCont(isExp ? null : cont); }}
+                    style={{ padding:'7px 10px', cursor:'pointer', display:'flex', alignItems:'center', gap:'7px', background: isExp ? '#eff6ff' : '#f8fafc', borderBottom:'1px solid #f1f5f9', userSelect:'none' }}>
+                    <span style={{ fontSize:'14px' }}>{LOC_CONTINENT_ICONS[cont]}</span>
+                    <span style={{ flex:1, fontSize:'12px', fontWeight:'700', color: isExp ? '#1d4ed8' : '#374151' }}>{cont}</span>
+                    <span style={{ fontSize:'10px', color:'#94a3b8' }}>{countries.length}</span>
+                    <span style={{ fontSize:'10px', color: isExp ? '#3b82f6' : '#94a3b8' }}>{isExp ? '▼' : '▶'}</span>
+                  </div>
+                  {isExp && countries.map(c => (
+                    <div key={c.isoCode} onMouseDown={() => { onChange(c); setOpen(false); }}
+                      style={{ padding:'6px 10px 6px 28px', cursor:'pointer', display:'flex', alignItems:'center', gap:'8px', fontSize:'12px', background: value === c.name ? '#dbeafe' : '#fff', color: value === c.name ? '#1d4ed8' : '#1e293b', fontWeight: value === c.name ? '600' : '400', borderBottom:'1px solid #f8fafc' }}
+                      onMouseEnter={e => { if (value !== c.name) e.currentTarget.style.background = '#f0f9ff'; }}
+                      onMouseLeave={e => { if (value !== c.name) e.currentTarget.style.background = '#fff'; }}>
+                      <span style={{ fontSize:'14px', lineHeight:1 }}>{c.flag}</span><span>{c.name}</span>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const LocStateSelect = ({ value, countryIso, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  const states = countryIso ? State.getStatesOfCountry(countryIso) : [];
+  React.useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  const triggerStyle = { width:'100%', padding:'8px 10px', fontSize:'13px', border:'1px solid #e2e8f0', borderRadius:'6px', background: !countryIso ? '#f9fafb' : '#fff', textAlign:'left', cursor: !countryIso ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:'7px', outline:'none', color: value ? '#1e293b' : '#94a3b8', boxSizing:'border-box' };
+  return (
+    <div ref={ref} style={{ position:'relative' }}>
+      <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>State</label>
+      <button type="button" disabled={!countryIso} onClick={() => countryIso && setOpen(o => !o)} style={triggerStyle}>
+        <span style={{ flex:1 }}>{value || (countryIso ? '-- Select State --' : '-- Select Country First --')}</span>
+        <span style={{ color:'#94a3b8', fontSize:'10px', marginLeft:'auto' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#fff', border:'1px solid #e2e8f0', borderRadius:'7px', boxShadow:'0 6px 20px rgba(0,0,0,0.13)', marginTop:'3px', overflow:'hidden' }}>
+          <div style={{ maxHeight:'280px', overflowY:'auto' }}>
+            {states.map(s => (
+              <div key={s.isoCode} onMouseDown={() => { onChange(s.name, s.isoCode); setOpen(false); }}
+                style={{ padding:'7px 12px', cursor:'pointer', display:'flex', alignItems:'center', fontSize:'12px', background: value === s.name ? '#dbeafe' : '#fff', color: value === s.name ? '#1d4ed8' : '#1e293b', fontWeight: value === s.name ? '600' : '400', borderBottom:'1px solid #f8fafc' }}
+                onMouseEnter={e => { if (value !== s.name) e.currentTarget.style.background = '#f0f9ff'; }}
+                onMouseLeave={e => { if (value !== s.name) e.currentTarget.style.background = '#fff'; }}>
+                {s.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const LocCitySelect = ({ value, countryIso, stateIso, onChange }) => {
+  const [open, setOpen] = React.useState(false);
+  const ref = React.useRef(null);
+  const cities = (countryIso && stateIso) ? City.getCitiesOfState(countryIso, stateIso) : [];
+  React.useEffect(() => {
+    if (!open) return;
+    const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  const triggerStyle = { width:'100%', padding:'8px 10px', fontSize:'13px', border:'1px solid #e2e8f0', borderRadius:'6px', background: !stateIso ? '#f9fafb' : '#fff', textAlign:'left', cursor: !stateIso ? 'not-allowed' : 'pointer', display:'flex', alignItems:'center', gap:'7px', outline:'none', color: value ? '#1e293b' : '#94a3b8', boxSizing:'border-box' };
+  return (
+    <div ref={ref} style={{ position:'relative' }}>
+      <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>City</label>
+      <button type="button" disabled={!stateIso} onClick={() => stateIso && setOpen(o => !o)} style={triggerStyle}>
+        <span style={{ flex:1 }}>{value || (stateIso ? '-- Select City --' : '-- Select State First --')}</span>
+        <span style={{ color:'#94a3b8', fontSize:'10px', marginLeft:'auto' }}>{open ? '▲' : '▼'}</span>
+      </button>
+      {open && (
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, zIndex:9999, background:'#fff', border:'1px solid #e2e8f0', borderRadius:'7px', boxShadow:'0 6px 20px rgba(0,0,0,0.13)', marginTop:'3px', overflow:'hidden' }}>
+          <div style={{ maxHeight:'280px', overflowY:'auto' }}>
+            {cities.map((c, idx) => (
+              <div key={idx} onMouseDown={() => { onChange(c.name); setOpen(false); }}
+                style={{ padding:'7px 12px', cursor:'pointer', display:'flex', alignItems:'center', fontSize:'12px', background: value === c.name ? '#dbeafe' : '#fff', color: value === c.name ? '#1d4ed8' : '#1e293b', fontWeight: value === c.name ? '600' : '400', borderBottom:'1px solid #f8fafc' }}
+                onMouseEnter={e => { if (value !== c.name) e.currentTarget.style.background = '#f0f9ff'; }}
+                onMouseLeave={e => { if (value !== c.name) e.currentTarget.style.background = '#fff'; }}>
+                {c.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CONTACT_WIZARD_STEPS = [
   { label: 'Basic Info',    icon: '👤', desc: 'Name, email & phone',       sections: ['Basic Information'] },
@@ -52,6 +201,8 @@ const Contacts = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [selectedCountryIso, setSelectedCountryIso] = useState('');
+  const [selectedStateIso, setSelectedStateIso] = useState('');
 
   const [formData, setFormData] = useState({
     firstName: '', lastName: '', email: '', phone: '', mobile: '', account: '', title: '', department: '',
@@ -59,7 +210,9 @@ const Contacts = () => {
     mailingCountry: '', mailingZipCode: '', description: ''
   });
 
-  const [fieldDefinitions, setFieldDefinitions] = useState([]);
+  const [fieldDefinitions, setFieldDefinitions] = useState(
+    () => DEFAULT_CONTACT_FIELDS.filter(f => !getContDisabled().includes(f.fieldName)).map(f => ({ ...f, isActive: true, _isStd: true })).sort((a, b) => a.displayOrder - b.displayOrder)
+  );
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [stats, setStats] = useState({ total: 0, primary: 0, withAccount: 0, recent: 0 });
@@ -203,9 +356,38 @@ const Contacts = () => {
     setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
   };
 
-  const renderDynamicField = (field) => (
-    <DynamicField fieldDefinition={field} value={fieldValues[field.fieldName] || ''} onChange={handleFieldChange} error={fieldErrors[field.fieldName]} />
-  );
+  const renderDynamicField = (field) => {
+    if (field.fieldName === 'mailingCountry') {
+      return (
+        <LocCountrySelect
+          value={fieldValues['mailingCountry'] || ''}
+          onChange={(c) => { handleFieldChange('mailingCountry', c.name); setSelectedCountryIso(c.isoCode); handleFieldChange('mailingState', ''); handleFieldChange('mailingCity', ''); setSelectedStateIso(''); }}
+        />
+      );
+    }
+    if (field.fieldName === 'mailingState') {
+      return (
+        <LocStateSelect
+          value={fieldValues['mailingState'] || ''}
+          countryIso={selectedCountryIso}
+          onChange={(name, iso) => { handleFieldChange('mailingState', name); setSelectedStateIso(iso); handleFieldChange('mailingCity', ''); }}
+        />
+      );
+    }
+    if (field.fieldName === 'mailingCity') {
+      return (
+        <LocCitySelect
+          value={fieldValues['mailingCity'] || ''}
+          countryIso={selectedCountryIso}
+          stateIso={selectedStateIso}
+          onChange={(name) => handleFieldChange('mailingCity', name)}
+        />
+      );
+    }
+    return (
+      <DynamicField fieldDefinition={field} value={fieldValues[field.fieldName] || ''} onChange={handleFieldChange} error={fieldErrors[field.fieldName]} />
+    );
+  };
 
   const closeAllForms = () => {
     setShowCreateForm(false);
@@ -243,6 +425,8 @@ const Contacts = () => {
     setFormData({ firstName: '', lastName: '', email: '', phone: '', mobile: '', account: '', title: '', department: '', isPrimary: false, doNotCall: false, emailOptOut: false, mailingStreet: '', mailingCity: '', mailingState: '', mailingCountry: '', mailingZipCode: '', description: '' });
     setFieldValues({});
     setFieldErrors({});
+    setSelectedCountryIso('');
+    setSelectedStateIso('');
   };
 
   const handleChange = (e) => {
@@ -433,114 +617,6 @@ const Contacts = () => {
       {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
       {/* ── WIZARD OVERLAY ── */}
-      {showCreateForm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1050, background: 'rgba(8,12,28,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
-          <div style={{ display: 'flex', width: '100%', maxWidth: '880px', height: '600px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
-            {/* Sidebar */}
-            <div style={{ width: '220px', flexShrink: 0, background: 'linear-gradient(180deg,#0f172a 0%,#1a2d5a 60%,#1e3c72 100%)', display: 'flex', flexDirection: 'column', padding: '28px 0 20px' }}>
-              <div style={{ padding: '0 22px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>👤</div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#fff' }}>New Contact</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Fill step by step</div>
-              </div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
-                {CONTACT_WIZARD_STEPS.map((step, idx) => {
-                  const isDone = idx < wizardStep; const isActive = idx === wizardStep;
-                  return (
-                    <div key={step.label} onClick={() => { if (isDone) setWizardStep(idx); }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 22px', cursor: isDone ? 'pointer' : 'default', background: isActive ? 'rgba(59,130,246,0.18)' : 'transparent', borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', transition: 'all 0.2s' }}>
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isDone ? '13px' : '11px', fontWeight: '700', background: isDone ? '#10b981' : isActive ? '#3b82f6' : 'rgba(255,255,255,0.06)', color: (isDone || isActive) ? '#fff' : 'rgba(255,255,255,0.3)', boxShadow: isActive ? '0 0 0 3px rgba(59,130,246,0.3)' : 'none' }}>{isDone ? '✓' : idx + 1}</div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '12px', fontWeight: isActive ? '700' : '500', color: isActive ? '#fff' : isDone ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)' }}>{step.icon} {step.label}</div>
-                        <div style={{ fontSize: '10px', color: isActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)', marginTop: '1px' }}>{step.desc}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ padding: '16px 22px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Progress</span>
-                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#3b82f6' }}>{Math.round((wizardStep / CONTACT_WIZARD_STEPS.length) * 100)}%</span>
-                </div>
-                <div style={{ height: '4px', borderRadius: '99px', background: 'rgba(255,255,255,0.08)' }}>
-                  <div style={{ height: '100%', borderRadius: '99px', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', width: `${Math.round((wizardStep / CONTACT_WIZARD_STEPS.length) * 100)}%`, transition: 'width 0.35s ease' }} />
-                </div>
-              </div>
-            </div>
-            {/* Right Panel */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0 }}>
-              <div style={{ padding: '22px 28px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '20px' }}>{CONTACT_WIZARD_STEPS[wizardStep].icon}</span>
-                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>{CONTACT_WIZARD_STEPS[wizardStep].label}</h3>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>{CONTACT_WIZARD_STEPS[wizardStep].desc}</p>
-                </div>
-                <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
-                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '15px' }}>✕</button>
-              </div>
-              <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-                {(() => {
-                  const step = CONTACT_WIZARD_STEPS[wizardStep];
-                  const grouped = groupFieldsBySection(fieldDefinitions);
-                  return (
-                    <div>
-                      {step.includeAccount && (
-                        <div style={{ marginBottom: '14px' }}>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🏢 Account</label>
-                          <select name="account" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.account} onChange={handleChange}>
-                            <option value="">— Select Account —</option>
-                            {accounts.map(a => <option key={a._id} value={a._id}>{a.accountName}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      {step.sections.map(sectionName => {
-                        const fields = grouped[sectionName];
-                        if (!fields?.length) return null;
-                        return (
-                          <div key={sectionName}>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
-                              {fields.map(field => (
-                                <div key={field.fieldName} style={field.fieldType === 'textarea' ? { gridColumn: 'span 2' } : {}}>
-                                  {renderDynamicField(field)}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()}
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 28px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', flexShrink: 0 }}>
-                <button type="button" onClick={() => { if (wizardStep > 0) setWizardStep(s => s - 1); else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
-                  style={{ padding: '9px 20px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                  {wizardStep === 0 ? 'Cancel' : '← Back'}
-                </button>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {CONTACT_WIZARD_STEPS.map((_, idx) => (
-                    <div key={idx} style={{ width: idx === wizardStep ? '18px' : '6px', height: '6px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
-                  ))}
-                </div>
-                {wizardStep < CONTACT_WIZARD_STEPS.length - 1 ? (
-                  <button type="button" onClick={() => setWizardStep(s => s + 1)}
-                    style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 3px 10px rgba(30,60,114,0.3)' }}>
-                    Continue →
-                  </button>
-                ) : (
-                  <button type="button" onClick={handleCreateContact} disabled={creating}
-                    style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 3px 10px rgba(16,185,129,0.35)' }}>
-                    {creating ? 'Saving...' : '✓ Save Contact'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Stats - Fixed outside split container */}
       <div className="stats-grid">
@@ -596,7 +672,103 @@ const Contacts = () => {
       <div id="contacts-split-container" style={{ display: 'flex', height: 'calc(100vh - 280px)', overflow: 'hidden', position: 'relative' }}>
 
         {/* LEFT: Detail Panel */}
-        {selectedContactId && (
+        {/* ── LEFT: Create Form (inline) ── */}
+        {showCreateForm && (
+          <div style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3c72 100%)', flexShrink: 0 }}>
+              <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>👤</div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Contact</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {CONTACT_WIZARD_STEPS.length}</div>
+                  </div>
+                </div>
+                <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
+              </div>
+              <div style={{ display: 'flex', padding: '8px 10px 0' }}>
+                {CONTACT_WIZARD_STEPS.map((step, idx) => {
+                  const isDone = idx < wizardStep; const isActive = idx === wizardStep;
+                  return (
+                    <div key={idx} onClick={() => isDone && setWizardStep(idx)}
+                      style={{ flex: 1, textAlign: 'center', padding: '5px 2px', borderRadius: '6px 6px 0 0', cursor: isDone ? 'pointer' : 'default',
+                        background: isActive ? 'rgba(59,130,246,0.22)' : isDone ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)',
+                        borderBottom: isActive ? '2px solid #3b82f6' : isDone ? '2px solid #10b981' : '2px solid transparent' }}>
+                      <div style={{ fontSize: '12px', color: isActive ? '#93c5fd' : isDone ? '#6ee7b7' : 'rgba(255,255,255,0.25)', fontWeight: '700' }}>{isDone ? '✓' : step.icon}</div>
+                      <div style={{ fontSize: '9px', color: isActive ? 'rgba(255,255,255,0.65)' : isDone ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{step.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
+                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / CONTACT_WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
+              </div>
+            </div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+                <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{CONTACT_WIZARD_STEPS[wizardStep]?.icon} {CONTACT_WIZARD_STEPS[wizardStep]?.label}</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{CONTACT_WIZARD_STEPS[wizardStep]?.desc}</p>
+                </div>
+                {(() => {
+                  const step = CONTACT_WIZARD_STEPS[wizardStep];
+                  const grouped = groupFieldsBySection(fieldDefinitions);
+                  return (
+                    <div>
+                      {step.includeAccount && (
+                        <div style={{ marginBottom: '12px' }}>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🏢 Account</label>
+                          <select name="account" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.account} onChange={handleChange}>
+                            <option value="">— Select Account —</option>
+                            {accounts.map(a => <option key={a._id} value={a._id}>{a.accountName}</option>)}
+                          </select>
+                        </div>
+                      )}
+                      {step.sections.map(sectionName => {
+                        const fields = grouped[sectionName];
+                        if (!fields?.length) return null;
+                        return (
+                          <div key={sectionName}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
+                              {fields.map(field => (
+                                <div key={field.fieldName}>{renderDynamicField(field)}</div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+              <div style={{ padding: '11px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                <button type="button" onClick={() => { if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
+                  style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                  {wizardStep === 0 ? 'Cancel' : '← Back'}
+                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {CONTACT_WIZARD_STEPS.map((_, idx) => (
+                    <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
+                  ))}
+                </div>
+                {wizardStep < CONTACT_WIZARD_STEPS.length - 1 ? (
+                  <button type="button" onClick={() => setWizardStep(s => s + 1)}
+                    style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
+                    Next →
+                  </button>
+                ) : (
+                  <button type="button" onClick={handleCreateContact} disabled={creating}
+                    style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(16,185,129,0.25)' }}>
+                    {creating ? 'Saving...' : '✓ Save Contact'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedContactId && !showCreateForm && (
           <div style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
             {/* Panel Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
@@ -859,14 +1031,14 @@ const Contacts = () => {
         )}
 
         {/* Drag Divider */}
-        {selectedContactId && !detailExpanded && (
+        {(selectedContactId || showCreateForm) && !detailExpanded && (
           <div onMouseDown={handleDividerDrag} style={{ width: '6px', cursor: 'col-resize', background: 'transparent', flexShrink: 0, position: 'relative', zIndex: 1, userSelect: 'none' }}>
             <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '4px', height: '40px', borderRadius: '2px', background: '#cbd5e1' }} />
           </div>
         )}
 
         {/* RIGHT: Filters + List */}
-        <div style={{ flex: selectedContactId && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%', minWidth: 0, overflow: 'auto', padding: '0 0 20px 0' }}>
+        <div style={{ flex: (selectedContactId || showCreateForm) && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%', minWidth: 0, overflow: 'auto', padding: '0 0 20px 0' }}>
           {/* Filters */}
           <div className="crm-card" style={{ marginBottom: '24px' }}>
             <div style={{ padding: '20px' }}>
@@ -878,17 +1050,19 @@ const Contacts = () => {
                 </select>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className={`crm-btn crm-btn-sm ${viewMode === 'table' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('table')}>Table</button>
-                  <button className={`crm-btn crm-btn-sm ${viewMode === 'grid' ? 'crm-btn-primary' : 'crm-btn-outline'}`} onClick={() => setViewMode('grid')}>Grid</button>
-                </div>
-                <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px' }}>
-                  {hasPermission('field_management', 'read') && (
-                    <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
-                      <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
+                {hasPermission('field_management', 'read') && (
+                  <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 16px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+                    <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
+                  </button>
+                )}
+                {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); setSelectedContactId(null); setSelectedContactData(null); setDetailExpanded(false); resetForm(); setShowCreateForm(true); }}>+ New Contact</button>}
+                <div style={{ marginLeft: 'auto', display: 'flex', background: '#f1f5f9', borderRadius: '10px', padding: '3px', border: '1.5px solid #e2e8f0' }}>
+                  {[['table', <List className="h-3.5 w-3.5" />, 'List'], ['grid', <LayoutGrid className="h-3.5 w-3.5" />, 'Grid']].map(([mode, icon, lbl]) => (
+                    <button key={mode} onClick={() => setViewMode(mode)}
+                      style={{ display: 'flex', alignItems: 'center', gap: '5px', padding: '6px 13px', borderRadius: '8px', border: 'none', fontSize: '12px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.18s', background: viewMode === mode ? 'white' : 'transparent', color: viewMode === mode ? '#0f172a' : '#94a3b8', boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+                      {icon} {lbl}
                     </button>
-                  )}
-                  {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setShowCreateForm(true); }}>+ New Contact</button>}
+                  ))}
                 </div>
               </div>
             </div>

@@ -239,13 +239,18 @@ const createCandidate = async (req, res) => {
       }
     }
 
+    // Auto-increment customerNumber per tenant
+    const lastCandidate = await DataCenterCandidate.findOne({ tenant: req.user.tenant }).sort({ customerNumber: -1 }).select('customerNumber');
+    const nextCustomerNumber = (lastCandidate?.customerNumber || 0) + 1;
+
     // 🔥 Create candidate with ALL fields directly at root level
     const candidate = await DataCenterCandidate.create({
       ...req.body,  // All form fields go directly to root
       importedBy: req.user._id,
       importedAt: new Date(),
       isActive: true,
-      tenant: req.user.tenant // 🔒 Add tenant
+      tenant: req.user.tenant, // 🔒 Add tenant
+      customerNumber: nextCustomerNumber
     });
 
     // Log activity

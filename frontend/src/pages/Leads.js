@@ -340,6 +340,82 @@ const CityCascadeSelect = ({ value, countryIso, stateIso, onChange }) => {
   );
 };
 
+// ── Rich Text Editor for Description / Requirements ──────────────────────────
+const RichTextEditor = ({ fieldName, value, onChange, label, isRequired, placeholder }) => {
+  const editorRef = React.useRef(null);
+  const isFocused = React.useRef(false);
+  const [fmts, setFmts] = React.useState({ bold: false, italic: false, underline: false });
+
+  // Per-field visual theme
+  const theme = fieldName === 'requirements'
+    ? { icon: '✅', iconBg: '#fef3c7', toolbarBg: '#fffbeb', border: '#fcd34d', activeBg: '#fde68a', activeColor: '#b45309', editorBg: '#fffdf7', labelColor: '#b45309', sepColor: '#fde68a' }
+    : { icon: '📝', iconBg: '#dbeafe', toolbarBg: '#eff6ff', border: '#bfdbfe', activeBg: '#dbeafe', activeColor: '#1d4ed8', editorBg: '#fafcff', labelColor: '#1d4ed8', sepColor: '#bfdbfe' };
+
+  React.useEffect(() => {
+    if (editorRef.current && !isFocused.current) {
+      editorRef.current.innerHTML = value || '';
+    }
+  }, [value]);
+
+  const exec = (cmd) => {
+    editorRef.current.focus();
+    document.execCommand(cmd, false, null);
+    setTimeout(refresh, 0);
+    onChange(fieldName, editorRef.current.innerHTML);
+  };
+
+  const refresh = () => setFmts({
+    bold: document.queryCommandState('bold'),
+    italic: document.queryCommandState('italic'),
+    underline: document.queryCommandState('underline'),
+  });
+
+  const tb = (active) => ({
+    background: active ? theme.activeBg : 'transparent',
+    border: 'none', borderRadius: '4px', padding: '3px 8px',
+    cursor: 'pointer', fontSize: '13px', fontWeight: '700',
+    color: active ? theme.activeColor : '#475569', lineHeight: '1.3',
+    transition: 'all 0.15s', userSelect: 'none',
+  });
+
+  return (
+    <div>
+      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px', color: theme.labelColor }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '18px', height: '18px', borderRadius: '4px', background: theme.iconBg, fontSize: '10px' }}>{theme.icon}</span>
+        {label}{isRequired && <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>}
+      </label>
+      {/* Toolbar */}
+      <div style={{ display: 'flex', gap: '1px', padding: '4px 6px', background: theme.toolbarBg, border: `1.5px solid ${theme.border}`, borderBottom: `1px solid ${theme.sepColor}`, borderRadius: '8px 8px 0 0', alignItems: 'center', flexWrap: 'wrap' }}>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('bold'); }} style={{ ...tb(fmts.bold), fontWeight: '900' }} title="Bold">B</button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('italic'); }} style={{ ...tb(fmts.italic), fontStyle: 'italic' }} title="Italic">I</button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('underline'); }} style={{ ...tb(fmts.underline), textDecoration: 'underline' }} title="Underline">U</button>
+        <div style={{ width: '1px', height: '16px', background: theme.sepColor, margin: '0 4px' }} />
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('insertUnorderedList'); }} style={tb(false)} title="Bullet List">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="4" cy="18" r="1.5" fill="currentColor" stroke="none"/></svg>
+        </button>
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('insertOrderedList'); }} style={tb(false)} title="Numbered List">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg>
+        </button>
+        <div style={{ width: '1px', height: '16px', background: theme.sepColor, margin: '0 4px' }} />
+        <button type="button" onMouseDown={e => { e.preventDefault(); exec('removeFormat'); }} style={{ ...tb(false), fontSize: '11px', textDecoration: 'line-through', opacity: 0.7 }} title="Clear Formatting">Tx</button>
+      </div>
+      {/* Editable area */}
+      <div
+        ref={editorRef}
+        contentEditable
+        suppressContentEditableWarning
+        onFocus={() => { isFocused.current = true; refresh(); }}
+        onBlur={() => { isFocused.current = false; }}
+        onInput={() => { onChange(fieldName, editorRef.current.innerHTML); refresh(); }}
+        onKeyUp={refresh}
+        onMouseUp={refresh}
+        data-ph={placeholder}
+        style={{ minHeight: '130px', padding: '10px 12px', border: `1.5px solid ${theme.border}`, borderTop: 'none', borderRadius: '0 0 8px 8px', fontSize: '13px', outline: 'none', lineHeight: '1.6', color: '#374151', background: theme.editorBg, overflowY: 'auto' }}
+      />
+    </div>
+  );
+};
+
 const Leads = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -1343,6 +1419,20 @@ const Leads = () => {
       );
     }
 
+    // Rich-text editor for Description and Requirements
+    if (field.fieldName === 'description' || field.fieldName === 'requirements') {
+      return (
+        <RichTextEditor
+          fieldName={field.fieldName}
+          value={fieldValues[field.fieldName] || ''}
+          onChange={handleFieldChange}
+          label={field.label}
+          isRequired={field.isRequired}
+          placeholder={`Enter ${field.label.toLowerCase()}...`}
+        />
+      );
+    }
+
     return (
       <div className="relative">
         <DynamicField
@@ -1449,8 +1539,147 @@ const Leads = () => {
       {/* Split View Container */}
       <div id="leads-split-container" style={{ display: 'flex', gap: '0', height: 'calc(100vh - 280px)', overflow: 'hidden', position: 'relative' }}>
 
+        {/* ── LEFT: Create Form (inline) ── */}
+        {showCreateForm && (
+          <div style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            {/* Gradient header with step tabs */}
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3c72 100%)', flexShrink: 0 }}>
+              {/* Title row */}
+              <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🎯</div>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Lead</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {WIZARD_STEPS.length}</div>
+                  </div>
+                </div>
+                <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
+              </div>
+              {/* Step tabs */}
+              <div style={{ display: 'flex', padding: '8px 10px 0' }}>
+                {WIZARD_STEPS.map((step, idx) => {
+                  const isDone = idx < wizardStep;
+                  const isActive = idx === wizardStep;
+                  return (
+                    <div key={idx} onClick={() => isDone && setWizardStep(idx)}
+                      style={{ flex: 1, textAlign: 'center', padding: '5px 2px', borderRadius: '6px 6px 0 0', cursor: isDone ? 'pointer' : 'default',
+                        background: isActive ? 'rgba(59,130,246,0.22)' : isDone ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)',
+                        borderBottom: isActive ? '2px solid #3b82f6' : isDone ? '2px solid #10b981' : '2px solid transparent' }}>
+                      <div style={{ fontSize: '12px', color: isActive ? '#93c5fd' : isDone ? '#6ee7b7' : 'rgba(255,255,255,0.25)', fontWeight: '700' }}>{isDone ? '✓' : step.icon}</div>
+                      <div style={{ fontSize: '9px', color: isActive ? 'rgba(255,255,255,0.65)' : isDone ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{step.label}</div>
+                    </div>
+                  );
+                })}
+              </div>
+              {/* Progress bar */}
+              <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
+                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
+              </div>
+            </div>
+
+            {/* Form body */}
+            <form onSubmit={handleCreateLead} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+                {/* Current step header */}
+                <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{WIZARD_STEPS[wizardStep].icon} {WIZARD_STEPS[wizardStep].label}</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{WIZARD_STEPS[wizardStep].desc}</p>
+                </div>
+                {(() => {
+                  const step = WIZARD_STEPS[wizardStep];
+                  const groupedFields = groupFieldsBySection(fieldDefinitions);
+                  return (
+                    <div>
+                      {step.sections.map(sectionName => {
+                        const sectionFields = groupedFields[sectionName];
+                        const hasOwner = step.includeOwner && sectionName === 'Basic Information';
+                        if (!sectionFields?.length && !hasOwner) return null;
+                        return (
+                          <div key={sectionName}>
+                            {step.sections.length > 1 && sectionFields?.length > 0 && (
+                              <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: '10px', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>{sectionName}</div>
+                            )}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
+                              {hasOwner && (
+                                <div>
+                                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Lead Owner</label>
+                                  <input type="text" value={`${user?.firstName || ''} ${user?.lastName || ''}`} disabled
+                                    style={{ width: '100%', padding: '9px 12px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', color: '#94a3b8', boxSizing: 'border-box' }} />
+                                </div>
+                              )}
+                              {sectionFields?.map((field) => (
+                                <div key={field._id || field.fieldName}>
+                                  {renderDynamicField(field)}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {step.includeCustomer && (
+                        <div style={{ marginTop: '4px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🔗 Link to Customer (Optional)</label>
+                          <select name="customer" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.customer} onChange={handleChange}>
+                            <option value="">— None —</option>
+                            {customers.map(c => (
+                              <option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                      {step.includeProduct && (
+                        <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>📦 Product (Optional)</label>
+                          <select name="product" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.product} onChange={handleChange}>
+                            <option value="">— None —</option>
+                            {products.map(product => (
+                              <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Footer nav */}
+              <div style={{ padding: '11px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+                <button type="button"
+                  onClick={() => { if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
+                  style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                  {wizardStep === 0 ? 'Cancel' : '← Back'}
+                </button>
+                <div style={{ display: 'flex', gap: '4px' }}>
+                  {WIZARD_STEPS.map((_, idx) => (
+                    <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
+                  ))}
+                </div>
+                {wizardStep < WIZARD_STEPS.length - 1 ? (
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                    {!currentStepHasRequired() && (
+                      <button type="button" onClick={() => { setFieldErrors({}); setWizardStep(s => s + 1); }}
+                        style={{ padding: '7px 11px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}>Skip</button>
+                    )}
+                    <button type="button" onClick={() => { if (validateCurrentStep()) { setFieldErrors({}); setWizardStep(s => s + 1); } }}
+                      style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
+                      Next →
+                    </button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={handleCreateLead} disabled={creating}
+                    style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(16,185,129,0.25)' }}>
+                    {creating ? 'Saving...' : '✓ Save Lead'}
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* ── LEFT: Detail Panel ── */}
-        {selectedLeadId && (
+        {selectedLeadId && !showCreateForm && (
           <div style={detailExpanded ? {
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden'
           } : {
@@ -1693,6 +1922,8 @@ const Leads = () => {
                                         {isEmail ? <a href={`mailto:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#3B82F6', wordBreak: 'break-all' }}>{display}</a>
                                           : isPhone ? <a href={`tel:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#059669' }}>{display}</a>
                                           : isUrl ? <a href={display} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: '500', color: '#7C3AED', wordBreak: 'break-all' }}>{display}</a>
+                                          : fieldType === 'textarea'
+                                          ? <div style={{ fontSize: '12px', fontWeight: '500', margin: 0, color: '#1e293b', wordBreak: 'break-word', lineHeight: '1.6' }} dangerouslySetInnerHTML={{ __html: display || '-' }} />
                                           : <p style={{ fontSize: '12px', fontWeight: '500', margin: 0, color: '#1e293b', wordBreak: 'break-word' }}>{display}</p>
                                         }
                                       </div>
@@ -1937,7 +2168,7 @@ const Leads = () => {
         )}
 
         {/* ── DRAG DIVIDER ── */}
-        {selectedLeadId && !detailExpanded && (
+        {(selectedLeadId || showCreateForm) && !detailExpanded && (
           <div onMouseDown={handleDividerDrag}
             title="Drag to resize"
             style={{ width: '6px', flexShrink: 0, background: '#e2e8f0', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', position: 'relative', zIndex: 10 }}
@@ -1949,7 +2180,7 @@ const Leads = () => {
 
         {/* ── RIGHT: Lead List ── */}
         <div style={{
-          flex: selectedLeadId && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%',
+          flex: (selectedLeadId || showCreateForm) && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%',
           minWidth: 0,
           overflow: 'auto'
         }}>
@@ -1957,6 +2188,18 @@ const Leads = () => {
 
       {/* ── FILTER BAR ── */}
       <div style={{ background:'white', borderRadius:'14px', padding:'12px 16px', marginBottom:'16px', border:'1.5px solid #e2e8f0', boxShadow:'0 2px 8px rgba(0,0,0,0.04)', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center' }}>
+        {/* Action buttons — LEFT */}
+        {hasPermission('field_management', 'read') && (
+          <button onClick={() => { closeAllForms(); setShowAddFieldForm(false); setShowManageFields(v => !v); }}
+            style={{ display:'flex', alignItems:'center', gap:'6px', background:'linear-gradient(135deg,#4A90E2 0%,#2c5364 100%)', color:'#fff', border:'none', borderRadius:'8px', padding:'8px 16px', fontWeight:'600', cursor:'pointer', fontSize:'13px' }}>
+            <Settings className="h-4 w-4" /> Manage Fields
+          </button>
+        )}
+        {canCreateLead && (
+          <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); setSelectedLeadId(null); setSelectedLeadData(null); setDetailExpanded(false); resetForm(); setWizardStep(0); setShowCreateForm(true); }}>
+            + New Lead
+          </button>
+        )}
         {/* Search */}
         <div style={{ position:'relative', flex:'1', minWidth:'200px', maxWidth:'280px' }}>
           <span style={{ position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)', fontSize:'13px', pointerEvents:'none', color:'#94a3b8' }}>🔍</span>
@@ -2011,198 +2254,13 @@ const Leads = () => {
             <Users className="h-4 w-4" /> Assign {selectedLeads.length}
           </button>
         )}
-        {/* Action buttons */}
+        {/* Bulk Upload */}
         {canImportLeads && (
           <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>
             <Upload className="h-4 w-4 mr-1" /> Bulk Upload
           </button>
         )}
-        {hasPermission('field_management', 'read') && (
-          <button onClick={() => { closeAllForms(); setShowAddFieldForm(false); setShowManageFields(v => !v); }}
-            style={{ display:'flex', alignItems:'center', gap:'6px', background:'linear-gradient(135deg,#4A90E2 0%,#2c5364 100%)', color:'#fff', border:'none', borderRadius:'8px', padding:'8px 16px', fontWeight:'600', cursor:'pointer', fontSize:'13px' }}>
-            <Settings className="h-4 w-4" /> Manage Fields
-          </button>
-        )}
-        {canCreateLead && (
-          <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); resetForm(); setWizardStep(0); setShowCreateForm(true); }}>
-            + New Lead
-          </button>
-        )}
       </div>
-
-      {/* Inline Create Lead Form */}
-      {showCreateForm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 1050, background: 'rgba(8,12,28,0.72)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px', backdropFilter: 'blur(4px)' }}>
-          <div style={{ display: 'flex', width: '100%', maxWidth: '880px', height: '600px', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 40px 100px rgba(0,0,0,0.45)', border: '1px solid rgba(255,255,255,0.08)' }}>
-
-            {/* ── LEFT SIDEBAR ── */}
-            <div style={{ width: '220px', flexShrink: 0, background: 'linear-gradient(180deg, #0f172a 0%, #1a2d5a 60%, #1e3c72 100%)', display: 'flex', flexDirection: 'column', padding: '28px 0 20px' }}>
-
-              {/* Brand */}
-              <div style={{ padding: '0 22px 24px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #3b82f6, #6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', marginBottom: '12px' }}>🎯</div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#fff', lineHeight: 1.3 }}>New Lead</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)', marginTop: '2px' }}>Fill step by step</div>
-              </div>
-
-              {/* Steps list */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px 0' }}>
-                {WIZARD_STEPS.map((step, idx) => {
-                  const isDone = idx < wizardStep;
-                  const isActive = idx === wizardStep;
-                  return (
-                    <div key={step.label} onClick={() => { if (isDone) setWizardStep(idx); }}
-                      onMouseEnter={e => { if (isDone && !isActive) e.currentTarget.style.background = 'rgba(255,255,255,0.07)'; }}
-                      onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
-                      style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 22px', cursor: isDone ? 'pointer' : 'default', background: isActive ? 'rgba(59,130,246,0.18)' : 'transparent', borderLeft: isActive ? '3px solid #3b82f6' : '3px solid transparent', transition: 'all 0.2s' }}>
-                      {/* Circle */}
-                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isDone ? '13px' : '11px', fontWeight: '700',
-                        background: isDone ? '#10b981' : isActive ? '#3b82f6' : 'rgba(255,255,255,0.06)',
-                        color: isDone || isActive ? '#fff' : 'rgba(255,255,255,0.3)',
-                        boxShadow: isActive ? '0 0 0 3px rgba(59,130,246,0.3)' : 'none' }}>
-                        {isDone ? '✓' : idx + 1}
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '12px', fontWeight: isActive ? '700' : '500', color: isActive ? '#fff' : isDone ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.35)', lineHeight: 1.3 }}>{step.icon} {step.label}</div>
-                        <div style={{ fontSize: '10px', color: isActive ? 'rgba(255,255,255,0.55)' : 'rgba(255,255,255,0.2)', marginTop: '1px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{step.desc}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {/* Progress */}
-              <div style={{ padding: '16px 22px 0', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '10px', color: 'rgba(255,255,255,0.4)' }}>Progress</span>
-                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#3b82f6' }}>{Math.round(((wizardStep) / WIZARD_STEPS.length) * 100)}%</span>
-                </div>
-                <div style={{ height: '4px', borderRadius: '99px', background: 'rgba(255,255,255,0.08)' }}>
-                  <div style={{ height: '100%', borderRadius: '99px', background: 'linear-gradient(90deg, #3b82f6, #6366f1)', width: `${Math.round((wizardStep / WIZARD_STEPS.length) * 100)}%`, transition: 'width 0.35s ease' }} />
-                </div>
-              </div>
-            </div>
-
-            {/* ── RIGHT PANEL ── */}
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff', minWidth: 0 }}>
-
-              {/* Right Header */}
-              <div style={{ padding: '22px 28px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '20px' }}>{WIZARD_STEPS[wizardStep].icon}</span>
-                    <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', color: '#0f172a' }}>{WIZARD_STEPS[wizardStep].label}</h3>
-                  </div>
-                  <p style={{ margin: 0, fontSize: '12px', color: '#94a3b8' }}>{WIZARD_STEPS[wizardStep].desc}</p>
-                </div>
-                <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#e2e8f0'; e.currentTarget.style.color = '#1e293b'; e.currentTarget.style.transform = 'scale(1.08)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#f1f5f9'; e.currentTarget.style.color = '#64748b'; e.currentTarget.style.transform = 'scale(1)'; }}
-                  style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', fontSize: '15px', flexShrink: 0, transition: 'all 0.2s' }}>✕</button>
-              </div>
-
-              {/* Fields */}
-              <form onSubmit={handleCreateLead} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px 28px' }}>
-                  {(() => {
-                    const step = WIZARD_STEPS[wizardStep];
-                    const groupedFields = groupFieldsBySection(fieldDefinitions);
-                    return (
-                      <div>
-                        {step.sections.map(sectionName => {
-                          const sectionFields = groupedFields[sectionName];
-                          const hasOwner = step.includeOwner && sectionName === 'Basic Information';
-                          if (!sectionFields?.length && !hasOwner) return null;
-                          return (
-                            <div key={sectionName}>
-                              {step.sections.length > 1 && sectionFields?.length > 0 && (
-                                <div style={{ fontSize: '10px', fontWeight: '700', color: '#cbd5e1', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: '12px', paddingBottom: '6px', borderBottom: '1px solid #f8fafc' }}>{sectionName}</div>
-                              )}
-                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '12px' }}>
-                                {hasOwner && (
-                                  <div>
-                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Lead Owner</label>
-                                    <input type="text" value={`${user?.firstName || ''} ${user?.lastName || ''}`} disabled
-                                      style={{ width: '100%', padding: '9px 12px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', color: '#94a3b8', boxSizing: 'border-box' }} />
-                                  </div>
-                                )}
-                                {sectionFields?.map((field) => (
-                                  <div key={field._id || field.fieldName} style={(field.fieldName === 'description' || field.fieldName === 'requirements') ? { gridColumn: 'span 2' } : {}}>
-                                    {renderDynamicField(field)}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {step.includeCustomer && (
-                          <div style={{ marginTop: '4px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🔗 Link to Customer (Optional)</label>
-                            <select name="customer" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.customer} onChange={handleChange}>
-                              <option value="">— None —</option>
-                              {customers.map(c => (
-                                <option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                        {step.includeProduct && (
-                          <div style={{ marginTop: '12px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>📦 Product (Optional)</label>
-                            <select name="product" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.product} onChange={handleChange}>
-                              <option value="">— None —</option>
-                              {products.map(product => (
-                                <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
-                              ))}
-                            </select>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-
-                {/* Footer */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 28px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', flexShrink: 0 }}>
-                  <button type="button"
-                    onClick={() => { if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
-                    style={{ padding: '9px 20px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                    {wizardStep === 0 ? 'Cancel' : '← Back'}
-                  </button>
-
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    {WIZARD_STEPS.map((_, idx) => (
-                      <div key={idx} style={{ width: idx === wizardStep ? '18px' : '6px', height: '6px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
-                    ))}
-                  </div>
-
-                  {wizardStep < WIZARD_STEPS.length - 1 ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      {!currentStepHasRequired() && (
-                        <button type="button" onClick={() => { setFieldErrors({}); setWizardStep(s => s + 1); }}
-                          style={{ padding: '9px 16px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: '13px', fontWeight: '500', cursor: 'pointer' }}>
-                          Skip
-                        </button>
-                      )}
-                      <button type="button" onClick={() => { if (validateCurrentStep()) { setFieldErrors({}); setWizardStep(s => s + 1); } }}
-                        style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: 'linear-gradient(135deg, #1e3c72 0%, #3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 3px 10px rgba(30,60,114,0.3)' }}>
-                        Continue →
-                      </button>
-                    </div>
-                  ) : (
-                    <button type="button" onClick={handleCreateLead} disabled={creating}
-                      style={{ padding: '9px 26px', borderRadius: '9px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 3px 10px rgba(16,185,129,0.35)' }}>
-                      {creating ? 'Saving...' : '✓ Save Lead'}
-                    </button>
-                  )}
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Inline Add Product Form - Compact */}
       {showAddProductForm && (
         <div className="crm-card" style={{ marginBottom: '10px' }}>

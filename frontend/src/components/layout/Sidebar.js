@@ -203,20 +203,20 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                   <NavItem to="/opportunities" label="Opportunities" permission="opportunity_management" />
                 </NavSection>
 
-                {/* Sales & Finance */}
-                <NavSection title="Sales & Finance" section="salesFinance" permissions={['rfi_management', 'quotation_management', 'purchase_order_management', 'invoice_management']}>
-                  <NavItem to="/rfi" label="RFI" permission="rfi_management" />
-                  <NavItem to="/quotations" label="Quotations" permission="quotation_management" />
-                  <NavItem to="/purchase-orders" label="Purchase Orders" permission="purchase_order_management" />
-                  <NavItem to="/invoices" label="Invoices" permission="invoice_management" />
-                </NavSection>
-
                 {/* Task Management */}
                 <NavSection title="Task Management" section="taskManagement" permissions={['task_management', 'meeting_management', 'call_management', 'email_management']}>
                   <NavItem to="/tasks" label="Tasks" permission="task_management" />
                   <NavItem to="/meetings" label="Meetings" permission="meeting_management" />
                   <NavItem to="/calls" label="Calls" permission="call_management" />
                   <NavItem to="/emails" label="Email Inbox" permission="email_management" />
+                </NavSection>
+
+                {/* Sales & Finance */}
+                <NavSection title="Sales & Finance" section="salesFinance" permissions={['rfi_management', 'quotation_management', 'purchase_order_management', 'invoice_management']}>
+                  <NavItem to="/rfi" label="RFI" permission="rfi_management" />
+                  <NavItem to="/quotations" label="Quotations" permission="quotation_management" />
+                  <NavItem to="/purchase-orders" label="Purchase Orders" permission="purchase_order_management" />
+                  <NavItem to="/invoices" label="Invoices" permission="invoice_management" />
                 </NavSection>
 
                 {/* Product */}

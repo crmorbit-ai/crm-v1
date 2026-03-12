@@ -54,6 +54,12 @@ const dataCenterCandidateSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+
+  // Auto-incrementing customer number (unique per tenant)
+  customerNumber: {
+    type: Number,
+    index: true
   }
 
   // ⚡ ALL OTHER FIELDS ARE DYNAMIC - Excel columns will be stored directly at root level
