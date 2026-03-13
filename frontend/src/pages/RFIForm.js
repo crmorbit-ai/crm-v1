@@ -62,11 +62,16 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
   const handleCustomerSelect = (cid) => {
     const c = customers.find(x => x._id === cid);
     if (!c) return;
+    let name = '';
+    if (customerType === 'Account') name = c.companyName || c.accountName || c.name || '';
+    else if (customerType === 'Lead') name = c.customerName || c.name || '';
+    else name = `${c.firstName || ''} ${c.lastName || ''}`.trim();
     setFormData(p => ({
       ...p, customer: cid, customerModel: customerType,
-      customerName: customerType === 'Account' ? c.accountName : `${c.firstName} ${c.lastName}`,
-      customerEmail: c.email, customerPhone: c.phone || c.mobile || '',
-      customerCompany: c.company || c.accountName || ''
+      customerName: name,
+      customerEmail: c.email || '',
+      customerPhone: c.phone || c.mobile || '',
+      customerCompany: c.company || c.companyName || c.accountName || ''
     }));
   };
 
@@ -122,7 +127,7 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
             <label style={ls}>Select Customer</label>
             <select style={ss} onChange={e => handleCustomerSelect(e.target.value)}>
               <option value="">Select {customerType}...</option>
-              {customers.map(c => <option key={c._id} value={c._id}>{customerType==='Account' ? c.accountName : `${c.firstName} ${c.lastName}`}</option>)}
+              {customers.map(c => <option key={c._id} value={c._id}>{customerType === 'Account' ? (c.companyName || c.accountName || c.name) : customerType === 'Lead' ? (c.customerName || c.name || c.email) : `${c.firstName || ''} ${c.lastName || ''}`.trim()}</option>)}
             </select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -264,7 +269,7 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
           <h2 style={{ marginBottom: '20px', marginTop: 0, fontSize: '18px', fontWeight: '600' }}>Customer Information</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
             <div><label className="crm-form-label">Customer Type</label><select className="crm-form-select" value={customerType} onChange={e => setCustomerType(e.target.value)}><option value="Lead">Lead</option><option value="Contact">Contact</option><option value="Account">Account</option></select></div>
-            <div><label className="crm-form-label">Select Customer</label><select className="crm-form-select" onChange={e => handleCustomerSelect(e.target.value)}><option value="">Select...</option>{customers.map(c => <option key={c._id} value={c._id}>{customerType==='Account' ? c.accountName : `${c.firstName} ${c.lastName}`}</option>)}</select></div>
+            <div><label className="crm-form-label">Select Customer</label><select className="crm-form-select" onChange={e => handleCustomerSelect(e.target.value)}><option value="">Select...</option>{customers.map(c => <option key={c._id} value={c._id}>{customerType === 'Account' ? (c.companyName || c.accountName || c.name) : customerType === 'Lead' ? (c.customerName || c.name || c.email) : `${c.firstName || ''} ${c.lastName || ''}`.trim()}</option>)}</select></div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '16px' }}>
             <div><label className="crm-form-label">Name *</label><input name="customerName" value={formData.customerName} onChange={inp} className="crm-form-input" required /></div>

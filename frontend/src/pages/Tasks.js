@@ -138,10 +138,10 @@ const Tasks = () => {
   const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '—';
 
   const statCards = [
-    { label: 'Total Tasks',   value: tasks.length,                                             icon: '📋' },
-    { label: 'In Progress',   value: tasks.filter(t => t.status === 'In Progress').length,     icon: '🔄' },
-    { label: 'Completed',     value: tasks.filter(t => t.status === 'Completed').length,       icon: '✅' },
-    { label: 'High Priority', value: tasks.filter(t => t.priority === 'High').length,          icon: '🔴' },
+    { label: 'Total Tasks',   value: tasks.length,                                             icon: '📋', bg: '#eff6ff', border: '#93c5fd', left: '#3b82f6', labelColor: '#2563eb', valColor: '#1e3a8a', iconBg: '#dbeafe' },
+    { label: 'In Progress',   value: tasks.filter(t => t.status === 'In Progress').length,     icon: '🔄', bg: '#fffbeb', border: '#fcd34d', left: '#f59e0b', labelColor: '#d97706', valColor: '#78350f', iconBg: '#fde68a' },
+    { label: 'Completed',     value: tasks.filter(t => t.status === 'Completed').length,       icon: '✅', bg: '#f0fdf4', border: '#86efac', left: '#22c55e', labelColor: '#16a34a', valColor: '#14532d', iconBg: '#dcfce7' },
+    { label: 'High Priority', value: tasks.filter(t => t.priority === 'High').length,          icon: '🔴', bg: '#fff1f2', border: '#fca5a5', left: '#ef4444', labelColor: '#dc2626', valColor: '#7f1d1d', iconBg: '#fee2e2' },
   ];
 
   if (loading) return (
@@ -172,13 +172,13 @@ const Tasks = () => {
           {/* Stats */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
             {statCards.map((s, i) => (
-              <div key={i} style={{ background: '#f0f6ff', borderRadius: '12px', padding: '12px 16px', border: '1px solid #93c5fd', boxShadow: '0 1px 6px rgba(59,130,246,0.08)', borderLeft: '4px solid #3b82f6' }}>
+              <div key={i} style={{ background: s.bg, borderRadius: '12px', padding: '12px 16px', border: `1px solid ${s.border}`, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', borderLeft: `4px solid ${s.left}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <div style={{ fontSize: '10px', color: '#3b82f6', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{s.label}</div>
-                    <div style={{ fontSize: '22px', fontWeight: '800', color: '#1e3a8a', lineHeight: 1 }}>{s.value}</div>
+                    <div style={{ fontSize: '10px', color: s.labelColor, fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>{s.label}</div>
+                    <div style={{ fontSize: '22px', fontWeight: '800', color: s.valColor, lineHeight: 1 }}>{s.value}</div>
                   </div>
-                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{s.icon}</div>
+                  <div style={{ width: '34px', height: '34px', borderRadius: '10px', background: s.iconBg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>{s.icon}</div>
                 </div>
               </div>
             ))}

@@ -187,7 +187,7 @@ const AuthSlider = ({ isOpen, onClose, defaultTab = 'login' }) => {
           >
             Sign In
           </button>
-          <button
+          <button 
             onClick={() => {
               setActiveTab('register');
               setError('');
