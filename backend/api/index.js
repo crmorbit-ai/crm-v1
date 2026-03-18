@@ -308,6 +308,10 @@ try {
   app.use('/api/emails', require('../src/routes/emails'));
   console.log('  ✅ CRM routes loaded');
 
+  // Notification Routes
+  app.use('/api/notifications', require('../src/routes/notifications'));
+  console.log('  ✅ notification routes loaded');
+
   // SAAS Admin & AI Routes
   app.use('/api/saas-admins', require('../src/routes/saasAdmins'));
   app.use('/api/viewing-pin', require('../src/routes/viewingPin'));
