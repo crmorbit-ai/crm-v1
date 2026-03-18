@@ -419,7 +419,7 @@ const SaasSubscriptions = () => {
               <h4 style={{ fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', marginBottom: '8px' }}>
                 Usage
               </h4>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' }}>
+              <div className="resp-grid-2" style={{gap:'8px'}}>
                 <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>{selectedTenant.usage?.users || 0}</div>
                   <div style={{ fontSize: '10px', color: '#64748b' }}>Users</div>

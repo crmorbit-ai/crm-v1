@@ -2,6 +2,8 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { NotificationProvider } from './context/NotificationContext';
+import Notifications from './pages/Notifications';
 
 
 // Auth components
@@ -476,6 +478,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/notifications" element={
+        <ProtectedRoute requireTenant>
+          <Notifications />
+        </ProtectedRoute>
+      } />
+
       {/* Public Info Pages */}
       <Route path="/about" element={<AboutUs />} />
       <Route path="/security" element={<Security />} />
@@ -517,12 +525,14 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <ThemeProvider>
-          <div className="App">
-            <AppRoutes />
-            <AIChat />
-          </div>
-        </ThemeProvider>
+        <NotificationProvider>
+          <ThemeProvider>
+            <div className="App">
+              <AppRoutes />
+              <AIChat />
+            </div>
+          </ThemeProvider>
+        </NotificationProvider>
       </AuthProvider>
     </Router>
   );

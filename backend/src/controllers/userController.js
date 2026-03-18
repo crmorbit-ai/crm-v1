@@ -1,4 +1,5 @@
 const User = require('../models/User');
+const Group = require('../models/Group');
 const Tenant = require('../models/Tenant');
 const Subscription = require('../models/Subscription');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
@@ -232,6 +233,14 @@ const createUser = async (req, res) => {
 
     const user = await User.create(userData);
 
+    // Sync: add user to each group's members array
+    if (groups && groups.length > 0) {
+      await Group.updateMany(
+        { _id: { $in: groups } },
+        { $addToSet: { members: user._id } }
+      );
+    }
+
     // Remove password from response
     const userResponse = user.toObject();
     delete userResponse.password;
@@ -301,6 +310,9 @@ const updateUser = async (req, res) => {
     // Track changes BEFORE updating
     const changes = trackChanges(user, req.body, allowedFields);
 
+    // Capture old groups before update for sync
+    const oldGroups = user.groups.map(g => g.toString());
+
     // Update fields
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
@@ -316,6 +328,19 @@ const updateUser = async (req, res) => {
     }
 
     await user.save();
+
+    // Sync Group.members when groups change
+    if (req.body.groups !== undefined) {
+      const newGroups = req.body.groups.map(g => g.toString());
+      const added = newGroups.filter(g => !oldGroups.includes(g));
+      const removed = oldGroups.filter(g => !newGroups.includes(g));
+      if (added.length > 0) {
+        await Group.updateMany({ _id: { $in: added } }, { $addToSet: { members: user._id } });
+      }
+      if (removed.length > 0) {
+        await Group.updateMany({ _id: { $in: removed } }, { $pull: { members: user._id } });
+      }
+    }
 
     // Remove password from response
     const userResponse = user.toObject();
@@ -499,7 +524,6 @@ const assignGroups = async (req, res) => {
     const newGroupIds = groups || [];
 
     // Fetch new group details to get names
-    const Group = require('../models/Group');
     const newGroupObjects = await Group.find({ _id: { $in: newGroupIds } }).select('name');
     const newGroupNames = newGroupObjects.map(group => group.name);
 
@@ -532,6 +556,14 @@ const assignGroups = async (req, res) => {
 
     user.groups = groups;
     await user.save();
+
+    // Sync Group.members: add user to new groups, remove from old groups
+    if (addedGroupIds.length > 0) {
+      await Group.updateMany({ _id: { $in: addedGroupIds } }, { $addToSet: { members: user._id } });
+    }
+    if (removedGroupIds.length > 0) {
+      await Group.updateMany({ _id: { $in: removedGroupIds } }, { $pull: { members: user._id } });
+    }
 
     // Log activity with detailed changes
     await logActivity(req, 'user.updated', 'User', user._id, {

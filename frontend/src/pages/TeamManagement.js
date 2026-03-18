@@ -406,7 +406,7 @@ const TeamManagement = () => {
           .tm-header-icon { margin: 0 auto; }
           .tm-subtitle { display: none; }
           .tm-add-btn { width: 100%; justify-content: center; }
-          .tm-stats-grid { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+          .tm-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
           .tm-stat-num { font-size: 18px; }
           .tm-panel {
             width: 100%;
@@ -1089,7 +1089,7 @@ const styles = {
   },
   success: { background: '#dcfce7', color: '#16a34a', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '12px' },
   error: { background: '#fef2f2', color: '#dc2626', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '12px' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '16px' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' },
   statCard: {
     background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)',
     padding: '14px',

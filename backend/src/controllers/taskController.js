@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Task = require('../models/Task');
 const { successResponse, errorResponse } = require('../utils/response');
+const { createNotification } = require('../services/notificationService');
 // const { logActivity } = require('../middleware/activityLogger'); // COMMENTED OUT
 
 const getTasks = async (req, res) => {
@@ -163,10 +164,33 @@ const createTask = async (req, res) => {
     await task.populate('owner', 'firstName lastName email');
     await task.populate('assignedTo', 'firstName lastName email');
 
-    // await logActivity(req, 'task.created', 'Task', task._id, {
-    //   subject: task.subject,
-    //   dueDate: task.dueDate
-    // }); // COMMENTED OUT
+    // Notify assigned user (if different from creator)
+    const assignedUserId = task.assignedTo?._id || task.assignedTo;
+    const creatorName = `${req.user.firstName} ${req.user.lastName}`;
+    if (assignedUserId && assignedUserId.toString() !== req.user._id.toString()) {
+      await createNotification({
+        tenantId: tenant,
+        userId: assignedUserId,
+        type: 'task_assigned',
+        title: 'Task Assigned to You',
+        message: `${creatorName} assigned you a task - "${task.subject}"`,
+        entityType: 'Task',
+        entityId: task._id,
+        createdBy: req.user._id
+      });
+    }
+
+    // Notify the creator too (so SaaS admin gets it regardless)
+    await createNotification({
+      tenantId: tenant,
+      userId: req.user._id,
+      type: 'task_assigned',
+      title: 'Task Created',
+      message: `${creatorName} created a task - "${task.subject}"`,
+      entityType: 'Task',
+      entityId: task._id,
+      createdBy: req.user._id
+    });
 
     console.log('Task created successfully:', task._id); // DEBUG
 
@@ -202,13 +226,28 @@ const updateTask = async (req, res) => {
       }
     });
 
+    const prevStatus = (await Task.findById(req.params.id).lean())?.status;
     task.lastModifiedBy = req.user._id;
     await task.save();
 
     await task.populate('owner', 'firstName lastName email');
     await task.populate('assignedTo', 'firstName lastName email');
 
-    // await logActivity(req, 'task.updated', 'Task', task._id); // COMMENTED OUT
+    // Notify on status change
+    if (req.body.status && req.body.status !== prevStatus) {
+      const updaterName = `${req.user.firstName} ${req.user.lastName}`;
+      const notifType = req.body.status === 'Completed' ? 'task_completed' : 'task_updated';
+      await createNotification({
+        tenantId: task.tenant,
+        userId: task.owner,
+        type: notifType,
+        title: req.body.status === 'Completed' ? 'Task Completed' : 'Task Updated',
+        message: `"${task.subject}" status changed to "${req.body.status}" by ${updaterName}`,
+        entityType: 'Task',
+        entityId: task._id,
+        createdBy: req.user._id
+      });
+    }
 
     successResponse(res, 200, 'Task updated successfully', task);
   } catch (error) {

@@ -137,7 +137,7 @@ const ResellerManagement = () => {
   return (
     <SaasLayout title="Reseller Management">
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+      <div className="resp-grid-4" style={{marginBottom:'16px'}}>
         <StatCard icon="🤝" value={stats.total} label="Total" onClick={() => handleStatusFilter('all')} active={filterStatus === 'all'} />
         <StatCard icon="✅" value={stats.approved} label="Approved" onClick={() => handleStatusFilter('approved')} active={filterStatus === 'approved'} />
         <StatCard icon="⏳" value={stats.pending} label="Pending" onClick={() => handleStatusFilter('pending')} active={filterStatus === 'pending'} />
@@ -348,7 +348,7 @@ const ResellerManagement = () => {
               </div>
 
               {/* Stats Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', marginBottom: '16px' }}>
+              <div className="resp-grid-3" style={{marginBottom:'16px'}}>
                 <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '6px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b' }}>{selectedReseller.stats.totalTenants}</div>
                   <div style={{ fontSize: '10px', color: '#64748b' }}>Clients</div>

@@ -300,7 +300,7 @@ const Subscription = () => {
             </h2>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             
             {/* Plan Info */}
             <div
@@ -680,7 +680,7 @@ const Subscription = () => {
 
          <div className="plans-grid" style={{
   display: 'grid',
-  gridTemplateColumns: 'repeat(4, 1fr)', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
   gap: '20px',
   alignItems: 'stretch'
 }}>

@@ -308,7 +308,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
           <div style={{ display: 'grid', gap: '14px' }}>
             <div>
               <label style={ls}>Customer Type</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div className="resp-form-grid-3">
                 {['Lead', 'Contact', 'Account'].map(t => (
                   <button key={t} type="button" onClick={() => setCustomerType(t)}
                     style={{ padding: '10px', borderRadius: '8px', border: customerType === t ? '2px solid #4361ee' : '2px solid #e0e0e0', background: customerType === t ? '#e8f0fe' : 'white', color: customerType === t ? '#4361ee' : '#666', fontWeight: customerType === t ? '600' : '400', cursor: 'pointer', fontSize: '13px' }}>
@@ -515,7 +515,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
       <form onSubmit={handleSubmit}>
         <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>PO Information</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+          <div className="resp-grid-2" style={{gap:'16px',marginBottom:'16px'}}>
             <div style={{ gridColumn: 'span 2' }}>
               <label className="crm-form-label">Link to Quotation (Optional)</label>
               <select className="crm-form-select" onChange={e => handleQuotationSelect(e.target.value)} value={formData.quotation || ''} style={{ backgroundColor: '#e8f4fd', borderColor: '#4361ee' }}>
@@ -545,7 +545,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
 
         <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Customer Information</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+          <div className="resp-grid-2" style={{gap:'16px',marginBottom:'16px'}}>
             <div>
               <label className="crm-form-label">Customer Type *</label>
               <select className="crm-form-select" value={customerType} onChange={e => setCustomerType(e.target.value)} required>
@@ -562,7 +562,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
               </select>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+          <div className="resp-grid-2" style={{gap:'16px'}}>
             <div><label className="crm-form-label">Customer Name *</label><input type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} className="crm-form-input" required /></div>
             <div><label className="crm-form-label">Email *</label><input type="email" name="customerEmail" value={formData.customerEmail} onChange={handleInputChange} className="crm-form-input" required /></div>
             <div><label className="crm-form-label">Phone</label><input type="text" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} className="crm-form-input" /></div>
@@ -587,7 +587,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
                 <h3 style={{ fontSize: '14px', fontWeight: '600' }}>Item {index + 1}</h3>
                 <button type="button" className="btn-icon" onClick={() => removeItem(index)}>🗑️</button>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px' }}>
+              <div className="resp-grid-2" style={{gap:'12px'}}>
                 <div style={{ gridColumn: 'span 2' }}><label className="crm-form-label">Select Product</label><select className="crm-form-select" onChange={e => selectProduct(index, e.target.value)} value={item.product || ''}><option value="">Select a product...</option>{products.map(p => <option key={p._id} value={p._id}>{p.name} - {formatCurrency(p.price)}</option>)}</select></div>
                 <div style={{ gridColumn: 'span 2' }}><label className="crm-form-label">Product Name *</label><input type="text" value={item.productName} onChange={e => updateItem(index, 'productName', e.target.value)} className="crm-form-input" required /></div>
                 <div><label className="crm-form-label">Quantity *</label><input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)} className="crm-form-input" min="1" required /></div>

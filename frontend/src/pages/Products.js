@@ -345,7 +345,7 @@ const Products = () => {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+          <div className="resp-grid-4">
             {statCards.map((s, i) => (
               <div key={i} style={{ background: s.bg, borderRadius: '12px', padding: '12px 16px', border: `1px solid ${s.border}`, boxShadow: '0 1px 6px rgba(0,0,0,0.06)', borderLeft: `4px solid ${s.left}` }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -435,7 +435,7 @@ const Products = () => {
                           <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: color, display: 'inline-block', flexShrink: 0 }} />
                           <span style={{ fontSize: '11px', fontWeight: '800', color, textTransform: 'uppercase', letterSpacing: '0.6px' }}>{section}</span>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '10px' }}>
+                        <div className="resp-grid-2" style={{gap:'10px'}}>
                           {sectionFields.map(field => {
                             if (!field.isStandardField) {
                               return (

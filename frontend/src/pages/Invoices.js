@@ -105,7 +105,7 @@ const Invoices = () => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+          <div className="resp-grid-4">
             {statCards.map((s, i) => (
               <div key={i} style={{ background: '#f0f6ff', borderRadius: '12px', padding: '14px 16px', border: '1px solid #93c5fd', boxShadow: '0 1px 6px rgba(59,130,246,0.08)', borderLeft: '4px solid #3b82f6' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -561,7 +561,7 @@ const LeadDetail = () => {
           </div>
           <form onSubmit={handleUpdateLead}>
             <div style={{ padding: '10px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+              <div className="resp-grid-6">
                 <div>
                   <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>First Name *</label>
                   <input type="text" name="firstName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.firstName || ''} onChange={handleChange} required />
@@ -640,7 +640,7 @@ const LeadDetail = () => {
               {formData.product && (
                 <div style={{ marginTop: '8px', padding: '8px', background: '#F0F9FF', borderRadius: '4px', border: '1px solid #BFDBFE' }}>
                   <h5 style={{ fontSize: '10px', fontWeight: '700', color: '#1E40AF', marginBottom: '6px', textTransform: 'uppercase' }}>Product Requirements</h5>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                  <div className="resp-grid-4" style={{gap:'6px'}}>
                     <div>
                       <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Quantity</label>
                       <input type="number" name="productDetails.quantity" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={formData.productDetails?.quantity || 1} onChange={handleChange} min="1" />
@@ -709,7 +709,7 @@ const LeadDetail = () => {
                 <p style={{ margin: '2px 0 0 0', fontSize: '11px' }}><strong>Email:</strong> {lead.email}</p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div className="resp-grid-3" style={{gap:'8px'}}>
                 <div>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '4px', marginBottom: '6px', cursor: 'pointer' }}>
                     <input type="checkbox" name="createAccount" checked={conversionData.createAccount} onChange={handleConversionChange} />
@@ -989,7 +989,7 @@ const LeadDetail = () => {
                 <div style={{ marginTop: '24px', padding: '20px', background: '#F0F9FF', borderRadius: '12px', border: '2px solid #BFDBFE' }}>
                   <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#1E40AF', marginBottom: '16px' }}>Product Information</h4>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+                  <div className="resp-grid-2" style={{gap:'16px',marginBottom:'16px'}}>
                     <div>
                       <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>Product Name</label>
                       <div style={{ fontSize: '15px', color: '#1e3c72', fontWeight: '700' }}>{lead.product.name}</div>
@@ -1004,7 +1004,7 @@ const LeadDetail = () => {
                     <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #BFDBFE' }}>
                       <h5 style={{ fontSize: '14px', fontWeight: '700', color: '#1E40AF', marginBottom: '12px' }}>Requirements & Details</h5>
 
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                      <div className="resp-grid-2" style={{gap:'16px'}}>
                         {lead.productDetails.quantity && (
                           <div>
                             <label style={{ fontSize: '12px', color: '#1E40AF', fontWeight: '600', marginBottom: '4px', display: 'block' }}>Quantity</label>
@@ -1137,7 +1137,7 @@ const LeadDetail = () => {
                       <button onClick={() => setShowTaskForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
                     </div>
                     <form onSubmit={handleCreateTask}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                      <div className="resp-grid-4" style={{gap:'12px',marginBottom:'12px'}}>
                         <div style={{ gridColumn: 'span 2' }}>
                           <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Subject *</label>
                           <input type="text" className="crm-form-input" value={taskData.subject} onChange={(e) => setTaskData({ ...taskData, subject: e.target.value })} required />
@@ -1171,7 +1171,7 @@ const LeadDetail = () => {
                       <button onClick={() => setShowMeetingForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
                     </div>
                     <form onSubmit={handleCreateMeeting}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                      <div className="resp-grid-4" style={{gap:'12px',marginBottom:'12px'}}>
                         <div style={{ gridColumn: 'span 2' }}>
                           <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Title *</label>
                           <input type="text" className="crm-form-input" value={meetingData.title} onChange={(e) => setMeetingData({ ...meetingData, title: e.target.value })} required />
@@ -1213,7 +1213,7 @@ const LeadDetail = () => {
                       <button onClick={() => setShowCallForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
                     </div>
                     <form onSubmit={handleCreateCall}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                      <div className="resp-grid-4" style={{gap:'12px',marginBottom:'12px'}}>
                         <div style={{ gridColumn: 'span 2' }}>
                           <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Subject *</label>
                           <input type="text" className="crm-form-input" value={callData.subject} onChange={(e) => setCallData({ ...callData, subject: e.target.value })} required />

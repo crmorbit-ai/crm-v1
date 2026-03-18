@@ -6,6 +6,7 @@ const Task = require('../models/Task');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
+const { createNotification } = require('../services/notificationService');
 
 const getContacts = async (req, res) => {
   try {
@@ -96,6 +97,17 @@ const createContact = async (req, res) => {
     await contact.populate('account', 'accountName accountNumber');
     await contact.populate('owner', 'firstName lastName email');
     await logActivity(req, 'contact.created', 'Contact', contact._id, { firstName: contact.firstName, lastName: contact.lastName, email: contact.email });
+    const creatorName = `${req.user.firstName} ${req.user.lastName}`;
+    await createNotification({
+      tenantId: tenant,
+      userId: req.user._id,
+      type: 'contact_created',
+      title: 'New Contact Added',
+      message: `${creatorName} added a new contact - "${contact.firstName} ${contact.lastName}"`,
+      entityType: 'Contact',
+      entityId: contact._id,
+      createdBy: req.user._id
+    });
     successResponse(res, 201, 'Contact created successfully', contact);
   } catch (error) {
     console.error('Create contact error:', error);

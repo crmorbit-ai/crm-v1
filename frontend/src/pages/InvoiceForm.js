@@ -205,7 +205,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
           <div style={{ display: 'grid', gap: '14px' }}>
             <div>
               <label style={ls}>Customer Type</label>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+              <div className="resp-form-grid-3">
                 {['Lead', 'Contact', 'Account'].map(t => (
                   <button key={t} type="button" onClick={() => setCustomerType(t)}
                     style={{ padding: '10px', borderRadius: '8px', border: customerType === t ? '2px solid #4361ee' : '2px solid #e0e0e0', background: customerType === t ? '#e8f0fe' : 'white', color: customerType === t ? '#4361ee' : '#666', fontWeight: customerType === t ? '600' : '400', cursor: 'pointer', fontSize: '13px' }}>
@@ -436,7 +436,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
       <form onSubmit={handleSubmit}>
         <div className="crm-card" style={{ marginBottom: '20px', padding: '24px' }}>
           <h3 style={{ marginBottom: '20px', marginTop: 0 }}>Customer Information</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '20px' }}>
+          <div className="resp-form-grid-3" style={{marginBottom:'20px'}}>
             {['Lead', 'Contact', 'Account'].map(t => (
               <button key={t} type="button" onClick={() => setCustomerType(t)}
                 style={{ padding: '12px', borderRadius: '8px', border: customerType === t ? '2px solid #4361ee' : '2px solid #e0e0e0', backgroundColor: customerType === t ? '#e8f0fe' : 'white', color: customerType === t ? '#4361ee' : '#666', fontWeight: customerType === t ? '600' : '400', cursor: 'pointer' }}>

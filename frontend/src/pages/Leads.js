@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { Country, State, City } from 'country-state-city';
@@ -416,6 +416,17 @@ const RichTextEditor = ({ fieldName, value, onChange, label, isRequired, placeho
   );
 };
 
+const DEFAULT_COL_WIDTH = {
+  customerName: 200, description: 220, customerType: 130, requirements: 200,
+  email: 180, companyEmail: 180, phone: 140, alternatePhone: 140,
+  company: 160, jobTitle: 150, website: 160, leadSource: 130, leadType: 120,
+  qualificationStatus: 150, priority: 100, campaign: 140, estimatedDealValue: 160,
+  expectedCloseDate: 150, industry: 140, region: 120, numberOfEmployees: 150,
+  annualRevenue: 140, country: 120, state: 110, city: 110, competitor: 140,
+  linkedIn: 150, twitter: 130, facebook: 140, instagram: 130, whatsApp: 130,
+  leadStatus: 130,
+};
+
 const Leads = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -443,6 +454,58 @@ const Leads = () => {
   const [groupMembers, setGroupMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [displayColumns, setDisplayColumns] = useState([]);
+
+  // Column resize
+  const [colWidths, setColWidths] = useState({});
+  const tableRef = useRef(null);
+
+  const startResize = useCallback((e, colKey) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const th = e.currentTarget.closest('th');
+    const startWidth = th.getBoundingClientRect().width;
+    const colIndex = Array.from(th.parentElement.children).indexOf(th);
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+
+    const applyWidth = (w) => {
+      if (!tableRef.current) return;
+      // Update col
+      const col = tableRef.current.querySelector(`col[data-col="${colKey}"]`);
+      if (col) col.style.width = w + 'px';
+      // Update th
+      th.style.width = w + 'px';
+      // Update every td in this column directly
+      tableRef.current.querySelectorAll('tbody tr').forEach(row => {
+        const td = row.children[colIndex];
+        if (td) td.style.width = w + 'px';
+      });
+    };
+
+    const onMouseMove = (e) => {
+      applyWidth(Math.max(80, startWidth + (e.clientX - startX)));
+    };
+
+    const onMouseUp = (e) => {
+      const finalWidth = Math.max(80, startWidth + (e.clientX - startX));
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      // Clean up inline styles — React state will take over
+      th.style.width = '';
+      tableRef.current?.querySelectorAll('tbody tr').forEach(row => {
+        const td = row.children[colIndex];
+        if (td) td.style.width = '';
+      });
+      setColWidths(prev => ({ ...prev, [colKey]: finalWidth }));
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  }, []);
 
   const [stats, setStats] = useState({ total: 0, new: 0, qualified: 0, contacted: 0 });
 
@@ -2270,7 +2333,7 @@ const Leads = () => {
           </div>
           <form onSubmit={handleCreateProductFromLead}>
             <div style={{ padding: '10px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: '6px' }}>
+              <div className="resp-grid-6">
                 <div>
                   <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', fontWeight: '600', color: '#374151' }}>Product Name *</label>
                   <input type="text" name="name" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={productFormData.name} onChange={handleProductFormChange} required placeholder="CRM Software" />
@@ -2351,7 +2414,7 @@ const Leads = () => {
             {!selectedGroupForAssignment ? (
               <div>
                 <h4 style={{ fontSize: '11px', fontWeight: '600', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Step 1: Select Group</h4>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px' }}>
+                <div className="resp-grid-4" style={{gap:'6px'}}>
                   {groups.map((group) => (
                     <button key={group._id} className="crm-btn crm-btn-outline crm-btn-sm" style={{ justifyContent: 'flex-start', textAlign: 'left', padding: '6px 8px', fontSize: '11px' }} onClick={() => handleGroupSelection(group._id)}>
                       {group.name}
@@ -2538,17 +2601,37 @@ const Leads = () => {
         ) : (
           /* ── TABLE VIEW ── */
           <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'13px' }}>
+            <table ref={tableRef} style={{ borderCollapse:'collapse', fontSize:'13px', tableLayout:'fixed', width:'max-content', minWidth:'100%' }}>
+              <colgroup>
+                <col style={{ width:'44px' }} />
+                <col data-col="__num__" style={{ width: colWidths['__num__'] || 60 }} />
+                {displayColumns.map(col => (
+                  <col key={col} data-col={col} style={{ width: colWidths[col] || DEFAULT_COL_WIDTH[col] || 150 }} />
+                ))}
+                {canDeleteLead && <col style={{ width:'52px' }} />}
+              </colgroup>
               <thead>
                 <tr style={{ background:'linear-gradient(135deg,#f8fafc,#f1f5f9)', borderBottom:'2px solid #e2e8f0' }}>
-                  <th style={{ padding:'12px 16px', width:'44px' }}>
+                  <th style={{ padding:'8px 12px', position:'relative' }}>
                     <Checkbox checked={selectedLeads.length === leads.length && leads.length > 0} onCheckedChange={(checked) => setSelectedLeads(checked ? leads.map(l => l._id) : [])} />
                   </th>
-                  <th style={{ padding:'12px 16px', textAlign:'left', fontSize:'11px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', width:'60px' }}>#</th>
+                  <th style={{ padding:'8px 6px 8px 12px', textAlign:'left', fontSize:'10px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', position:'relative', userSelect:'none' }}>
+                    #
+                    <span onMouseDown={e => startResize(e, '__num__')}
+                      style={{ position:'absolute', right:0, top:'20%', bottom:'20%', width:'3px', cursor:'col-resize', zIndex:2, background:'#cbd5e1', borderRadius:'2px', transition:'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#6366f1'}
+                      onMouseLeave={e => e.currentTarget.style.background='#cbd5e1'} />
+                  </th>
                   {displayColumns.map((col) => (
-                    <th key={col} style={{ padding:'12px 16px', textAlign:'left', fontSize:'11px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', whiteSpace:'nowrap' }}>{formatFieldName(col)}</th>
+                    <th key={col} style={{ padding:'8px 6px 8px 12px', textAlign:'left', fontSize:'10px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', position:'relative', userSelect:'none', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {formatFieldName(col)}
+                      <span onMouseDown={e => startResize(e, col)}
+                        style={{ position:'absolute', right:0, top:'20%', bottom:'20%', width:'3px', cursor:'col-resize', zIndex:2, background:'#cbd5e1', borderRadius:'2px', transition:'background 0.15s' }}
+                        onMouseEnter={e => e.currentTarget.style.background='#6366f1'}
+                        onMouseLeave={e => e.currentTarget.style.background='#cbd5e1'} />
+                    </th>
                   ))}
-                  {canDeleteLead && <th style={{ padding:'12px 16px', width:'52px' }} />}
+                  {canDeleteLead && <th style={{ padding:'8px 12px' }} />}
                 </tr>
               </thead>
               <tbody>
@@ -2560,48 +2643,48 @@ const Leads = () => {
                       onMouseEnter={e => { if (!isSelected) { e.currentTarget.style.background='#f8fafc'; } }}
                       onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background='white'; } }}
                       style={{ cursor:'pointer', background: isSelected ? '#fafbff' : 'white', borderBottom:'1px solid #f1f5f9', borderLeft: isSelected ? '3px solid #6366f1' : '3px solid transparent', transition:'all 0.15s' }}>
-                      <td style={{ padding:'11px 16px' }} onClick={e => e.stopPropagation()}>
+                      <td style={{ padding:'7px 12px', whiteSpace:'nowrap', overflow:'hidden' }} onClick={e => e.stopPropagation()}>
                         <Checkbox checked={selectedLeads.includes(lead._id)} onCheckedChange={(checked) => setSelectedLeads(checked ? [...selectedLeads, lead._id] : selectedLeads.filter(id => id !== lead._id))} />
                       </td>
-                      <td style={{ padding:'11px 16px' }}>
-                        <span style={{ fontSize:'11px', fontWeight:'700', color:'#94a3b8', background:'#f1f5f9', padding:'2px 7px', borderRadius:'5px' }}>{lead.leadNumber || '—'}</span>
+                      <td style={{ padding:'7px 12px', whiteSpace:'nowrap', overflow:'hidden' }}>
+                        <span style={{ fontSize:'10px', fontWeight:'700', color:'#94a3b8', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px' }}>{lead.leadNumber || '—'}</span>
                       </td>
                       {displayColumns.map((col) => (
-                        <td key={col} style={{ padding:'11px 16px', maxWidth:'200px' }}>
+                        <td key={col} style={{ padding:'7px 12px', whiteSpace:'nowrap' }}>
                           {col === 'customerName' ? (
-                            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-                              <div style={{ width:'34px', height:'34px', borderRadius:'9px', background: sc.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px', fontWeight:'800', color:'#fff', flexShrink:0, boxShadow:'0 2px 8px rgba(0,0,0,0.12)' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                              <div style={{ width:'28px', height:'28px', borderRadius:'7px', background: sc.bg, display:'flex', alignItems:'center', justifyContent:'center', fontSize:'11px', fontWeight:'800', color:'#fff', flexShrink:0 }}>
                                 {String(getFieldValue(lead, 'customerName') || '?')[0].toUpperCase()}
                               </div>
                               <div style={{ minWidth:0 }}>
-                                <div style={{ fontSize:'13px', fontWeight:'700', color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{getFieldValue(lead, 'customerName') || '—'}</div>
-                                {lead.company && <div style={{ fontSize:'11px', color:'#94a3b8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.company}</div>}
+                                <div style={{ fontSize:'12px', fontWeight:'700', color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{getFieldValue(lead, 'customerName') || '—'}</div>
+                                {lead.company && <div style={{ fontSize:'10px', color:'#94a3b8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.company}</div>}
                               </div>
                             </div>
                           ) : col === 'leadStatus' ? (
-                            <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700', background: sc.pill, color: sc.pillTxt }}>
-                              <span style={{ width:'6px', height:'6px', borderRadius:'50%', background: sc.dot, flexShrink:0 }} />{lead.leadStatus || 'New'}
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:'4px', padding:'2px 8px', borderRadius:'99px', fontSize:'10px', fontWeight:'700', background: sc.pill, color: sc.pillTxt }}>
+                              <span style={{ width:'5px', height:'5px', borderRadius:'50%', background: sc.dot, flexShrink:0 }} />{lead.leadStatus || 'New'}
                             </span>
                           ) : col === 'priority' ? (
-                            <span style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', borderRadius:'99px', fontSize:'11px', fontWeight:'700',
+                            <span style={{ display:'inline-flex', alignItems:'center', gap:'3px', padding:'2px 8px', borderRadius:'99px', fontSize:'10px', fontWeight:'700',
                               background: lead.priority === 'High' ? '#fee2e2' : lead.priority === 'Medium' ? '#fef3c7' : '#f0fdf4',
                               color: lead.priority === 'High' ? '#991b1b' : lead.priority === 'Medium' ? '#92400e' : '#166534' }}>
                               {lead.priority === 'High' ? '🔴' : lead.priority === 'Medium' ? '🟡' : '🟢'} {lead.priority || '—'}
                             </span>
                           ) : (
-                            <span style={{ fontSize:'13px', color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', display:'block' }}>
+                            <div style={{ fontSize:'12px', color:'#374151', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', width:'100%' }}>
                               {getMaskedValue(col, getFieldValue(lead, col)) || <span style={{ color:'#cbd5e1' }}>—</span>}
-                            </span>
+                            </div>
                           )}
                         </td>
                       ))}
                       {canDeleteLead && (
-                        <td style={{ padding:'11px 16px' }} onClick={e => e.stopPropagation()}>
+                        <td style={{ padding:'7px 12px', whiteSpace:'nowrap', overflow:'hidden' }} onClick={e => e.stopPropagation()}>
                           <button onClick={(e) => handleDeleteLead(e, lead._id)}
                             onMouseEnter={e => { e.currentTarget.style.background='#ef4444'; e.currentTarget.style.color='#fff'; }}
                             onMouseLeave={e => { e.currentTarget.style.background='#fee2e2'; e.currentTarget.style.color='#ef4444'; }}
-                            style={{ background:'#fee2e2', border:'none', borderRadius:'7px', padding:'6px 7px', cursor:'pointer', color:'#ef4444', display:'flex', alignItems:'center', transition:'all 0.15s' }}>
-                            <Trash2 className="h-3.5 w-3.5" />
+                            style={{ background:'#fee2e2', border:'none', borderRadius:'6px', padding:'4px 6px', cursor:'pointer', color:'#ef4444', display:'flex', alignItems:'center', transition:'all 0.15s' }}>
+                            <Trash2 className="h-3 w-3" />
                           </button>
                         </td>
                       )}

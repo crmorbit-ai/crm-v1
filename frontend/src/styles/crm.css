@@ -1707,3 +1707,79 @@
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(74, 144, 226, 0.2);
 }
+
+/* ═══════════════════════════════════════════════
+   RESPONSIVE GRID UTILITIES
+   ═══════════════════════════════════════════════ */
+
+/* Stat card grids — 4 cols → 2 on tablet → 2 on mobile */
+.resp-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+/* 3-col grids → 2 on tablet → 1 on mobile */
+.resp-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+/* 2-col grids → 1 on mobile */
+.resp-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+/* 6-col grids → 3 on tablet → 2 on mobile */
+.resp-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+}
+
+/* Form grids */
+.resp-form-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.resp-form-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+/* Overflow-safe table wrapper */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ChangePassword / auth pages — centered card that fills mobile */
+.auth-card-centered {
+  max-width: 600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .resp-grid-4  { grid-template-columns: repeat(2, 1fr); }
+  .resp-grid-6  { grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 768px) {
+  .resp-grid-4  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .resp-grid-3  { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .resp-grid-2  { grid-template-columns: 1fr; gap: 10px; }
+  .resp-grid-6  { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .resp-form-grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .resp-form-grid-2 { grid-template-columns: 1fr; }
+  .auth-card-centered { padding: 0 4px; }
+}
+
+@media (max-width: 480px) {
+  .resp-grid-4  { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .resp-grid-3  { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .resp-grid-6  { grid-template-columns: repeat(2, 1fr); }
+  .resp-form-grid-3 { grid-template-columns: 1fr; }
+}

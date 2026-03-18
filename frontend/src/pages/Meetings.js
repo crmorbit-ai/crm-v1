@@ -180,7 +180,7 @@ const Meetings = () => {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+          <div className="resp-grid-4">
             {statCards.map((s, i) => (
               <div key={i} style={{ background: '#f5f0ff', borderRadius: '12px', padding: '12px 16px', border: '1px solid #ddd6fe', boxShadow: '0 1px 6px rgba(139,92,246,0.08)', borderLeft: '4px solid #8b5cf6' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

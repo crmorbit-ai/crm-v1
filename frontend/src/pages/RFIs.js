@@ -96,7 +96,7 @@ const RFIs = () => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+          <div className="resp-grid-4">
             {statCards.map((s, i) => (
               <div key={i} style={{ background: '#f0f1ff', borderRadius: '12px', padding: '14px 16px', border: '1px solid #c7d2fe', boxShadow: '0 1px 6px rgba(99,102,241,0.08)', borderLeft: '4px solid #6366f1' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

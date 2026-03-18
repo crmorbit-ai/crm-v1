@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import profileService from '../services/profileService';
+import notificationService from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config/api.config';
 import '../styles/crm.css';
 
 // Responsive CSS for Profile page
 const profileResponsiveCSS = `
-  .profile-container { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .profile-container { padding: 0; }
   .profile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
   .profile-header-left { display: flex; align-items: center; gap: 16px; }
   .profile-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #f3f4f6; padding: 4px; border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
@@ -74,6 +75,21 @@ const Profile = () => {
   const [savingOrg, setSavingOrg] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
 
+  // Notification preferences
+  const [notifPrefs, setNotifPrefs] = useState({
+    taskNotifications: true,
+    leadNotifications: true,
+    opportunityNotifications: true,
+    supportTicketNotifications: true,
+    meetingReminders: true,
+    contactNotifications: true,
+    accountNotifications: true,
+    invoiceNotifications: true,
+    emailNotifications: false
+  });
+  const [savingNotif, setSavingNotif] = useState(false);
+  const [notifSaved, setNotifSaved] = useState(false);
+
   // Deletion request
   const [showDeletionModal, setShowDeletionModal] = useState(false);
   const [deletionStep, setDeletionStep] = useState(1); // 1: reason, 2: confirm org name
@@ -112,7 +128,14 @@ const Profile = () => {
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 
-  useEffect(() => { loadProfile(); checkPinStatus(); }, []);
+  useEffect(() => { loadProfile(); checkPinStatus(); loadNotifPrefs(); }, []);
+
+  const loadNotifPrefs = async () => {
+    try {
+      const res = await notificationService.getPreferences();
+      if (res?.data?.data) setNotifPrefs(res.data.data);
+    } catch (err) { console.error('loadNotifPrefs:', err); }
+  };
 
   const checkPinStatus = async () => {
     try {
@@ -355,7 +378,7 @@ const Profile = () => {
   if (!user) return <DashboardLayout><div className="error-message">User not found</div></DashboardLayout>;
 
   const styles = {
-    container: { maxWidth: '1000px', margin: '0 auto', padding: '16px' },
+    container: { padding: 0 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
     headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
     logoContainer: { position: 'relative', width: '70px', height: '70px', borderRadius: '12px', overflow: 'hidden', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isEditingOrg ? 'pointer' : 'default', border: '3px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
@@ -444,6 +467,7 @@ const Profile = () => {
           <button className={`profile-tab ${activeTab === 'organization' ? 'active' : ''}`} onClick={() => setActiveTab('organization')}>Organization</button>
           <button className={`profile-tab ${activeTab === 'contact' ? 'active' : ''}`} onClick={() => setActiveTab('contact')}>Contacts & Address</button>
           <button className={`profile-tab ${activeTab === 'digital' ? 'active' : ''}`} onClick={() => setActiveTab('digital')}>Digital Presence</button>
+          <button className={`profile-tab ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>Notifications</button>
         </div>
 
         {/* Personal Info Tab */}
@@ -808,6 +832,89 @@ const Profile = () => {
                 <label style={styles.label}>Instagram</label>
                 <input type="url" name="socialMedia.instagram" value={isEditingOrg ? editedOrg.socialMedia.instagram : (tenant.socialMedia?.instagram || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://instagram.com/..." style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Notifications Tab */}
+        {activeTab === 'notifications' && (
+          <div className="profile-card">
+            <div className="profile-card-header">
+              <h3 style={{ ...styles.cardTitle, marginBottom: 0 }}>Notification Preferences</h3>
+              <div style={{ fontSize: '13px', color: '#6b7280' }}>Choose which notifications you want to receive</div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0' }}>
+              {[
+                { key: 'taskNotifications', icon: '📋', label: 'Task Notifications', desc: 'Alerts when a task is assigned, completed or overdue' },
+                { key: 'leadNotifications', icon: '🧲', label: 'Lead Notifications', desc: 'When a lead is created, assigned or status changes' },
+                { key: 'opportunityNotifications', icon: '💼', label: 'Opportunity Notifications', desc: 'When stage changes or deal is won/lost' },
+                { key: 'contactNotifications', icon: '👤', label: 'Contact Notifications', desc: 'When a new contact is added' },
+                { key: 'accountNotifications', icon: '🏢', label: 'Account Notifications', desc: 'When a new account is added' },
+                { key: 'supportTicketNotifications', icon: '🎫', label: 'Support Ticket Notifications', desc: 'New ticket created or status updated' },
+                { key: 'meetingReminders', icon: '📅', label: 'Meeting Reminders', desc: 'Reminder before a scheduled meeting' },
+                { key: 'invoiceNotifications', icon: '💰', label: 'Invoice Notifications', desc: 'When an invoice is overdue or created' },
+                { key: 'emailNotifications', icon: '📧', label: 'Email Notifications', desc: 'Also send email along with in-app notification' },
+              ].map((item, i, arr) => (
+                <div
+                  key={item.key}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '14px 4px',
+                    borderBottom: i < arr.length - 1 ? '1px solid #f3f4f6' : 'none'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '20px' }}>{item.icon}</span>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '500', color: '#111827' }}>{item.label}</div>
+                      <div style={{ fontSize: '12px', color: '#9ca3af', marginTop: '2px' }}>{item.desc}</div>
+                    </div>
+                  </div>
+                  {/* Toggle */}
+                  <button
+                    onClick={() => setNotifPrefs(prev => ({ ...prev, [item.key]: !prev[item.key] }))}
+                    style={{
+                      width: '44px', height: '24px', borderRadius: '999px', border: 'none',
+                      background: notifPrefs[item.key] ? '#6366f1' : '#d1d5db',
+                      cursor: 'pointer', position: 'relative', transition: 'background 0.2s', flexShrink: 0
+                    }}
+                  >
+                    <span style={{
+                      position: 'absolute', top: '3px',
+                      left: notifPrefs[item.key] ? '22px' : '3px',
+                      width: '18px', height: '18px', borderRadius: '50%',
+                      background: '#fff', transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
+                    }} />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button
+                onClick={async () => {
+                  setSavingNotif(true);
+                  try {
+                    await notificationService.updatePreferences(notifPrefs);
+                    setNotifSaved(true);
+                    setTimeout(() => setNotifSaved(false), 3000);
+                  } catch (err) {
+                    console.error('Save notif prefs error:', err);
+                    alert('Failed to save preferences');
+                  } finally {
+                    setSavingNotif(false);
+                  }
+                }}
+                disabled={savingNotif}
+                style={{ padding: '9px 20px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}
+              >
+                {savingNotif ? 'Saving...' : 'Save Preferences'}
+              </button>
+              {notifSaved && <span style={{ fontSize: '13px', color: '#16a34a', fontWeight: '500' }}>✓ Saved!</span>}
             </div>
           </div>
         )}

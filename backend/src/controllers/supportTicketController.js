@@ -1,6 +1,7 @@
 const SupportTicket = require('../models/SupportTicket');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * @desc    Create new support ticket
@@ -32,6 +33,18 @@ const createTicket = async (req, res) => {
     await logActivity(req, 'support.ticket_created', 'SupportTicket', ticket._id, {
       ticketNumber: ticket.ticketNumber,
       summary: ticket.summary
+    });
+
+    const creatorName = `${req.user.firstName} ${req.user.lastName}`;
+    await createNotification({
+      tenantId: req.user.tenant,
+      userId: req.user._id,
+      type: 'support_ticket_created',
+      title: 'New Support Ticket Created',
+      message: `${creatorName} raised a support ticket - "${ticket.summary}" (Priority: ${ticket.priority})`,
+      entityType: 'SupportTicket',
+      entityId: ticket._id,
+      createdBy: req.user._id
     });
 
     return successResponse(res, ticket, 'Support ticket created successfully', 201);

@@ -95,7 +95,7 @@ const Billings = () => {
   return (
     <SaasLayout title="Billing Management">
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+      <div className="resp-grid-4" style={{marginBottom:'16px'}}>
         <StatCard icon="💰" value={`₹${stats.totalRevenue.toLocaleString()}`} label="Total Revenue" to="/saas/subscriptions" />
         <StatCard icon="📅" value={`₹${stats.monthlyRevenue.toLocaleString()}`} label="Monthly Recurring" to="/saas/subscriptions" />
         <StatCard icon="✅" value={stats.paidInvoices} label="Active Plans" to="/saas/subscriptions?status=active" />

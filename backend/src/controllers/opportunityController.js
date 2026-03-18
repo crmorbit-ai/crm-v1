@@ -5,6 +5,7 @@ const Contact = require('../models/Contact');
 const Task = require('../models/Task');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
+const { createNotification } = require('../services/notificationService');
 
 const getOpportunities = async (req, res) => {
   try {
@@ -75,6 +76,20 @@ const createOpportunity = async (req, res) => {
     await opportunity.populate('owner', 'firstName lastName email');
     await opportunity.populate('account', 'accountName');
     await logActivity(req, 'opportunity.created', 'Opportunity', opportunity._id, { opportunityName: opportunity.opportunityName, amount: opportunity.amount, stage: opportunity.stage });
+
+    const creatorName = `${req.user.firstName} ${req.user.lastName}`;
+    const amountStr = opportunity.amount ? ` - ₹${opportunity.amount.toLocaleString('en-IN')}` : '';
+    await createNotification({
+      tenantId: tenant,
+      userId: req.user._id,
+      type: 'opportunity_created',
+      title: 'New Opportunity Created',
+      message: `${creatorName} created a new opportunity - "${opportunity.opportunityName}"${amountStr}`,
+      entityType: 'Opportunity',
+      entityId: opportunity._id,
+      createdBy: req.user._id
+    });
+
     successResponse(res, 201, 'Opportunity created successfully', opportunity);
   } catch (error) {
     console.error('Create opportunity error:', error);
@@ -91,11 +106,42 @@ const updateOpportunity = async (req, res) => {
     }
     const allowedFields = ['opportunityName', 'amount', 'closeDate', 'stage', 'probability', 'type', 'leadSource', 'account', 'contact', 'nextStep', 'description', 'campaignSource', 'contactRole', 'owner', 'tags'];
     allowedFields.forEach(field => { if (req.body[field] !== undefined) opportunity[field] = req.body[field]; });
+    const prevStage = opportunity.stage;
+    allowedFields.forEach(field => { if (req.body[field] !== undefined) opportunity[field] = req.body[field]; });
     opportunity.lastModifiedBy = req.user._id;
     await opportunity.save();
     await opportunity.populate('owner', 'firstName lastName email');
     await opportunity.populate('account', 'accountName');
     await logActivity(req, 'opportunity.updated', 'Opportunity', opportunity._id);
+
+    const updaterName = `${req.user.firstName} ${req.user.lastName}`;
+    if (req.body.stage && req.body.stage !== prevStage) {
+      let notifType = 'opportunity_stage_changed';
+      let notifTitle = 'Opportunity Stage Changed';
+      let notifMsg = `"${opportunity.opportunityName}" stage changed from "${prevStage}" to "${req.body.stage}"`;
+
+      if (req.body.stage === 'Closed Won') {
+        notifType = 'opportunity_won';
+        notifTitle = 'Opportunity Won!';
+        notifMsg = `"${opportunity.opportunityName}" has been won!${opportunity.amount ? ` ₹${opportunity.amount.toLocaleString('en-IN')}` : ''}`;
+      } else if (req.body.stage === 'Closed Lost') {
+        notifType = 'opportunity_lost';
+        notifTitle = 'Opportunity Lost';
+        notifMsg = `"${opportunity.opportunityName}" has been marked as Closed Lost`;
+      }
+
+      await createNotification({
+        tenantId: opportunity.tenant,
+        userId: opportunity.owner?._id || opportunity.owner,
+        type: notifType,
+        title: notifTitle,
+        message: notifMsg,
+        entityType: 'Opportunity',
+        entityId: opportunity._id,
+        createdBy: req.user._id
+      });
+    }
+
     successResponse(res, 200, 'Opportunity updated successfully', opportunity);
   } catch (error) {
     console.error('Update opportunity error:', error);

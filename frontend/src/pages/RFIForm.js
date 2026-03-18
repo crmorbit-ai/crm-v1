@@ -119,7 +119,7 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div>
             <label style={ls}>Customer Type</label>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '8px' }}>
+            <div className="resp-form-grid-3">
               {['Lead','Contact','Account'].map(t => <button key={t} type="button" onClick={() => setCustomerType(t)} style={btnSty(customerType===t)}>{t}</button>)}
             </div>
           </div>
@@ -267,11 +267,11 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
       <form onSubmit={handleSubmit}>
         <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', marginTop: 0, fontSize: '18px', fontWeight: '600' }}>Customer Information</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', marginBottom: '16px' }}>
+          <div className="resp-grid-2" style={{gap:'16px',marginBottom:'16px'}}>
             <div><label className="crm-form-label">Customer Type</label><select className="crm-form-select" value={customerType} onChange={e => setCustomerType(e.target.value)}><option value="Lead">Lead</option><option value="Contact">Contact</option><option value="Account">Account</option></select></div>
             <div><label className="crm-form-label">Select Customer</label><select className="crm-form-select" onChange={e => handleCustomerSelect(e.target.value)}><option value="">Select...</option>{customers.map(c => <option key={c._id} value={c._id}>{customerType === 'Account' ? (c.companyName || c.accountName || c.name) : customerType === 'Lead' ? (c.customerName || c.name || c.email) : `${c.firstName || ''} ${c.lastName || ''}`.trim()}</option>)}</select></div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: '16px' }}>
+          <div className="resp-grid-2" style={{gap:'16px'}}>
             <div><label className="crm-form-label">Name *</label><input name="customerName" value={formData.customerName} onChange={inp} className="crm-form-input" required /></div>
             <div><label className="crm-form-label">Email *</label><input type="email" name="customerEmail" value={formData.customerEmail} onChange={inp} className="crm-form-input" required /></div>
             <div><label className="crm-form-label">Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} className="crm-form-input" /></div>

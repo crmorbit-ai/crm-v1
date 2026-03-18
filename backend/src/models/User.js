@@ -178,6 +178,18 @@ const userSchema = new mongoose.Schema({
   viewingPinOTPExpiry: {
     type: Date,
     default: null
+  },
+  // Notification Preferences
+  notificationPreferences: {
+    taskNotifications:          { type: Boolean, default: true },
+    leadNotifications:          { type: Boolean, default: true },
+    opportunityNotifications:   { type: Boolean, default: true },
+    supportTicketNotifications: { type: Boolean, default: true },
+    meetingReminders:           { type: Boolean, default: true },
+    contactNotifications:       { type: Boolean, default: true },
+    accountNotifications:       { type: Boolean, default: true },
+    invoiceNotifications:       { type: Boolean, default: true },
+    emailNotifications:         { type: Boolean, default: false }
   }
 }, {
   timestamps: true

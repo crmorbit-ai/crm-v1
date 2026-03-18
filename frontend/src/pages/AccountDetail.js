@@ -86,7 +86,7 @@ const AccountDetail = () => {
             </div>
           </div>
 
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'16px',marginTop:'24px',paddingTop:'24px',borderTop:'1px solid #E5E7EB'}}>
+          <div className="resp-grid-4" style={{marginTop:'24px',paddingTop:'24px',borderTop:'1px solid #E5E7EB'}}>
             <div><p style={{fontSize:'12px',color:'#666'}}>Phone</p><p style={{fontWeight:'500'}}>{account.phone || '-'}</p></div>
             <div><p style={{fontSize:'12px',color:'#666'}}>Email</p><p style={{fontWeight:'500'}}>{account.email || '-'}</p></div>
             <div><p style={{fontSize:'12px',color:'#666'}}>Website</p><p style={{fontWeight:'500'}}>{account.website || '-'}</p></div>

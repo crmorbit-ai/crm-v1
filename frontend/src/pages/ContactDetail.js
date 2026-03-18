@@ -252,7 +252,7 @@ const ContactDetail = () => {
           </div>
           <form onSubmit={handleUpdateContact}>
             <div style={{ padding: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+              <div className="resp-grid-4">
                 <div>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>First Name *</label>
                   <input
@@ -428,7 +428,7 @@ const ContactDetail = () => {
             </div>
           </div>
 
-          <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'16px',marginTop:'24px',paddingTop:'24px',borderTop:'1px solid #E5E7EB'}}>
+          <div className="resp-grid-4" style={{marginTop:'24px',paddingTop:'24px',borderTop:'1px solid #E5E7EB'}}>
             <div><p style={{fontSize:'12px',color:'#666'}}>Email</p><p style={{fontWeight:'500'}}>{contact.email}</p></div>
             <div><p style={{fontSize:'12px',color:'#666'}}>Phone</p><p style={{fontWeight:'500'}}>{contact.phone || '-'}</p></div>
             <div><p style={{fontSize:'12px',color:'#666'}}>Mobile</p><p style={{fontWeight:'500'}}>{contact.mobile || '-'}</p></div>
@@ -510,7 +510,7 @@ const ContactDetail = () => {
                         <button onClick={() => setShowTaskForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#64748b' }}>✕</button>
                       </div>
                       <form onSubmit={handleCreateTask}>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '12px' }}>
+                        <div className="resp-grid-4" style={{marginBottom:'12px'}}>
                           <div style={{ gridColumn: 'span 2' }}>
                             <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Subject *</label>
                             <input type="text" className="crm-form-input" value={taskData.subject} onChange={(e) => setTaskData({ ...taskData, subject: e.target.value })} required />

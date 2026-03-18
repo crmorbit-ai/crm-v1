@@ -78,7 +78,7 @@ const ChangePassword = () => {
 
   return (
     <DashboardLayout title="Change Password">
-      <div className="crm-card" style={{ maxWidth: '600px', margin: '0 auto' }}>
+      <div className="crm-card auth-card-centered">
         <div className="crm-card-header">
           <h2 className="crm-card-title">Change Your Password</h2>
           <p style={{ fontSize: '14px', color: '#6B7280', marginTop: '4px' }}>

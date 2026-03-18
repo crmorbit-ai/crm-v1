@@ -9,6 +9,7 @@ const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
 const { sendLeadAssignmentEmail } = require('../utils/emailService');
 const { hasPermission } = require('../utils/permissions');
+const { createNotification } = require('../services/notificationService');
 
 /**
  * @desc    Get all leads
@@ -440,6 +441,45 @@ const createLead = async (req, res) => {
       }
     }
 
+    // Notifications
+    const creatorName = `${req.user.firstName} ${req.user.lastName}`;
+    const leadCompanyStr = leadCompany ? ` (${leadCompany})` : '';
+    const leadOwnerRaw = lead.owner?._id?.toString() || lead.owner?.toString();
+    const creatorId = req.user._id.toString();
+    const isDifferentOwner = leadOwnerRaw && leadOwnerRaw !== creatorId;
+
+    console.log('🔔 NOTIF DEBUG - leadOwner:', leadOwnerRaw, '| creator:', creatorId, '| isDifferentOwner:', isDifferentOwner);
+
+    // 1. Creator ko - confirmation + SaaS admin bhi dekhe
+    const n1 = await createNotification({
+      tenantId: tenant,
+      userId: req.user._id,
+      type: 'lead_created',
+      title: 'New Lead Created',
+      message: `${creatorName} created a new lead - "${leadName}"${leadCompanyStr}`,
+      entityType: 'Lead',
+      entityId: lead._id,
+      createdBy: req.user._id,
+      forSaasAdmin: true
+    });
+    console.log('🔔 NOTIF 1 (creator):', n1?._id || 'FAILED');
+
+    // 2. Assignee ko - agar alag user hai
+    if (isDifferentOwner) {
+      const n2 = await createNotification({
+        tenantId: tenant,
+        userId: leadOwnerRaw,
+        type: 'lead_assigned',
+        title: 'Lead Assigned to You',
+        message: `${creatorName} assigned a lead to you - "${leadName}"${leadCompanyStr}`,
+        entityType: 'Lead',
+        entityId: lead._id,
+        createdBy: req.user._id,
+        forSaasAdmin: true
+      });
+      console.log('🔔 NOTIF 2 (assignee):', n2?._id || 'FAILED');
+    }
+
     console.log('=== CREATE LEAD SUCCESS ===');
 
     successResponse(res, 201, 'Lead created successfully', lead);
@@ -635,6 +675,40 @@ const updateLead = async (req, res) => {
             `${updatedBy.firstName} ${updatedBy.lastName}`
           );
           console.log(`✅ Lead reassignment email sent to ${newOwner.email}`);
+        }
+
+        // In-app notifications
+        if (newOwner) {
+          const assignerName = `${req.user.firstName} ${req.user.lastName}`;
+          const newOwnerName = `${newOwner.firstName} ${newOwner.lastName}`;
+          const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.email || 'Unknown';
+          const leadCompanyStr = lead.company ? ` (${lead.company})` : '';
+
+          // 1. Assignee ko - jise assign kiya
+          await createNotification({
+            tenantId: lead.tenant,
+            userId: newOwner._id,
+            type: 'lead_assigned',
+            title: 'Lead Assigned to You',
+            message: `${assignerName} assigned a lead to you - "${leadName}"${leadCompanyStr}`,
+            entityType: 'Lead',
+            entityId: lead._id,
+            createdBy: req.user._id,
+            forSaasAdmin: false  // ye sirf assignee ke liye
+          });
+
+          // 2. Assigner ko - jisne assign kiya (confirmation)
+          await createNotification({
+            tenantId: lead.tenant,
+            userId: req.user._id,
+            type: 'lead_assigned',
+            title: 'Lead Assigned',
+            message: `You assigned "${leadName}"${leadCompanyStr} to ${newOwnerName}`,
+            entityType: 'Lead',
+            entityId: lead._id,
+            createdBy: req.user._id,
+            forSaasAdmin: true  // SaaS admin bhi dekhe
+          });
         }
       } catch (emailError) {
         console.error('❌ Failed to send lead reassignment email:', emailError.message);
@@ -1323,19 +1397,29 @@ const assignLeadsToGroup = async (req, res) => {
     }
 
     // 🆕 If specific members provided, validate they belong to the group
+    // Check both Group.members and User.groups for backwards compatibility
+    const User = require('../models/User');
     let validatedMemberIds = [];
     if (memberIds && Array.isArray(memberIds) && memberIds.length > 0) {
-      const groupMemberIds = group.members.map(m => m._id.toString());
+      const groupMemberIds = new Set(group.members.map(m => m._id.toString()));
+      // Also find users who have this group in their groups array (out-of-sync data)
+      const usersWithGroup = await User.find({ _id: { $in: memberIds }, groups: groupId }, '_id').lean();
+      usersWithGroup.forEach(u => groupMemberIds.add(u._id.toString()));
 
       for (const memberId of memberIds) {
-        if (!groupMemberIds.includes(memberId.toString())) {
+        if (!groupMemberIds.has(memberId.toString())) {
           return errorResponse(res, 400, `Member ${memberId} does not belong to group ${group.name}`);
         }
       }
       validatedMemberIds = memberIds;
     } else {
-      // If no specific members, assign to ALL group members
-      validatedMemberIds = group.members.map(m => m._id);
+      // If no specific members, assign to ALL group members (both directions)
+      const usersWithGroup = await User.find({ groups: groupId, isActive: true }, '_id').lean();
+      const allMemberIds = new Set([
+        ...group.members.map(m => m._id.toString()),
+        ...usersWithGroup.map(u => u._id.toString())
+      ]);
+      validatedMemberIds = [...allMemberIds];
     }
 
     // Update leads
@@ -1373,6 +1457,44 @@ const assignLeadsToGroup = async (req, res) => {
           groupName: group.name,
           assignedMembersCount: validatedMemberIds.length
         });
+
+        // In-app notifications for each assigned member
+        try {
+          const assignerName = `${req.user.firstName} ${req.user.lastName}`;
+          const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.email || 'Unknown';
+          const leadCompanyStr = lead.company ? ` (${lead.company})` : '';
+
+          for (const memberId of validatedMemberIds) {
+            if (memberId.toString() !== req.user.id.toString()) {
+              await createNotification({
+                tenantId: lead.tenant,
+                userId: memberId,
+                type: 'lead_assigned',
+                title: 'Lead Assigned to You',
+                message: `${assignerName} assigned a lead to you - "${leadName}"${leadCompanyStr} via group "${group.name}"`,
+                entityType: 'Lead',
+                entityId: lead._id,
+                createdBy: req.user.id,
+                forSaasAdmin: false
+              });
+            }
+          }
+
+          // Notify assigner + SaaS admin
+          await createNotification({
+            tenantId: lead.tenant,
+            userId: req.user.id,
+            type: 'lead_assigned',
+            title: 'Lead Assigned',
+            message: `You assigned "${leadName}"${leadCompanyStr} to group "${group.name}" (${validatedMemberIds.length} member${validatedMemberIds.length !== 1 ? 's' : ''})`,
+            entityType: 'Lead',
+            entityId: lead._id,
+            createdBy: req.user.id,
+            forSaasAdmin: true
+          });
+        } catch (notifError) {
+          console.error('❌ Failed to create group assignment notification:', notifError.message);
+        }
       } catch (error) {
         results.failed.push({ leadId, error: error.message });
       }
@@ -1453,6 +1575,43 @@ const assignLeadToUser = async (req, res) => {
       userName: user.name,
       role
     });
+
+    // In-app notifications
+    try {
+      const assignedBy = await mongoose.model('User').findById(req.user.id);
+      const leadName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || lead.email || 'Unknown';
+      const leadCompanyStr = lead.company ? ` (${lead.company})` : '';
+      const assignerName = assignedBy ? `${assignedBy.firstName} ${assignedBy.lastName}` : 'Someone';
+      const assigneeName = `${user.firstName} ${user.lastName}`;
+
+      // 1. Assignee - jise lead assign hua
+      await createNotification({
+        tenantId: lead.tenant,
+        userId: user._id,
+        type: 'lead_assigned',
+        title: 'Lead Assigned to You',
+        message: `${assignerName} assigned a lead to you - "${leadName}"${leadCompanyStr}`,
+        entityType: 'Lead',
+        entityId: lead._id,
+        createdBy: req.user.id,
+        forSaasAdmin: false
+      });
+
+      // 2. Assigner - jisne assign kiya + SaaS admin
+      await createNotification({
+        tenantId: lead.tenant,
+        userId: req.user.id,
+        type: 'lead_assigned',
+        title: 'Lead Assigned',
+        message: `You assigned "${leadName}"${leadCompanyStr} to ${assigneeName}`,
+        entityType: 'Lead',
+        entityId: lead._id,
+        createdBy: req.user.id,
+        forSaasAdmin: true
+      });
+    } catch (notifError) {
+      console.error('❌ Failed to create lead assignment notification:', notifError.message);
+    }
 
     res.status(200).json({
       success: true,

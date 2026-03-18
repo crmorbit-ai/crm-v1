@@ -13,6 +13,7 @@ import {
 } from '../ui/dropdown-menu';
 import { Menu, User, KeyRound, LogOut, ChevronDown } from 'lucide-react';
 import { API_URL } from '../../config/api.config';
+import NotificationBell from '../notifications/NotificationBell';
 
 const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
   const navigate = useNavigate();
@@ -52,6 +53,8 @@ const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
         {actionButton && !isMobile && (
           <div>{actionButton}</div>
         )}
+
+        <NotificationBell />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

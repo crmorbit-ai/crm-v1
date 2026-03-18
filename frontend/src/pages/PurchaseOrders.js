@@ -100,7 +100,7 @@ const PurchaseOrders = () => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+          <div className="resp-grid-4">
             {statCards.map((s, i) => (
               <div key={i} style={{ background: '#fffbf0', borderRadius: '12px', padding: '14px 16px', border: '1px solid #fcd34d', boxShadow: '0 1px 6px rgba(245,158,11,0.08)', borderLeft: '4px solid #f59e0b' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

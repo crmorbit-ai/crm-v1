@@ -53,6 +53,10 @@ io.on('connection', (socket) => {
     socket.join(`tenant-${tenantId}`);
   });
 
+  socket.on('join-saas-admin', () => {
+    socket.join('saas-admin');
+  });
+
   socket.on('disconnect', () => {
     console.log('🔌 Client disconnected:', socket.id);
   });
@@ -114,6 +118,7 @@ app.use('/api/support-tickets', require('./routes/supportTickets'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/saas-admins', require('./routes/saasAdmins'));
 app.use('/api/viewing-pin', require('./routes/viewingPin'));
+app.use('/api/notifications', require('./routes/notifications'));
 
 
 app.use((req, res) => {

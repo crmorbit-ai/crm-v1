@@ -182,7 +182,7 @@ const QuotationDetail = () => {
           {getStatusBadge(quotation.status)}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '32px', marginBottom: '28px' }}>
+        <div className="resp-grid-2" style={{gap:'32px',marginBottom:'28px'}}>
           <div>
             <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Customer Information</h3>
             <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>{quotation.customerName}</div>

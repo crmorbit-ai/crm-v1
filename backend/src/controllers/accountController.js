@@ -6,6 +6,7 @@ const Task = require('../models/Task');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
+const { createNotification } = require('../services/notificationService');
 
 const getAccounts = async (req, res) => {
   try {
@@ -106,6 +107,17 @@ const createAccount = async (req, res) => {
     });
     await account.populate('owner', 'firstName lastName email');
     await logActivity(req, 'account.created', 'Account', account._id, { accountName: account.accountName, accountType: account.accountType });
+    const creatorName = `${req.user.firstName} ${req.user.lastName}`;
+    await createNotification({
+      tenantId: tenant,
+      userId: req.user._id,
+      type: 'account_created',
+      title: 'New Account Added',
+      message: `${creatorName} added a new account - "${account.accountName}"`,
+      entityType: 'Account',
+      entityId: account._id,
+      createdBy: req.user._id
+    });
     successResponse(res, 201, 'Account created successfully', account);
   } catch (error) {
     console.error('Create account error:', error);

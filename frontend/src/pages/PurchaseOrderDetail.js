@@ -178,7 +178,7 @@ const PurchaseOrderDetail = () => {
           <h2 style={{ marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
             PO Information
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
+          <div className="resp-grid-2" style={{gap:'24px'}}>
             <div>
               <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Internal PO Number
@@ -210,7 +210,7 @@ const PurchaseOrderDetail = () => {
           <h2 style={{ marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>
             Customer Information
           </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
+          <div className="resp-grid-2" style={{gap:'24px'}}>
             <div>
               <div style={{ fontSize: '12px', color: '#6c757d', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                 Customer Name
@@ -384,7 +384,7 @@ const PurchaseOrderDetail = () => {
             <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '700', color: '#198754' }}>
               ✅ Approval Information
             </h2>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '24px' }}>
+            <div className="resp-grid-2" style={{gap:'24px'}}>
               <div>
                 <div style={{ fontSize: '12px', color: '#0f5132', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   Approved By

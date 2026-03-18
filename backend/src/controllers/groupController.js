@@ -1,4 +1,5 @@
 const Group = require('../models/Group');
+const User = require('../models/User');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 
@@ -79,7 +80,19 @@ const getGroup = async (req, res) => {
       }
     }
 
-    successResponse(res, 200, 'Group retrieved successfully', group);
+    // Also include users who have this group in their groups array (handles legacy/out-of-sync data)
+    const usersWithGroup = await User.find(
+      { groups: group._id, isActive: true },
+      'firstName lastName email userType'
+    ).lean();
+
+    const existingMemberIds = new Set(group.members.map(m => m._id.toString()));
+    const extraMembers = usersWithGroup.filter(u => !existingMemberIds.has(u._id.toString()));
+
+    const groupObj = group.toObject();
+    groupObj.members = [...groupObj.members, ...extraMembers];
+
+    successResponse(res, 200, 'Group retrieved successfully', groupObj);
   } catch (error) {
     console.error('Get group error:', error);
     errorResponse(res, 500, 'Server error');
@@ -249,6 +262,12 @@ const addMembers = async (req, res) => {
 
     await group.save();
 
+    // Sync: add this group to each user's groups array
+    await User.updateMany(
+      { _id: { $in: members } },
+      { $addToSet: { groups: group._id } }
+    );
+
     // Log activity
     await logActivity(req, 'group.updated', 'Group', group._id, {
       action: 'members_added',
@@ -288,6 +307,12 @@ const removeMembers = async (req, res) => {
     group.members = group.members.filter(m => !members.includes(m.toString()));
 
     await group.save();
+
+    // Sync: remove this group from each user's groups array
+    await User.updateMany(
+      { _id: { $in: members } },
+      { $pull: { groups: group._id } }
+    );
 
     // Log activity
     await logActivity(req, 'group.updated', 'Group', group._id, {

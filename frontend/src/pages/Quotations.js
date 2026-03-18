@@ -101,7 +101,7 @@ const Quotations = () => {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '10px' }}>
+          <div className="resp-grid-4">
             {statCards.map((s, i) => (
               <div key={i} style={{ background: '#f0fdf8', borderRadius: '12px', padding: '14px 16px', border: '1px solid #6ee7b7', boxShadow: '0 1px 6px rgba(16,185,129,0.08)', borderLeft: '4px solid #10b981' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

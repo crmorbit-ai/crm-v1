@@ -133,7 +133,7 @@ const SupportAdmin = () => {
   return (
     <SaasLayout title="Support Dashboard">
       {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px', marginBottom: '16px' }}>
+      <div className="resp-grid-4" style={{marginBottom:'16px'}}>
         <StatCard
           icon="📊"
           value={statCounts.total}

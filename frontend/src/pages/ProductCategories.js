@@ -227,7 +227,7 @@ const ProductCategories = () => {
           </div>
           <div style={{ padding: '16px' }}>
             <form onSubmit={handleCreateCategory}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+              <div className="resp-grid-3">
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Category Name *</label>
                   <input type="text" name="name" className="crm-form-input" value={formData.name} onChange={handleChange} required placeholder="e.g., Electronics, Software" style={{ padding: '8px 10px', fontSize: '13px' }} />

@@ -122,7 +122,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
         <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
           <div>
             <label style={ls}>Customer Type</label>
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'8px' }}>
+            <div className="resp-form-grid-3">
               {['Lead','Contact','Account'].map(t => <button key={t} type="button" onClick={()=>setCustomerType(t)} style={btnSty(customerType===t)}>{t}</button>)}
             </div>
           </div>
@@ -261,7 +261,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
       <form onSubmit={handleSubmit}>
         <div className="crm-card" style={{ marginBottom:'20px', padding:'24px' }}>
           <h3 style={{ marginBottom:'20px', marginTop:0 }}>Customer</h3>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px', marginBottom:'16px' }}>
+          <div className="resp-form-grid-3" style={{marginBottom:'16px'}}>
             {['Lead','Contact','Account'].map(t=><button key={t} type="button" onClick={()=>setCustomerType(t)} style={btnSty(customerType===t)}>{t}</button>)}
           </div>
           <select onChange={e=>handleCustomerSelect(e.target.value)} className="crm-form-select" value={formData.customer||''} style={{ marginBottom:'12px' }}>

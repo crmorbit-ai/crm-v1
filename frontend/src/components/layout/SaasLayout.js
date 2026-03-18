@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { tenantService } from '../../services/tenantService';
+import notificationService from '../../services/notificationService';
 
 // Hook to detect screen size
 const useWindowSize = () => {
@@ -24,9 +25,23 @@ const useWindowSize = () => {
 const SaasLayout = ({ children, title }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const { isMobile, isTablet } = useWindowSize();
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingDeletions, setPendingDeletions] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await notificationService.getUnreadCount();
+        setUnreadCount(res?.data?.count || 0);
+      } catch {}
+    };
+    fetchUnread();
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Fetch pending deletion request count for notification badge
   useEffect(() => {
@@ -97,6 +112,25 @@ const SaasLayout = ({ children, title }) => {
               {user?.firstName} {user?.lastName}
             </span>
           )}
+          {/* Notification Bell */}
+          <button
+            onClick={() => navigate('/saas/notifications')}
+            style={{ position: 'relative', background: 'transparent', border: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '18px', padding: '4px', display: 'flex', alignItems: 'center' }}
+            title="Notifications"
+          >
+            🔔
+            {unreadCount > 0 && (
+              <span style={{
+                position: 'absolute', top: '0', right: '0',
+                background: '#ef4444', color: '#fff', borderRadius: '999px',
+                fontSize: '9px', fontWeight: '700', minWidth: '14px', height: '14px',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 2px'
+              }}>
+                {unreadCount > 99 ? '99+' : unreadCount}
+              </span>
+            )}
+          </button>
+
           <button
             onClick={logout}
             style={{

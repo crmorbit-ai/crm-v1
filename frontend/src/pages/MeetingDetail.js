@@ -130,7 +130,7 @@ const MeetingDetail = () => {
           </div>
           <form onSubmit={handleUpdate}>
             <div style={{ padding: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px' }}>
+              <div className="resp-grid-4">
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Title *</label>
                   <input type="text" className="crm-form-input" value={formData.title}
