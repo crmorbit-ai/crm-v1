@@ -5,6 +5,7 @@ import quotationService from '../services/quotationService';
 import { productItemService } from '../services/productItemService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { API_URL, getAuthHeaders } from '../config/api.config';
+import templateService from '../services/templateService';
 import '../styles/crm.css';
 
 const STEPS = [
@@ -28,6 +29,8 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
   const [customerType, setCustomerType] = useState('Lead');
   const [poFile, setPoFile] = useState(null);
   const [wizardStep, setWizardStep] = useState(0);
+  const [poTemplates, setPoTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const [formData, setFormData] = useState({
     customerPONumber: '',
@@ -50,7 +53,10 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
     fetchCustomers();
     fetchQuotations();
     if (isEdit) fetchPurchaseOrder();
-    else if (location.state?.quotationId) fetchQuotationData(location.state.quotationId);
+    else {
+      if (location.state?.quotationId) fetchQuotationData(location.state.quotationId);
+      templateService.getTemplates('purchase_order').then(r => setPoTemplates(r?.data || [])).catch(() => {});
+    }
   }, [id, isEdit, location.state]);
 
   useEffect(() => { fetchCustomers(); }, [customerType]);
@@ -268,6 +274,34 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
       switch (wizardStep) {
         case 0: return (
           <div style={{ display: 'grid', gap: '14px' }}>
+            {!isEdit && poTemplates.length > 0 && (
+              <div style={{ padding:'10px 12px', background:'#faf5ff', borderRadius:'10px', border:'1px solid #e9d5ff' }}>
+                <div style={{ fontSize:'10px', fontWeight:'700', color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>⚡ Apply Template</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                  {poTemplates.map(t => (
+                    <button key={t._id} type="button"
+                      onClick={() => {
+                        setSelectedTemplate(t._id);
+                        const dv = t.defaultValues || {};
+                        const updates = {};
+                        if (dv.title) updates.title = dv.title;
+                        if (dv.description) updates.description = dv.description;
+                        if (dv.paymentTerms) updates.paymentTerms = dv.paymentTerms;
+                        if (dv.terms) updates.terms = dv.terms;
+                        if (dv.notes) updates.notes = dv.notes;
+                        if (dv.deliveryDays) { const d = new Date(); d.setDate(d.getDate() + Number(dv.deliveryDays)); updates.deliveryDate = d.toISOString().split('T')[0]; }
+                        setFormData(prev => ({ ...prev, ...updates }));
+                        templateService.useTemplate(t._id).catch(() => {});
+                      }}
+                      style={{ padding:'5px 12px', borderRadius:'99px', border:`2px solid ${selectedTemplate===t._id ? t.color : '#e2e8f0'}`, background:selectedTemplate===t._id ? t.color+'18' : '#fff', color:selectedTemplate===t._id ? t.color : '#64748b', fontSize:'11px', fontWeight:'700', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px' }}>
+                      {t.icon} {t.name} {selectedTemplate===t._id && '✓'}
+                    </button>
+                  ))}
+                  {selectedTemplate && <button type="button" onClick={() => setSelectedTemplate(null)} style={{ padding:'5px 10px', borderRadius:'99px', border:'1px solid #fecaca', background:'#fee2e2', color:'#dc2626', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>✕ Clear</button>}
+                </div>
+                {selectedTemplate && (() => { const t = poTemplates.find(x => x._id === selectedTemplate); const keys = Object.keys(t?.defaultValues||{}).filter(k => t.defaultValues[k]); return keys.length > 0 ? <div style={{ marginTop:'8px', display:'flex', flexWrap:'wrap', gap:'4px' }}>{keys.map(k => <span key={k} style={{ fontSize:'10px', padding:'2px 8px', borderRadius:'99px', background:t.color+'18', color:t.color, fontWeight:'700' }}>{k}: {String(t.defaultValues[k]).substring(0,20)}</span>)}</div> : null; })()}
+              </div>
+            )}
             <div>
               <label style={ls}>Link to Quotation (Optional)</label>
               <select style={is} onChange={e => handleQuotationSelect(e.target.value)} value={formData.quotation || ''}>

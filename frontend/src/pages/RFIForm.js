@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import rfiService from '../services/rfiService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { API_URL, getAuthHeaders } from '../config/api.config';
+import templateService from '../services/templateService';
 import '../styles/crm.css';
 
 const STEPS = [
@@ -26,6 +27,8 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState([]);
   const [customerType, setCustomerType] = useState('Lead');
+  const [rfiTemplates, setRfiTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const [formData, setFormData] = useState({
     customerName: '', customerEmail: '', customerPhone: '', customerCompany: '',
@@ -40,6 +43,7 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
       const d = new Date(); d.setDate(d.getDate() + 7);
       setFormData(p => ({ ...p, dueDate: d.toISOString().split('T')[0] }));
     }
+    if (!isEdit) templateService.getTemplates('rfi').then(r => setRfiTemplates(r?.data || [])).catch(() => {});
   }, [id, isEdit]);
 
   useEffect(() => { fetchCustomers(); }, [customerType]);
@@ -117,6 +121,42 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
     switch (wizardStep) {
       case 0: return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {!isEdit && rfiTemplates.length > 0 && (
+            <div style={{ padding:'10px 12px', background:'#f0f9ff', borderRadius:'10px', border:'1px solid #bae6fd' }}>
+              <div style={{ fontSize:'10px', fontWeight:'700', color:'#0369a1', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>⚡ Apply Template</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                {rfiTemplates.map(t => (
+                  <button key={t._id} type="button"
+                    onClick={() => {
+                      setSelectedTemplate(t._id);
+                      const dv = t.defaultValues || {};
+                      const updates = {};
+                      if (dv.title) updates.title = dv.title;
+                      if (dv.description) updates.description = dv.description;
+                      if (dv.priority) updates.priority = dv.priority;
+                      if (dv.notes) updates.notes = dv.notes;
+                      setFormData(prev => ({ ...prev, ...updates }));
+                      templateService.useTemplate(t._id).catch(() => {});
+                    }}
+                    style={{ padding:'5px 12px', borderRadius:'99px', border:`2px solid ${selectedTemplate===t._id ? t.color : '#e2e8f0'}`, background:selectedTemplate===t._id ? t.color+'18' : '#fff', color:selectedTemplate===t._id ? t.color : '#64748b', fontSize:'11px', fontWeight:'700', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px' }}>
+                    {t.icon} {t.name} {selectedTemplate===t._id && '✓'}
+                  </button>
+                ))}
+                {selectedTemplate && (
+                  <button type="button" onClick={() => setSelectedTemplate(null)} style={{ padding:'5px 10px', borderRadius:'99px', border:'1px solid #fecaca', background:'#fee2e2', color:'#dc2626', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>✕ Clear</button>
+                )}
+              </div>
+              {selectedTemplate && (() => {
+                const t = rfiTemplates.find(x => x._id === selectedTemplate);
+                const keys = Object.keys(t?.defaultValues||{}).filter(k => t.defaultValues[k]);
+                return keys.length > 0 ? (
+                  <div style={{ marginTop:'8px', display:'flex', flexWrap:'wrap', gap:'4px' }}>
+                    {keys.map(k => <span key={k} style={{ fontSize:'10px', padding:'2px 8px', borderRadius:'99px', background:t.color+'18', color:t.color, fontWeight:'700' }}>{k}: {String(t.defaultValues[k]).substring(0,20)}</span>)}
+                  </div>
+                ) : null;
+              })()}
+            </div>
+          )}
           <div>
             <label style={ls}>Customer Type</label>
             <div className="resp-form-grid-3">

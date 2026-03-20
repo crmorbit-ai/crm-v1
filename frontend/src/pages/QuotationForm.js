@@ -4,6 +4,7 @@ import quotationService from '../services/quotationService';
 import { productItemService } from '../services/productItemService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { API_URL, getAuthHeaders } from '../config/api.config';
+import templateService from '../services/templateService';
 import '../styles/crm.css';
 
 const STEPS = [
@@ -28,6 +29,8 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [customerType, setCustomerType] = useState('Lead');
+  const [quotationTemplates, setQuotationTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const [formData, setFormData] = useState({
     customerName: '', customerEmail: '', customerPhone: '', customerAddress: '',
@@ -43,6 +46,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
     fetchProducts(); fetchCustomers();
     if (isEdit) { fetchQuotation(); }
     else { const d = new Date(); d.setDate(d.getDate()+30); setFormData(p => ({ ...p, expiryDate: d.toISOString().split('T')[0] })); }
+    if (!isEdit) templateService.getTemplates('quotation').then(r => setQuotationTemplates(r?.data || [])).catch(() => {});
   }, [id, isEdit]);
   useEffect(() => { fetchCustomers(); }, [customerType]);
 
@@ -120,6 +124,44 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
     switch (wizardStep) {
       case 0: return (
         <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+          {/* Template selector — shown at the very start */}
+          {!isEdit && quotationTemplates.length > 0 && (
+            <div style={{ padding:'10px 12px', background:'#f8fafc', borderRadius:'10px', border:'1px solid #e2e8f0' }}>
+              <div style={{ fontSize:'10px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>⚡ Apply Template</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                {quotationTemplates.map(t => (
+                  <button key={t._id} type="button"
+                    onClick={() => {
+                      setSelectedTemplate(t._id);
+                      const dv = t.defaultValues || {};
+                      const updates = {};
+                      if (dv.title) updates.title = dv.title;
+                      if (dv.description) updates.description = dv.description;
+                      if (dv.terms) updates.terms = dv.terms;
+                      if (dv.notes) updates.notes = dv.notes;
+                      if (dv.expiryDays) {
+                        const d = new Date(); d.setDate(d.getDate() + Number(dv.expiryDays));
+                        updates.expiryDate = d.toISOString().split('T')[0];
+                      }
+                      setFormData(prev => ({ ...prev, ...updates }));
+                      templateService.useTemplate(t._id).catch(() => {});
+                    }}
+                    style={{ padding:'5px 12px', borderRadius:'99px', border:`2px solid ${selectedTemplate===t._id ? t.color : '#e2e8f0'}`,
+                      background: selectedTemplate===t._id ? t.color+'18' : '#fff',
+                      color: selectedTemplate===t._id ? t.color : '#64748b',
+                      fontSize:'11px', fontWeight:'700', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px' }}>
+                    {t.icon} {t.name} {selectedTemplate===t._id && '✓'}
+                  </button>
+                ))}
+                {selectedTemplate && (
+                  <button type="button" onClick={() => setSelectedTemplate(null)}
+                    style={{ padding:'5px 10px', borderRadius:'99px', border:'1px solid #fecaca', background:'#fee2e2', color:'#dc2626', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>
+                    ✕ Clear
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           <div>
             <label style={ls}>Customer Type</label>
             <div className="resp-form-grid-3">
@@ -207,44 +249,142 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
               <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#10b981,#059669)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'15px' }}>💰</div>
               <div>
                 <div style={{ fontSize:'13px', fontWeight:'700', color:'white' }}>New Quotation</div>
-                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)' }}>Step {wizardStep+1} of {STEPS.length}</div>
+                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)' }}>{selectedTemplate ? '⚡ Template Mode — Quick Create' : `Step ${wizardStep+1} of ${STEPS.length}`}</div>
               </div>
             </div>
             <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'7px', padding:'5px 9px', color:'white', cursor:'pointer', fontSize:'15px', lineHeight:1 }}>✕</button>
           </div>
-          <div style={{ display:'flex', padding:'8px 10px 0' }}>
-            {STEPS.map((s,idx) => { const done=idx<wizardStep, active=idx===wizardStep; return (
-              <div key={idx} onClick={()=>done&&setWizardStep(idx)} style={{ flex:1, textAlign:'center', padding:'5px 2px', borderRadius:'6px 6px 0 0', cursor:done?'pointer':'default', background:active?'rgba(16,185,129,0.22)':done?'rgba(16,185,129,0.12)':'rgba(255,255,255,0.04)', borderBottom:active?'2px solid #10b981':done?'2px solid #34d399':'2px solid transparent' }}>
-                <div style={{ fontSize:'12px', color:active?'#6ee7b7':done?'#6ee7b7':'rgba(255,255,255,0.25)', fontWeight:'700' }}>{done?'✓':s.icon}</div>
-                <div style={{ fontSize:'9px', color:active?'rgba(255,255,255,0.65)':done?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:'1px' }}>{s.label}</div>
+          {!selectedTemplate && (
+            <>
+              <div style={{ display:'flex', padding:'8px 10px 0' }}>
+                {STEPS.map((s,idx) => { const done=idx<wizardStep, active=idx===wizardStep; return (
+                  <div key={idx} onClick={()=>done&&setWizardStep(idx)} style={{ flex:1, textAlign:'center', padding:'5px 2px', borderRadius:'6px 6px 0 0', cursor:done?'pointer':'default', background:active?'rgba(16,185,129,0.22)':done?'rgba(16,185,129,0.12)':'rgba(255,255,255,0.04)', borderBottom:active?'2px solid #10b981':done?'2px solid #34d399':'2px solid transparent' }}>
+                    <div style={{ fontSize:'12px', color:active?'#6ee7b7':done?'#6ee7b7':'rgba(255,255,255,0.25)', fontWeight:'700' }}>{done?'✓':s.icon}</div>
+                    <div style={{ fontSize:'9px', color:active?'rgba(255,255,255,0.65)':done?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:'1px' }}>{s.label}</div>
+                  </div>
+                ); })}
               </div>
-            ); })}
-          </div>
-          <div style={{ height:'3px', background:'rgba(255,255,255,0.08)', margin:'0 10px 8px' }}>
-            <div style={{ height:'100%', background:'linear-gradient(90deg,#10b981,#059669)', borderRadius:'99px', width:`${(wizardStep/STEPS.length)*100}%`, transition:'width 0.35s ease' }} />
-          </div>
+              <div style={{ height:'3px', background:'rgba(255,255,255,0.08)', margin:'0 10px 8px' }}>
+                <div style={{ height:'100%', background:'linear-gradient(90deg,#10b981,#059669)', borderRadius:'99px', width:`${(wizardStep/STEPS.length)*100}%`, transition:'width 0.35s ease' }} />
+              </div>
+            </>
+          )}
         </div>
         <div style={{ flex:1, overflowY:'auto', padding:'14px 16px' }}>
-          <div style={{ marginBottom:'14px', paddingBottom:'10px', borderBottom:'1px solid #f1f5f9' }}>
-            <h4 style={{ margin:'0 0 2px', fontSize:'14px', fontWeight:'700', color:'#0f172a' }}>{STEPS[wizardStep].icon} {STEPS[wizardStep].label}</h4>
-            <p style={{ margin:0, fontSize:'11px', color:'#94a3b8' }}>{STEPS[wizardStep].desc}</p>
-          </div>
           {error && <div className="error-message" style={{ marginBottom:'12px' }}>{error}</div>}
-          {renderStep()}
+          {selectedTemplate ? (() => {
+            const appliedTemplate = quotationTemplates.find(t => t._id === selectedTemplate);
+            const dv = appliedTemplate?.defaultValues || {};
+            const prefilledKeys = ['title','description','terms','notes'].filter(k => dv[k]);
+            if (dv.expiryDays) prefilledKeys.push('expiryDate');
+            const labelMap = { title:'Title', description:'Description', terms:'Terms & Conditions', notes:'Notes', expiryDate:'Expiry Date' };
+            const valueMap = { ...dv, expiryDate: formData.expiryDate };
+            return (
+              <div style={{ display:'flex', flexDirection:'column', gap:'14px' }}>
+                {/* Template banner */}
+                <div style={{ padding:'10px 13px', background:`${appliedTemplate?.color||'#10b981'}12`, border:`1.5px solid ${appliedTemplate?.color||'#10b981'}40`, borderRadius:'10px', display:'flex', alignItems:'center', gap:'10px' }}>
+                  <div style={{ fontSize:'22px' }}>{appliedTemplate?.icon||'📄'}</div>
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontSize:'12px', fontWeight:'700', color:appliedTemplate?.color||'#10b981' }}>{appliedTemplate?.name}</div>
+                    <div style={{ fontSize:'11px', color:'#64748b', marginTop:'1px' }}>{prefilledKeys.length} field{prefilledKeys.length!==1?'s':''} pre-filled automatically</div>
+                  </div>
+                </div>
+                {/* Customer — always required */}
+                <div>
+                  <div style={{ fontSize:'10px', fontWeight:'700', color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>Required — Select Customer</div>
+                  <div className="resp-form-grid-3" style={{ marginBottom:'8px' }}>
+                    {['Lead','Contact','Account'].map(t=><button key={t} type="button" onClick={()=>setCustomerType(t)} style={btnSty(customerType===t)}>{t}</button>)}
+                  </div>
+                  <select style={ss} onChange={e=>handleCustomerSelect(e.target.value)} value={formData.customer||''}>
+                    <option value="">-- Select {customerType} --</option>
+                    {customers.map(c=><option key={c._id} value={c._id}>{customerType==='Account'?c.accountName:`${c.firstName} ${c.lastName}`} - {c.email}</option>)}
+                  </select>
+                  {formData.customerName && <div style={{ marginTop:'6px', padding:'6px 10px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:'7px', fontSize:'12px', color:'#166534', fontWeight:'600' }}>✓ {formData.customerName}</div>}
+                </div>
+                {/* Title if not pre-filled */}
+                {!formData.title && (
+                  <div>
+                    <div style={{ fontSize:'10px', fontWeight:'700', color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'6px' }}>Required — Title</div>
+                    <input name="title" value={formData.title} onChange={inp} style={is} placeholder="Quotation title..." />
+                  </div>
+                )}
+                {/* Items — always needed */}
+                <div>
+                  <div style={{ fontSize:'10px', fontWeight:'700', color:'#ef4444', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>Required — Add Items</div>
+                  <button type="button" onClick={addItem} style={{ padding:'7px 14px', background:'linear-gradient(135deg,#065f46,#10b981)', color:'#fff', border:'none', borderRadius:'8px', fontWeight:'600', cursor:'pointer', fontSize:'12px', marginBottom:'8px' }}>+ Add Item</button>
+                  {formData.items.map((item,i) => (
+                    <div key={i} style={{ padding:'10px', background:'#f8fafc', borderRadius:'8px', border:'1px solid #e2e8f0', marginBottom:'8px' }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'6px' }}>
+                        <span style={{ fontSize:'11px', fontWeight:'700', color:'#374151' }}>Item {i+1}</span>
+                        <button type="button" onClick={()=>removeItem(i)} style={{ background:'none', border:'none', cursor:'pointer', color:'#ef4444', fontSize:'13px' }}>🗑️</button>
+                      </div>
+                      <select style={{ ...ss, marginBottom:'6px' }} value={item.product||''} onChange={e=>selectProduct(i,e.target.value)}>
+                        <option value="">Select product...</option>
+                        {products.map(p=><option key={p._id} value={p._id}>{p.name}</option>)}
+                      </select>
+                      {!item.product && <input value={item.productName} onChange={e=>updateItem(i,'productName',e.target.value)} placeholder="Or type custom name" style={{ ...is, marginBottom:'6px' }} />}
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:'6px' }}>
+                        <div><label style={ls}>Qty</label><input type="number" value={item.quantity} onChange={e=>updateItem(i,'quantity',parseFloat(e.target.value)||0)} min="1" style={is} /></div>
+                        <div><label style={ls}>Price</label><input type="number" value={item.unitPrice} onChange={e=>updateItem(i,'unitPrice',parseFloat(e.target.value)||0)} min="0" style={is} /></div>
+                        <div><label style={ls}>Disc%</label><input type="number" value={item.discount} onChange={e=>updateItem(i,'discount',parseFloat(e.target.value)||0)} min="0" max="100" style={is} /></div>
+                        <div><label style={ls}>Tax%</label><input type="number" value={item.tax} onChange={e=>updateItem(i,'tax',parseFloat(e.target.value)||0)} min="0" style={is} /></div>
+                      </div>
+                      <div style={{ textAlign:'right', marginTop:'6px', fontSize:'12px', fontWeight:'700', color:'#4361ee' }}>Total: {fmtCur(item.total)}</div>
+                    </div>
+                  ))}
+                </div>
+                {/* Pre-filled preview */}
+                {prefilledKeys.length > 0 && (
+                  <div style={{ padding:'12px', background:'#f8fafc', borderRadius:'10px', border:'1px solid #e2e8f0' }}>
+                    <div style={{ fontSize:'10px', fontWeight:'700', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'10px' }}>📋 Pre-filled by template</div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                      {prefilledKeys.map(key => (
+                        <div key={key} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'6px 10px', background:'#fff', borderRadius:'7px', border:'1px solid #e2e8f0' }}>
+                          <span style={{ fontSize:'11px', color:'#64748b', fontWeight:'600' }}>{labelMap[key]||key}</span>
+                          <span style={{ fontSize:'11px', fontWeight:'700', padding:'2px 8px', borderRadius:'99px', background:`${appliedTemplate?.color||'#10b981'}12`, color:appliedTemplate?.color||'#10b981', maxWidth:'160px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {String(valueMap[key]).substring(0,40)}{String(valueMap[key]).length>40?'…':''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })() : (
+            <>
+              <div style={{ marginBottom:'14px', paddingBottom:'10px', borderBottom:'1px solid #f1f5f9' }}>
+                <h4 style={{ margin:'0 0 2px', fontSize:'14px', fontWeight:'700', color:'#0f172a' }}>{STEPS[wizardStep].icon} {STEPS[wizardStep].label}</h4>
+                <p style={{ margin:0, fontSize:'11px', color:'#94a3b8' }}>{STEPS[wizardStep].desc}</p>
+              </div>
+              {renderStep()}
+            </>
+          )}
         </div>
         <div style={{ padding:'11px 14px', borderTop:'1px solid #f1f5f9', background:'#fafbfc', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
-          <button type="button" onClick={()=>wizardStep>0?setWizardStep(s=>s-1):onClose()} style={{ padding:'7px 14px', borderRadius:'8px', border:'1px solid #e2e8f0', background:'#fff', color:'#64748b', fontSize:'12px', fontWeight:'600', cursor:'pointer' }}>
-            {wizardStep===0?'Cancel':'← Back'}
+          <button type="button"
+            onClick={() => selectedTemplate ? setSelectedTemplate(null) : wizardStep>0 ? setWizardStep(s=>s-1) : onClose()}
+            style={{ padding:'7px 14px', borderRadius:'8px', border:'1px solid #e2e8f0', background:'#fff', color:'#64748b', fontSize:'12px', fontWeight:'600', cursor:'pointer' }}>
+            {selectedTemplate ? '← Change Template' : wizardStep===0 ? 'Cancel' : '← Back'}
           </button>
-          <div style={{ display:'flex', gap:'4px' }}>
-            {STEPS.map((_,idx)=><div key={idx} style={{ width:idx===wizardStep?'16px':'5px', height:'5px', borderRadius:'99px', background:idx<wizardStep?'#059669':idx===wizardStep?'#10b981':'#e2e8f0', transition:'all 0.25s' }} />)}
-          </div>
-          {wizardStep<STEPS.length-1 ? (
-            <button type="button" onClick={()=>setWizardStep(s=>s+1)} style={{ padding:'7px 18px', borderRadius:'8px', border:'none', background:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.25)' }}>Next →</button>
-          ) : (
-            <button type="button" onClick={handleSubmit} disabled={loading} style={{ padding:'7px 18px', borderRadius:'8px', border:'none', background:loading?'#94a3b8':'linear-gradient(135deg,#059669 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:loading?'not-allowed':'pointer', boxShadow:loading?'none':'0 2px 8px rgba(16,185,129,0.25)' }}>
-              {loading?'Saving...':'✓ Save Quotation'}
+          {selectedTemplate ? (
+            <button type="button" onClick={handleSubmit} disabled={loading}
+              style={{ padding:'8px 24px', borderRadius:'8px', border:'none', background:loading?'#94a3b8':'linear-gradient(135deg,#059669 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'700', cursor:loading?'not-allowed':'pointer', boxShadow:loading?'none':'0 2px 8px rgba(16,185,129,0.3)' }}>
+              {loading?'Saving...':'⚡ Save Quotation'}
             </button>
+          ) : (
+            <>
+              <div style={{ display:'flex', gap:'4px' }}>
+                {STEPS.map((_,idx)=><div key={idx} style={{ width:idx===wizardStep?'16px':'5px', height:'5px', borderRadius:'99px', background:idx<wizardStep?'#059669':idx===wizardStep?'#10b981':'#e2e8f0', transition:'all 0.25s' }} />)}
+              </div>
+              {wizardStep<STEPS.length-1 ? (
+                <button type="button" onClick={()=>setWizardStep(s=>s+1)} style={{ padding:'7px 18px', borderRadius:'8px', border:'none', background:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.25)' }}>Next →</button>
+              ) : (
+                <button type="button" onClick={handleSubmit} disabled={loading} style={{ padding:'7px 18px', borderRadius:'8px', border:'none', background:loading?'#94a3b8':'linear-gradient(135deg,#059669 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:loading?'not-allowed':'pointer', boxShadow:loading?'none':'0 2px 8px rgba(16,185,129,0.25)' }}>
+                  {loading?'Saving...':'✓ Save Quotation'}
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -274,6 +414,47 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
             <div><label className="crm-form-label">Phone</label><input name="customerPhone" value={formData.customerPhone} readOnly className="crm-form-input" style={{ background:'#f5f5f5' }} /></div>
           </div>
         </div>
+        {/* Quotation Templates */}
+        {!isEdit && quotationTemplates.length > 0 && (
+          <div className="crm-card" style={{ marginBottom:'16px', padding:'14px 16px' }}>
+            <div style={{ fontSize:'11px', fontWeight:'700', color:'#475569', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'10px' }}>
+              ⚡ Quick Start — Apply Template
+            </div>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
+              {quotationTemplates.map(t => (
+                <button key={t._id} type="button"
+                  onClick={() => {
+                    setSelectedTemplate(t._id);
+                    const dv = t.defaultValues || {};
+                    const updates = {};
+                    if (dv.title) updates.title = dv.title;
+                    if (dv.description) updates.description = dv.description;
+                    if (dv.terms) updates.terms = dv.terms;
+                    if (dv.notes) updates.notes = dv.notes;
+                    if (dv.expiryDays) {
+                      const d = new Date(); d.setDate(d.getDate() + Number(dv.expiryDays));
+                      updates.expiryDate = d.toISOString().split('T')[0];
+                    }
+                    setFormData(prev => ({ ...prev, ...updates }));
+                    templateService.useTemplate(t._id).catch(() => {});
+                  }}
+                  style={{ padding:'6px 14px', borderRadius:'99px', border:`2px solid ${selectedTemplate===t._id ? t.color : '#e2e8f0'}`,
+                    background: selectedTemplate===t._id ? t.color+'18' : '#fff',
+                    color: selectedTemplate===t._id ? t.color : '#64748b',
+                    fontSize:'12px', fontWeight:'700', cursor:'pointer', display:'flex', alignItems:'center', gap:'5px' }}>
+                  {t.icon} {t.name} {selectedTemplate===t._id && '✓'}
+                </button>
+              ))}
+              {selectedTemplate && (
+                <button type="button" onClick={() => setSelectedTemplate(null)}
+                  style={{ padding:'6px 12px', borderRadius:'99px', border:'1px solid #fecaca', background:'#fee2e2', color:'#dc2626', fontSize:'12px', fontWeight:'600', cursor:'pointer' }}>
+                  ✕ Clear
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="crm-card" style={{ marginBottom:'20px', padding:'24px' }}>
           <h3 style={{ marginBottom:'20px', marginTop:0 }}>Details</h3>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'16px' }}>

@@ -230,9 +230,18 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                   <NavItem to="/subscription" label="Subscription & Billing" permission="subscription_management" />
                 </NavSection>
 
+                {/* Automation */}
+                <NavSection title="Automation" section="automation" permissions={['user_management']}>
+                  <NavItem to="/templates" label="Templates" permission="user_management" />
+                </NavSection>
+
+                <div className="my-3 border-t border-white/20" />
+
                 {/* Access Management */}
                 <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'audit_logs']}>
                   <NavItem to="/users" label="Users" permission="user_management" />
+                  <NavItem to="/notifications" label="Notifications" />
+                  <NavItem to="/notification-settings" label="Notification Settings" />
                   <NavItem to="/activity-logs" label="Audit Logs" permission="audit_logs" />
                 </NavSection>
 

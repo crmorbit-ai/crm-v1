@@ -312,6 +312,10 @@ try {
   app.use('/api/notifications', require('../src/routes/notifications'));
   console.log('  ✅ notification routes loaded');
 
+  // Template Routes
+  app.use('/api/templates', require('../src/routes/templates'));
+  console.log('  ✅ template routes loaded');
+
   // SAAS Admin & AI Routes
   app.use('/api/saas-admins', require('../src/routes/saasAdmins'));
   app.use('/api/viewing-pin', require('../src/routes/viewingPin'));

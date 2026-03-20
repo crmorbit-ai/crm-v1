@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import templateService from '../services/templateService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { Country, State, City } from 'country-state-city';
@@ -454,6 +455,9 @@ const Leads = () => {
   const [groupMembers, setGroupMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
   const [displayColumns, setDisplayColumns] = useState([]);
+  const [leadTemplates, setLeadTemplates] = useState([]);
+  const [taskTemplates, setTaskTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   // Column resize
   const [colWidths, setColWidths] = useState({});
@@ -586,6 +590,8 @@ const Leads = () => {
     loadCustomFields();
     loadGroups();
     loadCustomers();
+    templateService.getTemplates('lead').then(r => setLeadTemplates(r?.data || [])).catch(() => {});
+    templateService.getTemplates('task').then(r => setTaskTemplates(r?.data || [])).catch(() => {});
   }, [pagination.page, filters]);
 
   // Sync filter with URL params when navigating from another page
@@ -911,6 +917,53 @@ const Leads = () => {
     setShowAddFieldForm(false);
   };
 
+  // Template quick-create — skip wizard, submit directly
+  const handleTemplateCreate = async () => {
+    if (creating) return;
+    const requiredEmpty = fieldDefinitions.filter(f => {
+      if (!f.isRequired) return false;
+      const val = fieldValues[f.fieldName];
+      return val === undefined || val === null || String(val).trim() === '';
+    });
+    if (requiredEmpty.length > 0) {
+      const errors = {};
+      requiredEmpty.forEach(f => { errors[f.fieldName] = `${f.label} is required`; });
+      setFieldErrors(errors);
+      return;
+    }
+    setCreating(true);
+    try {
+      setError('');
+      const standardFields = {};
+      const customFields = {};
+      fieldDefinitions.forEach(field => {
+        const value = fieldValues[field.fieldName];
+        if (value != null && value !== '') {
+          if (field.isStandardField) standardFields[field.fieldName] = value;
+          else customFields[field.fieldName] = value;
+        }
+      });
+      const leadData = {
+        ...standardFields,
+        ...customFields,
+        ...(formData.customer ? { customer: formData.customer } : {}),
+        product: formData.product,
+        productDetails: formData.productDetails,
+      };
+      await leadService.createLead(leadData);
+      setSuccess('Lead created successfully!');
+      setShowCreateForm(false);
+      resetForm();
+      loadLeads();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      if (err?.isPermissionDenied) return;
+      setError(err.message || err.response?.data?.message || 'Failed to create lead');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const handleCreateLead = async (e) => {
     e.preventDefault();
     if (wizardStep !== WIZARD_STEPS.length - 1) return; // only submit on last step
@@ -1050,6 +1103,7 @@ const Leads = () => {
     setPhoneVerification({ status: 'pending', message: '', isValid: null });
     setFieldValues({});
     setFieldErrors({});
+    setSelectedTemplate(null);
     setSelectedCountryIso('');
     setSelectedStateIso('');
   };
@@ -1613,128 +1667,240 @@ const Leads = () => {
                   <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🎯</div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Lead</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {WIZARD_STEPS.length}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>{selectedTemplate ? '⚡ Template Mode — Quick Create' : `Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`}</div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
                   style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
               </div>
-              {/* Step tabs */}
-              <div style={{ display: 'flex', padding: '8px 10px 0' }}>
-                {WIZARD_STEPS.map((step, idx) => {
-                  const isDone = idx < wizardStep;
-                  const isActive = idx === wizardStep;
-                  return (
-                    <div key={idx} onClick={() => isDone && setWizardStep(idx)}
-                      style={{ flex: 1, textAlign: 'center', padding: '5px 2px', borderRadius: '6px 6px 0 0', cursor: isDone ? 'pointer' : 'default',
-                        background: isActive ? 'rgba(59,130,246,0.22)' : isDone ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)',
-                        borderBottom: isActive ? '2px solid #3b82f6' : isDone ? '2px solid #10b981' : '2px solid transparent' }}>
-                      <div style={{ fontSize: '12px', color: isActive ? '#93c5fd' : isDone ? '#6ee7b7' : 'rgba(255,255,255,0.25)', fontWeight: '700' }}>{isDone ? '✓' : step.icon}</div>
-                      <div style={{ fontSize: '9px', color: isActive ? 'rgba(255,255,255,0.65)' : isDone ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{step.label}</div>
-                    </div>
-                  );
-                })}
-              </div>
-              {/* Progress bar */}
-              <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
-                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
-              </div>
+              {/* Step tabs — hidden in template mode */}
+              {!selectedTemplate && (
+                <>
+                  <div style={{ display: 'flex', padding: '8px 10px 0' }}>
+                    {WIZARD_STEPS.map((step, idx) => {
+                      const isDone = idx < wizardStep;
+                      const isActive = idx === wizardStep;
+                      return (
+                        <div key={idx} onClick={() => isDone && setWizardStep(idx)}
+                          style={{ flex: 1, textAlign: 'center', padding: '5px 2px', borderRadius: '6px 6px 0 0', cursor: isDone ? 'pointer' : 'default',
+                            background: isActive ? 'rgba(59,130,246,0.22)' : isDone ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)',
+                            borderBottom: isActive ? '2px solid #3b82f6' : isDone ? '2px solid #10b981' : '2px solid transparent' }}>
+                          <div style={{ fontSize: '12px', color: isActive ? '#93c5fd' : isDone ? '#6ee7b7' : 'rgba(255,255,255,0.25)', fontWeight: '700' }}>{isDone ? '✓' : step.icon}</div>
+                          <div style={{ fontSize: '9px', color: isActive ? 'rgba(255,255,255,0.65)' : isDone ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{step.label}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
+                    <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Form body */}
             <form onSubmit={handleCreateLead} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
-                {/* Current step header */}
-                <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{WIZARD_STEPS[wizardStep].icon} {WIZARD_STEPS[wizardStep].label}</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{WIZARD_STEPS[wizardStep].desc}</p>
-                </div>
-                {(() => {
-                  const step = WIZARD_STEPS[wizardStep];
-                  const groupedFields = groupFieldsBySection(fieldDefinitions);
+
+                {/* Template Selector — shown only on step 0 */}
+                {wizardStep === 0 && leadTemplates.length > 0 && (
+                  <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>
+                      ⚡ Quick Start — Apply Template
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {leadTemplates.map(t => (
+                        <button key={t._id} type="button"
+                          onClick={() => {
+                            setSelectedTemplate(t._id);
+                            // Pre-fill fieldValues with template defaultValues
+                            setFieldValues(prev => ({ ...prev, ...t.defaultValues }));
+                            templateService.useTemplate(t._id).catch(() => {});
+                          }}
+                          style={{
+                            padding: '5px 11px', borderRadius: '99px', border: `2px solid ${selectedTemplate === t._id ? t.color : '#e2e8f0'}`,
+                            background: selectedTemplate === t._id ? t.color + '18' : '#fff',
+                            color: selectedTemplate === t._id ? t.color : '#64748b',
+                            fontSize: '11px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.15s',
+                            display: 'flex', alignItems: 'center', gap: '4px'
+                          }}>
+                          {t.icon} {t.name}
+                          {selectedTemplate === t._id && <span style={{ marginLeft: '2px' }}>✓</span>}
+                        </button>
+                      ))}
+                      {selectedTemplate && (
+                        <button type="button" onClick={() => { setSelectedTemplate(null); setFieldValues({}); }}
+                          style={{ padding: '5px 10px', borderRadius: '99px', border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                          ✕ Clear
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedTemplate ? (() => {
+                  // ── TEMPLATE QUICK-CREATE MODE (Zoho-style) ──
+                  const appliedTemplate = leadTemplates.find(t => t._id === selectedTemplate);
+                  const prefilledKeys = Object.keys(appliedTemplate?.defaultValues || {}).filter(k => appliedTemplate.defaultValues[k] !== '' && appliedTemplate.defaultValues[k] != null);
+                  const requiredEmptyFields = fieldDefinitions.filter(f => {
+                    if (!f.isRequired) return false;
+                    const val = fieldValues[f.fieldName];
+                    return val === undefined || val === null || String(val).trim() === '';
+                  });
                   return (
                     <div>
-                      {step.sections.map(sectionName => {
-                        const sectionFields = groupedFields[sectionName];
-                        const hasOwner = step.includeOwner && sectionName === 'Basic Information';
-                        if (!sectionFields?.length && !hasOwner) return null;
-                        return (
-                          <div key={sectionName}>
-                            {step.sections.length > 1 && sectionFields?.length > 0 && (
-                              <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: '10px', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>{sectionName}</div>
-                            )}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
-                              {hasOwner && (
-                                <div>
-                                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Lead Owner</label>
-                                  <input type="text" value={`${user?.firstName || ''} ${user?.lastName || ''}`} disabled
-                                    style={{ width: '100%', padding: '9px 12px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', color: '#94a3b8', boxSizing: 'border-box' }} />
-                                </div>
-                              )}
-                              {sectionFields?.map((field) => (
-                                <div key={field._id || field.fieldName}>
-                                  {renderDynamicField(field)}
-                                </div>
-                              ))}
-                            </div>
+                      {/* Template applied banner */}
+                      <div style={{ marginBottom: '16px', padding: '10px 13px', background: `${appliedTemplate?.color || '#6366f1'}12`, border: `1.5px solid ${appliedTemplate?.color || '#6366f1'}40`, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ fontSize: '22px' }}>{appliedTemplate?.icon || '📋'}</div>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '12px', fontWeight: '700', color: appliedTemplate?.color || '#6366f1' }}>{appliedTemplate?.name}</div>
+                          <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>{prefilledKeys.length} field{prefilledKeys.length !== 1 ? 's' : ''} pre-filled automatically</div>
+                        </div>
+                      </div>
+
+                      {/* Only required empty fields */}
+                      {requiredEmptyFields.length > 0 && (
+                        <div style={{ marginBottom: '16px' }}>
+                          <div style={{ fontSize: '10px', fontWeight: '700', color: '#ef4444', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                            Required fields to fill
                           </div>
-                        );
-                      })}
-                      {step.includeCustomer && (
-                        <div style={{ marginTop: '4px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🔗 Link to Customer (Optional)</label>
-                          <select name="customer" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.customer} onChange={handleChange}>
-                            <option value="">— None —</option>
-                            {customers.map(c => (
-                              <option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                            {requiredEmptyFields.map(field => (
+                              <div key={field._id || field.fieldName}>
+                                {renderDynamicField(field)}
+                              </div>
                             ))}
-                          </select>
+                          </div>
                         </div>
                       )}
-                      {step.includeProduct && (
-                        <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
-                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>📦 Product (Optional)</label>
-                          <select name="product" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.product} onChange={handleChange}>
-                            <option value="">— None —</option>
-                            {products.map(product => (
-                              <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
-                            ))}
-                          </select>
+
+                      {/* Pre-filled values preview */}
+                      {prefilledKeys.length > 0 && (
+                        <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>
+                            📋 Pre-filled by template
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            {prefilledKeys.map(key => {
+                              const fieldDef = fieldDefinitions.find(f => f.fieldName === key);
+                              return (
+                                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#fff', borderRadius: '7px', border: '1px solid #e2e8f0' }}>
+                                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{fieldDef?.label || key}</span>
+                                  <span style={{ fontSize: '11px', color: '#0f172a', fontWeight: '700', padding: '2px 8px', background: `${appliedTemplate?.color || '#6366f1'}12`, borderRadius: '99px', color: appliedTemplate?.color || '#6366f1' }}>
+                                    {String(appliedTemplate.defaultValues[key])}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
                         </div>
                       )}
                     </div>
                   );
-                })()}
+                })() : (
+                  <>
+                    {/* Current step header */}
+                    <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
+                      <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{WIZARD_STEPS[wizardStep].icon} {WIZARD_STEPS[wizardStep].label}</h4>
+                      <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{WIZARD_STEPS[wizardStep].desc}</p>
+                    </div>
+                    {(() => {
+                      const step = WIZARD_STEPS[wizardStep];
+                      const groupedFields = groupFieldsBySection(fieldDefinitions);
+                      return (
+                        <div>
+                          {step.sections.map(sectionName => {
+                            const sectionFields = groupedFields[sectionName];
+                            const hasOwner = step.includeOwner && sectionName === 'Basic Information';
+                            if (!sectionFields?.length && !hasOwner) return null;
+                            return (
+                              <div key={sectionName}>
+                                {step.sections.length > 1 && sectionFields?.length > 0 && (
+                                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: '10px', paddingBottom: '4px', borderBottom: '1px solid #f1f5f9' }}>{sectionName}</div>
+                                )}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '12px' }}>
+                                  {hasOwner && (
+                                    <div>
+                                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '5px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Lead Owner</label>
+                                      <input type="text" value={`${user?.firstName || ''} ${user?.lastName || ''}`} disabled
+                                        style={{ width: '100%', padding: '9px 12px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '8px', background: '#f8fafc', color: '#94a3b8', boxSizing: 'border-box' }} />
+                                    </div>
+                                  )}
+                                  {sectionFields?.map((field) => (
+                                    <div key={field._id || field.fieldName}>
+                                      {renderDynamicField(field)}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {step.includeCustomer && (
+                            <div style={{ marginTop: '4px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🔗 Link to Customer (Optional)</label>
+                              <select name="customer" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.customer} onChange={handleChange}>
+                                <option value="">— None —</option>
+                                {customers.map(c => (
+                                  <option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                          {step.includeProduct && (
+                            <div style={{ marginTop: '12px', padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #f1f5f9' }}>
+                              <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>📦 Product (Optional)</label>
+                              <select name="product" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.product} onChange={handleChange}>
+                                <option value="">— None —</option>
+                                {products.map(product => (
+                                  <option key={product._id} value={product._id}>{product.articleNumber} - {product.name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
               </div>
 
               {/* Footer nav */}
               <div style={{ padding: '11px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                 <button type="button"
-                  onClick={() => { if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
+                  onClick={() => { if (selectedTemplate) { setSelectedTemplate(null); setFieldValues({}); } else if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
                   style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
-                  {wizardStep === 0 ? 'Cancel' : '← Back'}
+                  {selectedTemplate ? '← Change Template' : wizardStep === 0 ? 'Cancel' : '← Back'}
                 </button>
-                <div style={{ display: 'flex', gap: '4px' }}>
-                  {WIZARD_STEPS.map((_, idx) => (
-                    <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
-                  ))}
-                </div>
-                {wizardStep < WIZARD_STEPS.length - 1 ? (
-                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                    {!currentStepHasRequired() && (
-                      <button type="button" onClick={() => { setFieldErrors({}); setWizardStep(s => s + 1); }}
-                        style={{ padding: '7px 11px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}>Skip</button>
-                    )}
-                    <button type="button" onClick={() => { if (validateCurrentStep()) { setFieldErrors({}); setWizardStep(s => s + 1); } }}
-                      style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
-                      Next →
-                    </button>
-                  </div>
-                ) : (
-                  <button type="button" onClick={handleCreateLead} disabled={creating}
-                    style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(16,185,129,0.25)' }}>
-                    {creating ? 'Saving...' : '✓ Save Lead'}
+                {selectedTemplate ? (
+                  <button type="button" onClick={handleTemplateCreate} disabled={creating}
+                    style={{ padding: '8px 24px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '700', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(16,185,129,0.3)' }}>
+                    {creating ? 'Creating...' : '⚡ Create Lead'}
                   </button>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {WIZARD_STEPS.map((_, idx) => (
+                        <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
+                      ))}
+                    </div>
+                    {wizardStep < WIZARD_STEPS.length - 1 ? (
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        {!currentStepHasRequired() && (
+                          <button type="button" onClick={() => { setFieldErrors({}); setWizardStep(s => s + 1); }}
+                            style={{ padding: '7px 11px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#94a3b8', fontSize: '12px', fontWeight: '500', cursor: 'pointer' }}>Skip</button>
+                        )}
+                        <button type="button" onClick={() => { if (validateCurrentStep()) { setFieldErrors({}); setWizardStep(s => s + 1); } }}
+                          style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
+                          Next →
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={handleCreateLead} disabled={creating}
+                        style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(16,185,129,0.25)' }}>
+                        {creating ? 'Saving...' : '✓ Save Lead'}
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </form>
@@ -2043,6 +2209,25 @@ const Leads = () => {
                               <h5 style={{ margin: 0, fontSize: '12px', fontWeight: '600', color: '#166534' }}>Create Task</h5>
                               <button onClick={() => setShowDetailTaskForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#64748b' }}>✕</button>
                             </div>
+                            {/* Task Templates */}
+                            {taskTemplates.length > 0 && (
+                              <div style={{ marginBottom: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                {taskTemplates.map(t => (
+                                  <button key={t._id} type="button"
+                                    onClick={() => {
+                                      const dv = t.defaultValues || {};
+                                      const dueDate = t.dueDateOffset
+                                        ? new Date(Date.now() + t.dueDateOffset * 86400000).toISOString().split('T')[0]
+                                        : detailTaskData.dueDate;
+                                      setDetailTaskData(prev => ({ ...prev, ...dv, dueDate }));
+                                      templateService.useTemplate(t._id).catch(() => {});
+                                    }}
+                                    style={{ padding: '3px 9px', borderRadius: '99px', border: `1.5px solid ${t.color}`, background: t.color + '15', color: t.color, fontSize: '10px', fontWeight: '700', cursor: 'pointer' }}>
+                                    {t.icon} {t.name}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
                             <form onSubmit={handleDetailCreateTask}>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
                                 <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.subject} onChange={(e) => setDetailTaskData({ ...detailTaskData, subject: e.target.value })} required /></div>

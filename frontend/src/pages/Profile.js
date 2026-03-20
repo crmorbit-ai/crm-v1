@@ -133,7 +133,8 @@ const Profile = () => {
   const loadNotifPrefs = async () => {
     try {
       const res = await notificationService.getPreferences();
-      if (res?.data?.data) setNotifPrefs(res.data.data);
+      const data = res?.data?.data ?? res?.data;
+      if (data && typeof data === 'object') setNotifPrefs(prev => ({ ...prev, ...data }));
     } catch (err) { console.error('loadNotifPrefs:', err); }
   };
 

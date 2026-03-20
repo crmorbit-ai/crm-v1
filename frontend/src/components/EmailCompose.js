@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import api from '../services/api';
+import templateService from '../services/templateService';
 
 const EmailCompose = ({
   isOpen,
@@ -16,6 +17,8 @@ const EmailCompose = ({
   const [showBCC, setShowBCC] = useState(false);
   const [userEmail, setUserEmail] = useState('');
   const [emailConfigured, setEmailConfigured] = useState(true);
+  const [emailTemplates, setEmailTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const [emailData, setEmailData] = useState({
     from: '',
@@ -25,6 +28,10 @@ const EmailCompose = ({
     subject: '',
     message: ''
   });
+
+  useEffect(() => {
+    if (mode === 'new') templateService.getTemplates('email').then(r => setEmailTemplates(r?.data || [])).catch(() => {});
+  }, [mode]);
 
   // Load user's email settings and pre-fill for reply/forward
   useEffect(() => {
@@ -443,6 +450,31 @@ const EmailCompose = ({
                   background: 'transparent'
                 }}
               />
+            </div>
+          )}
+
+          {/* Email Template Selector */}
+          {mode === 'new' && emailTemplates.length > 0 && (
+            <div style={{ padding: '8px 16px', borderBottom: '1px solid #f0f0f0', background: '#fdf4ff' }}>
+              <div style={{ fontSize: '10px', fontWeight: '700', color: '#db2777', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>⚡ Apply Template</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+                {emailTemplates.map(t => (
+                  <button key={t._id} type="button"
+                    onClick={() => {
+                      setSelectedTemplate(t._id);
+                      const dv = t.defaultValues || {};
+                      setEmailData(prev => ({ ...prev, ...(dv.subject ? { subject: dv.subject } : {}), ...(dv.message ? { message: dv.message } : {}) }));
+                      templateService.useTemplate(t._id).catch(() => {});
+                    }}
+                    style={{ padding: '4px 10px', borderRadius: '99px', border: `2px solid ${selectedTemplate === t._id ? t.color : '#e2e8f0'}`, background: selectedTemplate === t._id ? t.color + '18' : '#fff', color: selectedTemplate === t._id ? t.color : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {t.icon} {t.name} {selectedTemplate === t._id && '✓'}
+                  </button>
+                ))}
+                {selectedTemplate && (
+                  <button type="button" onClick={() => { setSelectedTemplate(null); setEmailData(p => ({ ...p, subject: '', message: '' })); }}
+                    style={{ padding: '4px 9px', borderRadius: '99px', border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✕ Clear</button>
+                )}
+              </div>
             </div>
           )}
 

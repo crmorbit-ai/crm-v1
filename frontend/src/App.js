@@ -42,6 +42,8 @@ import Profile from './pages/Profile';
 
 // User management (Settings)
 import TeamManagement from './pages/TeamManagement';
+import TemplateManagement from './pages/TemplateManagement';
+import NotificationSettings from './pages/NotificationSettings';
 
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
@@ -404,6 +406,18 @@ function AppRoutes() {
       <Route path="/users" element={
         <ProtectedRoute requireTenant>
           <TeamManagement />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/templates" element={
+        <ProtectedRoute requireTenant>
+          <TemplateManagement />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/notification-settings" element={
+        <ProtectedRoute requireTenant>
+          <NotificationSettings />
         </ProtectedRoute>
       } />
 

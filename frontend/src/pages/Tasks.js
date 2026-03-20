@@ -4,6 +4,7 @@ import { taskService } from '../services/taskService';
 import { leadService } from '../services/leadService';
 import { contactService } from '../services/contactService';
 import { accountService } from '../services/accountService';
+import templateService from '../services/templateService';
 import '../styles/crm.css';
 
 const Tasks = () => {
@@ -18,6 +19,8 @@ const Tasks = () => {
   const [formData, setFormData] = useState({
     subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: ''
   });
+  const [taskTemplates, setTaskTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   // Related To state
   const [relatedToType, setRelatedToType] = useState('');
@@ -37,7 +40,10 @@ const Tasks = () => {
     { name: 'Waiting for Input', color: '#8B5CF6', icon: '⏳' },
   ];
 
-  useEffect(() => { loadTasks(); }, []);
+  useEffect(() => {
+    loadTasks();
+    templateService.getTemplates('task').then(r => setTaskTemplates(r?.data || [])).catch(() => {});
+  }, []);
 
   const loadTasks = async () => {
     try {
@@ -90,6 +96,7 @@ const Tasks = () => {
     setFormData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
     setRelatedToType(''); setRelatedToSearch(''); setRelatedToId('');
     setRelatedToOptions([]); setShowRelatedDropdown(false);
+    setSelectedTemplate(null);
   };
 
   const handleCreate = async (e) => {
@@ -206,7 +213,7 @@ const Tasks = () => {
                   <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>✅</div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Task</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>Fill in task details below</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>{selectedTemplate ? '⚡ Template Mode — Quick Create' : 'Fill in task details below'}</div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); resetForm(); }}
@@ -217,105 +224,249 @@ const Tasks = () => {
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
                 <form onSubmit={handleCreate}>
 
-                  {/* Subject */}
-                  <div style={{ marginBottom: '14px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Subject *</label>
-                    <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} required
-                      placeholder="Enter task subject..."
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
-                      onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
-                  </div>
-
-                  {/* Due Date + Priority */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Due Date *</label>
-                      <input type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} required
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
-                        onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                        onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                  {/* Template selector — always shown at top */}
+                  {taskTemplates.length > 0 && (
+                    <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>⚡ Apply Template</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {taskTemplates.map(t => (
+                          <button key={t._id} type="button"
+                            onClick={() => {
+                              setSelectedTemplate(t._id);
+                              const dv = t.defaultValues || {};
+                              const updates = {};
+                              if (dv.subject) updates.subject = dv.subject;
+                              if (dv.priority) updates.priority = dv.priority;
+                              if (dv.status) updates.status = dv.status;
+                              if (dv.description) updates.description = dv.description;
+                              if (t.dueDateOffset) {
+                                const d = new Date(); d.setDate(d.getDate() + Number(t.dueDateOffset));
+                                updates.dueDate = d.toISOString().split('T')[0];
+                              }
+                              setFormData(prev => ({ ...prev, ...updates }));
+                              templateService.useTemplate(t._id).catch(() => {});
+                            }}
+                            style={{ padding: '5px 12px', borderRadius: '99px', border: `2px solid ${selectedTemplate === t._id ? t.color : '#e2e8f0'}`,
+                              background: selectedTemplate === t._id ? t.color + '18' : '#fff',
+                              color: selectedTemplate === t._id ? t.color : '#64748b',
+                              fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {t.icon} {t.name} {selectedTemplate === t._id && '✓'}
+                          </button>
+                        ))}
+                        {selectedTemplate && (
+                          <button type="button" onClick={() => { setSelectedTemplate(null); setFormData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' }); }}
+                            style={{ padding: '5px 10px', borderRadius: '99px', border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                            ✕ Clear
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Priority</label>
-                      <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}
-                        style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}>
-                        <option value="High">🔴 High</option>
-                        <option value="Normal">🔵 Normal</option>
-                        <option value="Low">⚪ Low</option>
-                      </select>
-                    </div>
-                  </div>
+                  )}
 
-                  {/* Related To */}
-                  <div style={{ marginBottom: '14px', background: '#f8fafc', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0' }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>🔗 Related To (Optional)</label>
-                    <select value={relatedToType} onChange={e => handleRelatedTypeChange(e.target.value)}
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#fff', cursor: 'pointer', boxSizing: 'border-box', marginBottom: relatedToType ? '10px' : '0' }}>
-                      <option value="">— No relation —</option>
-                      <option value="Lead">Lead</option>
-                      <option value="Contact">Contact</option>
-                      <option value="Account">Account</option>
-                    </select>
-
-                    {relatedToType && (
-                      <div style={{ position: 'relative' }}>
-                        <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: '#64748b', marginBottom: '4px' }}>
-                          <span>Select {relatedToType}</span>
-                          {relatedToId && <span style={{ color: '#10b981', fontWeight: '700' }}>✓ Selected</span>}
-                        </label>
-                        <div style={{ position: 'relative' }}>
-                          <input ref={relatedSearchRef} type="text"
-                            placeholder={`Search ${relatedToType}...`}
-                            value={relatedToSearch}
-                            onChange={e => handleRelatedSearch(e.target.value)}
-                            onFocus={() => setShowRelatedDropdown(true)}
-                            style={{ width: '100%', padding: '8px 30px 8px 10px', borderRadius: '8px', border: `1.5px solid ${relatedToId ? '#10b981' : '#e2e8f0'}`, fontSize: '13px', boxSizing: 'border-box', outline: 'none', background: relatedToId ? '#f0fdf4' : '#fff', fontFamily: 'inherit' }} />
-                          {relatedToSearching && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: '#94a3b8' }}>⏳</span>}
+                  {selectedTemplate ? (() => {
+                    // ── TEMPLATE QUICK-CREATE MODE ──
+                    const appliedTemplate = taskTemplates.find(t => t._id === selectedTemplate);
+                    const dv = appliedTemplate?.defaultValues || {};
+                    const prefilledKeys = Object.keys(dv).filter(k => dv[k] !== '' && dv[k] != null);
+                    if (appliedTemplate?.dueDateOffset) prefilledKeys.push('dueDate');
+                    const labelMap = { subject: 'Subject', priority: 'Priority', status: 'Status', description: 'Description', dueDate: 'Due Date' };
+                    const valueMap = { ...dv, ...(appliedTemplate?.dueDateOffset ? { dueDate: formData.dueDate } : {}) };
+                    return (
+                      <div>
+                        {/* Template applied banner */}
+                        <div style={{ marginBottom: '16px', padding: '10px 13px', background: `${appliedTemplate?.color || '#6366f1'}12`, border: `1.5px solid ${appliedTemplate?.color || '#6366f1'}40`, borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ fontSize: '22px' }}>{appliedTemplate?.icon || '📋'}</div>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: appliedTemplate?.color || '#6366f1' }}>{appliedTemplate?.name}</div>
+                            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '1px' }}>{prefilledKeys.length} field{prefilledKeys.length !== 1 ? 's' : ''} pre-filled automatically</div>
+                          </div>
                         </div>
-                        {showRelatedDropdown && relatedToOptions.length > 0 && (
-                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 6px 20px rgba(0,0,0,0.12)', zIndex: 200, maxHeight: '180px', overflowY: 'auto', marginTop: '2px' }}>
-                            {relatedToOptions.map(opt => (
-                              <div key={opt._id} onClick={() => selectRelatedEntity(opt)}
-                                style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', color: '#374151', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
-                                onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                                <span style={{ fontSize: '10px', background: '#dbeafe', color: '#1d4ed8', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', flexShrink: 0 }}>{relatedToType[0]}</span>
-                                {opt.label}
-                              </div>
-                            ))}
+
+                        {/* Required empty fields */}
+                        {!formData.subject && (
+                          <div style={{ marginBottom: '14px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Subject *</label>
+                            <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} required
+                              placeholder="Enter task subject..."
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                              onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                              onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
                           </div>
                         )}
-                        {showRelatedDropdown && !relatedToSearching && relatedToOptions.length === 0 && (
-                          <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 200, padding: '14px', textAlign: 'center', fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
-                            No {relatedToType.toLowerCase()}s found
+                        {!formData.dueDate && (
+                          <div style={{ marginBottom: '14px' }}>
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Due Date *</label>
+                            <input type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} required
+                              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                              onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                              onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                          </div>
+                        )}
+
+                        {/* Pre-filled preview */}
+                        {prefilledKeys.length > 0 && (
+                          <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
+                            <div style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '10px' }}>📋 Pre-filled by template</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              {prefilledKeys.map(key => (
+                                <div key={key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', background: '#fff', borderRadius: '7px', border: '1px solid #e2e8f0' }}>
+                                  <span style={{ fontSize: '11px', color: '#64748b', fontWeight: '600' }}>{labelMap[key] || key}</span>
+                                  <span style={{ fontSize: '11px', fontWeight: '700', padding: '2px 8px', borderRadius: '99px', background: `${appliedTemplate?.color || '#6366f1'}12`, color: appliedTemplate?.color || '#6366f1' }}>
+                                    {String(valueMap[key])}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Related To always optional */}
+                        <div style={{ marginBottom: '14px', background: '#f8fafc', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0' }}>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>🔗 Related To (Optional)</label>
+                          <select value={relatedToType} onChange={e => handleRelatedTypeChange(e.target.value)}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#fff', cursor: 'pointer', boxSizing: 'border-box', marginBottom: relatedToType ? '10px' : '0' }}>
+                            <option value="">— No relation —</option>
+                            <option value="Lead">Lead</option>
+                            <option value="Contact">Contact</option>
+                            <option value="Account">Account</option>
+                          </select>
+                          {relatedToType && (
+                            <div style={{ position: 'relative' }}>
+                              <input ref={relatedSearchRef} type="text" placeholder={`Search ${relatedToType}...`} value={relatedToSearch}
+                                onChange={e => handleRelatedSearch(e.target.value)} onFocus={() => setShowRelatedDropdown(true)}
+                                style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: `1.5px solid ${relatedToId ? '#10b981' : '#e2e8f0'}`, fontSize: '13px', boxSizing: 'border-box', outline: 'none', background: relatedToId ? '#f0fdf4' : '#fff', fontFamily: 'inherit' }} />
+                              {showRelatedDropdown && relatedToOptions.length > 0 && (
+                                <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 6px 20px rgba(0,0,0,0.12)', zIndex: 200, maxHeight: '180px', overflowY: 'auto', marginTop: '2px' }}>
+                                  {relatedToOptions.map(opt => (
+                                    <div key={opt._id} onClick={() => selectRelatedEntity(opt)}
+                                      style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', color: '#374151', borderBottom: '1px solid #f1f5f9' }}
+                                      onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                                      onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                      {opt.label}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Footer buttons */}
+                        <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                          <button type="button" onClick={() => { setSelectedTemplate(null); setFormData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' }); }}
+                            style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                            ← Change
+                          </button>
+                          <button type="submit"
+                            style={{ flex: 2, padding: '10px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>
+                            ⚡ Create Task
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })() : (
+                    <>
+                      {/* Subject */}
+                      <div style={{ marginBottom: '14px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Subject *</label>
+                        <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} required
+                          placeholder="Enter task subject..."
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                          onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                          onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                      </div>
+
+                      {/* Due Date + Priority */}
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Due Date *</label>
+                          <input type="date" value={formData.dueDate} onChange={e => setFormData({...formData, dueDate: e.target.value})} required
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none' }}
+                            onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                            onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Priority</label>
+                          <select value={formData.priority} onChange={e => setFormData({...formData, priority: e.target.value})}
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#fff', cursor: 'pointer', boxSizing: 'border-box' }}>
+                            <option value="High">🔴 High</option>
+                            <option value="Normal">🔵 Normal</option>
+                            <option value="Low">⚪ Low</option>
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* Related To */}
+                      <div style={{ marginBottom: '14px', background: '#f8fafc', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>🔗 Related To (Optional)</label>
+                        <select value={relatedToType} onChange={e => handleRelatedTypeChange(e.target.value)}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#fff', cursor: 'pointer', boxSizing: 'border-box', marginBottom: relatedToType ? '10px' : '0' }}>
+                          <option value="">— No relation —</option>
+                          <option value="Lead">Lead</option>
+                          <option value="Contact">Contact</option>
+                          <option value="Account">Account</option>
+                        </select>
+
+                        {relatedToType && (
+                          <div style={{ position: 'relative' }}>
+                            <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', fontWeight: '600', color: '#64748b', marginBottom: '4px' }}>
+                              <span>Select {relatedToType}</span>
+                              {relatedToId && <span style={{ color: '#10b981', fontWeight: '700' }}>✓ Selected</span>}
+                            </label>
+                            <div style={{ position: 'relative' }}>
+                              <input ref={relatedSearchRef} type="text"
+                                placeholder={`Search ${relatedToType}...`}
+                                value={relatedToSearch}
+                                onChange={e => handleRelatedSearch(e.target.value)}
+                                onFocus={() => setShowRelatedDropdown(true)}
+                                style={{ width: '100%', padding: '8px 30px 8px 10px', borderRadius: '8px', border: `1.5px solid ${relatedToId ? '#10b981' : '#e2e8f0'}`, fontSize: '13px', boxSizing: 'border-box', outline: 'none', background: relatedToId ? '#f0fdf4' : '#fff', fontFamily: 'inherit' }} />
+                              {relatedToSearching && <span style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', color: '#94a3b8' }}>⏳</span>}
+                            </div>
+                            {showRelatedDropdown && relatedToOptions.length > 0 && (
+                              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 6px 20px rgba(0,0,0,0.12)', zIndex: 200, maxHeight: '180px', overflowY: 'auto', marginTop: '2px' }}>
+                                {relatedToOptions.map(opt => (
+                                  <div key={opt._id} onClick={() => selectRelatedEntity(opt)}
+                                    style={{ padding: '9px 12px', cursor: 'pointer', fontSize: '13px', color: '#374151', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                                    <span style={{ fontSize: '10px', background: '#dbeafe', color: '#1d4ed8', padding: '2px 6px', borderRadius: '4px', fontWeight: '700', flexShrink: 0 }}>{relatedToType[0]}</span>
+                                    {opt.label}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {showRelatedDropdown && !relatedToSearching && relatedToOptions.length === 0 && (
+                              <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, background: 'white', border: '1.5px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 16px rgba(0,0,0,0.1)', zIndex: 200, padding: '14px', textAlign: 'center', fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+                                No {relatedToType.toLowerCase()}s found
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
 
-                  {/* Description */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Description</label>
-                    <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3"
-                      placeholder="Add task details or notes..."
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', lineHeight: '1.5' }}
-                      onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
-                  </div>
+                      {/* Description */}
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Description</label>
+                        <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3"
+                          placeholder="Add task details or notes..."
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', lineHeight: '1.5' }}
+                          onFocus={e => e.target.style.borderColor = '#3b82f6'}
+                          onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                      </div>
 
-                  {/* Buttons */}
-                  <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
-                    <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }}
-                      style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
-                      Cancel
-                    </button>
-                    <button type="submit"
-                      style={{ flex: 2, padding: '10px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)' }}>
-                      ✓ Create Task
-                    </button>
-                  </div>
+                      {/* Buttons */}
+                      <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                        <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }}
+                          style={{ flex: 1, padding: '10px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: 'white', color: '#374151', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>
+                          Cancel
+                        </button>
+                        <button type="submit"
+                          style={{ flex: 2, padding: '10px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)' }}>
+                          ✓ Create Task
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </form>
               </div>
             </div>

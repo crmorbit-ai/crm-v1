@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config/api.config';
+import templateService from '../services/templateService';
 import '../styles/crm.css';
 
 const Meetings = () => {
@@ -24,8 +25,13 @@ const Meetings = () => {
   const [entityResults, setEntityResults] = useState([]);
   const [selectedEntity, setSelectedEntity] = useState(null);
   const [loadingEntities, setLoadingEntities] = useState(false);
+  const [meetingTemplates, setMeetingTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
-  useEffect(() => { loadMeetings(); }, []);
+  useEffect(() => {
+    loadMeetings();
+    templateService.getTemplates('meeting').then(r => setMeetingTemplates(r?.data || [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (formData.relatedTo && entitySearch && entitySearch.length >= 2) searchEntities();
@@ -108,6 +114,7 @@ const Meetings = () => {
   const resetForm = () => {
     setFormData({ title: '', from: '', to: '', location: '', meetingType: 'Online', relatedTo: '', relatedToId: '', description: '', participants: '', isIndependent: true });
     setEntitySearch(''); setEntityResults([]); setSelectedEntity(null);
+    setSelectedTemplate(null);
   };
 
   const handleDividerDrag = (e) => {
@@ -216,7 +223,7 @@ const Meetings = () => {
                   <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#8b5cf6,#a78bfa)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>📅</div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Meeting</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>Fill in meeting details below</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.5)' }}>{selectedTemplate ? '⚡ Template Mode — Quick Create' : 'Fill in meeting details below'}</div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); resetForm(); }}
@@ -226,6 +233,45 @@ const Meetings = () => {
               {/* Form body */}
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
                 <form onSubmit={handleCreate}>
+
+                  {/* Template selector */}
+                  {meetingTemplates.length > 0 && (
+                    <div style={{ marginBottom: '14px', padding: '10px 12px', background: '#faf5ff', borderRadius: '10px', border: '1px solid #e9d5ff' }}>
+                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#7c3aed', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>⚡ Apply Template</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {meetingTemplates.map(t => (
+                          <button key={t._id} type="button"
+                            onClick={() => {
+                              setSelectedTemplate(t._id);
+                              const dv = t.defaultValues || {};
+                              const updates = {};
+                              if (dv.title) updates.title = dv.title;
+                              if (dv.meetingType) updates.meetingType = dv.meetingType;
+                              if (dv.location) updates.location = dv.location;
+                              if (dv.description) updates.description = dv.description;
+                              setFormData(prev => ({ ...prev, ...updates }));
+                              templateService.useTemplate(t._id).catch(() => {});
+                            }}
+                            style={{ padding: '5px 12px', borderRadius: '99px', border: `2px solid ${selectedTemplate === t._id ? t.color : '#e2e8f0'}`, background: selectedTemplate === t._id ? t.color + '18' : '#fff', color: selectedTemplate === t._id ? t.color : '#64748b', fontSize: '11px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {t.icon} {t.name} {selectedTemplate === t._id && '✓'}
+                          </button>
+                        ))}
+                        {selectedTemplate && (
+                          <button type="button" onClick={() => { setSelectedTemplate(null); setFormData(p => ({ ...p, title: '', meetingType: 'Online', location: '', description: '' })); }}
+                            style={{ padding: '5px 10px', borderRadius: '99px', border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✕ Clear</button>
+                        )}
+                      </div>
+                      {selectedTemplate && (() => {
+                        const t = meetingTemplates.find(x => x._id === selectedTemplate);
+                        const keys = Object.keys(t?.defaultValues || {}).filter(k => t.defaultValues[k]);
+                        return keys.length > 0 ? (
+                          <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                            {keys.map(k => <span key={k} style={{ fontSize: '10px', padding: '2px 8px', borderRadius: '99px', background: t.color + '18', color: t.color, fontWeight: '700' }}>{k}: {String(t.defaultValues[k]).substring(0, 25)}</span>)}
+                          </div>
+                        ) : null;
+                      })()}
+                    </div>
+                  )}
 
                   {/* Title */}
                   <div style={{ marginBottom: '12px' }}>

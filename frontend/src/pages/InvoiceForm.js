@@ -4,6 +4,7 @@ import invoiceService from '../services/invoiceService';
 import { productItemService } from '../services/productItemService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { API_URL, getAuthHeaders } from '../config/api.config';
+import templateService from '../services/templateService';
 import '../styles/crm.css';
 
 const STEPS = [
@@ -24,6 +25,8 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   const [customers, setCustomers] = useState([]);
   const [customerType, setCustomerType] = useState('Lead');
   const [wizardStep, setWizardStep] = useState(0);
+  const [invoiceTemplates, setInvoiceTemplates] = useState([]);
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
 
   const [formData, setFormData] = useState({
     customerName: '',
@@ -48,6 +51,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
       const dueDate = new Date();
       dueDate.setDate(dueDate.getDate() + 30);
       setFormData(prev => ({ ...prev, dueDate: dueDate.toISOString().split('T')[0] }));
+      templateService.getTemplates('invoice').then(r => setInvoiceTemplates(r?.data || [])).catch(() => {});
     }
   }, [id, isEdit]);
 
@@ -203,6 +207,33 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
       switch (wizardStep) {
         case 0: return (
           <div style={{ display: 'grid', gap: '14px' }}>
+            {!isEdit && invoiceTemplates.length > 0 && (
+              <div style={{ padding:'10px 12px', background:'#fff1f2', borderRadius:'10px', border:'1px solid #fecdd3' }}>
+                <div style={{ fontSize:'10px', fontWeight:'700', color:'#dc2626', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>⚡ Apply Template</div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                  {invoiceTemplates.map(t => (
+                    <button key={t._id} type="button"
+                      onClick={() => {
+                        setSelectedTemplate(t._id);
+                        const dv = t.defaultValues || {};
+                        const updates = {};
+                        if (dv.title) updates.title = dv.title;
+                        if (dv.description) updates.description = dv.description;
+                        if (dv.terms) updates.terms = dv.terms;
+                        if (dv.notes) updates.notes = dv.notes;
+                        if (dv.dueDays) { const d = new Date(); d.setDate(d.getDate() + Number(dv.dueDays)); updates.dueDate = d.toISOString().split('T')[0]; }
+                        setFormData(prev => ({ ...prev, ...updates }));
+                        templateService.useTemplate(t._id).catch(() => {});
+                      }}
+                      style={{ padding:'5px 12px', borderRadius:'99px', border:`2px solid ${selectedTemplate===t._id ? t.color : '#e2e8f0'}`, background:selectedTemplate===t._id ? t.color+'18' : '#fff', color:selectedTemplate===t._id ? t.color : '#64748b', fontSize:'11px', fontWeight:'700', cursor:'pointer', display:'flex', alignItems:'center', gap:'4px' }}>
+                      {t.icon} {t.name} {selectedTemplate===t._id && '✓'}
+                    </button>
+                  ))}
+                  {selectedTemplate && <button type="button" onClick={() => setSelectedTemplate(null)} style={{ padding:'5px 10px', borderRadius:'99px', border:'1px solid #fecaca', background:'#fee2e2', color:'#dc2626', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>✕ Clear</button>}
+                </div>
+                {selectedTemplate && (() => { const t = invoiceTemplates.find(x => x._id === selectedTemplate); const keys = Object.keys(t?.defaultValues||{}).filter(k => t.defaultValues[k]); return keys.length > 0 ? <div style={{ marginTop:'8px', display:'flex', flexWrap:'wrap', gap:'4px' }}>{keys.map(k => <span key={k} style={{ fontSize:'10px', padding:'2px 8px', borderRadius:'99px', background:t.color+'18', color:t.color, fontWeight:'700' }}>{k}: {String(t.defaultValues[k]).substring(0,20)}</span>)}</div> : null; })()}
+              </div>
+            )}
             <div>
               <label style={ls}>Customer Type</label>
               <div className="resp-form-grid-3">
