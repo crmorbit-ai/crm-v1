@@ -233,6 +233,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                 {/* Automation */}
                 <NavSection title="Automation" section="automation" permissions={['user_management']}>
                   <NavItem to="/templates" label="Templates" permission="user_management" />
+                  <NavItem to="/document-templates" label="Document Templates" permission="user_management" />
                 </NavSection>
 
                 <div className="my-3 border-t border-white/20" />

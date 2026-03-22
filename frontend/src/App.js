@@ -44,6 +44,7 @@ import Profile from './pages/Profile';
 import TeamManagement from './pages/TeamManagement';
 import TemplateManagement from './pages/TemplateManagement';
 import NotificationSettings from './pages/NotificationSettings';
+import DocumentTemplates from './pages/DocumentTemplates';
 
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
@@ -418,6 +419,12 @@ function AppRoutes() {
       <Route path="/notification-settings" element={
         <ProtectedRoute requireTenant>
           <NotificationSettings />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/document-templates" element={
+        <ProtectedRoute requireTenant>
+          <DocumentTemplates />
         </ProtectedRoute>
       } />
 
