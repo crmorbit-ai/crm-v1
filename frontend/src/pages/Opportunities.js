@@ -200,7 +200,7 @@ const Opportunities = () => {
       const blobUrl = window.URL.createObjectURL(blob);
       setPreviewModal({ blobUrl, fileName: fileName || 'contract', fileType: fileType || '' });
     } catch (err) {
-      alert('Preview load karne mein error aaya. Download try karo.');
+      alert('Failed to load preview. Please try downloading the file.');
     } finally {
       setPreviewLoading(false);
     }
