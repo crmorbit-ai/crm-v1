@@ -91,7 +91,7 @@ const ICONS = ['📋','🎯','🧲','💼','📄','📞','🚀','⭐','🔥','�
 const COLORS = ['#6366f1','#2563eb','#7c3aed','#d97706','#16a34a','#dc2626','#0891b2','#db2777','#ea580c','#65a30d','#0f766e','#b45309'];
 
 const emptyForm = (module) => ({
-  name: '', description: '', module,
+  name: '', description: '', purpose: '', module,
   icon: MODULE_CONFIG[module]?.icon || '📋',
   color: MODULE_CONFIG[module]?.color || '#6366f1',
   defaultValues: {}, dueDateOffset: ''
@@ -141,7 +141,7 @@ export default function TemplateManagement() {
 
   const openEdit = (t) => {
     setForm({
-      name: t.name, description: t.description || '',
+      name: t.name, description: t.description || '', purpose: t.purpose || '',
       module: t.module, icon: t.icon, color: t.color,
       defaultValues: { ...t.defaultValues },
       dueDateOffset: t.dueDateOffset || ''
@@ -346,6 +346,14 @@ export default function TemplateManagement() {
                 <textarea value={form.description} onChange={e => setForm(p=>({...p, description:e.target.value}))}
                   rows={2} placeholder="What is this template for?"
                   style={{ ...inputStyle, resize:'vertical' }} />
+              </div>
+
+              {/* Purpose */}
+              <div>
+                <label style={labelStyle}>Purpose</label>
+                <input value={form.purpose} onChange={e => setForm(p=>({...p, purpose:e.target.value}))}
+                  placeholder="e.g. Used by sales team to quickly create qualified leads from cold calls"
+                  style={{ ...inputStyle }} />
               </div>
 
               {/* Icon + Color row */}

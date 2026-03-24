@@ -1,13 +1,20 @@
 const mongoose = require('mongoose');
 
 const opportunitySchema = new mongoose.Schema({
+  // Deal ID (auto-generated)
+  dealId: {
+    type: String,
+    unique: true,
+    trim: true
+  },
+
   // Basic Information
   opportunityName: {
     type: String,
     required: [true, 'Opportunity name is required'],
     trim: true
   },
-  
+
   amount: {
     type: Number,
     default: 0,
@@ -84,6 +91,20 @@ const opportunitySchema = new mongoose.Schema({
     trim: true
   },
   
+  // Account Manager (separate from owner)
+  accountManager: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+
+  // Contract Document
+  contract: {
+    url: { type: String },
+    publicId: { type: String },
+    fileName: { type: String },
+    fileType: { type: String }
+  },
+
   // Owner and Tenant
   owner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -138,8 +159,12 @@ opportunitySchema.virtual('daysUntilClose').get(function() {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 });
 
-// Calculate expected revenue based on amount and probability
-opportunitySchema.pre('save', function(next) {
+// Auto-generate dealId and calculate expected revenue
+opportunitySchema.pre('save', async function(next) {
+  if (this.isNew && !this.dealId) {
+    const count = await mongoose.model('Opportunity').countDocuments({ tenant: this.tenant });
+    this.dealId = `DEAL-${String(count + 1).padStart(4, '0')}`;
+  }
   if (this.amount && this.probability) {
     this.expectedRevenue = (this.amount * this.probability) / 100;
   }

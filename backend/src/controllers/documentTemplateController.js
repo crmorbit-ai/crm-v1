@@ -67,13 +67,13 @@ exports.getByShareToken = async (req, res) => {
 // ── CREATE ───────────────────────────────────────────────────────
 exports.create = async (req, res) => {
   try {
-    const { title, description, category, content, format, icon, color } = req.body;
+    const { title, description, purpose, category, content, format, icon, color } = req.body;
     if (!title) return errorResponse(res, 400, 'Title is required');
 
     const doc = await DocumentTemplate.create({
       tenant: req.user.tenant,
       createdBy: req.user._id,
-      title, description, category, content,
+      title, description, purpose, category, content,
       format: format || 'word',
       icon: icon || '📄',
       color: color || '#2563eb'
@@ -94,7 +94,7 @@ exports.update = async (req, res) => {
     });
     if (!doc) return errorResponse(res, 404, 'Not found');
 
-    const fields = ['title','description','category','content','format','icon','color'];
+    const fields = ['title','description','purpose','category','content','format','icon','color'];
     fields.forEach(f => { if (req.body[f] !== undefined) doc[f] = req.body[f]; });
     await doc.save();
     return successResponse(res, 200, 'Updated', doc);

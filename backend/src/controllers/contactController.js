@@ -77,19 +77,23 @@ const createContact = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, mobile, account, title, department, reportsTo, leadSource, isPrimary, doNotCall, emailOptOut,
       mailingStreet, mailingCity, mailingState, mailingCountry, mailingZipCode, description } = req.body;
-    if (!firstName || !lastName || !email) return errorResponse(res, 400, 'Please provide firstName, lastName, and email');
-    if (!account) return errorResponse(res, 400, 'Account is required for contact');
-    const accountExists = await Account.findById(account);
-    if (!accountExists) return errorResponse(res, 404, 'Account not found');
+    if (!firstName) return errorResponse(res, 400, 'Please provide Customer Name');
+    let accountExists = null;
+    if (account) {
+      accountExists = await Account.findById(account);
+      if (!accountExists) return errorResponse(res, 404, 'Account not found');
+    }
     let tenant;
     if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
       tenant = req.body.tenant;
       if (!tenant) return errorResponse(res, 400, 'Tenant is required');
     } else tenant = req.user.tenant;
-    const existingContact = await Contact.findOne({ email, account, isActive: true });
-    if (existingContact) return errorResponse(res, 400, 'Contact with this email already exists for this account');
+    if (email && account) {
+      const existingContact = await Contact.findOne({ email, account, isActive: true });
+      if (existingContact) return errorResponse(res, 400, 'Contact with this email already exists for this account');
+    }
     const contact = await Contact.create({
-      firstName, lastName, email, phone, mobile, account, title, department, reportsTo: reportsTo || null, leadSource,
+      firstName, lastName: lastName || '', email: email || '', phone, mobile, account: account || undefined, title, department, reportsTo: reportsTo || null, leadSource,
       isPrimary: isPrimary || false, doNotCall: doNotCall || false, emailOptOut: emailOptOut || false,
       mailingAddress: { street: mailingStreet, city: mailingCity, state: mailingState, country: mailingCountry, zipCode: mailingZipCode },
       description, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id

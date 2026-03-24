@@ -11,6 +11,7 @@ const { connectDataCenterDB } = require('./config/database');
 const imapIdleService = require('./services/imapIdleService');
 const emailSyncJob = require('./jobs/emailSyncJob');
 const { startDeletionCleanupJob } = require('./jobs/deletionCleanup');
+const { startScheduledPostsJob } = require('./jobs/scheduledPostsJob');
 
 // Initialize Express
 const app = express();
@@ -121,6 +122,7 @@ app.use('/api/viewing-pin', require('./routes/viewingPin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/templates', require('./routes/templates'));
 app.use('/api/document-templates', require('./routes/documentTemplates'));
+app.use('/api/social',            require('./routes/social'));
 
 
 app.use((req, res) => {
@@ -199,6 +201,7 @@ const startServer = async () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);
       emailSyncJob.start();
       startDeletionCleanupJob();
+      startScheduledPostsJob();
 
       try {
         await imapIdleService.startAllIdleConnections();

@@ -23,12 +23,12 @@ const getTemplates = async (req, res) => {
 // POST /api/templates
 const createTemplate = async (req, res) => {
   try {
-    const { name, description, module, icon, color, defaultValues, dueDateOffset } = req.body;
+    const { name, description, purpose, module, icon, color, defaultValues, dueDateOffset } = req.body;
     if (!name || !module) return errorResponse(res, 400, 'Name and module are required');
 
     const template = await Template.create({
       tenant: req.user.tenant,
-      name, description, module,
+      name, description, purpose, module,
       icon: icon || '📋',
       color: color || '#6366f1',
       defaultValues: defaultValues || {},
@@ -49,9 +49,10 @@ const updateTemplate = async (req, res) => {
     const template = await Template.findOne({ _id: req.params.id, tenant: req.user.tenant });
     if (!template) return errorResponse(res, 404, 'Template not found');
 
-    const { name, description, icon, color, defaultValues, dueDateOffset, isActive } = req.body;
+    const { name, description, purpose, icon, color, defaultValues, dueDateOffset, isActive } = req.body;
     if (name !== undefined) template.name = name;
     if (description !== undefined) template.description = description;
+    if (purpose !== undefined) template.purpose = purpose;
     if (icon !== undefined) template.icon = icon;
     if (color !== undefined) template.color = color;
     if (defaultValues !== undefined) template.defaultValues = defaultValues;

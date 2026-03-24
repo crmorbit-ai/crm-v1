@@ -16,7 +16,6 @@ import '../styles/crm.css';
 
 const DEFAULT_CONTACT_FIELDS = [
   { fieldName: 'firstName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
-  { fieldName: 'lastName', label: 'Last Name', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
   { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
   { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
   { fieldName: 'mobile', label: 'Mobile', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
@@ -1122,41 +1121,168 @@ const Contacts = () => {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ background: '#f9fafb' }}>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Name</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Account</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Email</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Phone</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {contacts.map((contact) => (
-                          <tr key={contact._id} onClick={() => handleContactClick(contact._id)}
-                            style={{ cursor: 'pointer', borderBottom: '1px solid #e5e7eb', background: selectedContactId === contact._id ? '#EFF6FF' : 'white' }}>
-                            <td style={{ padding: '12px 16px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>
-                                  {contact.firstName?.[0]}{contact.lastName?.[0]}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{contact.firstName} {contact.lastName}{contact.isPrimary && ' ⭐'}</div>
-                                  <div style={{ fontSize: '12px', color: '#64748b' }}>{contact.title || '-'}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.account?.accountName || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.email || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{contact.phone || contact.mobile || '-'}</td>
+                ) : (() => {
+                  /* ── Department cell colors (entire cell background like Monday.com) ── */
+                  const DEPT_CELL = {
+                    Sales:      { bg:'#dcfce7', color:'#14532d', fw:700 },
+                    Marketing:  { bg:'#fce7f3', color:'#831843', fw:700 },
+                    Finance:    { bg:'#dbeafe', color:'#1e3a8a', fw:700 },
+                    Operations: { bg:'#fef9c3', color:'#713f12', fw:700 },
+                    IT:         { bg:'#ede9fe', color:'#4c1d95', fw:700 },
+                    Other:      { bg:'#f1f5f9', color:'#334155', fw:600 },
+                  };
+
+                  /* ── Country name → ISO 2-letter code ── */
+                  const CISO = {
+                    'India':'IN','United States':'US','USA':'US','United Kingdom':'GB','UK':'GB',
+                    'Canada':'CA','Australia':'AU','Germany':'DE','France':'FR','Japan':'JP',
+                    'China':'CN','Brazil':'BR','Russia':'RU','South Africa':'ZA','UAE':'AE',
+                    'United Arab Emirates':'AE','Singapore':'SG','Pakistan':'PK','Bangladesh':'BD',
+                    'Nepal':'NP','Sri Lanka':'LK','Italy':'IT','Spain':'ES','Netherlands':'NL',
+                    'Switzerland':'CH','Sweden':'SE','Norway':'NO','Denmark':'DK','Finland':'FI',
+                    'New Zealand':'NZ','Mexico':'MX','Argentina':'AR','Chile':'CL','Colombia':'CO',
+                    'Indonesia':'ID','Malaysia':'MY','Thailand':'TH','Vietnam':'VN','Philippines':'PH',
+                    'Saudi Arabia':'SA','Israel':'IL','Turkey':'TR','Egypt':'EG','Nigeria':'NG',
+                    'Kenya':'KE','Ghana':'GH','Portugal':'PT','Poland':'PL','Ukraine':'UA',
+                    'Belgium':'BE','Austria':'AT','Ireland':'IE','Czech Republic':'CZ','Hungary':'HU',
+                    'Romania':'RO','Greece':'GR','Croatia':'HR','Slovakia':'SK','Bulgaria':'BG',
+                  };
+                  const isoToFlag = iso => iso.toUpperCase().replace(/./g, ch => String.fromCodePoint(ch.charCodeAt(0)+127397));
+                  const getFlag  = name => { const iso=CISO[name]; return iso ? isoToFlag(iso) : ''; };
+                  const getCountry = c => c.mailingAddress?.country || c.mailingCountry || '';
+
+                  /* ── Avatar colors ── */
+                  const AVCOLORS = ['#0073ea','#e2445c','#00c875','#ff642e','#a25ddc','#037f4c','#f2a640','#0086c0'];
+                  const avatarBg = name => AVCOLORS[(name?.charCodeAt(0)||0) % AVCOLORS.length];
+
+                  /* ── Column definitions ── */
+                  const FIELD_COL_MAP = {
+                    firstName: { label:'Customer Name', width:230,
+                      render:(c,_,isSel) => {
+                        const name=`${c.firstName||''}${c.lastName?' '+c.lastName:''}`.trim();
+                        const ini=((c.firstName?.[0]||'')+(c.lastName?.[0]||'')).toUpperCase()||'?';
+                        return (
+                          <div style={{display:'flex',alignItems:'center',gap:8,overflow:'hidden'}}>
+                            <div style={{width:26,height:26,borderRadius:'50%',background:avatarBg(name),display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:700,color:'#fff',flexShrink:0}}>{ini}</div>
+                            <div style={{minWidth:0,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                              <span style={{fontWeight:700,color:'#1e3c72',fontSize:13}}>{name||'—'}</span>
+                              {c.isPrimary && <span style={{marginLeft:5,fontSize:9,background:'#dcfce7',color:'#166534',borderRadius:3,padding:'1px 5px',fontWeight:700,verticalAlign:'middle'}}>★</span>}
+                            </div>
+                          </div>
+                        );
+                      }, cellStyle: () => ({})
+                    },
+                    title:     { label:'Job Title',   width:140, render:c=>c.title||'', cellStyle:()=>({}) },
+                    email:     { label:'Email',       width:190,
+                      render: c => c.email
+                        ? <a href={`mailto:${c.email}`} onClick={e=>e.stopPropagation()} style={{color:'#2563eb',textDecoration:'none',fontSize:13}}>{c.email}</a>
+                        : '',
+                      cellStyle:()=>({})
+                    },
+                    phone:  { label:'Phone',  width:170,
+                      render: c => {
+                        if (!c.phone) return '';
+                        const flag = getFlag(getCountry(c));
+                        return <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                          {flag ? <span style={{fontSize:17,lineHeight:'1',flexShrink:0}}>{flag}</span> : <span style={{fontSize:11,color:'#94a3b8'}}>📞</span>}
+                          <span style={{fontSize:13,color:'#1e293b'}}>{c.phone}</span>
+                        </span>;
+                      }, cellStyle:()=>({})
+                    },
+                    mobile: { label:'Mobile', width:170,
+                      render: c => {
+                        if (!c.mobile) return '';
+                        const flag = getFlag(getCountry(c));
+                        return <span style={{display:'inline-flex',alignItems:'center',gap:6}}>
+                          {flag ? <span style={{fontSize:17,lineHeight:'1',flexShrink:0}}>{flag}</span> : <span style={{fontSize:11,color:'#94a3b8'}}>📱</span>}
+                          <span style={{fontSize:13,color:'#1e293b'}}>{c.mobile}</span>
+                        </span>;
+                      }, cellStyle:()=>({})
+                    },
+                    department: { label:'Department', width:130,
+                      render: c => c.department || '',
+                      /* entire cell gets the department color */
+                      cellStyle: c => {
+                        if (!c.department) return {};
+                        const s = DEPT_CELL[c.department] || DEPT_CELL.Other;
+                        return { background:`${s.bg} !important`, color:s.color, fontWeight:s.fw, textAlign:'center' };
+                      }
+                    },
+                    mailingCity:    { label:'City',    width:110, render:c=>c.mailingAddress?.city    ||c.mailingCity   ||'', cellStyle:()=>({}) },
+                    mailingState:   { label:'State',   width:110, render:c=>c.mailingAddress?.state   ||c.mailingState  ||'', cellStyle:()=>({}) },
+                    mailingCountry: { label:'Country', width:130,
+                      render: c => { const cn=getCountry(c); const fl=getFlag(cn); return cn ? `${fl} ${cn}`.trim() : ''; },
+                      cellStyle:()=>({})
+                    },
+                    description: { label:'Description', width:200, render:c=>c.description||'', cellStyle:()=>({}) },
+                  };
+
+                  const activeCols = [
+                    ...(allFieldDefs.some(f=>f.fieldName==='firstName'&&f.isActive)
+                      ? [{ key:'firstName', ...FIELD_COL_MAP.firstName }] : []),
+                    { key:'account', label:'Company', width:150,
+                      render: c => c.account?.accountName||'',
+                      cellStyle: c => c.account?.accountName ? {fontWeight:600,color:'#2563eb'} : {}
+                    },
+                    ...allFieldDefs
+                      .filter(f=>f.isActive&&f.fieldName!=='firstName'&&f.fieldName!=='lastName'&&FIELD_COL_MAP[f.fieldName])
+                      .sort((a,b)=>a.displayOrder-b.displayOrder)
+                      .map(f=>({ key:f.fieldName, ...FIELD_COL_MAP[f.fieldName] })),
+                  ];
+                  const totalW = 36 + activeCols.reduce((s,c)=>s+c.width,0);
+
+                  return (
+                    <div style={{ overflowX:'auto', overflowY:'auto', maxHeight:'60vh' }}>
+                      <style>{`
+                        .xl-th { position:sticky; top:0; z-index:2; background:#f0f2f5; border:1px solid #c8cdd5; padding:8px 12px; font-size:11px; font-weight:700; color:#374151; text-align:left; white-space:nowrap; user-select:none; letter-spacing:.4px; text-transform:uppercase; }
+                        .xl-td { border:1px solid #e2e6eb; padding:6px 12px; font-size:13px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:38px; vertical-align:middle; }
+                        .xl-row { cursor:pointer; }
+                        .xl-row:hover .xl-td { background:#f0f7ff !important; }
+                        .xl-row.xl-sel .xl-td { background:#dbeafe !important; }
+                        .xl-num { position:sticky; left:0; z-index:1; background:#f0f2f5 !important; border:1px solid #c8cdd5; padding:6px 8px; font-size:11px; color:#94a3b8; text-align:center; width:36px; min-width:36px; font-weight:600; }
+                      `}</style>
+                      <table style={{ borderCollapse:'collapse', tableLayout:'fixed', width:totalW }}>
+                        <colgroup>
+                          <col style={{width:36}}/>
+                          {activeCols.map(c=><col key={c.key} style={{width:c.width}}/>)}
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th className="xl-th xl-num">#</th>
+                            {activeCols.map(c=><th key={c.key} className="xl-th">{c.label}</th>)}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody>
+                          {contacts.map((contact,i) => {
+                            const isSel = selectedContactId===contact._id;
+                            return (
+                              <tr key={contact._id} className={`xl-row${isSel?' xl-sel':''}`}
+                                style={{background: isSel?'#dbeafe': i%2===0?'#fff':'#f8fafc'}}
+                                onClick={()=>handleContactClick(contact._id)}>
+                                <td className="xl-td xl-num">{(pagination.page-1)*pagination.limit+i+1}</td>
+                                {activeCols.map(c => {
+                                  const extraStyle = c.cellStyle ? c.cellStyle(contact) : {};
+                                  // For dept col, apply bg directly (not via class so !important works)
+                                  const deptBg = c.key==='department'&&contact.department
+                                    ? (DEPT_CELL[contact.department]||DEPT_CELL.Other).bg : null;
+                                  return (
+                                    <td key={c.key} className="xl-td"
+                                      style={{
+                                        ...extraStyle,
+                                        ...(deptBg && !isSel ? {background:deptBg} : {}),
+                                      }}>
+                                      {c.render(contact, i, isSel)}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
 
                 {pagination.pages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid #e5e7eb' }}>

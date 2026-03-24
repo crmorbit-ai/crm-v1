@@ -1,4 +1,7 @@
 const mongoose = require('mongoose');
+const path = require('path');
+const fs = require('fs');
+const cloudinary = require('../config/cloudinary');
 const Opportunity = require('../models/Opportunity');
 const Account = require('../models/Account');
 const Contact = require('../models/Contact');
@@ -20,6 +23,7 @@ const getOpportunities = async (req, res) => {
     const total = await Opportunity.countDocuments(query);
     const opportunities = await Opportunity.find(query)
       .populate('owner', 'firstName lastName email')
+      .populate('accountManager', 'firstName lastName email')
       .populate('account', 'accountName accountType')
       .populate('contact', 'firstName lastName email')
       .populate('tenant', 'organizationName')
@@ -59,7 +63,7 @@ const getOpportunity = async (req, res) => {
 
 const createOpportunity = async (req, res) => {
   try {
-    const { opportunityName, amount, closeDate, stage, probability, type, leadSource, account, contact, nextStep, description, campaignSource, contactRole } = req.body;
+    const { opportunityName, amount, closeDate, stage, probability, type, leadSource, account, contact, nextStep, description, campaignSource, contactRole, accountManager } = req.body;
     if (!opportunityName || !closeDate || !account) return errorResponse(res, 400, 'Please provide opportunityName, closeDate, and account');
     const accountExists = await Account.findById(account);
     if (!accountExists) return errorResponse(res, 404, 'Account not found');
@@ -68,12 +72,34 @@ const createOpportunity = async (req, res) => {
       tenant = req.body.tenant;
       if (!tenant) return errorResponse(res, 400, 'Tenant is required');
     } else tenant = req.user.tenant;
+
+    // Handle contract file upload
+    let contractData = {};
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'crm/contracts',
+        resource_type: 'raw',
+        type: 'private',
+        public_id: `contract-${Date.now()}`
+      });
+      contractData = {
+        url: result.secure_url,
+        publicId: result.public_id,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype
+      };
+      fs.unlink(req.file.path, () => {});
+    }
+
     const opportunity = await Opportunity.create({
       opportunityName, amount: amount || 0, closeDate, stage: stage || 'Qualification', probability: probability || 50,
       type: type || 'New Business', leadSource, account, contact, nextStep, description, campaignSource, contactRole,
+      accountManager: accountManager || null,
+      contract: contractData.url ? contractData : undefined,
       owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
     });
     await opportunity.populate('owner', 'firstName lastName email');
+    await opportunity.populate('accountManager', 'firstName lastName email');
     await opportunity.populate('account', 'accountName');
     await logActivity(req, 'opportunity.created', 'Opportunity', opportunity._id, { opportunityName: opportunity.opportunityName, amount: opportunity.amount, stage: opportunity.stage });
 
@@ -104,10 +130,30 @@ const updateOpportunity = async (req, res) => {
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       if (opportunity.tenant.toString() !== req.user.tenant.toString()) return errorResponse(res, 403, 'Access denied');
     }
-    const allowedFields = ['opportunityName', 'amount', 'closeDate', 'stage', 'probability', 'type', 'leadSource', 'account', 'contact', 'nextStep', 'description', 'campaignSource', 'contactRole', 'owner', 'tags'];
-    allowedFields.forEach(field => { if (req.body[field] !== undefined) opportunity[field] = req.body[field]; });
+    const allowedFields = ['opportunityName', 'amount', 'closeDate', 'stage', 'probability', 'type', 'leadSource', 'account', 'contact', 'nextStep', 'description', 'campaignSource', 'contactRole', 'owner', 'accountManager', 'tags'];
     const prevStage = opportunity.stage;
     allowedFields.forEach(field => { if (req.body[field] !== undefined) opportunity[field] = req.body[field]; });
+
+    // Handle contract file upload on update
+    if (req.file) {
+      // Delete old contract from cloudinary if exists
+      if (opportunity.contract && opportunity.contract.publicId) {
+        await cloudinary.uploader.destroy(opportunity.contract.publicId, { resource_type: 'raw' }).catch(() => {});
+      }
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'crm/contracts',
+        resource_type: 'raw',
+        type: 'private',
+        public_id: `contract-${Date.now()}`
+      });
+      opportunity.contract = {
+        url: result.secure_url,
+        publicId: result.public_id,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype
+      };
+      fs.unlink(req.file.path, () => {});
+    }
     opportunity.lastModifiedBy = req.user._id;
     await opportunity.save();
     await opportunity.populate('owner', 'firstName lastName email');
@@ -146,6 +192,49 @@ const updateOpportunity = async (req, res) => {
   } catch (error) {
     console.error('Update opportunity error:', error);
     errorResponse(res, 500, 'Server error');
+  }
+};
+
+const downloadContract = async (req, res) => {
+  try {
+    const opportunity = await Opportunity.findById(req.params.id);
+    if (!opportunity) return errorResponse(res, 404, 'Opportunity not found');
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      if (opportunity.tenant.toString() !== req.user.tenant.toString()) return errorResponse(res, 403, 'Access denied');
+    }
+    if (!opportunity.contract || !opportunity.contract.url) return errorResponse(res, 404, 'No contract attached');
+
+    const fileName = opportunity.contract.fileName || 'contract.pdf';
+    const fileType = opportunity.contract.fileType || 'application/octet-stream';
+    const publicId = opportunity.contract.publicId;
+
+    // private_download_url is specifically for type:'private' Cloudinary files
+    const ext = fileName.split('.').pop() || 'pdf';
+    const privateUrl = cloudinary.utils.private_download_url(publicId, ext, {
+      resource_type: 'raw',
+      expires_at: Math.floor(Date.now() / 1000) + 300,
+      attachment: false
+    });
+
+    console.log('📄 Private download URL:', privateUrl);
+
+    const axios = require('axios');
+    const fileResponse = await axios.get(privateUrl, {
+      responseType: 'stream',
+      maxRedirects: 5,
+      timeout: 30000
+    });
+
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Type', fileType);
+    if (fileResponse.headers['content-length']) {
+      res.setHeader('Content-Length', fileResponse.headers['content-length']);
+    }
+
+    fileResponse.data.pipe(res);
+  } catch (error) {
+    console.error('Download contract error:', error.message);
+    if (!res.headersSent) errorResponse(res, 500, `Download failed: ${error.message}`);
   }
 };
 
@@ -208,4 +297,4 @@ const getOpportunityStats = async (req, res) => {
   }
 };
 
-module.exports = { getOpportunities, getOpportunity, createOpportunity, updateOpportunity, deleteOpportunity, getOpportunityStats };
+module.exports = { getOpportunities, getOpportunity, createOpportunity, updateOpportunity, deleteOpportunity, getOpportunityStats, downloadContract };

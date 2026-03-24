@@ -16,6 +16,10 @@ const templateSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  purpose: {
+    type: String,
+    trim: true
+  },
   module: {
     type: String,
     enum: ['lead', 'task', 'quotation', 'rfi', 'meeting', 'purchase_order', 'invoice', 'email'],

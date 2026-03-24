@@ -13,15 +13,21 @@ export const opportunityService = {
     return response;
   },
 
-  // Create opportunity
+  // Create opportunity (supports FormData for contract file upload)
   createOpportunity: async (opportunityData) => {
-    const response = await api.post('/opportunities', opportunityData);
+    const isFormData = opportunityData instanceof FormData;
+    const response = await api.post('/opportunities', opportunityData, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {}
+    });
     return response;
   },
 
-  // Update opportunity
+  // Update opportunity (supports FormData for contract file upload)
   updateOpportunity: async (id, opportunityData) => {
-    const response = await api.put(`/opportunities/${id}`, opportunityData);
+    const isFormData = opportunityData instanceof FormData;
+    const response = await api.put(`/opportunities/${id}`, opportunityData, {
+      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {}
+    });
     return response;
   },
 

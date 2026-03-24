@@ -12,7 +12,7 @@ const FORMAT_CONFIG = {
 const CATEGORIES = ['General', 'Lead Process', 'Sales SOP', 'HR & Onboarding', 'Finance', 'Operations', 'Support', 'Other'];
 
 const emptyForm = () => ({
-  title: '', description: '', category: 'General',
+  title: '', description: '', purpose: '', category: 'General',
   content: '', format: 'word', icon: '📄', color: '#2563eb'
 });
 
@@ -65,7 +65,7 @@ export default function DocumentTemplates() {
 
   const openCreate = () => { setForm(emptyForm()); setEditingId(null); setShowForm(true); };
   const openEdit   = (t)  => {
-    setForm({ title:t.title, description:t.description||'', category:t.category||'General',
+    setForm({ title:t.title, description:t.description||'', purpose:t.purpose||'', category:t.category||'General',
               content:t.content||'', format:t.format||'word', icon:t.icon||'📄', color:t.color||'#2563eb' });
     setEditingId(t._id); setShowForm(true);
   };
@@ -277,6 +277,14 @@ export default function DocumentTemplates() {
                 <label style={lbl}>Description</label>
                 <textarea value={form.description} onChange={e => setForm(p=>({...p,description:e.target.value}))} rows={2}
                   placeholder="What is this document about?" style={{ ...inp, resize:'vertical' }} />
+              </div>
+
+              {/* Purpose */}
+              <div>
+                <label style={lbl}>Purpose</label>
+                <input value={form.purpose} onChange={e => setForm(p=>({...p,purpose:e.target.value}))}
+                  placeholder="e.g. Used for onboarding new sales reps, shared with clients before deal closure"
+                  style={{ ...inp }} />
               </div>
 
               {/* Category + Format */}

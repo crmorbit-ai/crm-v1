@@ -19,6 +19,7 @@ const EmailCompose = ({
   const [emailConfigured, setEmailConfigured] = useState(true);
   const [emailTemplates, setEmailTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [isHtmlMode, setIsHtmlMode] = useState(false);
 
   const [emailData, setEmailData] = useState({
     from: '',
@@ -463,6 +464,8 @@ const EmailCompose = ({
                     onClick={() => {
                       setSelectedTemplate(t._id);
                       const dv = t.defaultValues || {};
+                      const isHtml = dv.message && (dv.message.trim().startsWith('<!DOCTYPE') || dv.message.trim().startsWith('<html'));
+                      setIsHtmlMode(!!isHtml);
                       setEmailData(prev => ({ ...prev, ...(dv.subject ? { subject: dv.subject } : {}), ...(dv.message ? { message: dv.message } : {}) }));
                       templateService.useTemplate(t._id).catch(() => {});
                     }}
@@ -471,7 +474,7 @@ const EmailCompose = ({
                   </button>
                 ))}
                 {selectedTemplate && (
-                  <button type="button" onClick={() => { setSelectedTemplate(null); setEmailData(p => ({ ...p, subject: '', message: '' })); }}
+                  <button type="button" onClick={() => { setSelectedTemplate(null); setIsHtmlMode(false); setEmailData(p => ({ ...p, subject: '', message: '' })); }}
                     style={{ padding: '4px 9px', borderRadius: '99px', border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>✕ Clear</button>
                 )}
               </div>
@@ -510,24 +513,44 @@ const EmailCompose = ({
           </div>
 
           {/* Compose Area */}
-          <div style={{ padding: '16px' }}>
-            <textarea
-              value={emailData.message}
-              onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
-              placeholder="Compose email...&#10;&#10;Tip: Use {{firstName}} and {{lastName}} for personalization"
-              style={{
-                width: '100%',
-                minHeight: '250px',
-                border: 'none',
-                outline: 'none',
-                fontSize: '14px',
-                fontFamily: 'Arial, sans-serif',
-                resize: 'vertical',
-                color: '#202124',
-                lineHeight: '1.6',
-                background: 'transparent'
-              }}
-            />
+          <div style={{ padding: isHtmlMode ? '0' : '16px' }}>
+            {isHtmlMode ? (
+              <div style={{ position: 'relative' }}>
+                <div style={{ padding: '6px 12px', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a' }}>✦ HTML Template Applied — rendered preview below</span>
+                  <button
+                    type="button"
+                    onClick={() => { setIsHtmlMode(false); setSelectedTemplate(null); setEmailData(p => ({ ...p, message: '' })); }}
+                    style={{ fontSize: 11, color: '#dc2626', background: '#fee2e2', border: '1px solid #fecaca', borderRadius: 6, padding: '2px 8px', cursor: 'pointer', fontWeight: 600 }}>
+                    ✕ Remove
+                  </button>
+                </div>
+                <iframe
+                  srcDoc={emailData.message}
+                  style={{ width: '100%', minHeight: '300px', border: 'none', display: 'block' }}
+                  title="Email Preview"
+                  sandbox="allow-same-origin"
+                />
+              </div>
+            ) : (
+              <textarea
+                value={emailData.message}
+                onChange={(e) => setEmailData({ ...emailData, message: e.target.value })}
+                placeholder="Compose email...&#10;&#10;Tip: Use {{firstName}} and {{lastName}} for personalization"
+                style={{
+                  width: '100%',
+                  minHeight: '250px',
+                  border: 'none',
+                  outline: 'none',
+                  fontSize: '14px',
+                  fontFamily: 'Arial, sans-serif',
+                  resize: 'vertical',
+                  color: '#202124',
+                  lineHeight: '1.6',
+                  background: 'transparent'
+                }}
+              />
+            )}
           </div>
         </div>
 

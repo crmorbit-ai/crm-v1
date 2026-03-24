@@ -45,6 +45,8 @@ import TeamManagement from './pages/TeamManagement';
 import TemplateManagement from './pages/TemplateManagement';
 import NotificationSettings from './pages/NotificationSettings';
 import DocumentTemplates from './pages/DocumentTemplates';
+import EmailTemplates from './pages/EmailTemplates';
+import SocialMedia from './pages/SocialMedia';
 
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
@@ -425,6 +427,18 @@ function AppRoutes() {
       <Route path="/document-templates" element={
         <ProtectedRoute requireTenant>
           <DocumentTemplates />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/email-templates" element={
+        <ProtectedRoute requireTenant>
+          <EmailTemplates />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/social-media" element={
+        <ProtectedRoute requireTenant>
+          <SocialMedia />
         </ProtectedRoute>
       } />
 

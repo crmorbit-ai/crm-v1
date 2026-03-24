@@ -1154,41 +1154,134 @@ const Accounts = () => {
                       </div>
                     ))}
                   </div>
-                ) : (
-                  <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                      <thead>
-                        <tr style={{ background: '#f9fafb' }}>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Account</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Type</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Industry</th>
-                          <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Phone</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {accounts.map((account) => (
-                          <tr key={account._id} onClick={() => handleAccountClick(account._id)}
-                            style={{ cursor: 'pointer', borderBottom: '1px solid #e5e7eb', background: selectedAccountId === account._id ? '#EFF6FF' : 'white' }}>
-                            <td style={{ padding: '12px 16px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>
-                                  {getAccountTypeIcon(account.accountType)}
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: '600', color: '#1e3c72', fontSize: '14px' }}>{account.accountName}</div>
-                                  <div style={{ fontSize: '11px', color: '#94a3b8' }}>{account.accountNumber ? `#${String(account.accountNumber).padStart(5, '0')}` : ''}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: '12px 16px' }}><span style={{ padding: '2px 8px', background: '#E0E7FF', color: '#3730A3', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>{account.accountType}</span></td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.industry || '-'}</td>
-                            <td style={{ padding: '12px 16px', fontSize: '13px', color: '#374151' }}>{account.phone || '-'}</td>
+                ) : (() => {
+                  /* ── Type cell colors (entire cell bg) ── */
+                  const TYPE_CELL = {
+                    Customer:  { bg:'#dbeafe', color:'#1e3a8a', fw:700 },
+                    Prospect:  { bg:'#ffedd5', color:'#9a3412', fw:700 },
+                    Partner:   { bg:'#dcfce7', color:'#14532d', fw:700 },
+                    Reseller:  { bg:'#ede9fe', color:'#4c1d95', fw:700 },
+                    Vendor:    { bg:'#fee2e2', color:'#991b1b', fw:700 },
+                    Other:     { bg:'#f1f5f9', color:'#334155', fw:600 },
+                  };
+                  /* ── Industry cell colors ── */
+                  const IND_CELL = {
+                    'IT & Technology':       { bg:'#e0f2fe', color:'#0c4a6e' },
+                    'Healthcare':            { bg:'#dcfce7', color:'#14532d' },
+                    'Banking & Finance':     { bg:'#dbeafe', color:'#1e3a8a' },
+                    'Education':             { bg:'#fef9c3', color:'#713f12' },
+                    'Manufacturing':         { bg:'#ffedd5', color:'#9a3412' },
+                    'Retail':                { bg:'#fce7f3', color:'#831843' },
+                    'Real Estate':           { bg:'#ede9fe', color:'#4c1d95' },
+                    'Consulting':            { bg:'#cffafe', color:'#164e63' },
+                    'Telecom':               { bg:'#d1fae5', color:'#065f46' },
+                    'Logistics & Transport': { bg:'#fee2e2', color:'#991b1b' },
+                  };
+
+                  const AVCOLORS = ['#0073ea','#e2445c','#00c875','#ff642e','#a25ddc','#037f4c','#f2a640','#0086c0'];
+                  const avatarBg = name => AVCOLORS[(name?.charCodeAt(0)||0) % AVCOLORS.length];
+
+                  const ACCT_COL_MAP = {
+                    accountName: { label:'Customer Name', width:230,
+                      render: a => {
+                        const name = a.accountName || '—';
+                        const ini  = name[0]?.toUpperCase() || '?';
+                        return (
+                          <div style={{display:'flex',alignItems:'center',gap:8,overflow:'hidden'}}>
+                            <div style={{width:26,height:26,borderRadius:6,background:avatarBg(name),display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0}}>{ini}</div>
+                            <div style={{minWidth:0,overflow:'hidden'}}>
+                              <div style={{fontWeight:700,color:'#1e3c72',fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{name}</div>
+                              {a.accountNumber && <div style={{fontSize:10,color:'#94a3b8'}}>#{String(a.accountNumber).padStart(5,'0')}</div>}
+                            </div>
+                          </div>
+                        );
+                      }, cellBg: () => null,
+                    },
+                    accountType: { label:'Type', width:120,
+                      render: a => a.accountType || '',
+                      cellBg: a => a.accountType ? (TYPE_CELL[a.accountType]||TYPE_CELL.Other) : null,
+                    },
+                    contactPerson: { label:'Contact Person', width:150, render: a => a.contactPerson||'', cellBg:()=>null },
+                    email:   { label:'Email',   width:185,
+                      render: a => a.email
+                        ? <a href={`mailto:${a.email}`} onClick={e=>e.stopPropagation()} style={{color:'#2563eb',textDecoration:'none',fontSize:13}}>{a.email}</a>
+                        : '', cellBg:()=>null
+                    },
+                    phone:   { label:'Phone',   width:130, render: a => a.phone  ||'', cellBg:()=>null },
+                    website: { label:'Website', width:160,
+                      render: a => a.website
+                        ? <a href={a.website} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()} style={{color:'#0073ea',textDecoration:'none',fontSize:13}}>{a.website.replace(/^https?:\/\//,'')}</a>
+                        : '', cellBg:()=>null
+                    },
+                    industry: { label:'Industry', width:150,
+                      render: a => a.industry||'',
+                      cellBg: a => a.industry ? (IND_CELL[a.industry]||null) : null,
+                    },
+                    annualRevenue:     { label:'Annual Revenue', width:140, render: a => a.annualRevenue ? `₹${Number(a.annualRevenue).toLocaleString('en-IN')}` : '', cellBg:()=>null },
+                    numberOfEmployees: { label:'Employees',      width:100, render: a => a.numberOfEmployees||'', cellBg:()=>null },
+                    leadSource:        { label:'Lead Source',    width:120, render: a => a.leadSource||'', cellBg:()=>null },
+                    billingCity:       { label:'City',           width:110, render: a => a.billingAddress?.city||'', cellBg:()=>null },
+                    billingState:      { label:'State',          width:110, render: a => a.billingAddress?.state||'', cellBg:()=>null },
+                    billingCountry:    { label:'Country',        width:120, render: a => a.billingAddress?.country||'', cellBg:()=>null },
+                    gstNumber:         { label:'GST Number',     width:140, render: a => a.gstNumber||'', cellBg:()=>null },
+                    description:       { label:'Description',    width:200, render: a => a.description||'', cellBg:()=>null },
+                  };
+
+                  const activeCols = allFieldDefs
+                    .filter(f => f.isActive && ACCT_COL_MAP[f.fieldName])
+                    .sort((a,b) => a.displayOrder - b.displayOrder)
+                    .map(f => ({ key:f.fieldName, ...ACCT_COL_MAP[f.fieldName] }));
+                  const totalW = 36 + activeCols.reduce((s,c) => s+c.width, 0);
+
+                  return (
+                    <div style={{ overflowX:'auto', overflowY:'auto', maxHeight:'60vh' }}>
+                      <style>{`
+                        .xl-th { position:sticky; top:0; z-index:2; background:#f0f2f5; border:1px solid #c8cdd5; padding:8px 12px; font-size:11px; font-weight:700; color:#374151; text-align:left; white-space:nowrap; user-select:none; letter-spacing:.4px; text-transform:uppercase; }
+                        .xl-td { border:1px solid #e2e6eb; padding:6px 12px; font-size:13px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:40px; vertical-align:middle; }
+                        .xl-row { cursor:pointer; }
+                        .xl-row:hover .xl-td { background:#f0f7ff !important; }
+                        .xl-row.xl-sel .xl-td { background:#dbeafe !important; }
+                        .xl-num { position:sticky; left:0; z-index:1; background:#f0f2f5 !important; border:1px solid #c8cdd5; padding:6px 8px; font-size:11px; color:#94a3b8; text-align:center; width:36px; min-width:36px; font-weight:600; }
+                      `}</style>
+                      <table style={{ borderCollapse:'collapse', tableLayout:'fixed', width:totalW }}>
+                        <colgroup>
+                          <col style={{width:36}}/>
+                          {activeCols.map(c => <col key={c.key} style={{width:c.width}}/>)}
+                        </colgroup>
+                        <thead>
+                          <tr>
+                            <th className="xl-th xl-num">#</th>
+                            {activeCols.map(c => <th key={c.key} className="xl-th">{c.label}</th>)}
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
+                        </thead>
+                        <tbody>
+                          {accounts.map((account, i) => {
+                            const isSel = selectedAccountId === account._id;
+                            return (
+                              <tr key={account._id}
+                                className={`xl-row${isSel?' xl-sel':''}`}
+                                style={{background: isSel?'#dbeafe': i%2===0?'#fff':'#f8fafc'}}
+                                onClick={() => handleAccountClick(account._id)}>
+                                <td className="xl-td xl-num">{(pagination.page-1)*pagination.limit+i+1}</td>
+                                {activeCols.map(c => {
+                                  const cb = c.cellBg ? c.cellBg(account) : null;
+                                  return (
+                                    <td key={c.key} className="xl-td"
+                                      style={{
+                                        ...(cb && !isSel ? { background:cb.bg, color:cb.color, fontWeight:cb.fw||600, textAlign:'center' } : {}),
+                                      }}>
+                                      {c.render(account)}
+                                    </td>
+                                  );
+                                })}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                })()}
 
                 {pagination.pages > 1 && (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid #e5e7eb' }}>

@@ -17,6 +17,10 @@ const documentTemplateSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  purpose: {
+    type: String,
+    trim: true
+  },
   category: {
     type: String,
     default: 'General',

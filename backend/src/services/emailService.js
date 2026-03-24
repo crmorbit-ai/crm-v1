@@ -276,9 +276,31 @@ class EmailService {
           .replace(/\{\{firstName\}\}/g, recipient.firstName || '')
           .replace(/\{\{lastName\}\}/g, recipient.lastName || '');
 
-        // Add signature
-        if (userSettings.signature) {
-          personalizedMessage += `\n\n---\n${userSettings.signature}`;
+        // Detect if message is already a full HTML document
+        const isHtml = personalizedMessage.trim().startsWith('<!DOCTYPE') || personalizedMessage.trim().startsWith('<html');
+
+        let htmlBody, textBody;
+        if (isHtml) {
+          // Already a full HTML email — use as-is, strip tags for plain text fallback
+          htmlBody = personalizedMessage;
+          textBody = personalizedMessage
+            .replace(/<style[\s\S]*?<\/style>/gi, '')
+            .replace(/<script[\s\S]*?<\/script>/gi, '')
+            .replace(/<!--[\s\S]*?-->/g, '')
+            .replace(/<[^>]*>/g, '')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/\s{3,}/g, '\n')
+            .trim();
+        } else {
+          // Plain text — add signature then convert newlines to <br>
+          if (userSettings.signature) {
+            personalizedMessage += `\n\n---\n${userSettings.signature}`;
+          }
+          textBody = personalizedMessage;
+          htmlBody = personalizedMessage.replace(/\n/g, '<br>');
         }
 
         let mailOptions;
@@ -289,8 +311,8 @@ class EmailService {
             from: `"${userSettings.displayName}" <${fromEmail}>`,
             to: recipient.email,
             subject,
-            text: personalizedMessage,
-            html: personalizedMessage.replace(/\n/g, '<br>'),
+            text: textBody,
+            html: htmlBody,
           };
         } else {
           // Free: From system with Reply-To
@@ -299,8 +321,8 @@ class EmailService {
             replyTo: userSettings.replyToEmail,
             to: recipient.email,
             subject,
-            text: personalizedMessage,
-            html: personalizedMessage.replace(/\n/g, '<br>'),
+            text: textBody,
+            html: htmlBody,
           };
         }
 
@@ -313,8 +335,8 @@ class EmailService {
           from: mailOptions.from,
           to: recipient.email,
           subject,
-          text: personalizedMessage,
-          html: mailOptions.html,
+          text: textBody,
+          html: htmlBody,
           emailType: 'bulk',
           relatedTo: recipient.relatedTo,
           userId,

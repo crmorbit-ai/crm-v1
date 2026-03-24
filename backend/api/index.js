@@ -314,6 +314,8 @@ try {
 
   // Template Routes
   app.use('/api/templates', require('../src/routes/templates'));
+  app.use('/api/document-templates', require('../src/routes/documentTemplates'));
+  app.use('/api/social', require('../src/routes/social'));
   console.log('  ✅ template routes loaded');
 
   // SAAS Admin & AI Routes
