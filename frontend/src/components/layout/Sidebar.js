@@ -235,7 +235,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                   <NavItem to="/templates" label="Templates" permission="user_management" />
                   <NavItem to="/document-templates" label="Document Templates" permission="user_management" />
                   <NavItem to="/email-templates" label="Email Templates" permission="user_management" />
-                  {/* <NavItem to="/social-media" label="Social Media" permission="user_management" /> */}
+                  <NavItem to="/social-media" label="Social Media" permission="user_management" />
                 </NavSection>
 
                 <div className="my-3 border-t border-white/20" />
