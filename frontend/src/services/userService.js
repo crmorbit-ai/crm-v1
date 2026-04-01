@@ -34,5 +34,10 @@ export const userService = {
   assignGroups: async (id, groups) => {
     const response = await api.post(`/users/${id}/assign-groups`, { groups });
     return response.data;
+  },
+
+  resetUserPassword: async (id, newPassword) => {
+    const response = await api.put(`/users/${id}/reset-password`, { newPassword });
+    return response.data;
   }
 };

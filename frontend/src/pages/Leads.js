@@ -2189,6 +2189,41 @@ const Leads = () => {
                             </div>
                           </div>
                         )}
+
+                        {/* Audit Info — only for TENANT_ADMIN and above */}
+                        {(user?.userType === 'TENANT_ADMIN' || user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN') && (
+                          <div style={{ marginBottom: '14px', padding: '10px', background: '#fefce8', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                            <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#92400e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Audit Information</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}>
+                                <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>ADDED BY</p>
+                                <p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                                  {selectedLeadData.createdBy
+                                    ? `${selectedLeadData.createdBy.firstName} ${selectedLeadData.createdBy.lastName}`
+                                    : '-'}
+                                </p>
+                              </div>
+                              <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}>
+                                <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>ADDED ON</p>
+                                <p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                                  {selectedLeadData.createdAt ? new Date(selectedLeadData.createdAt).toLocaleDateString() : '-'}
+                                </p>
+                              </div>
+                              {selectedLeadData.createdBy?.email && (
+                                <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px', gridColumn: 'span 2' }}>
+                                  <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>EMAIL</p>
+                                  <p style={{ fontSize: '12px', fontWeight: '600', margin: 0, color: '#3B82F6' }}>{selectedLeadData.createdBy.email}</p>
+                                </div>
+                              )}
+                              {selectedLeadData.source === 'Data Center' && (
+                                <div style={{ background: '#EEF2FF', padding: '6px 8px', borderRadius: '5px', gridColumn: 'span 2' }}>
+                                  <p style={{ fontSize: '9px', color: '#4338CA', marginBottom: '2px', fontWeight: '600' }}>SOURCE</p>
+                                  <p style={{ fontSize: '12px', fontWeight: '700', margin: 0, color: '#4F46E5' }}>Data Center</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
@@ -2443,11 +2478,12 @@ const Leads = () => {
             <Settings className="h-4 w-4" /> Manage Fields
           </button>
         )}
-        {canCreateLead && (
-          <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); setSelectedLeadId(null); setSelectedLeadData(null); setDetailExpanded(false); resetForm(); setWizardStep(0); setShowCreateForm(true); }}>
-            + New Lead
-          </button>
-        )}
+        <button className="crm-btn crm-btn-primary" onClick={() => {
+          if (!canCreateLead) { setError('Access Restricted: You do not have permission to create leads.'); return; }
+          closeAllForms(); setSelectedLeadId(null); setSelectedLeadData(null); setDetailExpanded(false); resetForm(); setWizardStep(0); setShowCreateForm(true);
+        }}>
+          + New Lead
+        </button>
         {/* Search */}
         <div style={{ position:'relative', flex:'1', minWidth:'200px', maxWidth:'280px' }}>
           <span style={{ position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)', fontSize:'13px', pointerEvents:'none', color:'#94a3b8' }}>🔍</span>
@@ -2701,12 +2737,13 @@ const Leads = () => {
             </div>
             <p style={{ fontSize:'18px', fontWeight:'700', color:'#0f172a', marginBottom:'8px' }}>No leads found</p>
             <p style={{ color:'#94a3b8', marginBottom:'24px', fontSize:'14px' }}>Create your first lead to start managing your pipeline!</p>
-            {canCreateLead && (
-              <button onClick={() => { resetForm(); setWizardStep(0); setShowCreateForm(true); }}
-                style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'10px 24px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#1e3c72,#3b82f6)', color:'#fff', fontSize:'14px', fontWeight:'700', cursor:'pointer', boxShadow:'0 4px 16px rgba(59,130,246,0.35)' }}>
-                <Plus className="h-4 w-4" /> Create First Lead
-              </button>
-            )}
+            <button onClick={() => {
+                if (!canCreateLead) { setError('Access Restricted: You do not have permission to create leads.'); return; }
+                resetForm(); setWizardStep(0); setShowCreateForm(true);
+              }}
+              style={{ display:'inline-flex', alignItems:'center', gap:'6px', padding:'10px 24px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#1e3c72,#3b82f6)', color:'#fff', fontSize:'14px', fontWeight:'700', cursor:'pointer', boxShadow:'0 4px 16px rgba(59,130,246,0.35)' }}>
+              <Plus className="h-4 w-4" /> Create First Lead
+            </button>
           </div>
         ) : viewMode === 'grid' ? (
           /* ── GRID VIEW ── */

@@ -14,13 +14,26 @@ const getAccounts = async (req, res) => {
     let query = { isActive: true };
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       query.tenant = req.user.tenant;
+
+      // TENANT_USER can only see accounts they own or created
+      // TENANT_ADMIN and TENANT_MANAGER see all accounts in their tenant
+      if (req.user.userType === 'TENANT_USER') {
+        query.$and = [
+          { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
+        ];
+      }
     }
     if (search) {
-      query.$or = [
+      const searchOr = [
         { accountName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } }
       ];
+      if (query.$and) {
+        query.$and.push({ $or: searchOr });
+      } else {
+        query.$or = searchOr;
+      }
     }
     if (accountType) query.accountType = accountType;
     if (industry) query.industry = industry;
@@ -49,6 +62,8 @@ const getAccount = async (req, res) => {
   try {
     const account = await Account.findById(req.params.id)
       .populate('owner', 'firstName lastName email')
+      .populate('createdBy', 'firstName lastName email userType')
+      .populate('lastModifiedBy', 'firstName lastName email')
       .populate('parentAccount', 'accountName accountType')
       .populate('tenant', 'organizationName');
     if (!account) return errorResponse(res, 404, 'Account not found');

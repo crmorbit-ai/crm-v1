@@ -15,7 +15,7 @@ const userSchema = new mongoose.Schema({
       // Password only required for local authentication
       return this.authProvider === 'local' || !this.authProvider;
     },
-    minlength: 6
+    minlength: 4
   },
   firstName: {
     type: String,

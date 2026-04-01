@@ -361,12 +361,13 @@ const Products = () => {
 
           {/* Toolbar */}
           <div style={{ background: 'white', borderRadius: '10px', padding: '8px 12px', marginTop: '8px', border: '1.5px solid #e2e8f0', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-            {canCreateProduct && (
-              <button onClick={openCreateForm}
-                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                + New Product
-              </button>
-            )}
+            <button onClick={() => {
+                if (!canCreateProduct) { setError('Access Restricted: You do not have permission to create products.'); return; }
+                openCreateForm();
+              }}
+              style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+              + New Product
+            </button>
             <div style={{ flex: '1', minWidth: '160px', position: 'relative' }}>
               <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', opacity: 0.45 }}>🔍</span>
               <input type="text" name="search" placeholder="Search products..." value={filters.search} onChange={handleFilterChange}
@@ -520,9 +521,10 @@ const Products = () => {
                   <div style={{ fontSize: '42px', marginBottom: '10px' }}>📦</div>
                   <div style={{ fontSize: '15px', fontWeight: '700', color: '#374151', marginBottom: '4px' }}>No products found</div>
                   <div style={{ fontSize: '12px', color: '#94a3b8', marginBottom: '16px' }}>Create your first product to get started</div>
-                  {canCreateProduct && (
-                    <button onClick={openCreateForm} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>+ Create First Product</button>
-                  )}
+                  <button onClick={() => {
+                      if (!canCreateProduct) { setError('Access Restricted: You do not have permission to create products.'); return; }
+                      openCreateForm();
+                    }} style={{ padding: '10px 20px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer' }}>+ Create First Product</button>
                 </div>
               ) : viewMode === 'grid' ? (
                 <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>

@@ -7,7 +7,8 @@ const {
   updateUser,
   deleteUser,
   assignRoles,
-  assignGroups
+  assignGroups,
+  resetUserPassword
 } = require('../controllers/userController');
 const { protect, restrictTo } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
@@ -25,5 +26,8 @@ router.delete('/:id', requirePermission('user_management', 'delete'), deleteUser
 // Role and group assignment
 router.post('/:id/assign-roles', requirePermission('user_management', 'manage'), assignRoles);
 router.post('/:id/assign-groups', requirePermission('user_management', 'manage'), assignGroups);
+
+// Admin password reset
+router.put('/:id/reset-password', requirePermission('user_management', 'manage'), resetUserPassword);
 
 module.exports = router;

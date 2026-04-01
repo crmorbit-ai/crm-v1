@@ -14,8 +14,24 @@ const getOpportunities = async (req, res) => {
   try {
     const { page = 1, limit = 100, search, stage, type, owner, account } = req.query;
     let query = { isActive: true };
-    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') query.tenant = req.user.tenant;
-    if (search) query.$or = [{ opportunityName: { $regex: search, $options: 'i' }}, { description: { $regex: search, $options: 'i' }}];
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      query.tenant = req.user.tenant;
+
+      // TENANT_USER can only see opportunities they own or created
+      if (req.user.userType === 'TENANT_USER') {
+        query.$and = [
+          { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
+        ];
+      }
+    }
+    if (search) {
+      const searchOr = [{ opportunityName: { $regex: search, $options: 'i' }}, { description: { $regex: search, $options: 'i' }}];
+      if (query.$and) {
+        query.$and.push({ $or: searchOr });
+      } else {
+        query.$or = searchOr;
+      }
+    }
     if (stage) query.stage = stage;
     if (type) query.type = type;
     if (owner) query.owner = owner;

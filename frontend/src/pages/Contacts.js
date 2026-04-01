@@ -187,7 +187,7 @@ const CONTACT_WIZARD_STEPS = [
 
 const Contacts = () => {
   const navigate = useNavigate();
-  const { hasPermission } = useAuth();
+  const { user, hasPermission } = useAuth();
   const [contacts, setContacts] = useState([]);
   const [accounts, setAccounts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -927,6 +927,34 @@ const Contacts = () => {
                             );
                           });
                         })()}
+
+                        {/* Audit Info — only for TENANT_ADMIN and above */}
+                        {(user?.userType === 'TENANT_ADMIN' || user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN') && (
+                          <div style={{ marginTop: '14px', padding: '10px', background: '#fefce8', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                            <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#92400e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Audit Information</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}>
+                                <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>ADDED BY</p>
+                                <p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                                  {selectedContactData.createdBy ? `${selectedContactData.createdBy.firstName} ${selectedContactData.createdBy.lastName}` : '-'}
+                                </p>
+                              </div>
+                              <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}>
+                                <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>ADDED ON</p>
+                                <p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                                  {selectedContactData.createdAt ? new Date(selectedContactData.createdAt).toLocaleDateString() : '-'}
+                                </p>
+                              </div>
+                              {selectedContactData.createdBy?.email && (
+                                <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px', gridColumn: 'span 2' }}>
+                                  <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>EMAIL</p>
+                                  <p style={{ fontSize: '12px', fontWeight: '600', margin: 0, color: '#3B82F6' }}>{selectedContactData.createdBy.email}</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
                         {/* Related Deals/Opportunities */}
                         {selectedContactData.relatedData?.opportunities && (
                           <div style={{ marginTop: '16px' }}>
@@ -1054,7 +1082,10 @@ const Contacts = () => {
                     <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
                   </button>
                 )}
-                {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={() => { closeAllForms(); setSelectedContactId(null); setSelectedContactData(null); setDetailExpanded(false); resetForm(); setShowCreateForm(true); }}>+ New Contact</button>}
+                <button className="crm-btn crm-btn-primary" onClick={() => {
+                  if (!canCreateContact) { setError('Access Restricted: You do not have permission to create contacts.'); return; }
+                  closeAllForms(); setSelectedContactId(null); setSelectedContactData(null); setDetailExpanded(false); resetForm(); setShowCreateForm(true);
+                }}>+ New Contact</button>
                 <div style={{ marginLeft: 'auto', display: 'flex', background: '#f1f5f9', borderRadius: '10px', padding: '3px', border: '1.5px solid #e2e8f0' }}>
                   {[['table', <List className="h-3.5 w-3.5" />, 'List'], ['grid', <LayoutGrid className="h-3.5 w-3.5" />, 'Grid']].map(([mode, icon, lbl]) => (
                     <button key={mode} onClick={() => setViewMode(mode)}
@@ -1095,7 +1126,10 @@ const Contacts = () => {
             ) : contacts.length === 0 ? (
               <div style={{ padding: '60px', textAlign: 'center' }}>
                 <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72' }}>No contacts found</p>
-                {canCreateContact && <button className="crm-btn crm-btn-primary" onClick={() => { resetForm(); setShowCreateForm(true); }}>+ Create First Contact</button>}
+                <button className="crm-btn crm-btn-primary" onClick={() => {
+                  if (!canCreateContact) { setError('Access Restricted: You do not have permission to create contacts.'); return; }
+                  resetForm(); setShowCreateForm(true);
+                }}>+ Create First Contact</button>
               </div>
             ) : (
               <>

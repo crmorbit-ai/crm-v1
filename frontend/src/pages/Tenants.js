@@ -464,691 +464,493 @@ const Tenants = () => {
 
   return (
     <SaasLayout title="Tenant Management">
-      {/* PIN Status Banner */}
-      <div style={styles.credBanner}>
-        <div style={styles.credInfo}>
-          <span style={{ fontWeight: '600' }}>🔐 Viewing PIN:</span>
-          {isPinSet ? (
-            <Badge variant="success">Set</Badge>
-          ) : (
-            <Badge variant="danger">Not Set</Badge>
-          )}
-          {isPinVerified && <Badge variant="info">Verified</Badge>}
+      <style>{`
+        .xTh { position:sticky; top:0; z-index:2; background:#1e293b; border:1px solid #334155; padding:7px 10px; font-size:10px; font-weight:700; color:#94a3b8; text-align:left; white-space:nowrap; user-select:none; letter-spacing:.5px; text-transform:uppercase; }
+        .xTd { border:1px solid #e2e6eb; padding:0 10px; font-size:12px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:38px; vertical-align:middle; }
+        .xRow { cursor:pointer; }
+        .xRow:hover .xTd { background:#eff6ff !important; }
+        .xRow.xSel .xTd { background:#e0e7ff !important; border-color:#c7d2fe !important; }
+        .xNum { position:sticky; left:0; z-index:1; background:#f8fafc !important; border:1px solid #d1d5db !important; padding:0 8px; font-size:10px; color:#94a3b8; text-align:center; width:32px; min-width:32px; font-weight:600; }
+        .xRow.xSel .xNum { background:#e0e7ff !important; }
+        .xPin { position:sticky; right:0; z-index:1; background:#fff !important; border-left:2px solid #e2e8f0 !important; }
+        .xRow.xSel .xPin { background:#e0e7ff !important; }
+        .dRow { display:grid; grid-template-columns:110px 1fr; align-items:center; border-bottom:1px solid #f1f5f9; min-height:30px; }
+        .dRow:last-child { border-bottom:none; }
+        .dLbl { font-size:10px; font-weight:600; color:#64748b; padding:5px 10px; text-transform:uppercase; letter-spacing:.3px; }
+        .dVal { font-size:12px; font-weight:500; color:#1e293b; padding:5px 10px; border-left:1px solid #f1f5f9; word-break:break-all; }
+        .dRow:nth-child(even) { background:#f8fafc; }
+        .dRow:nth-child(odd) { background:#fff; }
+        .sStat { cursor:pointer; border-radius:8px; padding:10px 14px; transition:transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease; }
+        .sStat:hover { transform:translateY(-3px) scale(1.03); filter:brightness(1.15); box-shadow:0 8px 24px rgba(0,0,0,0.28) !important; }
+        .sStat:active { transform:translateY(0) scale(0.98); }
+        @media (max-width:768px) {
+          .xHideM { display:none !important; }
+          .xFullM { width:100% !important; }
+        }
+      `}</style>
+
+      {/* TOP BAR: hero + PIN */}
+      <div style={{background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 40%,#0d1b4b 100%)',borderRadius:12,marginBottom:10,padding:'11px 18px',display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',gap:10,flexWrap:'wrap',flexDirection:isMobile?'column':'row'}}>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <div style={{width:34,height:34,borderRadius:8,background:'rgba(99,102,241,0.3)',border:'1px solid rgba(99,102,241,0.5)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>🏢</div>
+          <div>
+            <div style={{fontSize:15,fontWeight:800,color:'#fff',letterSpacing:'-0.3px'}}>Tenant Management</div>
+            <div style={{fontSize:10,color:'#8b9ccc',marginTop:1}}>{allTenants.length} organizations · Manage subscriptions &amp; access</div>
+          </div>
         </div>
-        <div style={styles.credActions}>
-          {!isPinSet ? (
-            <button onClick={() => setShowSetupModal(true)} style={styles.credBtn}>Set PIN</button>
-          ) : (
-            <>
-              <button onClick={() => { setIsPinVerified(false); setShowPinModal(true); setPendingTenant(null); }} style={styles.credBtn}>
-                {isPinVerified ? 'Re-verify' : 'Verify PIN'}
-              </button>
-              <button onClick={() => { setPinError(''); setShowChangePinModal(true); }} style={styles.credBtnOutline}>Change PIN</button>
+        <div style={{display:'flex',alignItems:'center',gap:7,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:5,background:'rgba(255,255,255,0.07)',borderRadius:7,padding:'5px 9px',border:'1px solid rgba(255,255,255,0.1)',fontSize:11}}>
+            <span>🔐</span>
+            <span style={{color:'#94a3b8',fontWeight:500}}>PIN:</span>
+            {isPinSet?<span style={{background:'#14532d',color:'#86efac',fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:3}}>SET</span>:<span style={{background:'#7f1d1d',color:'#fca5a5',fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:3}}>NOT SET</span>}
+            {isPinVerified&&<span style={{background:'#1e3a5f',color:'#60a5fa',fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:3}}>VERIFIED</span>}
+          </div>
+          {!isPinSet
+            ?<button onClick={()=>setShowSetupModal(true)} style={{background:'linear-gradient(135deg,#6366f1,#4f46e5)',color:'#fff',border:'none',padding:'6px 13px',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>Set PIN</button>
+            :<>
+              <button onClick={()=>{setIsPinVerified(false);setShowPinModal(true);setPendingTenant(null);}} style={{background:'linear-gradient(135deg,#6366f1,#4f46e5)',color:'#fff',border:'none',padding:'6px 13px',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>{isPinVerified?'Re-verify':'Verify PIN'}</button>
+              <button onClick={()=>{setPinError('');setShowChangePinModal(true);}} style={{background:'transparent',color:'#a5b4fc',border:'1px solid rgba(99,102,241,0.4)',padding:'6px 13px',borderRadius:6,fontSize:11,fontWeight:600,cursor:'pointer'}}>Change PIN</button>
             </>
+          }
+        </div>
+      </div>
+
+      {/* STATS */}
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(5,1fr)',gap:isMobile?6:8,marginBottom:10}}>
+        {[
+          {k:'total',label:'Total Tenants',val:stats.total,            grad:'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)', hov:'linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#0891b2 100%)', f:()=>setFilterStatus('all'),               act:filterStatus==='all'},
+          {k:'act',  label:'Active',       val:stats.active,           grad:'linear-gradient(135deg,#10b981 0%,#16a34a 50%,#84cc16 100%)', hov:'linear-gradient(135deg,#059669 0%,#15803d 50%,#65a30d 100%)', f:()=>setFilterStatus('active'),            act:filterStatus==='active'},
+          {k:'tri',  label:'Trial',        val:stats.trial,            grad:'linear-gradient(135deg,#0ea5e9 0%,#6366f1 50%,#8b5cf6 100%)', hov:'linear-gradient(135deg,#0284c7 0%,#4f46e5 50%,#7c3aed 100%)', f:()=>setFilterStatus('trial'),             act:filterStatus==='trial'},
+          {k:'sus',  label:'Suspended',    val:stats.suspended,        grad:'linear-gradient(135deg,#ec4899 0%,#dc2626 50%,#9f1239 100%)', hov:'linear-gradient(135deg,#db2777 0%,#b91c1c 50%,#881337 100%)', f:()=>setFilterStatus('suspended'),         act:filterStatus==='suspended'},
+          {k:'del',  label:'Del. Requests',val:stats.deletionRequested,grad:'linear-gradient(135deg,#f97316 0%,#ea580c 40%,#7c3aed 100%)', hov:'linear-gradient(135deg,#ea580c 0%,#c2410c 40%,#6d28d9 100%)', f:()=>setFilterStatus('deletion_requested'),act:filterStatus==='deletion_requested'},
+        ].map(s=>(
+          <div key={s.k} onClick={s.f} className="sStat"
+            style={{background:s.grad,boxShadow:s.act?'0 4px 18px rgba(0,0,0,0.3)':'0 2px 8px rgba(0,0,0,0.15)',outline:s.act?'2px solid rgba(255,255,255,0.5)':'none',outlineOffset:3}}>
+            <div style={{fontSize:22,fontWeight:900,color:'#fff',lineHeight:1,marginBottom:4,textShadow:'0 1px 3px rgba(0,0,0,0.2)'}}>{s.val}</div>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.85)',textTransform:'uppercase',letterSpacing:'0.5px'}}>{s.label}</div>
+            {s.act&&<div style={{width:20,height:2,background:'rgba(255,255,255,0.6)',borderRadius:1,marginTop:5}} />}
+          </div>
+        ))}
+      </div>
+
+      {/* Deletion alert */}
+      {stats.deletionRequested>0&&(
+        <div style={{background:'#fef2f2',border:'1px solid #fecaca',borderLeft:'4px solid #dc2626',borderRadius:7,padding:'7px 13px',marginBottom:10,display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',gap:8,flexWrap:'wrap',flexDirection:isMobile?'column':'row'}}>
+          <div style={{display:'flex',alignItems:'center',gap:7}}>
+            <span style={{fontSize:14}}>⚠️</span>
+            <span style={{fontWeight:700,fontSize:12,color:'#dc2626'}}>{stats.deletionRequested} Pending Deletion Request{stats.deletionRequested>1?'s':''}</span>
+            <span style={{fontSize:11,color:'#b91c1c'}}>— requires your action</span>
+          </div>
+          <button onClick={()=>setFilterStatus('deletion_requested')} style={{background:'#dc2626',color:'#fff',border:'none',borderRadius:5,padding:'4px 11px',fontSize:11,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>Review →</button>
+        </div>
+      )}
+
+      {/* MAIN */}
+      <div style={{display:'flex',flexDirection:isMobile?'column':'row',gap:12,minHeight:isMobile?'auto':400}}>
+        {/* EXCEL TABLE SIDE */}
+        <div style={{flex:(!isMobile&&selectedTenant&&isPinVerified)?'0 0 58%':'1',minWidth:0,display:'flex',flexDirection:'column',gap:0}}>
+          {/* Toolbar */}
+          <div style={{background:'#fff',borderRadius:'8px 8px 0 0',border:'1px solid #d1d5db',borderBottom:'none',padding:'8px 12px',display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
+            <input type="text" placeholder="🔍 Search organization, ID..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}
+              autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" name="tenant-search-unique"
+              style={{flex:1,minWidth:140,padding:'5px 10px',border:'1px solid #d1d5db',borderRadius:5,fontSize:12,outline:'none',background:'#f9fafb'}} />
+            <select value={filterStatus} onChange={e=>setFilterStatus(e.target.value)}
+              style={{padding:'5px 8px',border:'1px solid #d1d5db',borderRadius:5,fontSize:11,outline:'none',background:'#f9fafb',fontWeight:600,color:'#374151'}}>
+              <option value="all">All Status</option>
+              <option value="active">Active</option>
+              <option value="trial">Trial</option>
+              <option value="suspended">Suspended</option>
+              <option value="deletion_requested">Del. Requested</option>
+            </select>
+            {filterStatus!=='all'&&<button onClick={()=>setFilterStatus('all')} style={{background:'#fee2e2',color:'#dc2626',border:'1px solid #fecaca',padding:'5px 9px',borderRadius:5,fontSize:11,fontWeight:600,cursor:'pointer'}}>✕ Clear</button>}
+            <span style={{marginLeft:'auto',fontSize:10,color:'#94a3b8',fontWeight:600,whiteSpace:'nowrap'}}>{filteredTenants.length} records</span>
+          </div>
+
+          {/* Excel Grid */}
+          <div style={{overflowX:'auto',borderRadius:'0 0 8px 8px',border:'1px solid #d1d5db',background:'#fff'}}>
+            {loading?(
+              <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:13}}>Loading tenants...</div>
+            ):(
+              <table style={{width:'100%',borderCollapse:'collapse',tableLayout:isMobile?'auto':'fixed',minWidth:isMobile?'auto':600}}>
+                {!isMobile&&<colgroup>
+                  <col style={{width:36}} />
+                  <col style={{width:'28%'}} />
+                  <col style={{width:'14%'}} />
+                  <col style={{width:'11%'}} />
+                  <col style={{width:'11%'}} />
+                  <col style={{width:'13%'}} />
+                  <col style={{width:'13%'}} />
+                  <col style={{width:80}} />
+                </colgroup>}
+                <thead>
+                  <tr>
+                    <th className="xTh xNum">#</th>
+                    <th className="xTh">Company</th>
+                    <th className={`xTh${isMobile?' xHideM':''}`}>Org ID</th>
+                    <th className="xTh" style={{textAlign:'center'}}>Status</th>
+                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Plan</th>
+                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Users</th>
+                    <th className={`xTh${isMobile?' xHideM':''}`}>Created</th>
+                    <th className="xTh xPin" style={{textAlign:'center'}}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedTenants.length===0?(
+                    <tr><td colSpan={8} style={{padding:'28px',textAlign:'center',color:'#94a3b8',fontSize:13,border:'1px solid #e2e6eb'}}>No tenants found</td></tr>
+                  ):paginatedTenants.map((t,i)=>{
+                    const status=getTenantStatus(t);
+                    const isSelected=selectedTenant?._id===t._id;
+                    const statusCell={
+                      active:   {bg:'#16a34a',color:'#fff',fw:700},
+                      trial:    {bg:'#0ea5e9',color:'#fff',fw:700},
+                      suspended:{bg:'#dc2626',color:'#fff',fw:700},
+                    }[status]||{bg:'#475569',color:'#fff',fw:600};
+                    const grads=['linear-gradient(135deg,#6366f1,#4f46e5)','linear-gradient(135deg,#8b5cf6,#7c3aed)','linear-gradient(135deg,#06b6d4,#0891b2)','linear-gradient(135deg,#10b981,#059669)','linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#ef4444,#dc2626)','linear-gradient(135deg,#ec4899,#db2777)','linear-gradient(135deg,#14b8a6,#0d9488)'];
+                    const grad=grads[(t.organizationName?.charCodeAt(0)||0)%grads.length];
+                    const rowBg=isSelected?null:i%2===0?'#fff':'#f9fafb';
+                    return (
+                      <tr key={t._id} className={`xRow${isSelected?' xSel':''}`} onClick={()=>handleTenantClick(t)}>
+                        <td className="xTd xNum" style={{background:rowBg||undefined}}>{startIndex+i+1}</td>
+                        <td className="xTd" style={{background:rowBg||undefined}}>
+                          <div style={{display:'flex',alignItems:'center',gap:7}}>
+                            <div style={{width:26,height:26,borderRadius:6,background:grad,display:'flex',alignItems:'center',justifyContent:'center',fontSize:11,fontWeight:700,color:'#fff',flexShrink:0,overflow:'hidden'}}>
+                              {t.logo?<img src={getLogoUrl(t.logo)} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}} />:t.organizationName?.charAt(0)?.toUpperCase()||'?'}
+                            </div>
+                            <div style={{minWidth:0}}>
+                              <div style={{fontSize:12,fontWeight:700,color:'#111827',overflow:'hidden',textOverflow:'ellipsis'}}>{t.organizationName||'N/A'}</div>
+                              <div style={{fontSize:10,color:'#9ca3af',overflow:'hidden',textOverflow:'ellipsis'}}>{maskEmail(t.contactEmail)}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontFamily:'monospace',fontSize:10,color:'#6366f1',fontWeight:600,letterSpacing:'0.3px'}}>{t.organizationId||'—'}</td>
+                        <td className="xTd" style={{background:isSelected?null:statusCell.bg,color:statusCell.color,fontWeight:statusCell.fw,fontSize:10,textAlign:'center',textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                          {status}
+                          {t.deletionRequest?.status==='pending'&&<div style={{fontSize:9,marginTop:1,color:isSelected?'#dc2626':'#dc2626',fontWeight:700}}>DEL REQ</div>}
+                        </td>
+                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:isSelected?null:'#eff6ff',color:'#3730a3',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
+                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center',fontSize:11,fontWeight:700,color:'#374151'}}>{t.userCount||0}<span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>/{t.subscription?.maxUsers||'∞'}</span></td>
+                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontSize:11,color:'#6b7280'}}>{formatDate(t.createdAt)}</td>
+                        <td className="xTd xPin" style={{background:rowBg||undefined,textAlign:'center'}}>
+                          <button onClick={e=>{e.stopPropagation();handleTenantClick(t);}}
+                            style={{background:isPinVerified?'linear-gradient(135deg,#6366f1,#4f46e5)':'#e5e7eb',color:isPinVerified?'#fff':'#6b7280',border:'none',padding:'4px 10px',borderRadius:4,fontSize:10,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:3}}>
+                            {isPinVerified?'👁 View':'🔒'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Pagination */}
+          {!loading&&(
+            <div style={{background:'#f9fafb',border:'1px solid #d1d5db',borderTop:'none',borderRadius:'0 0 8px 8px',padding:'6px 12px',display:'flex',justifyContent:'space-between',alignItems:'center',fontSize:11,color:'#6b7280',flexWrap:'wrap',gap:6}}>
+              <span>Showing <b style={{color:'#111827'}}>{startIndex+1}–{Math.min(startIndex+pageSize,filteredTenants.length)}</b> of <b style={{color:'#111827'}}>{filteredTenants.length}</b> tenants{filterStatus!=='all'?` · Filter: ${filterStatus}`:''}</span>
+              <div style={{display:'flex',alignItems:'center',gap:5}}>
+                <button onClick={()=>setCurrentPage(p=>Math.max(1,p-1))} disabled={currentPage===1}
+                  style={{background:currentPage===1?'#f3f4f6':'#1e293b',color:currentPage===1?'#9ca3af':'#fff',border:'1px solid',borderColor:currentPage===1?'#d1d5db':'#1e293b',padding:'4px 9px',borderRadius:4,cursor:currentPage===1?'not-allowed':'pointer',fontSize:11,fontWeight:600}}>← Prev</button>
+                <span style={{fontWeight:700,color:'#1e293b',fontSize:11,padding:'0 4px'}}>Page {currentPage} / {totalPages||1}</span>
+                <button onClick={()=>setCurrentPage(p=>Math.min(totalPages,p+1))} disabled={currentPage>=totalPages}
+                  style={{background:currentPage>=totalPages?'#f3f4f6':'#1e293b',color:currentPage>=totalPages?'#9ca3af':'#fff',border:'1px solid',borderColor:currentPage>=totalPages?'#d1d5db':'#1e293b',padding:'4px 9px',borderRadius:4,cursor:currentPage>=totalPages?'not-allowed':'pointer',fontSize:11,fontWeight:600}}>Next →</button>
+              </div>
+            </div>
           )}
         </div>
-      </div>
 
-      {/* Pending Deletion Requests Alert Banner */}
-      {stats.deletionRequested > 0 && (
-        <div style={{
-          background: 'linear-gradient(135deg, #fef2f2 0%, #fff5f5 100%)',
-          border: '1.5px solid #fecaca',
-          borderRadius: '10px',
-          padding: '12px 18px',
-          marginBottom: '14px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: '10px'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '22px' }}>🔔</span>
-            <div>
-              <p style={{ margin: 0, fontWeight: '700', fontSize: '14px', color: '#dc2626' }}>
-                {stats.deletionRequested} Pending Deletion Request{stats.deletionRequested > 1 ? 's' : ''}
-              </p>
-              <p style={{ margin: 0, fontSize: '12px', color: '#b91c1c' }}>
-                Organization{stats.deletionRequested > 1 ? 's' : ''} requesting account deletion — action required
-              </p>
+        {/* DETAIL PANEL */}
+        {selectedTenant&&isPinVerified&&(()=>{
+          const t=selectedTenant;
+          const st=getTenantStatus(t);
+          const stColors={active:{bg:'#16a34a',c:'#fff'},trial:{bg:'#0ea5e9',c:'#fff'},suspended:{bg:'#dc2626',c:'#fff'}};
+          const sc=stColors[st]||{bg:'#f1f5f9',c:'#475569'};
+
+          const Sec=({label,accent='#6366f1',children})=>(
+            <div style={{marginBottom:0}}>
+              <div style={{background:`linear-gradient(90deg,${accent}18 0%,transparent 100%)`,borderLeft:`3px solid ${accent}`,padding:'5px 10px',fontSize:10,fontWeight:800,color:accent,textTransform:'uppercase',letterSpacing:'0.5px'}}>{label}</div>
+              <div>{children}</div>
             </div>
-          </div>
-          <button
-            onClick={() => setFilterStatus('deletion_requested')}
-            style={{ background: '#dc2626', color: '#fff', border: 'none', borderRadius: '6px', padding: '7px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-          >
-            Review Requests →
-          </button>
-        </div>
-      )}
-
-      {/* Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)', gap: '12px', marginBottom: '16px' }}>
-        <StatCard icon="🏢" value={stats.total} label="Total" onClick={() => setFilterStatus('all')} active={filterStatus === 'all'} />
-        <StatCard icon="✅" value={stats.active} label="Active" onClick={() => setFilterStatus('active')} active={filterStatus === 'active'} />
-        <StatCard icon="⏳" value={stats.trial} label="Trial" onClick={() => setFilterStatus('trial')} active={filterStatus === 'trial'} />
-        <StatCard icon="🚫" value={stats.suspended} label="Suspended" onClick={() => setFilterStatus('suspended')} active={filterStatus === 'suspended'} />
-        <StatCard icon="🗑️" value={stats.deletionRequested} label="Deletion Req." onClick={() => setFilterStatus('deletion_requested')} active={filterStatus === 'deletion_requested'} />
-      </div>
-
-      {/* Main Content */}
-      <div style={{ display: 'flex', gap: '16px', minHeight: '500px' }}>
-        {/* Left - List */}
-        <div style={{ flex: selectedTenant ? '0 0 55%' : '1' }}>
-          <Card>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
-              <input
-                type="text"
-                placeholder="Search..."
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                style={styles.searchInput}
-                autoComplete="off"
-                autoCorrect="off"
-                autoCapitalize="off"
-                spellCheck="false"
-                name="tenant-search-unique"
-              />
-              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={styles.selectInput}>
-                <option value="all">All Status</option>
-                <option value="active">Active</option>
-                <option value="trial">Trial</option>
-                <option value="suspended">Suspended</option>
-                <option value="deletion_requested">Deletion Requested</option>
-              </select>
+          );
+          const FR=({l,v,mono})=>(
+            <div className="dRow">
+              <div className="dLbl">{l}</div>
+              <div className="dVal" style={mono?{fontFamily:'monospace',fontSize:11,color:'#6366f1'}:{}}>{v||'—'}</div>
             </div>
+          );
 
-            {loading ? (
-              <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>Loading...</div>
-            ) : (
-              <>
-                <Table
-                  columns={columns}
-                  data={paginatedTenants}
-                  onRowClick={handleTenantClick}
-                  selectedId={selectedTenant?._id}
-                  emptyMessage="No tenants found"
-                />
-                {/* Pagination */}
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '12px',
-                  borderTop: '1px solid #e2e8f0',
-                  fontSize: '12px',
-                  color: '#64748b',
-                  flexWrap: 'wrap',
-                  gap: '10px'
-                }}>
-                  <span>
-                    Showing {startIndex + 1}-{Math.min(startIndex + pageSize, filteredTenants.length)} of {filteredTenants.length} tenants
-                    {filterStatus !== 'all' && ` (${filterStatus})`}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    {filterStatus !== 'all' && (
-                      <button
-                        onClick={() => setFilterStatus('all')}
-                        style={{
-                          background: '#fee2e2',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                          color: '#dc2626',
-                          fontWeight: '500'
-                        }}
-                      >
-                        ✕ Clear Filter
-                      </button>
+          return (
+            <div style={{flex:isMobile?'1':'0 0 41%',width:isMobile?'100%':undefined,minWidth:0,background:'#fff',borderRadius:8,border:'1px solid #d1d5db',overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:isMobile?'none':'82vh',boxShadow:'0 2px 8px rgba(0,0,0,0.07)'}}>
+              {/* Dark header */}
+              <div style={{background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 50%,#312e81 100%)',padding:'11px 14px 10px',flexShrink:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:36,height:36,borderRadius:7,background:'rgba(99,102,241,0.2)',border:'1px solid rgba(99,102,241,0.35)',display:'flex',alignItems:'center',justifyContent:'center',overflow:'hidden',flexShrink:0}}>
+                    {t.logo?<img src={getLogoUrl(t.logo)} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}} onError={e=>{e.target.style.display='none'}} />
+                      :<span style={{fontSize:16,fontWeight:700,color:'#a5b4fc'}}>{t.organizationName?.charAt(0)}</span>}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:13,fontWeight:800,color:'#fff',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.organizationName}</div>
+                    <div style={{display:'flex',gap:4,marginTop:3,flexWrap:'wrap'}}>
+                      <span style={{background:sc.bg,color:sc.c,fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:3,textTransform:'uppercase'}}>{st}</span>
+                      <span style={{background:'rgba(99,102,241,0.25)',color:'#a5b4fc',fontSize:9,fontWeight:700,padding:'1px 6px',borderRadius:3}}>{t.subscription?.planName||'Free'}</span>
+                      {t.organizationId&&<span style={{background:'rgba(255,255,255,0.08)',color:'#94a3b8',fontSize:9,fontFamily:'monospace',padding:'1px 6px',borderRadius:3}}>{t.organizationId}</span>}
+                    </div>
+                  </div>
+                  <button onClick={()=>setSelectedTenant(null)} style={{background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.12)',color:'#94a3b8',width:24,height:24,borderRadius:5,cursor:'pointer',fontSize:13,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>×</button>
+                </div>
+              </div>
+
+              {/* KPI row */}
+              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',borderBottom:'1px solid #e2e8f0',flexShrink:0}}>
+                {[
+                  {l:'Users',v:`${t.userCount||0}/${t.subscription?.maxUsers||'∞'}`},
+                  {l:'Plan',v:t.subscription?.planName||'Free'},
+                  {l:'Billing',v:t.subscription?.billingCycle||'N/A'},
+                ].map(({l,v},i)=>(
+                  <div key={l} style={{padding:'7px 10px',textAlign:'center',borderRight:i<2?'1px solid #e2e8f0':'none',background:i%2===0?'#fff':'#f9fafb'}}>
+                    <div style={{fontSize:13,fontWeight:800,color:'#1e293b'}}>{v}</div>
+                    <div style={{fontSize:9,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',marginTop:1}}>{l}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Scrollable sections */}
+              <div style={{flex:1,overflowY:'auto'}}>
+                <Sec label="Subscription" accent="#6366f1">
+                  <FR l="Status"  v={st.toUpperCase()} />
+                  <FR l="Expires" v={formatDate(t.subscription?.endDate)} />
+                  <FR l="Max Users" v={t.subscription?.maxUsers||'Unlimited'} />
+                </Sec>
+
+                <Sec label="Contact Info" accent="#0891b2">
+                  <FR l="Email"  v={t.contactEmail} />
+                  <FR l="Phone"  v={t.contactPhone} />
+                  {t.alternatePhone&&<FR l="Alt. Phone" v={t.alternatePhone} />}
+                  <FR l="Admin"  v={t.adminUser?`${t.adminUser.firstName} ${t.adminUser.lastName}`:null} />
+                  {t.website&&<FR l="Website" v={t.website} />}
+                </Sec>
+
+                {(t.industry||t.businessType||t.numberOfEmployees)&&(
+                  <Sec label="Business" accent="#0d9488">
+                    {t.industry&&<FR l="Industry" v={t.industry} />}
+                    {t.businessType&&<FR l="Type" v={t.businessType} />}
+                    {t.numberOfEmployees&&<FR l="Team Size" v={t.numberOfEmployees} />}
+                    {t.foundedYear&&<FR l="Founded" v={t.foundedYear} />}
+                    {t.taxId&&<FR l="Tax ID" v={t.taxId} mono />}
+                    {t.registrationNumber&&<FR l="Reg. No." v={t.registrationNumber} mono />}
+                  </Sec>
+                )}
+
+                {(t.headquarters?.city||t.headquarters?.country)&&(
+                  <Sec label="Location" accent="#7c3aed">
+                    {t.headquarters?.street&&<FR l="Street" v={t.headquarters.street} />}
+                    {t.headquarters?.city&&<FR l="City" v={t.headquarters.city} />}
+                    {t.headquarters?.state&&<FR l="State" v={t.headquarters.state} />}
+                    {t.headquarters?.country&&<FR l="Country" v={t.headquarters.country} />}
+                    {t.headquarters?.zipCode&&<FR l="ZIP" v={t.headquarters.zipCode} />}
+                  </Sec>
+                )}
+
+                <Sec label="Settings" accent="#d97706">
+                  <FR l="Timezone" v={t.settings?.timezone} />
+                  <FR l="Date Fmt" v={t.settings?.dateFormat} />
+                  <FR l="Currency" v={t.settings?.currency} />
+                  <FR l="Created"  v={formatDate(t.createdAt)} />
+                  {t.slug&&<FR l="Slug" v={t.slug} mono />}
+                </Sec>
+
+                {t.deletionRequest?.status&&t.deletionRequest.status!=='none'&&(
+                  <Sec label="Deletion Request" accent="#dc2626">
+                    <FR l="Status" v={t.deletionRequest.status.toUpperCase()} />
+                    {t.deletionRequest.requestedAt&&<FR l="Requested" v={formatDate(t.deletionRequest.requestedAt)} />}
+                    {t.deletionRequest.reason&&<FR l="Reason" v={t.deletionRequest.reason} />}
+                    {t.deletionRequest.permanentDeleteAt&&<FR l="Perm. Del." v={formatDate(t.deletionRequest.permanentDeleteAt)} />}
+                    {t.deletionRequest.status==='pending'&&(
+                      <div style={{display:'flex',gap:6,padding:'8px 10px',background:'#fef2f2'}}>
+                        <button onClick={()=>handleApproveDeletion(t._id)} disabled={deletionActionLoading} style={{flex:1,padding:'6px',background:'#dc2626',border:'none',borderRadius:5,color:'#fff',fontSize:11,fontWeight:700,cursor:'pointer'}}>✅ Approve</button>
+                        <button onClick={()=>setShowRejectModal(true)} disabled={deletionActionLoading} style={{flex:1,padding:'6px',background:'#fff',border:'1px solid #dc2626',borderRadius:5,color:'#dc2626',fontSize:11,fontWeight:700,cursor:'pointer'}}>❌ Reject</button>
+                      </div>
                     )}
-                    <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                      style={{
-                        background: currentPage === 1 ? '#f1f5f9' : '#3b82f6',
-                        color: currentPage === 1 ? '#94a3b8' : '#fff',
-                        border: 'none',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
-                        fontSize: '11px',
-                        fontWeight: '600'
-                      }}
-                    >
-                      ← Prev
-                    </button>
-                    <span style={{ fontWeight: '600', color: '#1e293b' }}>
-                      Page {currentPage} of {totalPages || 1}
-                    </span>
-                    <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                      disabled={currentPage >= totalPages}
-                      style={{
-                        background: currentPage >= totalPages ? '#f1f5f9' : '#3b82f6',
-                        color: currentPage >= totalPages ? '#94a3b8' : '#fff',
-                        border: 'none',
-                        padding: '6px 12px',
-                        borderRadius: '4px',
-                        cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
-                        fontSize: '11px',
-                        fontWeight: '600'
-                      }}
-                    >
-                      Next →
-                    </button>
-                  </div>
-                </div>
-              </>
-            )}
-          </Card>
-        </div>
+                    {t.deletionRequest.status==='approved'&&(
+                      <div style={{padding:'7px 10px',background:'#fef2f2'}}>
+                        <button onClick={()=>handleRecoverTenant(t._id)} disabled={deletionActionLoading} style={{width:'100%',padding:'6px',background:'#16a34a',border:'none',borderRadius:5,color:'#fff',fontSize:11,fontWeight:700,cursor:'pointer'}}>🔄 Recover Account</button>
+                      </div>
+                    )}
+                  </Sec>
+                )}
 
-        {/* Right - Details (only if verified) */}
-        {selectedTenant && isPinVerified && (
-          <DetailPanel title="Tenant Details" onClose={() => setSelectedTenant(null)}>
-            {/* Header with Logo + Company Name */}
-            <div style={styles.detailHeader}>
-              <div style={{ ...styles.detailAvatar, overflow: 'hidden', flexShrink: 0, position: 'relative' }}>
-                {selectedTenant.logo
-                  ? <img
-                      src={getLogoUrl(selectedTenant.logo)}
-                      alt="logo"
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }}
-                    />
-                  : null}
-                <span style={{ display: selectedTenant.logo ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', position: 'absolute', top: 0, left: 0, fontSize: '18px', fontWeight: '700', color: '#fff' }}>
-                  {selectedTenant.organizationName?.charAt(0)}
-                </span>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={styles.detailName}>{selectedTenant.organizationName}</div>
-                {selectedTenant.legalName && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>{selectedTenant.legalName}</div>}
-                <Badge variant={getStatusVariant(selectedTenant.subscription?.status)} style={{ marginTop: '4px' }}>
-                  {selectedTenant.subscription?.status || 'N/A'}
-                </Badge>
-              </div>
-              {selectedTenant.primaryColor && (
-                <div style={{ width: '18px', height: '18px', borderRadius: '50%', background: selectedTenant.primaryColor, border: '2px solid #e2e8f0', flexShrink: 0 }} title="Brand Color" />
-              )}
-            </div>
-
-            {/* Org ID */}
-            <div style={styles.orgIdBox}>
-              <div style={styles.orgIdLabel}>Organization ID</div>
-              <div style={styles.orgIdValue}>{selectedTenant.organizationId || 'N/A'}</div>
-            </div>
-
-            {/* Subscription */}
-            <div style={styles.section}>
-              <h4 style={styles.sectionTitle}>Subscription</h4>
-              <div style={styles.planBox}>
-                <div style={styles.planItem}>
-                  <span style={styles.planLabel}>Plan</span>
-                  <Badge variant="info">{selectedTenant.subscription?.planName || 'Free'}</Badge>
-                </div>
-                <div style={styles.planItem}>
-                  <span style={styles.planLabel}>Status</span>
-                  <Badge variant={getStatusVariant(selectedTenant.subscription?.status)}>
-                    {selectedTenant.subscription?.status || 'N/A'}
-                  </Badge>
+                {/* Action */}
+                <div style={{padding:'10px 12px',borderTop:'1px solid #e2e8f0',background:'#f9fafb'}}>
+                  {getTenantStatus(t)==='suspended'
+                    ?<button onClick={()=>handleActivate(t._id)} style={{width:'100%',padding:'7px',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>✅ Activate Tenant</button>
+                    :<button onClick={()=>handleSuspend(t._id)} style={{width:'100%',padding:'7px',background:'linear-gradient(135deg,#dc2626,#b91c1c)',color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>🚫 Suspend Tenant</button>
+                  }
                 </div>
               </div>
-              <InfoRow label="Users" value={`${selectedTenant.userCount || 0} / ${selectedTenant.subscription?.maxUsers || '∞'}`} />
-              <InfoRow label="Expires" value={formatDate(selectedTenant.subscription?.endDate)} />
-              <InfoRow label="Billing" value={selectedTenant.subscription?.billingCycle || 'N/A'} />
             </div>
-
-            {/* Branding */}
-            {(selectedTenant.logo || selectedTenant.primaryColor) && (
-              <div style={styles.section}>
-                <h4 style={styles.sectionTitle}>Branding</h4>
-                {selectedTenant.logo && (
-                  <div style={{ marginBottom: '10px' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '6px' }}>Logo</div>
-                    <div style={{ width: '100px', height: '60px', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img
-                        src={getLogoUrl(selectedTenant.logo)}
-                        alt="Company Logo"
-                        style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
-                        onError={e => { e.target.parentNode.innerHTML = '<span style="font-size:11px;color:#94a3b8">No logo</span>'; }}
-                      />
-                    </div>
-                  </div>
-                )}
-                {selectedTenant.primaryColor && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>Brand Color</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <div style={{ width: '20px', height: '20px', borderRadius: '4px', background: selectedTenant.primaryColor, border: '1px solid #e2e8f0' }} />
-                      <span style={{ fontSize: '11px', color: '#475569', fontFamily: 'monospace' }}>{selectedTenant.primaryColor}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Business Details */}
-            <div style={styles.section}>
-              <h4 style={styles.sectionTitle}>Business Details</h4>
-              <InfoRow label="Industry" value={selectedTenant.industry || 'N/A'} />
-              <InfoRow label="Business Type" value={selectedTenant.businessType || 'N/A'} />
-              <InfoRow label="Team Size" value={selectedTenant.numberOfEmployees || 'N/A'} />
-              {selectedTenant.foundedYear && <InfoRow label="Founded" value={selectedTenant.foundedYear} />}
-              {selectedTenant.taxId && <InfoRow label="Tax ID" value={selectedTenant.taxId} />}
-              {selectedTenant.registrationNumber && <InfoRow label="Reg. No." value={selectedTenant.registrationNumber} />}
-            </div>
-
-            {/* Contact Info */}
-            <div style={styles.section}>
-              <h4 style={styles.sectionTitle}>Contact Info</h4>
-              <InfoRow label="Email" value={selectedTenant.contactEmail} />
-              <InfoRow label="Phone" value={selectedTenant.contactPhone || 'N/A'} />
-              {selectedTenant.alternatePhone && <InfoRow label="Alt. Phone" value={selectedTenant.alternatePhone} />}
-              <InfoRow label="Admin" value={selectedTenant.adminUser ? `${selectedTenant.adminUser.firstName} ${selectedTenant.adminUser.lastName}` : 'N/A'} />
-              {selectedTenant.website && <InfoRow label="Website" value={selectedTenant.website} />}
-            </div>
-
-            {/* Location */}
-            {(selectedTenant.headquarters?.city || selectedTenant.headquarters?.country) && (
-              <div style={styles.section}>
-                <h4 style={styles.sectionTitle}>Location</h4>
-                {selectedTenant.headquarters?.street && <InfoRow label="Street" value={selectedTenant.headquarters.street} />}
-                {selectedTenant.headquarters?.city && <InfoRow label="City" value={selectedTenant.headquarters.city} />}
-                {selectedTenant.headquarters?.state && <InfoRow label="State" value={selectedTenant.headquarters.state} />}
-                {selectedTenant.headquarters?.country && <InfoRow label="Country" value={selectedTenant.headquarters.country} />}
-                {selectedTenant.headquarters?.zipCode && <InfoRow label="ZIP" value={selectedTenant.headquarters.zipCode} />}
-              </div>
-            )}
-
-            {/* Preferences */}
-            <div style={styles.section}>
-              <h4 style={styles.sectionTitle}>Preferences</h4>
-              <InfoRow label="Timezone" value={selectedTenant.settings?.timezone || 'N/A'} />
-              <InfoRow label="Date Format" value={selectedTenant.settings?.dateFormat || 'N/A'} />
-              <InfoRow label="Currency" value={selectedTenant.settings?.currency || 'N/A'} />
-            </div>
-
-            {/* Other Info */}
-            <div style={styles.section}>
-              <h4 style={styles.sectionTitle}>Other Info</h4>
-              <InfoRow label="Created" value={formatDate(selectedTenant.createdAt)} />
-              <InfoRow label="Slug" value={selectedTenant.slug || 'N/A'} />
-            </div>
-
-            {/* Deletion Request Section */}
-            {selectedTenant.deletionRequest?.status && selectedTenant.deletionRequest.status !== 'none' && (
-              <div style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '16px', marginBottom: '12px' }}>
-                <h4 style={{ margin: '0 0 10px', fontSize: '13px', fontWeight: '700', color: '#dc2626' }}>
-                  🗑️ Deletion Request
-                </h4>
-                <InfoRow label="Status" value={
-                  <span style={{
-                    background: selectedTenant.deletionRequest.status === 'pending' ? '#fef3c7' : selectedTenant.deletionRequest.status === 'approved' ? '#fef2f2' : '#f0fdf4',
-                    color: selectedTenant.deletionRequest.status === 'pending' ? '#92400e' : selectedTenant.deletionRequest.status === 'approved' ? '#dc2626' : '#16a34a',
-                    padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase'
-                  }}>{selectedTenant.deletionRequest.status}</span>
-                } />
-                {selectedTenant.deletionRequest.requestedAt && (
-                  <InfoRow label="Requested" value={formatDate(selectedTenant.deletionRequest.requestedAt)} />
-                )}
-                {selectedTenant.deletionRequest.reason && (
-                  <InfoRow label="Reason" value={selectedTenant.deletionRequest.reason} />
-                )}
-                {selectedTenant.deletionRequest.permanentDeleteAt && (
-                  <InfoRow label="Permanent Delete" value={formatDate(selectedTenant.deletionRequest.permanentDeleteAt)} />
-                )}
-                {selectedTenant.deletionRequest.rejectionReason && (
-                  <InfoRow label="Rejection Reason" value={selectedTenant.deletionRequest.rejectionReason} />
-                )}
-
-                {selectedTenant.deletionRequest.status === 'pending' && (
-                  <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
-                    <button
-                      onClick={() => handleApproveDeletion(selectedTenant._id)}
-                      disabled={deletionActionLoading}
-                      style={{ flex: 1, padding: '8px', background: '#dc2626', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      ✅ Approve Deletion
-                    </button>
-                    <button
-                      onClick={() => setShowRejectModal(true)}
-                      disabled={deletionActionLoading}
-                      style={{ flex: 1, padding: '8px', background: '#fff', border: '1.5px solid #dc2626', borderRadius: '6px', color: '#dc2626', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      ❌ Reject
-                    </button>
-                  </div>
-                )}
-
-                {selectedTenant.deletionRequest.status === 'approved' && (
-                  <div style={{ marginTop: '12px' }}>
-                    <button
-                      onClick={() => handleRecoverTenant(selectedTenant._id)}
-                      disabled={deletionActionLoading}
-                      style={{ width: '100%', padding: '9px', background: '#16a34a', border: 'none', borderRadius: '6px', color: '#fff', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
-                    >
-                      🔄 Recover Account
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div style={styles.actionBtns}>
-              {selectedTenant.subscription?.status === 'suspended' ? (
-                <Button variant="success" onClick={() => handleActivate(selectedTenant._id)}>Activate</Button>
-              ) : (
-                <Button variant="danger" onClick={() => handleSuspend(selectedTenant._id)}>Suspend</Button>
-              )}
-            </div>
-          </DetailPanel>
-        )}
+          );
+        })()}
       </div>
 
-      {/* Verify PIN Modal */}
-      {showPinModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowPinModal(false)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔒</div>
-              <h3 style={styles.modalTitle}>Enter Viewing PIN</h3>
-              <p style={styles.modalSubtitle}>Enter your PIN to view tenant details</p>
+      {/* VERIFY PIN MODAL */}
+      {showPinModal&&(
+        <div style={S.overlay} onClick={()=>setShowPinModal(false)}>
+          <div style={S.modal} onClick={e=>e.stopPropagation()}>
+            <div style={S.mHead}>
+              <div style={S.mIcon}>🔒</div>
+              <div><div style={S.mTitle}>Enter Viewing PIN</div><div style={S.mSub}>Verify identity to view tenant details</div></div>
             </div>
-            {pinError && <div style={styles.errorBox}>{pinError}</div>}
-            <div style={styles.pinInputs}>
-              {pin.map((digit, index) => (
-                <input
-                  key={index}
-                  ref={el => pinRefs.current[index] = el}
-                  type="password"
-                  value={digit}
-                  onChange={e => handlePinChange(index, e.target.value, pin, setPin, pinRefs)}
-                  onKeyDown={e => handlePinKeyDown(index, e, pinRefs)}
-                  style={styles.pinInput}
-                  maxLength={1}
-                  inputMode="numeric"
-                  autoFocus={index === 0}
-                  autoComplete="new-password"
-                  name={`pin-digit-${index}`}
-                />
+            <div style={S.mBody}>
+              {pinError&&<div style={S.err}>{pinError}</div>}
+              <div style={S.pinRow}>
+                {pin.map((d,i)=>(
+                  <input key={i} ref={el=>pinRefs.current[i]=el} type="password" value={d}
+                    onChange={e=>handlePinChange(i,e.target.value,pin,setPin,pinRefs)}
+                    onKeyDown={e=>handlePinKeyDown(i,e,pinRefs)}
+                    style={S.pinBox} maxLength={1} inputMode="numeric" autoFocus={i===0}
+                    autoComplete="new-password" name={`pin-digit-${i}`} />
+                ))}
+              </div>
+              <div style={S.mAct}>
+                <button onClick={()=>{setShowPinModal(false);setPin(['','','','']);setPinError('');}} style={S.btnCancel}>Cancel</button>
+                <button onClick={handleVerifyPin} style={S.btnSubmit} disabled={pinLoading}>{pinLoading?'Verifying...':'Verify'}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SETUP PIN MODAL */}
+      {showSetupModal&&(
+        <div style={S.overlay} onClick={()=>setShowSetupModal(false)}>
+          <div style={S.modal} onClick={e=>e.stopPropagation()}>
+            <div style={S.mHead}>
+              <div style={S.mIcon}>🔐</div>
+              <div><div style={S.mTitle}>Set Viewing PIN</div><div style={S.mSub}>Create a 4-digit PIN to access tenant data</div></div>
+            </div>
+            <div style={S.mBody}>
+              {pinError&&<div style={S.err}>{pinError}</div>}
+              {[['Create PIN',newPin,setNewPin,newPinRefs,'new'],['Confirm PIN',confirmPin,setConfirmPin,confirmPinRefs,'conf']].map(([lbl,arr,setArr,refs,pfx])=>(
+                <div key={pfx} style={{marginBottom:12}}>
+                  <div style={S.pinLabel}>{lbl}</div>
+                  <div style={S.pinRow}>
+                    {arr.map((d,i)=>(
+                      <input key={`${pfx}-${i}`} ref={el=>refs.current[i]=el} type="password" value={d}
+                        onChange={e=>handlePinChange(i,e.target.value,arr,setArr,refs)}
+                        onKeyDown={e=>handlePinKeyDown(i,e,refs)}
+                        style={S.pinBox} maxLength={1} inputMode="numeric" autoComplete="new-password" name={`${pfx}-pin-${i}`} />
+                    ))}
+                  </div>
+                </div>
               ))}
-            </div>
-            <div style={styles.modalActions}>
-              <button onClick={() => { setShowPinModal(false); setPin(['', '', '', '']); setPinError(''); }} style={styles.cancelBtn}>Cancel</button>
-              <button onClick={handleVerifyPin} style={styles.submitBtn} disabled={pinLoading}>
-                {pinLoading ? 'Verifying...' : 'Verify'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Setup PIN Modal */}
-      {showSetupModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowSetupModal(false)}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔐</div>
-              <h3 style={styles.modalTitle}>Set Your Viewing PIN</h3>
-              <p style={styles.modalSubtitle}>Create a 4 digit PIN to securely access tenant data</p>
-            </div>
-            {pinError && <div style={styles.errorBox}>{pinError}</div>}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.pinLabel}>Create PIN</label>
-              <div style={styles.pinInputs}>
-                {newPin.map((digit, index) => (
-                  <input
-                    key={`new-${index}`}
-                    ref={el => newPinRefs.current[index] = el}
-                    type="password"
-                    value={digit}
-                    onChange={e => handlePinChange(index, e.target.value, newPin, setNewPin, newPinRefs)}
-                    onKeyDown={e => handlePinKeyDown(index, e, newPinRefs)}
-                    style={styles.pinInput}
-                    maxLength={1}
-                    inputMode="numeric"
-                    autoComplete="new-password"
-                    name={`new-pin-${index}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.pinLabel}>Confirm PIN</label>
-              <div style={styles.pinInputs}>
-                {confirmPin.map((digit, index) => (
-                  <input
-                    key={`confirm-${index}`}
-                    ref={el => confirmPinRefs.current[index] = el}
-                    type="password"
-                    value={digit}
-                    onChange={e => handlePinChange(index, e.target.value, confirmPin, setConfirmPin, confirmPinRefs)}
-                    onKeyDown={e => handlePinKeyDown(index, e, confirmPinRefs)}
-                    style={styles.pinInput}
-                    maxLength={1}
-                    inputMode="numeric"
-                    autoComplete="new-password"
-                    name={`confirm-pin-${index}`}
-                  />
-                ))}
-              </div>
-            </div>
-            <div style={styles.modalActions}>
-              <button onClick={() => { setShowSetupModal(false); setNewPin(['', '', '', '']); setConfirmPin(['', '', '', '']); setPinError(''); }} style={styles.cancelBtn}>Cancel</button>
-              <button onClick={handleSetPin} style={styles.submitBtn} disabled={pinLoading}>
-                {pinLoading ? 'Setting...' : 'Set PIN'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Change PIN Modal */}
-      {showChangePinModal && (
-        <div style={styles.modalOverlay} onClick={closeAllPinModals}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔐</div>
-              <h3 style={styles.modalTitle}>Change Viewing PIN</h3>
-              <p style={styles.modalSubtitle}>Enter current PIN and set a new one</p>
-            </div>
-            {pinError && <div style={styles.errorBox}>{pinError}</div>}
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.pinLabel}>Current PIN</label>
-              <div style={styles.pinInputs}>
-                {currentPin.map((digit, index) => (
-                  <input
-                    key={`current-${index}`}
-                    ref={el => currentPinRefs.current[index] = el}
-                    type="password"
-                    value={digit}
-                    onChange={e => handlePinChange(index, e.target.value, currentPin, setCurrentPin, currentPinRefs)}
-                    onKeyDown={e => handlePinKeyDown(index, e, currentPinRefs)}
-                    style={styles.pinInput}
-                    maxLength={1}
-                    inputMode="numeric"
-                    autoComplete="new-password"
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.pinLabel}>New PIN</label>
-              <div style={styles.pinInputs}>
-                {changeNewPin.map((digit, index) => (
-                  <input
-                    key={`changeNew-${index}`}
-                    ref={el => changeNewPinRefs.current[index] = el}
-                    type="password"
-                    value={digit}
-                    onChange={e => handlePinChange(index, e.target.value, changeNewPin, setChangeNewPin, changeNewPinRefs)}
-                    onKeyDown={e => handlePinKeyDown(index, e, changeNewPinRefs)}
-                    style={styles.pinInput}
-                    maxLength={1}
-                    inputMode="numeric"
-                    autoComplete="new-password"
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '16px' }}>
-              <label style={styles.pinLabel}>Confirm New PIN</label>
-              <div style={styles.pinInputs}>
-                {changeConfirmPin.map((digit, index) => (
-                  <input
-                    key={`changeConfirm-${index}`}
-                    ref={el => changeConfirmPinRefs.current[index] = el}
-                    type="password"
-                    value={digit}
-                    onChange={e => handlePinChange(index, e.target.value, changeConfirmPin, setChangeConfirmPin, changeConfirmPinRefs)}
-                    onKeyDown={e => handlePinKeyDown(index, e, changeConfirmPinRefs)}
-                    style={styles.pinInput}
-                    maxLength={1}
-                    inputMode="numeric"
-                    autoComplete="new-password"
-                  />
-                ))}
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button onClick={() => { closeAllPinModals(); setShowForgotPinModal(true); }} style={{ background: 'none', border: 'none', color: '#6366f1', fontSize: '11px', cursor: 'pointer' }}>
-                Forgot PIN?
-              </button>
-              <div style={{ display: 'flex', gap: '10px' }}>
-                <button onClick={closeAllPinModals} style={styles.cancelBtn}>Cancel</button>
-                <button onClick={handleChangePin} style={styles.submitBtn} disabled={pinLoading}>
-                  {pinLoading ? 'Changing...' : 'Change PIN'}
-                </button>
+              <div style={S.mAct}>
+                <button onClick={()=>{setShowSetupModal(false);setNewPin(['','','','']);setConfirmPin(['','','','']);setPinError('');}} style={S.btnCancel}>Cancel</button>
+                <button onClick={handleSetPin} style={S.btnSubmit} disabled={pinLoading}>{pinLoading?'Setting...':'Set PIN'}</button>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Forgot PIN Modal */}
-      {showForgotPinModal && (
-        <div style={styles.modalOverlay} onClick={closeAllPinModals}>
-          <div style={styles.modal} onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-              <div style={{ fontSize: '40px', marginBottom: '12px' }}>🔓</div>
-              <h3 style={styles.modalTitle}>Reset Viewing PIN</h3>
-              <p style={styles.modalSubtitle}>
-                {forgotStep === 1 ? "We'll send an OTP to your email" : "Enter OTP and set new PIN"}
-              </p>
+      {/* CHANGE PIN MODAL */}
+      {showChangePinModal&&(
+        <div style={S.overlay} onClick={closeAllPinModals}>
+          <div style={S.modal} onClick={e=>e.stopPropagation()}>
+            <div style={S.mHead}>
+              <div style={S.mIcon}>🔐</div>
+              <div><div style={S.mTitle}>Change Viewing PIN</div><div style={S.mSub}>Enter current PIN and set a new one</div></div>
             </div>
-            {pinError && <div style={styles.errorBox}>{pinError}</div>}
-
-            {forgotStep === 1 ? (
-              <div style={styles.modalActions}>
-                <button onClick={closeAllPinModals} style={styles.cancelBtn}>Cancel</button>
-                <button onClick={handleForgotSendOtp} style={styles.submitBtn} disabled={pinLoading}>
-                  {pinLoading ? 'Sending...' : 'Send OTP'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={styles.pinLabel}>Enter OTP</label>
-                  <input
-                    type="text"
-                    value={forgotOtp}
-                    onChange={e => setForgotOtp(e.target.value)}
-                    maxLength={6}
-                    placeholder="6-digit OTP"
-                    style={{ width: '100%', padding: '12px', border: '2px solid #e2e8f0', borderRadius: '8px', fontSize: '16px', textAlign: 'center', letterSpacing: '8px', boxSizing: 'border-box' }}
-                    autoComplete="off"
-                  />
-                </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={styles.pinLabel}>New PIN</label>
-                  <div style={styles.pinInputs}>
-                    {resetPin.map((digit, index) => (
-                      <input
-                        key={`reset-${index}`}
-                        ref={el => resetPinRefs.current[index] = el}
-                        type="password"
-                        value={digit}
-                        onChange={e => handlePinChange(index, e.target.value, resetPin, setResetPin, resetPinRefs)}
-                        onKeyDown={e => handlePinKeyDown(index, e, resetPinRefs)}
-                        style={styles.pinInput}
-                        maxLength={1}
-                        inputMode="numeric"
-                        autoComplete="new-password"
-                      />
+            <div style={S.mBody}>
+              {pinError&&<div style={S.err}>{pinError}</div>}
+              {[['Current PIN',currentPin,setCurrentPin,currentPinRefs,'cur'],['New PIN',changeNewPin,setChangeNewPin,changeNewPinRefs,'cnew'],['Confirm New PIN',changeConfirmPin,setChangeConfirmPin,changeConfirmPinRefs,'cconf']].map(([lbl,arr,setArr,refs,pfx])=>(
+                <div key={pfx} style={{marginBottom:11}}>
+                  <div style={S.pinLabel}>{lbl}</div>
+                  <div style={S.pinRow}>
+                    {arr.map((d,i)=>(
+                      <input key={`${pfx}-${i}`} ref={el=>refs.current[i]=el} type="password" value={d}
+                        onChange={e=>handlePinChange(i,e.target.value,arr,setArr,refs)}
+                        onKeyDown={e=>handlePinKeyDown(i,e,refs)}
+                        style={S.pinBox} maxLength={1} inputMode="numeric" autoComplete="new-password" />
                     ))}
                   </div>
                 </div>
-
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={styles.pinLabel}>Confirm New PIN</label>
-                  <div style={styles.pinInputs}>
-                    {resetConfirmPin.map((digit, index) => (
-                      <input
-                        key={`resetConfirm-${index}`}
-                        ref={el => resetConfirmPinRefs.current[index] = el}
-                        type="password"
-                        value={digit}
-                        onChange={e => handlePinChange(index, e.target.value, resetConfirmPin, setResetConfirmPin, resetConfirmPinRefs)}
-                        onKeyDown={e => handlePinKeyDown(index, e, resetConfirmPinRefs)}
-                        style={styles.pinInput}
-                        maxLength={1}
-                        inputMode="numeric"
-                        autoComplete="new-password"
-                      />
-                    ))}
-                  </div>
+              ))}
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginTop:4}}>
+                <button onClick={()=>{closeAllPinModals();setShowForgotPinModal(true);}} style={{background:'none',border:'none',color:'#6366f1',fontSize:11,cursor:'pointer',fontWeight:600}}>Forgot PIN?</button>
+                <div style={{display:'flex',gap:8}}>
+                  <button onClick={closeAllPinModals} style={S.btnCancel}>Cancel</button>
+                  <button onClick={handleChangePin} style={S.btnSubmit} disabled={pinLoading}>{pinLoading?'Changing...':'Change PIN'}</button>
                 </div>
-
-                <div style={styles.modalActions}>
-                  <button onClick={() => setForgotStep(1)} style={styles.cancelBtn}>Back</button>
-                  <button onClick={handleResetPin} style={styles.submitBtn} disabled={pinLoading}>
-                    {pinLoading ? 'Resetting...' : 'Reset PIN'}
-                  </button>
-                </div>
-              </>
-            )}
+              </div>
+            </div>
           </div>
         </div>
       )}
-      {/* Reject Deletion Modal */}
-      {showRejectModal && (
-        <div style={styles.modalOverlay} onClick={() => setShowRejectModal(false)}>
-          <div style={{ ...styles.modal, maxWidth: '420px' }} onClick={e => e.stopPropagation()}>
-            <div style={{ textAlign: 'center', marginBottom: '16px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '8px' }}>❌</div>
-              <h3 style={styles.modalTitle}>Reject Deletion Request</h3>
-              <p style={{ ...styles.modalSubtitle, marginBottom: 0 }}>The tenant will be notified via email.</p>
+
+      {/* FORGOT PIN MODAL */}
+      {showForgotPinModal&&(
+        <div style={S.overlay} onClick={closeAllPinModals}>
+          <div style={S.modal} onClick={e=>e.stopPropagation()}>
+            <div style={S.mHead}>
+              <div style={S.mIcon}>🔓</div>
+              <div><div style={S.mTitle}>Reset Viewing PIN</div><div style={S.mSub}>{forgotStep===1?"We'll send an OTP to your email":"Enter OTP and set new PIN"}</div></div>
             </div>
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>
-                Rejection Reason (optional)
-              </label>
-              <textarea
-                value={rejectReason}
-                onChange={e => setRejectReason(e.target.value)}
-                placeholder="Explain why the request is being rejected..."
-                rows={3}
-                style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '13px', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
-              />
+            <div style={S.mBody}>
+              {pinError&&<div style={S.err}>{pinError}</div>}
+              {forgotStep===1?(
+                <div style={S.mAct}>
+                  <button onClick={closeAllPinModals} style={S.btnCancel}>Cancel</button>
+                  <button onClick={handleForgotSendOtp} style={S.btnSubmit} disabled={pinLoading}>{pinLoading?'Sending...':'Send OTP'}</button>
+                </div>
+              ):(
+                <>
+                  <div style={{marginBottom:12}}>
+                    <div style={S.pinLabel}>Enter OTP</div>
+                    <input type="text" value={forgotOtp} onChange={e=>setForgotOtp(e.target.value)} maxLength={6} placeholder="6-digit OTP"
+                      style={{width:'100%',padding:'11px',border:'2px solid #e2e8f0',borderRadius:8,fontSize:16,textAlign:'center',letterSpacing:8,boxSizing:'border-box',outline:'none'}} autoComplete="off" />
+                  </div>
+                  {[['New PIN',resetPin,setResetPin,resetPinRefs,'rst'],['Confirm PIN',resetConfirmPin,setResetConfirmPin,resetConfirmPinRefs,'rstc']].map(([lbl,arr,setArr,refs,pfx])=>(
+                    <div key={pfx} style={{marginBottom:12}}>
+                      <div style={S.pinLabel}>{lbl}</div>
+                      <div style={S.pinRow}>
+                        {arr.map((d,i)=>(
+                          <input key={`${pfx}-${i}`} ref={el=>refs.current[i]=el} type="password" value={d}
+                            onChange={e=>handlePinChange(i,e.target.value,arr,setArr,refs)}
+                            onKeyDown={e=>handlePinKeyDown(i,e,refs)}
+                            style={S.pinBox} maxLength={1} inputMode="numeric" autoComplete="new-password" />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={S.mAct}>
+                    <button onClick={()=>setForgotStep(1)} style={S.btnCancel}>Back</button>
+                    <button onClick={handleResetPin} style={S.btnSubmit} disabled={pinLoading}>{pinLoading?'Resetting...':'Reset PIN'}</button>
+                  </div>
+                </>
+              )}
             </div>
-            <div style={styles.modalActions}>
-              <button onClick={() => { setShowRejectModal(false); setRejectReason(''); }} style={styles.cancelBtn}>Cancel</button>
-              <button
-                onClick={() => handleRejectDeletion(selectedTenant._id)}
-                disabled={deletionActionLoading}
-                style={{ ...styles.submitBtn, background: '#dc2626' }}
-              >
-                {deletionActionLoading ? 'Rejecting...' : 'Reject Request'}
-              </button>
+          </div>
+        </div>
+      )}
+
+      {/* REJECT DELETION MODAL */}
+      {showRejectModal&&(
+        <div style={S.overlay} onClick={()=>setShowRejectModal(false)}>
+          <div style={{...S.modal,maxWidth:420}} onClick={e=>e.stopPropagation()}>
+            <div style={{...S.mHead,background:'linear-gradient(135deg,#7f1d1d,#991b1b,#b91c1c)'}}>
+              <div style={S.mIcon}>❌</div>
+              <div><div style={S.mTitle}>Reject Deletion Request</div><div style={S.mSub}>Tenant will be notified via email</div></div>
+            </div>
+            <div style={S.mBody}>
+              <div style={{marginBottom:12}}>
+                <label style={{display:'block',fontSize:11,fontWeight:600,color:'#374151',marginBottom:5}}>Rejection Reason (optional)</label>
+                <textarea value={rejectReason} onChange={e=>setRejectReason(e.target.value)} placeholder="Explain why the request is being rejected..." rows={3}
+                  style={{width:'100%',padding:'9px 11px',border:'1px solid #e2e8f0',borderRadius:7,fontSize:12,resize:'vertical',fontFamily:'inherit',boxSizing:'border-box',outline:'none'}} />
+              </div>
+              <div style={S.mAct}>
+                <button onClick={()=>{setShowRejectModal(false);setRejectReason('');}} style={S.btnCancel}>Cancel</button>
+                <button onClick={()=>handleRejectDeletion(selectedTenant._id)} disabled={deletionActionLoading} style={{...S.btnSubmit,background:'#dc2626'}}>{deletionActionLoading?'Rejecting...':'Reject Request'}</button>
+              </div>
             </div>
           </div>
         </div>
@@ -1157,264 +959,21 @@ const Tenants = () => {
   );
 };
 
-const styles = {
-  credBanner: {
-    background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)',
-    padding: '12px 16px',
-    borderRadius: '8px',
-    marginBottom: '16px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: '10px',
-    border: '1px solid #e2e8f0'
-  },
-  credInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    fontSize: '12px'
-  },
-  credActions: {
-    display: 'flex',
-    gap: '8px'
-  },
-  credBtn: {
-    background: '#6366f1',
-    color: '#fff',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: '6px',
-    fontSize: '11px',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  credBtnOutline: {
-    background: 'transparent',
-    color: '#6366f1',
-    border: '1px solid #6366f1',
-    padding: '6px 12px',
-    borderRadius: '6px',
-    fontSize: '11px',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  searchInput: {
-    flex: 1,
-    minWidth: '150px',
-    padding: '8px 12px',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    fontSize: '12px',
-    outline: 'none'
-  },
-  selectInput: {
-    padding: '8px 12px',
-    border: '1px solid #e2e8f0',
-    borderRadius: '6px',
-    fontSize: '12px',
-    outline: 'none',
-    background: '#fff'
-  },
-  detailHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    marginBottom: '20px',
-    padding: '12px',
-    background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)',
-    borderRadius: '8px'
-  },
-  detailAvatar: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '10px',
-    background: '#6366f1',
-    color: '#fff',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '20px',
-    fontWeight: '700'
-  },
-  detailName: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#1e293b'
-  },
-  detailId: {
-    fontSize: '11px',
-    color: '#64748b'
-  },
-  orgIdBox: {
-    background: '#fef3c7',
-    border: '1px solid #fbbf24',
-    borderRadius: '8px',
-    padding: '12px',
-    marginBottom: '16px',
-    textAlign: 'center'
-  },
-  orgIdLabel: {
-    fontSize: '10px',
-    fontWeight: '600',
-    color: '#92400e',
-    textTransform: 'uppercase',
-    marginBottom: '4px'
-  },
-  orgIdValue: {
-    fontSize: '18px',
-    fontWeight: '700',
-    color: '#78350f',
-    fontFamily: 'monospace',
-    letterSpacing: '1px'
-  },
-  planBox: {
-    display: 'flex',
-    gap: '12px',
-    marginBottom: '10px'
-  },
-  planItem: {
-    flex: 1,
-    background: '#f8fafc',
-    borderRadius: '6px',
-    padding: '10px',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '4px'
-  },
-  planLabel: {
-    fontSize: '10px',
-    fontWeight: '500',
-    color: '#64748b',
-    textTransform: 'uppercase'
-  },
-  section: {
-    marginBottom: '16px'
-  },
-  sectionTitle: {
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#64748b',
-    textTransform: 'uppercase',
-    marginBottom: '8px',
-    paddingBottom: '4px',
-    borderBottom: '1px solid #e2e8f0'
-  },
-  actionBtns: {
-    marginTop: '20px',
-    display: 'flex',
-    gap: '8px'
-  },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0,0,0,0.5)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000
-  },
-  modal: {
-    background: '#fff',
-    borderRadius: '12px',
-    padding: '24px',
-    width: '100%',
-    maxWidth: '380px'
-  },
-  modalTitle: {
-    fontSize: '16px',
-    fontWeight: '700',
-    color: '#1e293b',
-    marginBottom: '4px'
-  },
-  modalSubtitle: {
-    fontSize: '12px',
-    color: '#64748b',
-    marginBottom: '20px'
-  },
-  formGroup: {
-    marginBottom: '14px'
-  },
-  label: {
-    display: 'block',
-    fontSize: '11px',
-    fontWeight: '500',
-    color: '#475569',
-    marginBottom: '4px'
-  },
-  input: {
-    width: '100%',
-    padding: '10px 12px',
-    border: '1px solid #e2e8f0',
-    borderRadius: '8px',
-    fontSize: '13px',
-    outline: 'none',
-    boxSizing: 'border-box'
-  },
-  modalActions: {
-    display: 'flex',
-    gap: '10px',
-    justifyContent: 'flex-end',
-    marginTop: '20px'
-  },
-  cancelBtn: {
-    padding: '10px 16px',
-    border: '1px solid #e2e8f0',
-    background: '#fff',
-    borderRadius: '8px',
-    fontSize: '12px',
-    cursor: 'pointer'
-  },
-  submitBtn: {
-    padding: '10px 16px',
-    border: 'none',
-    background: '#6366f1',
-    color: '#fff',
-    borderRadius: '8px',
-    fontSize: '12px',
-    fontWeight: '600',
-    cursor: 'pointer'
-  },
-  pinInputs: {
-    display: 'flex',
-    gap: '8px',
-    justifyContent: 'center',
-    marginBottom: '16px'
-  },
-  pinInput: {
-    width: '42px',
-    height: '48px',
-    border: '2px solid #e2e8f0',
-    borderRadius: '10px',
-    fontSize: '20px',
-    fontWeight: '700',
-    textAlign: 'center',
-    outline: 'none',
-    transition: 'border-color 0.2s'
-  },
-  pinLabel: {
-    display: 'block',
-    fontSize: '11px',
-    fontWeight: '600',
-    color: '#64748b',
-    marginBottom: '8px',
-    textTransform: 'uppercase',
-    textAlign: 'center'
-  },
-  errorBox: {
-    background: '#fef2f2',
-    color: '#dc2626',
-    padding: '10px 14px',
-    borderRadius: '8px',
-    fontSize: '12px',
-    marginBottom: '16px',
-    textAlign: 'center'
-  }
+const S = {
+  overlay:   { position:'fixed',top:0,left:0,right:0,bottom:0,background:'rgba(0,0,0,0.6)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000 },
+  modal:     { background:'#fff',borderRadius:12,overflow:'hidden',width:'100%',maxWidth:380,boxShadow:'0 20px 60px rgba(0,0,0,0.3)' },
+  mHead:     { background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 50%,#312e81 100%)',padding:'13px 16px',display:'flex',alignItems:'center',gap:11 },
+  mIcon:     { width:36,height:36,borderRadius:9,background:'rgba(99,102,241,0.2)',border:'1px solid rgba(99,102,241,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,flexShrink:0 },
+  mTitle:    { fontSize:14,fontWeight:800,color:'#fff' },
+  mSub:      { fontSize:11,color:'#8b9ccc',marginTop:2 },
+  mBody:     { padding:'16px 18px' },
+  mAct:      { display:'flex',gap:8,justifyContent:'flex-end',marginTop:14 },
+  btnCancel: { padding:'8px 14px',border:'1px solid #e2e8f0',background:'#fff',borderRadius:7,fontSize:11,cursor:'pointer',fontWeight:600,color:'#475569' },
+  btnSubmit: { padding:'8px 16px',border:'none',background:'linear-gradient(135deg,#6366f1,#4f46e5)',color:'#fff',borderRadius:7,fontSize:11,fontWeight:700,cursor:'pointer' },
+  pinRow:    { display:'flex',gap:8,justifyContent:'center',marginTop:6,marginBottom:4 },
+  pinBox:    { width:42,height:46,border:'2px solid #e2e8f0',borderRadius:9,fontSize:20,fontWeight:700,textAlign:'center',outline:'none' },
+  pinLabel:  { fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.5px',textAlign:'center',marginBottom:4 },
+  err:       { background:'#fef2f2',color:'#dc2626',padding:'8px 12px',borderRadius:7,fontSize:11,marginBottom:12,textAlign:'center' },
 };
 
 export default Tenants;

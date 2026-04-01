@@ -955,6 +955,45 @@ const LeadDetail = () => {
                   </div>
                 )}
 
+                {(user?.userType === 'TENANT_ADMIN' || user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN') && (
+                  <div>
+                    <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Audit Information</h4>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                      {lead.createdBy && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Added By</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>
+                            {lead.createdBy.firstName} {lead.createdBy.lastName}
+                            <span style={{ fontSize: '12px', color: '#6B7280', marginLeft: '6px' }}>({lead.createdBy.email})</span>
+                          </p>
+                        </div>
+                      )}
+                      {lead.createdAt && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Added On</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>{new Date(lead.createdAt).toLocaleString()}</p>
+                        </div>
+                      )}
+                      {lead.source === 'Data Center' && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Source</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>
+                            <span style={{ background: '#EEF2FF', color: '#4F46E5', padding: '2px 8px', borderRadius: '6px', fontSize: '12px', fontWeight: '600' }}>Data Center</span>
+                          </p>
+                        </div>
+                      )}
+                      {lead.lastModifiedBy && lead.lastModifiedBy._id !== lead.createdBy?._id && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Last Modified By</label>
+                          <p style={{ fontSize: '14px', fontWeight: '500' }}>
+                            {lead.lastModifiedBy.firstName} {lead.lastModifiedBy.lastName}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {(lead.street || lead.city || lead.state || lead.country) && (
                   <div>
                     <h4 style={{ fontSize: '14px', fontWeight: '600', marginBottom: '12px', color: '#374151' }}>Address</h4>

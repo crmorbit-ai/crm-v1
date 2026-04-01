@@ -206,7 +206,20 @@ const getCandidate = async (req, res) => {
       return errorResponse(res, 'Candidate not found', 404);
     }
 
-    return successResponse(res, candidate);
+    // Manually resolve importedBy and movedBy from main DB (cross-DB populate workaround)
+    const User = require('../models/User');
+    const candidateObj = candidate.toObject();
+
+    if (candidateObj.importedBy) {
+      const importedByUser = await User.findById(candidateObj.importedBy).select('firstName lastName email userType').lean();
+      candidateObj.importedBy = importedByUser || candidateObj.importedBy;
+    }
+    if (candidateObj.movedBy) {
+      const movedByUser = await User.findById(candidateObj.movedBy).select('firstName lastName email userType').lean();
+      candidateObj.movedBy = movedByUser || candidateObj.movedBy;
+    }
+
+    return successResponse(res, candidateObj);
 
   } catch (error) {
     console.error('Error fetching candidate:', error);

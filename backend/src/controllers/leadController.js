@@ -40,44 +40,39 @@ const getLeads = async (req, res) => {
       query.tenant = req.user.tenant;
     }
 
-    // 🆕 Group-based Visibility
+    // Group-based Visibility
     const Group = require('../models/Group');
 
-    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
-      // Managers and above (role level >= 50) see all tenant leads
-      const isManager = req.user.userType === 'TENANT_MANAGER' ||
-                        (req.user.roles && req.user.roles.some(r => (r.level || 0) >= 50));
+    if (req.user.userType === 'TENANT_USER') {
+      // TENANT_USER sees only leads they own or are assigned to
+      const userGroups = await Group.find({
+        members: req.user._id,
+        isActive: true
+      });
 
-      if (!isManager) {
-        // Regular users (level < 50) — show only their assigned leads
-        const userGroups = await Group.find({
-          members: req.user.id,
-          isActive: true
-        });
-
-        if (userGroups.length > 0) {
-          const groupIds = userGroups.map(g => g._id);
-          query.$or = [
-            { owner: req.user.id },
-            {
-              assignedGroup: { $in: groupIds },
-              assignedMembers: req.user.id
-            }
-          ];
-        } else {
-          query.owner = req.user.id;
-        }
+      if (userGroups.length > 0) {
+        const groupIds = userGroups.map(g => g._id);
+        query.$and = [
+          { $or: [
+            { owner: req.user._id },
+            { assignedGroup: { $in: groupIds }, assignedMembers: req.user._id }
+          ]}
+        ];
+      } else {
+        query.$and = [
+          { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
+        ];
       }
-      // isManager: no ownership filter — they see all tenant leads
     }
+    // TENANT_MANAGER and TENANT_ADMIN see all tenant leads (no ownership filter)
 
-    // 🆕 Unassigned filter
+    // Unassigned filter
     if (unassigned === 'true') {
       query.owner = null;
       query.assignedGroup = null;
     }
 
-    // 🆕 Group filter
+    // Group filter
     if (assignedGroup) {
       if (assignedGroup === 'null' || assignedGroup === 'unassigned') {
         query.assignedGroup = null;
@@ -86,15 +81,20 @@ const getLeads = async (req, res) => {
       }
     }
 
-    // Existing filters
+    // Search filter — use $and to avoid overwriting ownership $or
     if (search) {
-      query.$or = [
+      const searchOr = [
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
         { company: { $regex: search, $options: 'i' } },
         { phone: { $regex: search, $options: 'i' } }
       ];
+      if (query.$and) {
+        query.$and.push({ $or: searchOr });
+      } else {
+        query.$or = searchOr;
+      }
     }
 
     if (leadStatus) query.leadStatus = leadStatus;
@@ -107,6 +107,7 @@ const getLeads = async (req, res) => {
 
     const leads = await Lead.find(query)
       .populate('owner', 'firstName lastName email')
+      .populate('createdBy', 'firstName lastName email userType')
       .populate('assignedGroup', 'name category')
       .populate('tenant', 'organizationName')
       .populate('product', 'name articleNumber')
@@ -140,6 +141,8 @@ const getLead = async (req, res) => {
   try {
     const lead = await Lead.findById(req.params.id)
       .populate('owner', 'firstName lastName email')
+      .populate('createdBy', 'firstName lastName email userType')
+      .populate('lastModifiedBy', 'firstName lastName email')
       .populate('tenant', 'organizationName')
       .populate('product', 'name articleNumber category price')
       .populate('customer', 'accountName phone email industry contactPerson')

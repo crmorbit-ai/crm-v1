@@ -6,1176 +6,926 @@ import { groupService } from '../services/groupService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 const FEATURES = [
-  // Access Management
-  { slug: 'user_management', name: 'Users', category: 'Access' },
-  { slug: 'role_management', name: 'Roles', category: 'Access' },
-  { slug: 'group_management', name: 'Groups', category: 'Access' },
-  // CRM
-  { slug: 'lead_management', name: 'Leads', category: 'CRM' },
-  { slug: 'contact_management', name: 'Contacts', category: 'CRM' },
-  { slug: 'account_management', name: 'Accounts', category: 'CRM' },
-  { slug: 'opportunity_management', name: 'Opportunities', category: 'CRM' },
-  { slug: 'data_center', name: 'Customers', category: 'CRM' },
-  // Sales & Finance
-  { slug: 'quotation_management', name: 'Quotations', category: 'Sales' },
-  { slug: 'invoice_management', name: 'Invoices', category: 'Sales' },
-  { slug: 'purchase_order_management', name: 'Purchase Orders', category: 'Sales' },
-  { slug: 'rfi_management', name: 'RFI', category: 'Sales' },
-  // Product
-  { slug: 'product_management', name: 'Products', category: 'Product' },
-  // Tasks
-  { slug: 'task_management', name: 'Tasks', category: 'Tasks' },
-  { slug: 'meeting_management', name: 'Meetings', category: 'Tasks' },
-  { slug: 'call_management', name: 'Calls', category: 'Tasks' },
-  { slug: 'email_management', name: 'Emails', category: 'Tasks' },
-  // Account
-  { slug: 'subscription_management', name: 'Subscription & Billing', category: 'Account' },
-  // Customization
-  { slug: 'field_management', name: 'Manage Fields', category: 'Customization' },
-  // Data
-  { slug: 'audit_logs', name: 'Audit Logs', category: 'Data' },
+  { slug: 'user_management',           name: 'Users',                 category: 'Access' },
+  { slug: 'role_management',           name: 'Roles',                 category: 'Access' },
+  { slug: 'group_management',          name: 'Groups',                category: 'Access' },
+  { slug: 'lead_management',           name: 'Leads',                 category: 'CRM' },
+  { slug: 'contact_management',        name: 'Contacts',              category: 'CRM' },
+  { slug: 'account_management',        name: 'Accounts',              category: 'CRM' },
+  { slug: 'opportunity_management',    name: 'Opportunities',         category: 'CRM' },
+  { slug: 'data_center',               name: 'Customers',             category: 'CRM' },
+  { slug: 'quotation_management',      name: 'Quotations',            category: 'Sales' },
+  { slug: 'invoice_management',        name: 'Invoices',              category: 'Sales' },
+  { slug: 'purchase_order_management', name: 'Purchase Orders',       category: 'Sales' },
+  { slug: 'rfi_management',            name: 'RFI',                   category: 'Sales' },
+  { slug: 'product_management',        name: 'Products',              category: 'Product' },
+  { slug: 'task_management',           name: 'Tasks',                 category: 'Tasks' },
+  { slug: 'meeting_management',        name: 'Meetings',              category: 'Tasks' },
+  { slug: 'call_management',           name: 'Calls',                 category: 'Tasks' },
+  { slug: 'email_management',          name: 'Emails',                category: 'Tasks' },
+  { slug: 'subscription_management',   name: 'Subscription & Billing',category: 'Account' },
+  { slug: 'field_management',          name: 'Manage Fields',         category: 'Customization' },
+  { slug: 'audit_logs',                name: 'Audit Logs',            category: 'Data' },
 ];
 const ACTIONS = ['create', 'read', 'update', 'delete', 'manage', 'import', 'export'];
 
+const AVATAR_COLORS = [
+  ['#7c3aed','#a78bfa'],['#2563eb','#60a5fa'],['#059669','#34d399'],
+  ['#dc2626','#f87171'],['#d97706','#fbbf24'],['#db2777','#f472b6'],
+  ['#0891b2','#38bdf8'],['#7c3aed','#ec4899'],
+];
+const avGrad = n => { const i = (n?.charCodeAt(0)||0) % AVATAR_COLORS.length; return `linear-gradient(135deg,${AVATAR_COLORS[i][0]},${AVATAR_COLORS[i][1]})`; };
+
+const TYPE_CFG = {
+  TENANT_ADMIN:   { label:'Admin',   c:'#92400e', bg:'#fffbeb', b:'#fcd34d', dot:'#f59e0b' },
+  TENANT_MANAGER: { label:'Manager', c:'#5b21b6', bg:'#f5f3ff', b:'#c4b5fd', dot:'#8b5cf6' },
+  TENANT_USER:    { label:'User',    c:'#1e40af', bg:'#eff6ff', b:'#bfdbfe', dot:'#3b82f6' },
+};
+
+const SVG_EYE_ON  = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+const SVG_EYE_OFF = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+
 const TeamManagement = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('users');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-
-  const [users, setUsers] = useState([]);
-  const [roles, setRoles] = useState([]);
-  const [groups, setGroups] = useState([]);
-
-  const [showPanel, setShowPanel] = useState(false);
-  const [panelMode, setPanelMode] = useState('user');
+  const [activeTab, setActiveTab]     = useState('users');
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState('');
+  const [success, setSuccess]         = useState('');
+  const [users, setUsers]             = useState([]);
+  const [roles, setRoles]             = useState([]);
+  const [groups, setGroups]           = useState([]);
+  const [showPanel, setShowPanel]     = useState(false);
+  const [panelMode, setPanelMode]     = useState('user');
   const [editingItem, setEditingItem] = useState(null);
-  const [showRoleDropdown, setShowRoleDropdown] = useState(false);
-  const [showGroupDropdown, setShowGroupDropdown] = useState(false);
-  const [userStep, setUserStep] = useState(1);
-  const [subStep, setSubStep] = useState(null); // null | 'create-role' | 'create-group'
-  const [quickRoleForm, setQuickRoleForm] = useState({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
-  const [quickGroupForm, setQuickGroupForm] = useState({ name: '', description: '' });
-
-  const [userForm, setUserForm] = useState({ firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', loginName: '', department: '', viewingPin: '', roles: [], groups: [] });
-  const [showPassword, setShowPassword] = useState(false);
+  const [showRoleDD, setShowRoleDD]   = useState(false);
+  const [showGroupDD, setShowGroupDD] = useState(false);
+  const [userStep, setUserStep]       = useState(1);
+  const [subStep, setSubStep]         = useState(null);
+  const [qRole, setQRole]   = useState({ name:'', description:'', permissions:[], forUserTypes:['TENANT_USER','TENANT_MANAGER'] });
+  const [qGroup, setQGroup] = useState({ name:'', description:'' });
+  const [userForm, setUserForm] = useState({ firstName:'', lastName:'', email:'', password:'', userType:'TENANT_USER', phone:'', loginName:'', department:'', viewingPin:'', roles:[], groups:[] });
+  const [showPwd, setShowPwd] = useState(false);
   const [showPin, setShowPin] = useState(false);
-  const [roleForm, setRoleForm] = useState({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
-  const [groupForm, setGroupForm] = useState({ name: '', description: '', members: [] });
+  const [roleForm, setRoleForm]   = useState({ name:'', description:'', permissions:[], forUserTypes:['TENANT_USER','TENANT_MANAGER'] });
+  const [groupForm, setGroupForm] = useState({ name:'', description:'', members:[] });
   const [submitting, setSubmitting] = useState(false);
+  const [resetModal, setResetModal] = useState({ open:false, userId:null, userName:'' });
+  const [resetForm, setResetForm]   = useState({ newPassword:'', confirmPassword:'' });
+  const [showRPwd, setShowRPwd]     = useState(false);
+  const [search, setSearch]           = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [panelWidth, setPanelWidth]   = useState(380);
+  const [dragging, setDragging]       = useState(false);
+  const [dragStartX, setDragStartX]   = useState(0);
+  const [dragStartW, setDragStartW]   = useState(380);
 
-  const ALL_FEATURES = [
-    'user_management', 'role_management', 'group_management',
-    'lead_management', 'contact_management', 'account_management',
-    'opportunity_management', 'data_center', 'quotation_management',
-    'invoice_management', 'purchase_order_management', 'rfi_management',
-    'product_management', 'task_management', 'meeting_management',
-    'call_management', 'email_management', 'subscription_management',
-    'field_management', 'audit_logs',
-  ];
+  useEffect(() => {
+    if (!dragging) return;
+    const onMove = e => setPanelWidth(Math.max(280, Math.min(560, dragStartW + e.clientX - dragStartX)));
+    const onUp   = () => setDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+  }, [dragging, dragStartX, dragStartW]);
 
-  const USER_PERMISSIONS = ALL_FEATURES.map(f => ({ feature: f, actions: ['read'] }));
-  const MANAGER_PERMISSIONS = ALL_FEATURES.map(f => ({ feature: f, actions: ['create', 'read', 'update'] }));
-  const ADMIN_PERMISSIONS = ALL_FEATURES.map(f => ({ feature: f, actions: ['create', 'read', 'update', 'delete', 'manage'] }));
+  const startDrag = e => { e.preventDefault(); setDragging(true); setDragStartX(e.clientX); setDragStartW(panelWidth); };
+
+  const ALL = FEATURES.map(f=>f.slug);
+  const UP  = ALL.map(f=>({ feature:f, actions:['read'] }));
+  const MP  = ALL.map(f=>({ feature:f, actions:['create','read','update'] }));
+  const AP  = ALL.map(f=>({ feature:f, actions:['create','read','update','delete','manage'] }));
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [usersRes, rolesRes, groupsRes] = await Promise.all([
-        userService.getUsers({ limit: 100 }),
-        roleService.getRoles({ limit: 100 }),
-        groupService.getGroups({ limit: 100 })
+      const [ur,rr,gr] = await Promise.all([
+        userService.getUsers({limit:100}),
+        roleService.getRoles({limit:100}),
+        groupService.getGroups({limit:100}),
       ]);
-      setUsers(usersRes.users || []);
-      const customRoles = (rolesRes.roles || []).filter(r => r.roleType !== 'system');
-      const fetchedGroups = groupsRes.groups || [];
-
-      // Auto-seed defaults: create if missing, update if exists (fixes wrong slugs)
-      const existingUser    = customRoles.find(r => r.name === 'User');
-      const existingManager = customRoles.find(r => r.name === 'Manager');
-      const existingAdmin   = customRoles.find(r => r.name === 'Admin');
-      const needsMonitoringGroup = !fetchedGroups.some(g => g.name === 'Monitoring Group');
-
-      const seeds = [];
-
-      const upsertRole = (existing, createData) => {
-        if (existing) {
-          return roleService.updateRole(existing._id, {
-            permissions: createData.permissions,
-            forUserTypes: createData.forUserTypes,
-            level: createData.level,
-          }).catch(() => {});
-        }
-        return roleService.createRole(createData).catch(() => {});
-      };
-
-      seeds.push(upsertRole(existingUser, {
-        name: 'User',
-        slug: 'user',
-        description: 'Read-only access to all features',
-        permissions: USER_PERMISSIONS,
-        forUserTypes: ['TENANT_USER'],
-        level: 10,
-      }));
-      seeds.push(upsertRole(existingManager, {
-        name: 'Manager',
-        slug: 'manager',
-        description: 'Create, read and update access to all features',
-        permissions: MANAGER_PERMISSIONS,
-        forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
-        level: 50,
-      }));
-      seeds.push(upsertRole(existingAdmin, {
-        name: 'Admin',
-        slug: 'admin',
-        description: 'Full access to all features',
-        permissions: ADMIN_PERMISSIONS,
-        forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'],
-        level: 100,
-      }));
-      if (needsMonitoringGroup) {
-        seeds.push(
-          groupService.createGroup({
-            name: 'Monitoring Group',
-            slug: 'monitoring-group',
-            description: 'Default group for monitoring and oversight',
-            members: [],
-          }).catch(() => {})
-        );
-      }
-
-      await Promise.all(seeds);
-      // Re-fetch to get latest roles/groups after upsert
-      const [rolesRes2, groupsRes2] = await Promise.all([
-        roleService.getRoles({ limit: 100 }),
-        groupService.getGroups({ limit: 100 })
+      setUsers(ur.users||[]);
+      const cr = (rr.roles||[]).filter(r=>r.roleType!=='system');
+      const fg = gr.groups||[];
+      const eU=cr.find(r=>r.name==='User'), eM=cr.find(r=>r.name==='Manager'), eA=cr.find(r=>r.name==='Admin');
+      const up = (ex,d) => ex ? roleService.updateRole(ex._id,{permissions:d.permissions,forUserTypes:d.forUserTypes,level:d.level}).catch(()=>{}) : roleService.createRole(d).catch(()=>{});
+      await Promise.all([
+        up(eU,{name:'User',slug:'user',description:'Read-only',permissions:UP,forUserTypes:['TENANT_USER'],level:10}),
+        up(eM,{name:'Manager',slug:'manager',description:'Create/read/update',permissions:MP,forUserTypes:['TENANT_USER','TENANT_MANAGER'],level:50}),
+        up(eA,{name:'Admin',slug:'admin',description:'Full access',permissions:AP,forUserTypes:['TENANT_USER','TENANT_MANAGER'],level:100}),
+        !fg.some(g=>g.name==='Monitoring Group') && groupService.createGroup({name:'Monitoring Group',slug:'monitoring-group',description:'Default monitoring group',members:[]}).catch(()=>{}),
       ]);
-      setRoles((rolesRes2.roles || []).filter(r => r.roleType !== 'system'));
-      setGroups(groupsRes2.groups || []);
-    } catch (err) {
-      if (err?.isPermissionDenied) return;
-      setError('Failed to load data');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+      const [rr2,gr2] = await Promise.all([roleService.getRoles({limit:100}),groupService.getGroups({limit:100})]);
+      setRoles((rr2.roles||[]).filter(r=>r.roleType!=='system'));
+      setGroups(gr2.groups||[]);
+    } catch(e) { if(e?.isPermissionDenied) return; setError('Failed to load data'); }
+    finally { setLoading(false); }
+  },[]);
+  useEffect(()=>{ loadData(); },[loadData]);
 
-  useEffect(() => { loadData(); }, [loadData]);
+  const showMsg = (m,err=false) => { err?setError(m):setSuccess(m); setTimeout(()=>{setError('');setSuccess('');},3000); };
+  const closePanel = () => { setShowPanel(false);setEditingItem(null);setShowRoleDD(false);setShowGroupDD(false);setSubmitting(false);setUserStep(1);setSubStep(null); };
 
-  const showMessage = (msg, isError = false) => {
-    if (isError) setError(msg); else setSuccess(msg);
-    setTimeout(() => { setError(''); setSuccess(''); }, 3000);
-  };
-
-  const closePanel = () => {
-    setShowPanel(false);
-    setEditingItem(null);
-    setShowRoleDropdown(false);
-    setShowGroupDropdown(false);
-    setSubmitting(false);
-    setUserStep(1);
-    setSubStep(null);
-  };
-
-  const openUserPanel = (u = null) => {
-    setPanelMode('user');
-    setEditingItem(u);
-    setUserStep(1);
-    setSubStep(null);
-    setShowRoleDropdown(false);
-    setShowGroupDropdown(false);
-    const userGroups = u ? groups.filter(g => g.members?.some(m => (m._id || m) === u._id)).map(g => g._id) : [];
-    setShowPassword(false);
-    setShowPin(false);
-    setUserForm(u ? { firstName: u.firstName, lastName: u.lastName, email: u.email, password: '', userType: u.userType, phone: u.phone || '', loginName: u.loginName || '', department: u.department || '', viewingPin: '', roles: u.roles?.map(r => r._id) || [], groups: userGroups }
-      : { firstName: '', lastName: '', email: '', password: '', userType: 'TENANT_USER', phone: '', loginName: '', department: '', viewingPin: '', roles: [], groups: [] });
+  const openUserPanel = (u=null) => {
+    setPanelMode('user'); setEditingItem(u); setUserStep(1); setSubStep(null);
+    setShowRoleDD(false); setShowGroupDD(false); setShowPwd(false); setShowPin(false);
+    const ug = u ? groups.filter(g=>g.members?.some(m=>(m._id||m)===u._id)).map(g=>g._id) : [];
+    setUserForm(u
+      ? {firstName:u.firstName,lastName:u.lastName,email:u.email,password:'',userType:u.userType,phone:u.phone||'',loginName:u.loginName||'',department:u.department||'',viewingPin:'',roles:u.roles?.map(r=>r._id)||[],groups:ug}
+      : {firstName:'',lastName:'',email:'',password:'',userType:'TENANT_USER',phone:'',loginName:'',department:'',viewingPin:'',roles:[],groups:[]});
     setShowPanel(true);
   };
+  const openRolePanel  = (r=null) => { setPanelMode('role');  setEditingItem(r); setRoleForm(r?{name:r.name,description:r.description||'',permissions:r.permissions||[],forUserTypes:r.forUserTypes||['TENANT_USER','TENANT_MANAGER']}:{name:'',description:'',permissions:[],forUserTypes:['TENANT_USER','TENANT_MANAGER']}); setShowPanel(true); };
+  const openGroupPanel = (g=null) => { setPanelMode('group'); setEditingItem(g); setGroupForm(g?{name:g.name,description:g.description||'',members:g.members?.map(m=>m._id)||[]}:{name:'',description:'',members:[]}); setShowPanel(true); };
 
-  const openRolePanel = (r = null) => {
-    setPanelMode('role');
-    setEditingItem(r);
-    setRoleForm(r ? { name: r.name, description: r.description || '', permissions: r.permissions || [], forUserTypes: r.forUserTypes || ['TENANT_USER', 'TENANT_MANAGER'] }
-      : { name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
-    setShowPanel(true);
+  const handleUserSubmit = async e => {
+    e.preventDefault(); if(submitting) return; setSubmitting(true);
+    try {
+      let uid;
+      if(editingItem){ await userService.updateUser(editingItem._id,userForm); uid=editingItem._id; showMsg('User updated!'); }
+      else { const r=await userService.createUser({...userForm,tenant:user.tenant?._id}); uid=r.user?._id||r._id; showMsg('User created!'); }
+      if(uid) await userService.assignGroups(uid,userForm.groups);
+      closePanel(); loadData();
+    } catch(e){ if(e?.isPermissionDenied) return; showMsg(e.message||'Error',true); }
+    finally { setSubmitting(false); }
   };
+  const handleDeleteUser  = async u => { if(!window.confirm(`Delete ${u.firstName}?`)) return; try{ await userService.deleteUser(u._id);  showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
+  const handleDeleteRole  = async r => { if(!window.confirm(`Delete "${r.name}"?`)) return; try{ await roleService.deleteRole(r._id);   showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
+  const handleDeleteGroup = async g => { if(!window.confirm(`Delete "${g.name}"?`)) return; try{ await groupService.deleteGroup(g._id); showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
 
-  const openGroupPanel = (g = null) => {
-    setPanelMode('group');
-    setEditingItem(g);
-    setGroupForm(g ? { name: g.name, description: g.description || '', members: g.members?.map(m => m._id) || [] }
-      : { name: '', description: '', members: [] });
-    setShowPanel(true);
-  };
-
-  // Handlers
-  const handleUserSubmit = async (e) => {
+  const openResetModal = u => { setResetModal({open:true,userId:u._id,userName:`${u.firstName} ${u.lastName}`}); setResetForm({newPassword:'',confirmPassword:''}); setShowRPwd(false); };
+  const handleReset = async e => {
     e.preventDefault();
-    if (submitting) return;
-    setSubmitting(true);
-    try {
-      let userId;
-      if (editingItem) {
-        await userService.updateUser(editingItem._id, userForm);
-        userId = editingItem._id;
-        showMessage('User updated!');
-      } else {
-        const res = await userService.createUser({ ...userForm, tenant: user.tenant?._id });
-        userId = res.user?._id || res._id;
-        showMessage('User created!');
-      }
-      if (userId) {
-        await userService.assignGroups(userId, userForm.groups);
-      }
-      closePanel();
-      loadData();
-    } catch (err) {
-      if (err?.isPermissionDenied) return;
-      showMessage(err.message || 'Error', true);
-    } finally {
-      setSubmitting(false);
-    }
+    if(resetForm.newPassword.length<4){ showMsg('Min 4 characters',true); return; }
+    if(resetForm.newPassword!==resetForm.confirmPassword){ showMsg('Passwords do not match',true); return; }
+    try{ setSubmitting(true); await userService.resetUserPassword(resetModal.userId,resetForm.newPassword); showMsg(`Password reset for ${resetModal.userName}`); setResetModal({open:false,userId:null,userName:''}); }
+    catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message||'Failed',true); }
+    finally{ setSubmitting(false); }
   };
 
-  const handleDeleteUser = async (u) => {
-    if (!window.confirm(`Delete ${u.firstName}?`)) return;
-    try {
-      await userService.deleteUser(u._id);
-      showMessage('Deleted!');
-      loadData();
-    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
-  };
-
-  const handleRoleSubmit = async (e) => {
+  const handleRoleSubmit = async e => {
     e.preventDefault();
-    try {
-      const data = {
-        ...roleForm,
-        slug: roleForm.name.toLowerCase().replace(/\s+/g, '_'),
-        forUserTypes: roleForm.forUserTypes || ['TENANT_USER', 'TENANT_MANAGER']
-      };
-      if (editingItem) {
-        await roleService.updateRole(editingItem._id, data);
-        showMessage('Role updated!');
-      } else {
-        await roleService.createRole(data);
-        showMessage('Role created!');
-      }
-      closePanel();
-      loadData();
-    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
+    try{ const d={...roleForm,slug:roleForm.name.toLowerCase().replace(/\s+/g,'_'),forUserTypes:roleForm.forUserTypes||['TENANT_USER','TENANT_MANAGER']}; editingItem?await roleService.updateRole(editingItem._id,d):await roleService.createRole(d); showMsg(editingItem?'Role updated!':'Role created!'); closePanel(); loadData(); }
+    catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); }
+  };
+  const handleGroupSubmit = async e => {
+    e.preventDefault();
+    try{ const d={...groupForm,slug:groupForm.name.toLowerCase().replace(/\s+/g,'_')}; editingItem?await groupService.updateGroup(editingItem._id,d):await groupService.createGroup(d); showMsg(editingItem?'Group updated!':'Group created!'); closePanel(); loadData(); }
+    catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); }
   };
 
-  const handleDeleteRole = async (r) => {
-    if (!window.confirm(`Delete "${r.name}"?`)) return;
-    try {
-      await roleService.deleteRole(r._id);
-      showMessage('Deleted!');
-      loadData();
-    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
-  };
-
-  const togglePermission = (feature, action) => {
-    setRoleForm(prev => {
-      const perms = [...prev.permissions];
-      const idx = perms.findIndex(p => p.feature === feature);
-      if (idx === -1) perms.push({ feature, actions: [action] });
-      else {
-        const actions = [...perms[idx].actions];
-        const aIdx = actions.indexOf(action);
-        if (aIdx === -1) actions.push(action); else actions.splice(aIdx, 1);
-        if (actions.length === 0) perms.splice(idx, 1);
-        else perms[idx] = { ...perms[idx], actions };
-      }
-      return { ...prev, permissions: perms };
+  const togglePerm = (form,setForm) => (feature,action) => {
+    setForm(p=>{ const ps=[...p.permissions],i=ps.findIndex(x=>x.feature===feature);
+      if(i===-1) ps.push({feature,actions:[action]});
+      else{ const a=[...ps[i].actions],ai=a.indexOf(action); if(ai===-1)a.push(action);else a.splice(ai,1); if(!a.length)ps.splice(i,1);else ps[i]={...ps[i],actions:a}; }
+      return{...p,permissions:ps};
     });
   };
+  const hasPerm  = (f,a) => roleForm.permissions.find(p=>p.feature===f)?.actions?.includes(a)||false;
+  const hasQPerm = (f,a) => qRole.permissions.find(p=>p.feature===f)?.actions?.includes(a)||false;
 
-  const hasAction = (feature, action) => roleForm.permissions.find(p => p.feature === feature)?.actions?.includes(action) || false;
-
-  const handleGroupSubmit = async (e) => {
+  const handleQRole = async e => {
     e.preventDefault();
-    try {
-      const data = { ...groupForm, slug: groupForm.name.toLowerCase().replace(/\s+/g, '_') };
-      if (editingItem) {
-        await groupService.updateGroup(editingItem._id, data);
-        showMessage('Group updated!');
-      } else {
-        await groupService.createGroup(data);
-        showMessage('Group created!');
-      }
-      closePanel();
-      loadData();
-    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
+    try{ const d={...qRole,slug:qRole.name.toLowerCase().replace(/\s+/g,'_')}; const r=await roleService.createRole(d); const id=r.role?._id||r._id; await loadData(); if(id)setUserForm(p=>({...p,roles:[...p.roles,id]})); setSubStep(null); setQRole({name:'',description:'',permissions:[],forUserTypes:['TENANT_USER','TENANT_MANAGER']}); showMsg('Role created!'); }
+    catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message||'Error',true); }
   };
-
-  const handleDeleteGroup = async (g) => {
-    if (!window.confirm(`Delete "${g.name}"?`)) return;
-    try {
-      await groupService.deleteGroup(g._id);
-      showMessage('Deleted!');
-      loadData();
-    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message, true); }
+  const handleQGroup = async e => {
+    e.preventDefault();
+    try{ const d={...qGroup,slug:qGroup.name.toLowerCase().replace(/\s+/g,'_')}; const r=await groupService.createGroup(d); const id=r.group?._id||r._id; await loadData(); if(id)setUserForm(p=>({...p,groups:[...p.groups,id]})); setSubStep(null); setQGroup({name:'',description:''}); showMsg('Group created!'); }
+    catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message||'Error',true); }
   };
-
-  const getUserTypeLabel = (type) => {
-    const labels = { 'TENANT_USER': 'Tenant User', 'TENANT_MANAGER': 'Tenant Manager', 'TENANT_ADMIN': 'Tenant Admin' };
-    return labels[type] || type;
-  };
-
-  const handleNextStep = () => {
-    if (!userForm.firstName.trim() || !userForm.lastName.trim() || !userForm.email.trim()) {
-      showMessage('Please fill in all required fields', true); return;
-    }
-    if (!editingItem && userForm.password.length < 6) {
-      showMessage('Password must be at least 6 characters', true); return;
-    }
+  const handleNext = () => {
+    if(!userForm.firstName.trim()||!userForm.lastName.trim()||!userForm.email.trim()){ showMsg('Fill required fields',true); return; }
+    if(!editingItem&&userForm.password.length<4){ showMsg('Min 4 characters',true); return; }
     setUserStep(2);
   };
 
-  const toggleQuickPermission = (feature, action) => {
-    setQuickRoleForm(prev => {
-      const perms = [...prev.permissions];
-      const idx = perms.findIndex(p => p.feature === feature);
-      if (idx === -1) perms.push({ feature, actions: [action] });
-      else {
-        const actions = [...perms[idx].actions];
-        const aIdx = actions.indexOf(action);
-        if (aIdx === -1) actions.push(action); else actions.splice(aIdx, 1);
-        if (actions.length === 0) perms.splice(idx, 1);
-        else perms[idx] = { ...perms[idx], actions };
-      }
-      return { ...prev, permissions: perms };
-    });
-  };
+  /* ─ shared tiny components ──────────────────────────────────── */
+  const Label = ({children}) => <div style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:6}}>{children}</div>;
+  const Inp   = ({style={}, ...p}) => <input {...p} className="xInp" style={{width:'100%',padding:'10px 13px',border:'1.5px solid #e2e8f0',borderRadius:10,fontSize:14,color:'#0f172a',background:'#fff',outline:'none',boxSizing:'border-box',...style}} />;
+  const PriBtn = ({children,style={}, ...p}) => <button {...p} className="xPriBtn" style={{width:'100%',padding:'12px',border:'none',borderRadius:11,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,boxShadow:'0 4px 14px rgba(79,70,229,0.35)',transition:'all 0.2s',marginTop:8,...style}}>{children}</button>;
 
-  const hasQuickAction = (feature, action) => quickRoleForm.permissions.find(p => p.feature === feature)?.actions?.includes(action) || false;
+  const PermTable = ({hasP,toggleP}) => (
+    <div style={{border:'1.5px solid #e2e8f0',borderRadius:10,overflow:'hidden',maxHeight:260,overflowY:'auto'}}>
+      <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+        <thead><tr style={{background:'#f8fafc',position:'sticky',top:0}}>
+          <th style={{textAlign:'left',padding:'7px 10px',fontWeight:700,color:'#64748b',fontSize:10,textTransform:'uppercase',borderBottom:'1px solid #e2e8f0'}}>Module</th>
+          {ACTIONS.map(a=><th key={a} title={a} style={{padding:'7px 4px',fontWeight:700,color:'#64748b',fontSize:10,borderBottom:'1px solid #e2e8f0'}}>{a[0].toUpperCase()}</th>)}
+        </tr></thead>
+        <tbody>
+          {['Access','CRM','Sales','Product','Tasks','Account','Customization','Data'].map(cat=>(
+            <React.Fragment key={cat}>
+              <tr><td colSpan={ACTIONS.length+1} style={{padding:'5px 10px',background:'#f1f5f9',fontWeight:800,fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>{cat}</td></tr>
+              {FEATURES.filter(f=>f.category===cat).map(f=>(
+                <tr key={f.slug} style={{borderTop:'1px solid #f8fafc'}}>
+                  <td style={{padding:'5px 10px 5px 18px',fontWeight:500,color:'#374151'}}>{f.name}</td>
+                  {ACTIONS.map(a=><td key={a} style={{padding:'4px 4px',textAlign:'center'}}><input type="checkbox" style={{cursor:'pointer',width:13,height:13,accentColor:'#4f46e5'}} checked={hasP(f.slug,a)} onChange={()=>toggleP(f.slug,a)} /></td>)}
+                </tr>
+              ))}
+            </React.Fragment>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 
-  const handleQuickRoleCreate = async (e) => {
-    e.preventDefault();
-    try {
-      const data = { ...quickRoleForm, slug: quickRoleForm.name.toLowerCase().replace(/\s+/g, '_') };
-      const res = await roleService.createRole(data);
-      const newId = res.role?._id || res._id;
-      await loadData();
-      if (newId) setUserForm(prev => ({ ...prev, roles: [...prev.roles, newId] }));
-      setSubStep(null);
-      setQuickRoleForm({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] });
-      showMessage('Role created and selected!');
-    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message || 'Error', true); }
-  };
+  /* ─── inline dropdown helper ────────────────────────────────── */
+  const DDSelect = ({value,onChange,items,placeholder,open,onToggle,tagBg,tagColor,tagBorder}) => (
+    <div style={{position:'relative'}}>
+      <button type="button" onClick={onToggle} style={{width:'100%',padding:'8px 11px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:13,background:'#fff',cursor:'pointer',display:'flex',justifyContent:'space-between',alignItems:'center',color:value.length?'#0f172a':'#94a3b8',textAlign:'left'}}>
+        <span>{value.length?`${value.length} selected`:placeholder}</span><span style={{color:'#94a3b8',fontSize:11}}>▾</span>
+      </button>
+      {open&&<div style={{position:'absolute',top:'calc(100% + 4px)',left:0,right:0,background:'#fff',border:'1.5px solid #e2e8f0',borderRadius:12,boxShadow:'0 10px 30px rgba(0,0,0,0.12)',zIndex:400,maxHeight:170,overflowY:'auto'}}>
+        {items.length===0?<div style={{padding:14,fontSize:12,color:'#94a3b8',textAlign:'center'}}>None yet</div>
+          :items.map(it=><label key={it.id} style={{display:'flex',alignItems:'center',gap:10,padding:'9px 14px',cursor:'pointer',fontSize:13,borderBottom:'1px solid #f8fafc',background:value.includes(it.id)?'#f5f3ff':'#fff',fontWeight:value.includes(it.id)?700:400,color:value.includes(it.id)?'#4f46e5':'#0f172a'}}>
+            <input type="checkbox" style={{accentColor:'#4f46e5'}} checked={value.includes(it.id)} onChange={()=>onChange(value.includes(it.id)?value.filter(i=>i!==it.id):[...value,it.id])} />{it.name}</label>)}
+      </div>}
+      {value.length>0&&<div style={{display:'flex',flexWrap:'wrap',gap:4,marginTop:6}}>
+        {value.map(id=>{const it=items.find(i=>i.id===id);return it?<span key={id} style={{padding:'2px 9px',background:tagBg,color:tagColor,border:`1px solid ${tagBorder}`,borderRadius:20,fontSize:11,fontWeight:600,display:'inline-flex',alignItems:'center',gap:4}}>{it.name}<button type="button" style={{background:'none',border:'none',cursor:'pointer',color:'inherit',padding:0,fontSize:14,opacity:.7,lineHeight:1}} onClick={()=>onChange(value.filter(i=>i!==id))}>×</button></span>:null;})}
+      </div>}
+    </div>
+  );
 
-  const handleQuickGroupCreate = async (e) => {
-    e.preventDefault();
-    try {
-      const data = { ...quickGroupForm, slug: quickGroupForm.name.toLowerCase().replace(/\s+/g, '_') };
-      const res = await groupService.createGroup(data);
-      const newId = res.group?._id || res._id;
-      await loadData();
-      if (newId) setUserForm(prev => ({ ...prev, groups: [...prev.groups, newId] }));
-      setSubStep(null);
-      setQuickGroupForm({ name: '', description: '' });
-      showMessage('Group created and selected!');
-    } catch (err) { if (err?.isPermissionDenied) return; showMessage(err.message || 'Error', true); }
-  };
+  const roleItems  = roles.map(r=>({id:r._id,name:r.name}));
+  const groupItems = groups.map(g=>({id:g._id,name:g.name}));
 
   return (
     <DashboardLayout>
-      {/* Responsive CSS */}
       <style>{`
-        .tm-wrapper { display: flex; gap: 16px; padding: 16px; min-height: calc(100vh - 120px); }
-        .tm-main { flex: 1; min-width: 0; }
-        .tm-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-        .tm-table-wrapper { overflow-x: auto; }
-        .tm-panel {
-          width: 320px;
-          background: linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%);
-          border-radius: 8px;
-          border: 1px solid #e2e8f0;
-          flex-shrink: 0;
-          display: flex;
-          flex-direction: column;
-          max-height: calc(100vh - 140px);
-          overflow: hidden;
-        }
-        @media (max-width: 768px) {
-          .tm-wrapper { flex-direction: column; padding: 12px; }
-          .tm-header { flex-direction: column; align-items: stretch; }
-          .tm-header-left { flex-direction: column; text-align: center; }
-          .tm-header-icon { margin: 0 auto; }
-          .tm-subtitle { display: none; }
-          .tm-add-btn { width: 100%; justify-content: center; }
-          .tm-stats-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
-          .tm-stat-num { font-size: 18px; }
-          .tm-panel {
-            width: 100%;
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            max-height: 100vh;
-            z-index: 1000;
-            border-radius: 0;
-          }
-          .tm-table { min-width: 600px; }
-          .tm-hide-mobile { display: none !important; }
-        }
+        .xInp:focus        { border-color:#4f46e5 !important; box-shadow:0 0 0 3px rgba(79,70,229,0.12) !important; }
+        .xInp:disabled     { background:#f8fafc !important; color:#94a3b8 !important; }
+        .xPriBtn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 7px 22px rgba(79,70,229,0.42) !important; }
+        .xPriBtn:disabled  { opacity:0.65; cursor:not-allowed; }
+
+        .xRow              { transition:background 0.12s; }
+        .xRow:hover        { background:#f8f7ff !important; }
+        .xRow:hover button { opacity:1; }
+
+        .xStat             { cursor:pointer; transition:all 0.2s; }
+        .xStat:hover       { transform:translateY(-2px); box-shadow:0 6px 20px rgba(0,0,0,0.09) !important; }
+        .xStat.xActive     { transform:translateY(-1px); }
+
+        .xTabBtn           { cursor:pointer; transition:all 0.18s; }
+        .xTabBtn.xActive   { background:rgba(255,255,255,0.18) !important; color:#fff !important; border-color:rgba(255,255,255,0.3) !important; }
+        .xTabBtn:hover:not(.xActive) { background:rgba(255,255,255,0.1) !important; }
+
+        .xActBtn:hover     { filter:brightness(0.9); transform:translateY(-1px); }
+        [onmousedown] { user-select:none; }
+        .xClose:hover      { background:#f1f5f9 !important; }
+        .xTypeCard:hover   { border-color:#4f46e5 !important; }
+
+        .xScroll::-webkit-scrollbar       { width:3px; }
+        .xScroll::-webkit-scrollbar-thumb { background:#e2e8f0; border-radius:3px; }
+
+        @keyframes xPulse   { 0%,100%{box-shadow:0 0 4px rgba(34,197,94,0.6)} 50%{box-shadow:0 0 10px rgba(34,197,94,1)} }
+        @keyframes xFadeUp  { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes xModalIn { from{opacity:0;transform:scale(0.95)}     to{opacity:1;transform:scale(1)}     }
+        @keyframes xToastIn { from{opacity:0;transform:translateX(14px)} to{opacity:1;transform:translateX(0)} }
+        .xFadeUp  { animation:xFadeUp  0.2s ease; }
+        .xModalIn { animation:xModalIn 0.2s ease; }
+        .xToastIn { animation:xToastIn 0.2s ease; }
       `}</style>
 
-      <div className="tm-wrapper">
-        <div className="tm-main">
-          {/* Header */}
-          <div style={styles.headerCard} className="tm-header">
-            <div style={styles.headerLeft} className="tm-header-left">
-              <div style={styles.headerIcon} className="tm-header-icon">
-                {activeTab === 'users' ? '👥' : activeTab === 'roles' ? '🔐' : '👨‍👩‍👧‍👦'}
-              </div>
-              <div>
-                <h2 style={styles.title}>
-                  {activeTab === 'users' ? 'Team Members' : activeTab === 'roles' ? 'Roles & Permissions' : 'User Groups'}
-                </h2>
-                <p style={styles.subtitle} className="tm-subtitle">
-                  {activeTab === 'users' ? 'Add, edit and manage your team members' : activeTab === 'roles' ? 'Define roles and control feature access' : 'Organize users into groups for easy management'}
-                </p>
-              </div>
-            </div>
-            <button onClick={() => activeTab === 'users' ? openUserPanel() : activeTab === 'roles' ? openRolePanel() : openGroupPanel()} style={styles.addBtn} className="tm-add-btn">
-              <span style={{ fontSize: '16px' }}>+</span> Add {activeTab === 'users' ? 'User' : activeTab === 'roles' ? 'Role' : 'Group'}
-            </button>
-          </div>
+      {/* ── toast ──────────────────────────────────────────── */}
+      {(success||error)&&(
+        <div className="xToastIn" style={{position:'fixed',top:18,right:22,zIndex:9999,padding:'11px 16px',borderRadius:12,background:success?'#f0fdf4':'#fff1f2',border:`1px solid ${success?'#86efac':'#fca5a5'}`,color:success?'#15803d':'#be123c',fontSize:13,fontWeight:600,display:'flex',alignItems:'center',gap:8,boxShadow:'0 6px 24px rgba(0,0,0,0.1)',maxWidth:320}}>
+          <span style={{fontSize:16}}>{success?'✓':'⚠'}</span>{success||error}
+        </div>
+      )}
 
-          {/* Alerts */}
-          {success && <div style={styles.success}>{success}</div>}
-          {error && <div style={styles.error}>{error}</div>}
+      {/* ════════════════════════════════════════════
+          HERO — dark gradient card (title + tabs only)
+      ════════════════════════════════════════════ */}
+      <div style={{
+        background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 40%,#0d1b4b 100%)',
+        borderRadius:16, marginBottom:12, overflow:'hidden',
+        boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 20px 48px rgba(79,70,229,0.28)',
+        position:'relative',
+      }}>
+        <div style={{position:'absolute',top:-70,right:-40,width:260,height:260,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,0.38) 0%,transparent 68%)',pointerEvents:'none'}} />
+        <div style={{position:'absolute',bottom:-40,left:'30%',width:180,height:180,borderRadius:'50%',background:'radial-gradient(circle,rgba(6,182,212,0.22) 0%,transparent 68%)',pointerEvents:'none'}} />
+        <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(rgba(255,255,255,0.04) 1px,transparent 1px)',backgroundSize:'26px 26px',pointerEvents:'none'}} />
 
-          {/* Stats */}
-          <div style={styles.statsGrid} className="tm-stats-grid">
-            <div style={{ ...styles.statCard, ...(activeTab === 'users' ? styles.activeStatCard : {}) }} onClick={() => setActiveTab('users')}>
-              <span style={styles.statNum} className="tm-stat-num">👥 {users.length}</span>
-              <span style={styles.statLabel}>Users</span>
-            </div>
-            <div style={{ ...styles.statCard, ...(activeTab === 'roles' ? styles.activeStatCard : {}) }} onClick={() => setActiveTab('roles')}>
-              <span style={styles.statNum} className="tm-stat-num">🔐 {roles.length}</span>
-              <span style={styles.statLabel}>Roles</span>
-            </div>
-            <div style={{ ...styles.statCard, ...(activeTab === 'groups' ? styles.activeStatCard : {}) }} onClick={() => setActiveTab('groups')}>
-              <span style={styles.statNum} className="tm-stat-num">👨‍👩‍👧‍👦 {groups.length}</span>
-              <span style={styles.statLabel}>Groups</span>
-            </div>
-          </div>
-
-          {/* Split layout: form left + table right */}
-          <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-
-          {/* Left: Add/Edit User Form */}
-          {showPanel && panelMode === 'user' && (
-            <div style={styles.inlineFormCard}>
-              {/* Header */}
-              <div style={styles.modalHeader}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e293b' }}>
-                    {editingItem ? 'Edit User' : 'Add New User'}
-                  </h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#94a3b8' }}>
-                    {editingItem ? 'Update user information' : subStep === 'create-role' ? 'Step 2 — Create Role' : subStep === 'create-group' ? 'Step 2 — Create Group' : `Step ${userStep} of 2 — ${userStep === 1 ? 'Basic Information' : 'Roles & Groups'}`}
-                  </p>
-                </div>
-                <button onClick={closePanel} style={styles.closeBtn}>×</button>
-              </div>
-
-              {/* Step indicator (add only) */}
-              {!editingItem && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 18px', borderBottom: '1px solid #f1f5f9' }}>
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: '#3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: '#fff' }}>1</div>
-                  <div style={{ flex: 1, height: '2px', background: userStep === 2 ? '#3b82f6' : '#e2e8f0', borderRadius: '2px', transition: 'background 0.3s' }} />
-                  <div style={{ width: '24px', height: '24px', borderRadius: '50%', background: userStep === 2 ? '#3b82f6' : '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: '700', color: userStep === 2 ? '#fff' : '#94a3b8', transition: 'all 0.3s' }}>2</div>
-                </div>
-              )}
-
-              <div style={styles.inlineFormBody}>
-                {/* Step 1 */}
-                {(userStep === 1) && (
-                  <div style={styles.inlineFormGrid}>
-                    <div>
-                      <div style={styles.formGrid}>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>First Name *</label>
-                          <input
-                            style={styles.input}
-                            value={userForm.firstName}
-                            onChange={e => {
-                              const fn = e.target.value;
-                              const generated = (fn + (userForm.lastName ? '.' + userForm.lastName : '')).toLowerCase().replace(/\s+/g, '');
-                              setUserForm(prev => ({ ...prev, firstName: fn, loginName: generated }));
-                            }}
-                            placeholder="John"
-                          />
-                        </div>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Last Name *</label>
-                          <input
-                            style={styles.input}
-                            value={userForm.lastName}
-                            onChange={e => {
-                              const ln = e.target.value;
-                              const generated = ((userForm.firstName ? userForm.firstName + '.' : '') + ln).toLowerCase().replace(/\s+/g, '');
-                              setUserForm(prev => ({ ...prev, lastName: ln, loginName: generated }));
-                            }}
-                            placeholder="Doe"
-                          />
-                        </div>
-                      </div>
-                      <div style={styles.formGrid}>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Email *</label>
-                          <input type="email" style={styles.input} value={userForm.email} onChange={e => setUserForm({ ...userForm, email: e.target.value })} placeholder="john@company.com" disabled={!!editingItem} />
-                        </div>
-                        {!editingItem && (
-                          <div style={styles.formGroup}>
-                            <label style={styles.label}>Password *</label>
-                            <div style={{ position: 'relative' }}>
-                              <input
-                                type={showPassword ? 'text' : 'password'}
-                                style={{ ...styles.input, paddingRight: '36px' }}
-                                value={userForm.password}
-                                onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                                placeholder="Min. 6 characters"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => setShowPassword(p => !p)}
-                                style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0', display: 'flex', alignItems: 'center' }}
-                                title={showPassword ? 'Hide password' : 'Show password'}
-                              >
-                                {showPassword ? (
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                                    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                                    <line x1="1" y1="1" x2="23" y2="23"/>
-                                  </svg>
-                                ) : (
-                                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                    <circle cx="12" cy="12" r="3"/>
-                                  </svg>
-                                )}
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Login Name</label>
-                        <input
-                          style={{
-                            ...styles.input,
-                            borderColor: userForm.loginName && users.some(u => u.loginName === userForm.loginName && u._id !== editingItem?._id) ? '#ef4444' : undefined
-                          }}
-                          value={userForm.loginName}
-                          onChange={e => setUserForm({ ...userForm, loginName: e.target.value.toLowerCase().replace(/\s+/g, '') })}
-                          placeholder="john.doe"
-                        />
-                        {userForm.loginName && users.some(u => u.loginName === userForm.loginName && u._id !== editingItem?._id) && (
-                          <span style={{ fontSize: '10px', color: '#ef4444', marginTop: '3px', display: 'block' }}>
-                            This login name is already taken
-                          </span>
-                        )}
-                      </div>
-                      <div style={styles.formGrid}>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Department</label>
-                          <select style={styles.input} value={userForm.department} onChange={e => setUserForm({ ...userForm, department: e.target.value })}>
-                            <option value="">— Select Department —</option>
-                            <option value="Sales">Sales</option>
-                            <option value="Marketing">Marketing</option>
-                            <option value="Finance">Finance</option>
-                            <option value="Operations">Operations</option>
-                            <option value="Human Resources">Human Resources</option>
-                            <option value="IT">IT</option>
-                            <option value="Customer Support">Customer Support</option>
-                            <option value="Product">Product</option>
-                            <option value="Legal">Legal</option>
-                            <option value="Administration">Administration</option>
-                          </select>
-                        </div>
-                        <div style={styles.formGroup}>
-                          <label style={styles.label}>Set PIN (4 digits) {editingItem && <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: 400 }}>— leave blank to keep existing</span>}</label>
-                          <div style={{ position: 'relative' }}>
-                            <input
-                              type={showPin ? 'text' : 'password'}
-                              style={{ ...styles.input, paddingRight: '36px', letterSpacing: showPin ? 'normal' : '4px' }}
-                              value={userForm.viewingPin}
-                              onChange={e => {
-                                const val = e.target.value.replace(/\D/g, '').slice(0, 4);
-                                setUserForm({ ...userForm, viewingPin: val });
-                              }}
-                              placeholder="4-digit PIN"
-                              maxLength={4}
-                            />
-                            <button
-                              type="button"
-                              onClick={() => setShowPin(p => !p)}
-                              style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '0', display: 'flex', alignItems: 'center' }}
-                            >
-                              {showPin ? (
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
-                                  <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
-                                  <line x1="1" y1="1" x2="23" y2="23"/>
-                                </svg>
-                              ) : (
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                                  <circle cx="12" cy="12" r="3"/>
-                                </svg>
-                              )}
-                            </button>
-                          </div>
-                          {userForm.viewingPin && userForm.viewingPin.length < 4 && (
-                            <span style={{ fontSize: '10px', color: '#f59e0b', marginTop: '3px', display: 'block' }}>PIN must be exactly 4 digits</span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>User Type</label>
-                        <select style={styles.input} value={userForm.userType} onChange={e => setUserForm({ ...userForm, userType: e.target.value, roles: [] })}>
-                          <option value="TENANT_USER">Tenant User</option>
-                          <option value="TENANT_MANAGER">Tenant Manager</option>
-                          <option value="TENANT_ADMIN">Tenant Admin</option>
-                        </select>
-                        <span style={{ fontSize: '10px', color: '#64748b', marginTop: '3px', display: 'block' }}>
-                          {userForm.userType === 'TENANT_ADMIN' ? '⚡ Full access' : userForm.userType === 'TENANT_MANAGER' ? '📊 Manage team & reports' : '👤 Access via assigned roles'}
-                        </span>
-                      </div>
-                      <div style={styles.formGroup}>
-                        <label style={styles.label}>Phone</label>
-                        <input style={styles.input} value={userForm.phone} onChange={e => setUserForm({ ...userForm, phone: e.target.value })} placeholder="+91 00000 00000" />
-                      </div>
-                      {!editingItem && (
-                        userForm.userType === 'TENANT_ADMIN'
-                          ? <button type="button" onClick={handleUserSubmit} disabled={submitting} style={{ ...styles.submitBtn, opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>{submitting ? 'Creating...' : 'Create User'}</button>
-                          : <button type="button" onClick={handleNextStep} style={styles.submitBtn}>Next: Assign Roles & Groups →</button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Step 2 (add) or roles/groups section (edit) */}
-                {(userStep === 2 || !!editingItem) && (
-                  <div style={styles.inlineFormGrid}>
-
-                    {/* Sub-step: Create Role inline */}
-                    {subStep === 'create-role' && (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                          <button type="button" onClick={() => { setSubStep(null); setQuickRoleForm({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] }); }} style={styles.subStepBack}>← Back</button>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Create New Role</div>
-                            <div style={{ fontSize: '10px', color: '#94a3b8' }}>Auto-selected after creation</div>
-                          </div>
-                        </div>
-                        <form onSubmit={handleQuickRoleCreate}>
-                          <div style={styles.formGroup}>
-                            <label style={styles.label}>Role Name *</label>
-                            <input style={styles.input} value={quickRoleForm.name} onChange={e => setQuickRoleForm({ ...quickRoleForm, name: e.target.value })} required placeholder="e.g., Sales Manager" />
-                          </div>
-                          <div style={styles.formGroup}>
-                            <label style={styles.label}>Description</label>
-                            <input style={styles.input} value={quickRoleForm.description} onChange={e => setQuickRoleForm({ ...quickRoleForm, description: e.target.value })} placeholder="Brief description" />
-                          </div>
-                          <div style={styles.formGroup}>
-                            <label style={styles.label}>For User Types</label>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                              {[{ value: 'TENANT_USER', label: 'User', color: '#3b82f6' }, { value: 'TENANT_MANAGER', label: 'Manager', color: '#8b5cf6' }].map(ut => (
-                                <label key={ut.value} style={{ padding: '5px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', background: quickRoleForm.forUserTypes?.includes(ut.value) ? ut.color : '#f1f5f9', color: quickRoleForm.forUserTypes?.includes(ut.value) ? '#fff' : '#64748b', border: `1px solid ${quickRoleForm.forUserTypes?.includes(ut.value) ? ut.color : '#e2e8f0'}` }}>
-                                  <input type="checkbox" checked={quickRoleForm.forUserTypes?.includes(ut.value)} onChange={() => { const t = quickRoleForm.forUserTypes || []; setQuickRoleForm({ ...quickRoleForm, forUserTypes: t.includes(ut.value) ? t.filter(x => x !== ut.value) : [...t, ut.value] }); }} style={{ display: 'none' }} />
-                                  {ut.label}
-                                </label>
-                              ))}
-                            </div>
-                          </div>
-                          <div style={styles.formGroup}>
-                            <label style={styles.label}>Permissions</label>
-                            <div style={styles.permTable}>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
-                                <thead>
-                                  <tr>
-                                    <th style={{ textAlign: 'left', padding: '4px 6px', background: '#f8fafc', position: 'sticky', top: 0 }}>Module</th>
-                                    {ACTIONS.map(a => <th key={a} style={{ padding: '4px 3px', background: '#f8fafc', fontSize: '8px', position: 'sticky', top: 0 }} title={a}>{a[0].toUpperCase()}</th>)}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {['Access', 'CRM', 'Sales', 'Product', 'Tasks', 'Account', 'Customization', 'Data'].map(cat => (
-                                    <React.Fragment key={cat}>
-                                      <tr><td colSpan={ACTIONS.length + 1} style={{ padding: '4px 6px', background: '#e2e8f0', fontWeight: '600', fontSize: '9px', color: '#475569' }}>{cat}</td></tr>
-                                      {FEATURES.filter(f => f.category === cat).map(f => (
-                                        <tr key={f.slug}>
-                                          <td style={{ padding: '4px 6px', borderTop: '1px solid #f1f5f9', paddingLeft: '12px' }}>{f.name}</td>
-                                          {ACTIONS.map(a => (
-                                            <td key={a} style={{ padding: '3px', textAlign: 'center', borderTop: '1px solid #f1f5f9' }}>
-                                              <input type="checkbox" checked={hasQuickAction(f.slug, a)} onChange={() => toggleQuickPermission(f.slug, a)} style={{ cursor: 'pointer', width: '12px', height: '12px' }} />
-                                            </td>
-                                          ))}
-                                        </tr>
-                                      ))}
-                                    </React.Fragment>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-                          <button type="submit" style={styles.submitBtn}>Create Role</button>
-                        </form>
-                      </div>
-                    )}
-
-                    {/* Sub-step: Create Group inline */}
-                    {subStep === 'create-group' && (
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-                          <button type="button" onClick={() => { setSubStep(null); setQuickGroupForm({ name: '', description: '' }); }} style={styles.subStepBack}>← Back</button>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>Create New Group</div>
-                            <div style={{ fontSize: '10px', color: '#94a3b8' }}>Auto-selected after creation</div>
-                          </div>
-                        </div>
-                        <form onSubmit={handleQuickGroupCreate}>
-                          <div style={styles.formGroup}>
-                            <label style={styles.label}>Group Name *</label>
-                            <input style={styles.input} value={quickGroupForm.name} onChange={e => setQuickGroupForm({ ...quickGroupForm, name: e.target.value })} required placeholder="e.g., Sales Team" />
-                          </div>
-                          <div style={styles.formGroup}>
-                            <label style={styles.label}>Description</label>
-                            <input style={styles.input} value={quickGroupForm.description} onChange={e => setQuickGroupForm({ ...quickGroupForm, description: e.target.value })} placeholder="Brief description" />
-                          </div>
-                          <button type="submit" style={styles.submitBtn}>Create Group</button>
-                        </form>
-                      </div>
-                    )}
-
-                    {/* Normal step 2: Role & Group selectors */}
-                    {!subStep && (
-                      <>
-                        {/* Roles */}
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <label style={{ ...styles.label, marginBottom: 0 }}>Assign Role(s)</label>
-                            <button type="button" onClick={() => { setQuickRoleForm({ name: '', description: '', permissions: [], forUserTypes: ['TENANT_USER', 'TENANT_MANAGER'] }); setSubStep('create-role'); }} style={styles.createNewBtn}>+ Create new role</button>
-                          </div>
-                          <div style={{ position: 'relative' }}>
-                            <button type="button" onClick={() => { setShowRoleDropdown(p => !p); setShowGroupDropdown(false); }} style={styles.dropdownTrigger}>
-                              <span>{userForm.roles.length > 0 ? `${userForm.roles.length} role(s) selected` : 'Select roles...'}</span>
-                              <span>▾</span>
-                            </button>
-                            {showRoleDropdown && (
-                              <div style={styles.dropdownList}>
-                                {roles.length === 0
-                                  ? <div style={{ padding: '12px', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>No roles yet — create one above</div>
-                                  : roles.map(r => (
-                                    <label key={r._id} style={{ ...styles.dropdownItem, background: userForm.roles.includes(r._id) ? '#eff6ff' : '#fff' }}>
-                                      <input type="checkbox" checked={userForm.roles.includes(r._id)} onChange={() => { const n = userForm.roles.includes(r._id) ? userForm.roles.filter(i => i !== r._id) : [...userForm.roles, r._id]; setUserForm({ ...userForm, roles: n }); }} style={{ accentColor: '#3b82f6' }} />
-                                      <span style={{ color: userForm.roles.includes(r._id) ? '#1d4ed8' : '#1e293b', fontWeight: userForm.roles.includes(r._id) ? '600' : '400' }}>{r.name}</span>
-                                    </label>
-                                  ))}
-                              </div>
-                            )}
-                            {userForm.roles.length > 0 && (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                                {userForm.roles.map(id => { const r = roles.find(r => r._id === id); return r ? <span key={id} style={styles.tagBlue}>{r.name}<button type="button" onClick={() => setUserForm({ ...userForm, roles: userForm.roles.filter(i => i !== id) })} style={styles.tagX}>×</button></span> : null; })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Groups */}
-                        <div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <label style={{ ...styles.label, marginBottom: 0 }}>Add to Group(s) <span style={{ color: '#94a3b8', fontWeight: 400 }}>— optional</span></label>
-                            <button type="button" onClick={() => { setQuickGroupForm({ name: '', description: '' }); setSubStep('create-group'); }} style={styles.createNewBtn}>+ Create new group</button>
-                          </div>
-                          <div style={{ position: 'relative' }}>
-                            <button type="button" onClick={() => { setShowGroupDropdown(p => !p); setShowRoleDropdown(false); }} style={styles.dropdownTrigger}>
-                              <span>{userForm.groups.length > 0 ? `${userForm.groups.length} group(s) selected` : 'Select groups...'}</span>
-                              <span>▾</span>
-                            </button>
-                            {showGroupDropdown && (
-                              <div style={styles.dropdownList}>
-                                {groups.length === 0
-                                  ? <div style={{ padding: '12px', fontSize: '11px', color: '#94a3b8', textAlign: 'center' }}>No groups yet — create one above</div>
-                                  : groups.map(g => (
-                                    <label key={g._id} style={{ ...styles.dropdownItem, background: userForm.groups.includes(g._id) ? '#f0fdf4' : '#fff' }}>
-                                      <input type="checkbox" checked={userForm.groups.includes(g._id)} onChange={() => { const n = userForm.groups.includes(g._id) ? userForm.groups.filter(i => i !== g._id) : [...userForm.groups, g._id]; setUserForm({ ...userForm, groups: n }); }} style={{ accentColor: '#16a34a' }} />
-                                      <span style={{ color: userForm.groups.includes(g._id) ? '#16a34a' : '#1e293b', fontWeight: userForm.groups.includes(g._id) ? '600' : '400' }}>{g.name}</span>
-                                    </label>
-                                  ))}
-                              </div>
-                            )}
-                            {userForm.groups.length > 0 && (
-                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                                {userForm.groups.map(id => { const g = groups.find(g => g._id === id); return g ? <span key={id} style={styles.tagGreen}>{g.name}<button type="button" onClick={() => setUserForm({ ...userForm, groups: userForm.groups.filter(i => i !== id) })} style={styles.tagX}>×</button></span> : null; })}
-                              </div>
-                            )}
-                          </div>
-                          <div style={{ display: 'flex', gap: '8px', marginTop: '14px' }}>
-                            {!editingItem && <button type="button" onClick={() => setUserStep(1)} disabled={submitting} style={styles.backBtn}>← Back</button>}
-                            <button type="button" onClick={handleUserSubmit} disabled={submitting} style={{ ...styles.submitBtn, flex: 1, marginTop: 0, opacity: submitting ? 0.7 : 1, cursor: submitting ? 'not-allowed' : 'pointer' }}>
-                              {submitting ? (editingItem ? 'Updating...' : 'Creating...') : (editingItem ? 'Update User' : 'Create User')}
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* Right: Table */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={styles.tableCard}>
-            <div className="tm-table-wrapper">
-            {loading ? <div style={styles.loading}>Loading...</div> : (
-              <table style={styles.table} className="tm-table">
-                <thead>
-                  {activeTab === 'users' && (
-                    <tr>
-                      <th style={styles.th}>User</th>
-                      <th style={styles.th} className="tm-hide-mobile">Email</th>
-                      <th style={styles.th}>Type</th>
-                      <th style={styles.th} className="tm-hide-mobile">Roles</th>
-                      <th style={styles.th}>Status</th>
-                      <th style={styles.th}>Actions</th>
-                    </tr>
-                  )}
-                  {activeTab === 'roles' && (
-                    <tr>
-                      <th style={styles.th}>Role</th>
-                      <th style={styles.th} className="tm-hide-mobile">Description</th>
-                      <th style={styles.th} className="tm-hide-mobile">Type</th>
-                      <th style={styles.th} className="tm-hide-mobile">Permissions</th>
-                      <th style={styles.th}>Actions</th>
-                    </tr>
-                  )}
-                  {activeTab === 'groups' && (
-                    <tr>
-                      <th style={styles.th}>Group</th>
-                      <th style={styles.th}>Description</th>
-                      <th style={styles.th}>Members</th>
-                      <th style={styles.th}>Actions</th>
-                    </tr>
-                  )}
-                </thead>
-                <tbody>
-                  {activeTab === 'users' && users.map(u => (
-                    <tr key={u._id} style={styles.tr}>
-                      <td style={styles.td}>
-                        <div style={styles.cellFlex}>
-                          <div style={styles.avatar}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
-                          <span style={styles.name}>{u.firstName} {u.lastName}</span>
-                        </div>
-                      </td>
-                      <td style={styles.td} className="tm-hide-mobile">{u.email}</td>
-                      <td style={styles.td}><span style={styles.badgeBlue}>{getUserTypeLabel(u.userType)}</span></td>
-                      <td style={styles.td} className="tm-hide-mobile">{u.roles?.map(r => r.name).join(', ') || '-'}</td>
-                      <td style={styles.td}><span style={u.isActive ? styles.badgeGreen : styles.badgeRed}>{u.isActive ? 'Active' : 'Inactive'}</span></td>
-                      <td style={styles.td}>
-                        <div style={styles.actions}>
-                          <button onClick={() => openUserPanel(u)} style={styles.actionBtn}>✏️</button>
-                          {u._id !== user._id && <button onClick={() => handleDeleteUser(u)} style={styles.actionBtnDanger}>🗑️</button>}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {activeTab === 'roles' && roles.map(r => (
-                    <tr key={r._id} style={styles.tr}>
-                      <td style={styles.td}><span style={styles.name}>{r.name}</span></td>
-                      <td style={styles.td} className="tm-hide-mobile">{r.description || '-'}</td>
-                      <td style={styles.td} className="tm-hide-mobile"><span style={styles.badgePurple}>{r.roleType || 'Custom'}</span></td>
-                      <td style={styles.td} className="tm-hide-mobile"><span style={{ fontSize: '10px', color: '#64748b' }}>{r.permissions?.length || 0} permissions</span></td>
-                      <td style={styles.td}>
-                        <div style={styles.actions}>
-                          <button onClick={() => openRolePanel(r)} style={styles.actionBtn}>✏️</button>
-                          {r.roleType !== 'system' && <button onClick={() => handleDeleteRole(r)} style={styles.actionBtnDanger}>🗑️</button>}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                  {activeTab === 'groups' && groups.map(g => (
-                    <tr key={g._id} style={styles.tr}>
-                      <td style={styles.td}><span style={styles.name}>{g.name}</span></td>
-                      <td style={styles.td} className="tm-hide-mobile">{g.description || '-'}</td>
-                      <td style={styles.td}><span style={styles.badgeGreen}>{g.members?.length || 0} members</span></td>
-                      <td style={styles.td}>
-                        <div style={styles.actions}>
-                          <button onClick={() => openGroupPanel(g)} style={styles.actionBtn}>✏️</button>
-                          <button onClick={() => handleDeleteGroup(g)} style={styles.actionBtnDanger}>🗑️</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            </div>
-            {!loading && ((activeTab === 'users' && users.length === 0) || (activeTab === 'roles' && roles.length === 0) || (activeTab === 'groups' && groups.length === 0)) && (
-              <div style={styles.empty}>No {activeTab} found</div>
-            )}
-          </div>
-          </div>{/* end table wrapper */}
-          </div>{/* end split layout */}
+        <div style={{padding:'14px 20px 0',position:'relative',zIndex:1}}>
+          <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.38)',letterSpacing:'2px',textTransform:'uppercase',marginBottom:5}}>Organisation / Team</div>
+          <h2 style={{margin:0,fontSize:21,fontWeight:900,color:'#fff',letterSpacing:'-0.3px',lineHeight:1.15}}>
+            {activeTab==='users'?<>Team <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Management</span></>
+             :activeTab==='roles'?<>Roles &amp; <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Permissions</span></>
+             :<>User <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Groups</span></>}
+          </h2>
         </div>
 
-        {/* Side Panel — Role & Group only */}
-        {showPanel && panelMode !== 'user' && (
-          <div className="tm-panel" style={styles.panel}>
-            <div style={styles.panelHeader}>
-              <h3 style={styles.panelTitle}>{editingItem ? 'Edit' : 'Add'} {panelMode === 'role' ? 'Role' : 'Group'}</h3>
-              <button onClick={closePanel} style={styles.closeBtn}>×</button>
+        {/* tab pills */}
+        <div style={{padding:'10px 20px 14px',position:'relative',zIndex:1,display:'flex',gap:6}}>
+          {[{k:'users',l:'Members',c:users.length},{k:'roles',l:'Roles',c:roles.length},{k:'groups',l:'Groups',c:groups.length}].map(t=>(
+            <button key={t.k} className={`xTabBtn${activeTab===t.k?' xActive':''}`} onClick={()=>setActiveTab(t.k)}
+              style={{padding:'7px 16px',borderRadius:9,border:'1px solid rgba(255,255,255,0.13)',background:'transparent',color:'rgba(255,255,255,0.55)',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
+              {t.l}
+              <span style={{background:'rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.8)',padding:'1px 7px',borderRadius:8,fontSize:10,fontWeight:800}}>{t.c}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* ════════════════════════════════════════════
+          STATS ROW — each card has its own dark glass bg
+      ════════════════════════════════════════════ */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:12}}>
+        {[
+          {k:'users',  ico:'👥', label:'Team Members', val:users.length,  bg:'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', numColor:'#4338ca', labelColor:'#6366f1', iconBg:'linear-gradient(135deg,#818cf8,#6366f1)', border:'#c7d2fe'},
+          {k:'roles',  ico:'🛡️', label:'Custom Roles', val:roles.length,  bg:'linear-gradient(135deg,#ecfeff 0%,#cffafe 100%)', numColor:'#0e7490', labelColor:'#06b6d4', iconBg:'linear-gradient(135deg,#22d3ee,#06b6d4)', border:'#a5f3fc'},
+          {k:'groups', ico:'📂', label:'User Groups',  val:groups.length, bg:'linear-gradient(135deg,#fdf4ff 0%,#fae8ff 100%)', numColor:'#7e22ce', labelColor:'#a855f7', iconBg:'linear-gradient(135deg,#c084fc,#a855f7)', border:'#e9d5ff'},
+        ].map(s=>(
+          <div key={s.k} className={`xStat${activeTab===s.k?' xActive':''}`} onClick={()=>setActiveTab(s.k)}
+            style={{background:s.bg,border:`1.5px solid ${activeTab===s.k?s.border:'transparent'}`,borderRadius:14,padding:'14px 16px',position:'relative',overflow:'hidden',boxShadow:activeTab===s.k?'0 4px 18px rgba(0,0,0,0.08)':'0 1px 4px rgba(0,0,0,0.04)',transition:'all 0.2s'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12}}>
+              <div style={{width:40,height:40,borderRadius:11,background:s.iconBg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,flexShrink:0,boxShadow:'0 3px 8px rgba(0,0,0,0.12)'}}>{s.ico}</div>
+              <div>
+                <div style={{fontSize:26,fontWeight:900,color:s.numColor,lineHeight:1}}>{s.val}</div>
+                <div style={{fontSize:11,color:s.labelColor,fontWeight:700,marginTop:3}}>{s.label}</div>
+              </div>
             </div>
-            <div style={styles.panelBody}>
-              {/* Role Form */}
-              {panelMode === 'role' && (
+            {activeTab===s.k&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:2.5,background:s.iconBg}} />}
+          </div>
+        ))}
+      </div>
+
+      {/* ADD BUTTON — left aligned below stats */}
+      <div style={{marginBottom:12}}>
+        <button
+          onClick={()=>activeTab==='users'?openUserPanel():activeTab==='roles'?openRolePanel():openGroupPanel()}
+          style={{background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',border:'none',padding:'8px 18px',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:8,boxShadow:'0 4px 18px rgba(79,70,229,0.38)',transition:'all 0.2s'}}
+          onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow='0 8px 26px rgba(79,70,229,0.5)';}}
+          onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow='0 4px 18px rgba(79,70,229,0.38)';}}
+        >
+          <span style={{width:22,height:22,background:'rgba(255,255,255,0.2)',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:300,lineHeight:1}}>+</span>
+          Add {activeTab==='users'?'Member':activeTab==='roles'?'Role':'Group'}
+        </button>
+      </div>
+
+      {/* ════════════════════════════════════════════
+          CONTENT — form (optional) + table
+      ════════════════════════════════════════════ */}
+      <div style={{display:'flex',gap:18,alignItems:'flex-start'}}>
+
+        {/* ─── INLINE USER FORM ────────────────────────────── */}
+        {showPanel&&panelMode==='user'&&(
+          <div className="xFadeUp" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.13)',overflow:'hidden',position:'relative'}}>
+            {/* drag handle */}
+            <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20,background:'transparent'}} title="Drag to resize" />
+            {/* header */}
+            <div style={{background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 50%,#312e81 100%)',padding:'14px 18px 12px',position:'relative',overflow:'hidden'}}>
+              <div style={{position:'absolute',top:-40,right:-20,width:140,height:140,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,0.4) 0%,transparent 70%)',pointerEvents:'none'}} />
+              <div style={{position:'absolute',bottom:-30,left:'20%',width:100,height:100,borderRadius:'50%',background:'radial-gradient(circle,rgba(6,182,212,0.25) 0%,transparent 70%)',pointerEvents:'none'}} />
+              <button className="xClose" onClick={closePanel} style={{position:'absolute',top:14,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.18)',cursor:'pointer',color:'#fff',fontSize:17,display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',flexShrink:0,zIndex:2}}>×</button>
+              <div style={{position:'relative',zIndex:1}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <div style={{width:32,height:32,borderRadius:9,background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0}}>
+                    {editingItem?'✏️':'👤'}
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:800,color:'#fff',lineHeight:1.2}}>{editingItem?'Edit Member':'Add Team Member'}</div>
+                    <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:2}}>
+                      {subStep==='create-role'?'Creating new role':subStep==='create-group'?'Creating new group':`Step ${userStep} of 2 · ${userStep===1?'Basic Info':'Roles & Access'}`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* step progress bar */}
+              {!editingItem&&!subStep&&(
+                <div style={{marginTop:14,position:'relative',zIndex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:0}}>
+                    {[{n:1,l:'Info'},{n:2,l:'Access'}].map((s,i)=>(
+                      <React.Fragment key={s.n}>
+                        <div style={{display:'flex',alignItems:'center',gap:6}}>
+                          <div style={{width:24,height:24,borderRadius:'50%',background:userStep>=s.n?'linear-gradient(135deg,#a78bfa,#67e8f9)':'rgba(255,255,255,0.15)',border:userStep>=s.n?'none':'1px solid rgba(255,255,255,0.2)',color:userStep>=s.n?'#1e1b4b':'rgba(255,255,255,0.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:900,boxShadow:userStep>=s.n?'0 2px 8px rgba(167,139,250,0.5)':'none',transition:'all 0.3s',flexShrink:0}}>{s.n}</div>
+                          <span style={{fontSize:10,fontWeight:700,color:userStep>=s.n?'rgba(255,255,255,0.9)':'rgba(255,255,255,0.35)',letterSpacing:'0.4px'}}>{s.l}</span>
+                        </div>
+                        {i===0&&<div style={{flex:1,height:2,margin:'0 10px',borderRadius:2,background:userStep>=2?'linear-gradient(90deg,#a78bfa,#67e8f9)':'rgba(255,255,255,0.12)',transition:'background 0.4s'}} />}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="xScroll" style={{padding:'16px 18px',maxHeight:'calc(100vh - 260px)',overflowY:'auto'}}>
+
+              {/* ── STEP 1 ──────────────────────────────────── */}
+              {userStep===1&&(
+                <>
+                  {/* user type visual cards */}
+                  <div style={{marginBottom:14}}>
+                    <Label>User Type</Label>
+                    <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
+                      {[
+                        {v:'TENANT_USER',   e:'👤',n:'User',   d:'Role-based', sel:{borderColor:'#3b82f6',bg:'#eff6ff',c:'#1d4ed8'}},
+                        {v:'TENANT_MANAGER',e:'📊',n:'Manager',d:'Team lead',  sel:{borderColor:'#8b5cf6',bg:'#f5f3ff',c:'#6d28d9'}},
+                        {v:'TENANT_ADMIN',  e:'⚡',n:'Admin',  d:'Full access',sel:{borderColor:'#f59e0b',bg:'#fffbeb',c:'#92400e'}},
+                      ].map(o=>(
+                        <div key={o.v} className="xTypeCard" onClick={()=>setUserForm({...userForm,userType:o.v,roles:[]})}
+                          style={{padding:'10px 6px',borderRadius:10,cursor:'pointer',border:`1.5px solid ${userForm.userType===o.v?o.sel.borderColor:'#e2e8f0'}`,background:userForm.userType===o.v?o.sel.bg:'#fafbff',textAlign:'center',transition:'all 0.15s',display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                          <span style={{fontSize:20}}>{o.e}</span>
+                          <span style={{fontSize:11,fontWeight:800,color:userForm.userType===o.v?o.sel.c:'#475569'}}>{o.n}</span>
+                          <span style={{fontSize:9,color:'#94a3b8'}}>{o.d}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    <div style={{marginBottom:12}}>
+                      <Label>First Name *</Label>
+                      <Inp value={userForm.firstName} onChange={e=>{const f=e.target.value;setUserForm(p=>({...p,firstName:f,loginName:(f+(p.lastName?'.'+p.lastName:'')).toLowerCase().replace(/\s+/g,'')}));}} placeholder="John" />
+                    </div>
+                    <div style={{marginBottom:12}}>
+                      <Label>Last Name *</Label>
+                      <Inp value={userForm.lastName} onChange={e=>{const l=e.target.value;setUserForm(p=>({...p,lastName:l,loginName:((p.firstName?p.firstName+'.':'')+l).toLowerCase().replace(/\s+/g,'')}));}} placeholder="Doe" />
+                    </div>
+                  </div>
+
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    <div style={{marginBottom:12}}>
+                      <Label>Email *</Label>
+                      <Inp type="email" value={userForm.email} onChange={e=>setUserForm({...userForm,email:e.target.value})} placeholder="john@co.com" disabled={!!editingItem} />
+                    </div>
+                    {!editingItem&&(
+                      <div style={{marginBottom:12}}>
+                        <Label>Password *</Label>
+                        <div style={{position:'relative'}}>
+                          <Inp type={showPwd?'text':'password'} style={{paddingRight:34}} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} placeholder="Min. 4 chars" />
+                          <button type="button" onClick={()=>setShowPwd(p=>!p)} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{marginBottom:12}}>
+                    <Label>Login Name{userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)&&<span style={{textTransform:'none',fontWeight:400,color:'#ef4444',marginLeft:6}}>— taken</span>}</Label>
+                    <Inp style={userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)?{borderColor:'#ef4444'}:{}} value={userForm.loginName} onChange={e=>setUserForm({...userForm,loginName:e.target.value.toLowerCase().replace(/\s+/g,'')})} placeholder="john.doe" />
+                  </div>
+
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
+                    <div style={{marginBottom:12}}>
+                      <Label>Department</Label>
+                      <select className="xInp" style={{width:'100%',padding:'8px 28px 8px 11px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:13,color:userForm.department?'#0f172a':'#94a3b8',background:'#fff',outline:'none',boxSizing:'border-box',appearance:'none',backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",backgroundRepeat:'no-repeat',backgroundPosition:'right 10px center'}}
+                        value={userForm.department} onChange={e=>setUserForm({...userForm,department:e.target.value})}>
+                        <option value="">— Select —</option>
+                        {['Sales','Marketing','Finance','Operations','Human Resources','IT','Customer Support','Product','Legal','Administration'].map(d=><option key={d}>{d}</option>)}
+                      </select>
+                    </div>
+                    <div style={{marginBottom:12}}>
+                      <Label>Phone</Label>
+                      <Inp value={userForm.phone} onChange={e=>setUserForm({...userForm,phone:e.target.value})} placeholder="+91 00000 00000" />
+                    </div>
+                  </div>
+
+                  <div style={{marginBottom:14}}>
+                    <Label>Viewing PIN (4 digits){editingItem&&<span style={{textTransform:'none',fontWeight:400,color:'#94a3b8',marginLeft:6}}>leave blank to keep</span>}</Label>
+                    <div style={{position:'relative'}}>
+                      <Inp type={showPin?'text':'password'} style={{paddingRight:34,letterSpacing:showPin?'normal':'6px'}} value={userForm.viewingPin}
+                        onChange={e=>setUserForm({...userForm,viewingPin:e.target.value.replace(/\D/g,'').slice(0,4)})} placeholder="4-digit PIN" maxLength={4} />
+                      <button type="button" onClick={()=>setShowPin(p=>!p)} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showPin?SVG_EYE_OFF:SVG_EYE_ON}</button>
+                    </div>
+                    {userForm.viewingPin&&userForm.viewingPin.length<4&&<span style={{fontSize:10,color:'#f59e0b',marginTop:3,display:'block'}}>Exactly 4 digits required</span>}
+                  </div>
+
+                  {!editingItem&&(userForm.userType==='TENANT_ADMIN'
+                    ?<PriBtn disabled={submitting} onClick={handleUserSubmit}>{submitting?'Creating...':'Create Admin User'}</PriBtn>
+                    :<PriBtn onClick={handleNext}>Next — Roles &amp; Groups →</PriBtn>
+                  )}
+                  {editingItem&&<div style={{display:'flex',gap:8,marginTop:6}}>
+                    <button type="button" onClick={()=>setUserStep(2)} style={{flex:1,padding:'10px 0',border:'1.5px solid #e2e8f0',borderRadius:10,background:'#f8fafc',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer'}}>Roles →</button>
+                    <PriBtn disabled={submitting} onClick={handleUserSubmit} style={{flex:1,marginTop:0}}>{submitting?'Saving...':'Save Changes'}</PriBtn>
+                  </div>}
+                </>
+              )}
+
+              {/* ── STEP 2 ──────────────────────────────────── */}
+              {userStep===2&&(
+                <>
+                  {subStep==='create-role'&&(
+                    <div>
+                      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                        <button style={{padding:'4px 11px',border:'1.5px solid #e2e8f0',borderRadius:7,background:'#f8fafc',color:'#64748b',fontSize:11,fontWeight:700,cursor:'pointer'}} onClick={()=>{setSubStep(null);setQRole({name:'',description:'',permissions:[],forUserTypes:['TENANT_USER','TENANT_MANAGER']});}}>← Back</button>
+                        <div><div style={{fontSize:13,fontWeight:800,color:'#0f172a'}}>Create New Role</div><div style={{fontSize:11,color:'#94a3b8'}}>Auto-selected after creation</div></div>
+                      </div>
+                      <form onSubmit={handleQRole}>
+                        <div style={{marginBottom:12}}><Label>Role Name *</Label><Inp value={qRole.name} onChange={e=>setQRole({...qRole,name:e.target.value})} required placeholder="e.g. Sales Manager" /></div>
+                        <div style={{marginBottom:12}}><Label>Description</Label><Inp value={qRole.description} onChange={e=>setQRole({...qRole,description:e.target.value})} placeholder="Brief description" /></div>
+                        <div style={{marginBottom:12}}><Label>For User Types</Label>
+                          <div style={{display:'flex',gap:8}}>
+                            {[{v:'TENANT_USER',l:'User'},{v:'TENANT_MANAGER',l:'Manager'}].map(ut=>(
+                              <label key={ut.v} style={{padding:'6px 14px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',border:`1.5px solid ${qRole.forUserTypes?.includes(ut.v)?'#4f46e5':'#e2e8f0'}`,background:qRole.forUserTypes?.includes(ut.v)?'#eef2ff':'#fff',color:qRole.forUserTypes?.includes(ut.v)?'#4338ca':'#64748b',transition:'all 0.15s'}}>
+                                <input type="checkbox" style={{display:'none'}} checked={qRole.forUserTypes?.includes(ut.v)} onChange={()=>{const t=qRole.forUserTypes||[];setQRole({...qRole,forUserTypes:t.includes(ut.v)?t.filter(x=>x!==ut.v):[...t,ut.v]});}} />{ut.l}
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                        <div style={{marginBottom:12}}><Label>Permissions</Label><PermTable hasP={hasQPerm} toggleP={togglePerm(qRole,setQRole)} /></div>
+                        <PriBtn type="submit">Create Role</PriBtn>
+                      </form>
+                    </div>
+                  )}
+
+                  {subStep==='create-group'&&(
+                    <div>
+                      <div style={{display:'flex',alignItems:'center',gap:10,marginBottom:14}}>
+                        <button style={{padding:'4px 11px',border:'1.5px solid #e2e8f0',borderRadius:7,background:'#f8fafc',color:'#64748b',fontSize:11,fontWeight:700,cursor:'pointer'}} onClick={()=>{setSubStep(null);setQGroup({name:'',description:''});}}>← Back</button>
+                        <div><div style={{fontSize:13,fontWeight:800,color:'#0f172a'}}>Create New Group</div><div style={{fontSize:11,color:'#94a3b8'}}>Auto-selected after creation</div></div>
+                      </div>
+                      <form onSubmit={handleQGroup}>
+                        <div style={{marginBottom:12}}><Label>Group Name *</Label><Inp value={qGroup.name} onChange={e=>setQGroup({...qGroup,name:e.target.value})} required placeholder="e.g. Sales Team" /></div>
+                        <div style={{marginBottom:12}}><Label>Description</Label><Inp value={qGroup.description} onChange={e=>setQGroup({...qGroup,description:e.target.value})} placeholder="Brief description" /></div>
+                        <PriBtn type="submit">Create Group</PriBtn>
+                      </form>
+                    </div>
+                  )}
+
+                  {!subStep&&(
+                    <>
+                      <div style={{marginBottom:14}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                          <Label>Assign Roles</Label>
+                          <button style={{background:'none',border:'none',color:'#4f46e5',fontSize:11,fontWeight:700,cursor:'pointer',padding:0}} onClick={()=>{setQRole({name:'',description:'',permissions:[],forUserTypes:['TENANT_USER','TENANT_MANAGER']});setSubStep('create-role');}}>+ New</button>
+                        </div>
+                        <DDSelect value={userForm.roles} onChange={v=>setUserForm({...userForm,roles:v})} items={roleItems} placeholder="Select roles..." open={showRoleDD} onToggle={()=>{setShowRoleDD(p=>!p);setShowGroupDD(false);}} tagBg="#ede9fe" tagColor="#5b21b6" tagBorder="#c4b5fd" />
+                      </div>
+                      <div style={{marginBottom:14}}>
+                        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:6}}>
+                          <Label>Groups <span style={{textTransform:'none',fontWeight:400,color:'#94a3b8'}}>— optional</span></Label>
+                          <button style={{background:'none',border:'none',color:'#4f46e5',fontSize:11,fontWeight:700,cursor:'pointer',padding:0}} onClick={()=>{setQGroup({name:'',description:''});setSubStep('create-group');}}>+ New</button>
+                        </div>
+                        <DDSelect value={userForm.groups} onChange={v=>setUserForm({...userForm,groups:v})} items={groupItems} placeholder="Select groups..." open={showGroupDD} onToggle={()=>{setShowGroupDD(p=>!p);setShowRoleDD(false);}} tagBg="#dcfce7" tagColor="#15803d" tagBorder="#86efac" />
+                      </div>
+                      <div style={{display:'flex',gap:8,marginTop:4}}>
+                        <button onClick={()=>setUserStep(1)} style={{padding:'10px 16px',border:'1.5px solid #e2e8f0',borderRadius:10,background:'#f8fafc',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap'}}>← Back</button>
+                        <PriBtn disabled={submitting} onClick={handleUserSubmit} style={{flex:1,marginTop:0}}>
+                          {submitting?(editingItem?'Saving...':'Creating...'):(editingItem?'Save Changes':'Create User')}
+                        </PriBtn>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ─── ROLE / GROUP PANEL (left, same flex row as table) ── */}
+        {showPanel&&panelMode!=='user'&&(
+          <div className="xFadeUp" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.13)',display:'flex',flexDirection:'column',maxHeight:'calc(100vh - 160px)',overflow:'hidden',position:'relative'}}>
+            {/* drag handle */}
+            <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20}} />
+            <div style={{background:'linear-gradient(135deg,#4f46e5 0%,#6d28d9 60%,#7c3aed 100%)',padding:'13px 18px 11px',position:'relative',overflow:'hidden',flexShrink:0}}>
+              <div style={{position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(255,255,255,0.15) 0%,transparent 70%)',pointerEvents:'none'}} />
+              <button className="xClose" onClick={closePanel} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.18)',cursor:'pointer',color:'#fff',fontSize:17,display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+              <div style={{position:'relative',zIndex:1,display:'flex',alignItems:'center',gap:10}}>
+                <div style={{width:32,height:32,borderRadius:9,background:'rgba(255,255,255,0.12)',border:'1px solid rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0}}>{panelMode==='role'?'🛡️':'📂'}</div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:'#fff',lineHeight:1.2}}>{editingItem?'Edit':'New'} {panelMode==='role'?'Role':'Group'}</div>
+                  <div style={{fontSize:10,color:'rgba(255,255,255,0.42)',marginTop:2}}>{panelMode==='role'?'Set module permissions':'Add members to group'}</div>
+                </div>
+              </div>
+            </div>
+            <div className="xScroll" style={{padding:'14px 18px',overflowY:'auto',flex:1}}>
+              {panelMode==='role'&&(
                 <form onSubmit={handleRoleSubmit}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Role Name</label>
-                    <input style={styles.input} value={roleForm.name} onChange={e => setRoleForm({ ...roleForm, name: e.target.value })} required placeholder="e.g., Sales Manager" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Description</label>
-                    <input style={styles.input} value={roleForm.description} onChange={e => setRoleForm({ ...roleForm, description: e.target.value })} placeholder="Brief description" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>For User Types</label>
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      {[{ value: 'TENANT_USER', label: 'User', color: '#3b82f6' }, { value: 'TENANT_MANAGER', label: 'Manager', color: '#8b5cf6' }].map(ut => (
-                        <label key={ut.value} style={{
-                          padding: '6px 12px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer',
-                          background: roleForm.forUserTypes?.includes(ut.value) ? ut.color : '#f1f5f9',
-                          color: roleForm.forUserTypes?.includes(ut.value) ? '#fff' : '#64748b',
-                          border: `1px solid ${roleForm.forUserTypes?.includes(ut.value) ? ut.color : '#e2e8f0'}`,
-                          display: 'flex', alignItems: 'center', gap: '4px'
-                        }}>
-                          <input type="checkbox" checked={roleForm.forUserTypes?.includes(ut.value)} onChange={() => {
-                            const types = roleForm.forUserTypes || [];
-                            const newTypes = types.includes(ut.value) ? types.filter(t => t !== ut.value) : [...types, ut.value];
-                            setRoleForm({ ...roleForm, forUserTypes: newTypes });
-                          }} style={{ display: 'none' }} />
-                          {ut.label}
+                  <div style={{marginBottom:12}}><Label>Role Name *</Label><Inp value={roleForm.name} onChange={e=>setRoleForm({...roleForm,name:e.target.value})} required placeholder="e.g. Sales Manager" /></div>
+                  <div style={{marginBottom:12}}><Label>Description</Label><Inp value={roleForm.description} onChange={e=>setRoleForm({...roleForm,description:e.target.value})} placeholder="Brief description" /></div>
+                  <div style={{marginBottom:12}}><Label>For User Types</Label>
+                    <div style={{display:'flex',gap:8}}>
+                      {[{v:'TENANT_USER',l:'User'},{v:'TENANT_MANAGER',l:'Manager'}].map(ut=>(
+                        <label key={ut.v} style={{padding:'6px 14px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',border:`1.5px solid ${roleForm.forUserTypes?.includes(ut.v)?'#4f46e5':'#e2e8f0'}`,background:roleForm.forUserTypes?.includes(ut.v)?'#eef2ff':'#fff',color:roleForm.forUserTypes?.includes(ut.v)?'#4338ca':'#64748b',transition:'all 0.15s'}}>
+                          <input type="checkbox" style={{display:'none'}} checked={roleForm.forUserTypes?.includes(ut.v)} onChange={()=>{const t=roleForm.forUserTypes||[];setRoleForm({...roleForm,forUserTypes:t.includes(ut.v)?t.filter(x=>x!==ut.v):[...t,ut.v]});}} />{ut.l}
                         </label>
                       ))}
                     </div>
-                    <span style={{ fontSize: '9px', color: '#94a3b8', marginTop: '4px', display: 'block' }}>Select which user types can be assigned this role</span>
                   </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Permissions</label>
-                    <div style={styles.permTable}>
-                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '9px' }}>
-                        <thead>
-                          <tr>
-                            <th style={{ textAlign: 'left', padding: '4px 6px', background: '#f8fafc', position: 'sticky', top: 0 }}>Module</th>
-                            {ACTIONS.map(a => <th key={a} style={{ padding: '4px 3px', background: '#f8fafc', fontSize: '8px', position: 'sticky', top: 0 }} title={a}>{a.slice(0, 1).toUpperCase()}</th>)}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {['Access', 'CRM', 'Sales', 'Product', 'Tasks', 'Account', 'Customization', 'Data'].map(cat => (
-                            <React.Fragment key={cat}>
-                              <tr>
-                                <td colSpan={ACTIONS.length + 1} style={{ padding: '4px 6px', background: '#e2e8f0', fontWeight: '600', fontSize: '9px', color: '#475569' }}>{cat}</td>
-                              </tr>
-                              {FEATURES.filter(f => f.category === cat).map(f => (
-                                <tr key={f.slug}>
-                                  <td style={{ padding: '4px 6px', borderTop: '1px solid #f1f5f9', paddingLeft: '12px' }}>{f.name}</td>
-                                  {ACTIONS.map(a => (
-                                    <td key={a} style={{ padding: '3px', textAlign: 'center', borderTop: '1px solid #f1f5f9' }}>
-                                      <input type="checkbox" checked={hasAction(f.slug, a)} onChange={() => togglePermission(f.slug, a)} style={{ cursor: 'pointer', width: '12px', height: '12px' }} />
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </React.Fragment>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <button type="submit" style={styles.submitBtn}>{editingItem ? 'Update' : 'Create'} Role</button>
+                  <div style={{marginBottom:12}}><Label>Permissions</Label><PermTable hasP={hasPerm} toggleP={togglePerm(roleForm,setRoleForm)} /></div>
+                  <PriBtn type="submit">{editingItem?'Update':'Create'} Role</PriBtn>
                 </form>
               )}
-
-              {/* Group Form */}
-              {panelMode === 'group' && (
+              {panelMode==='group'&&(
                 <form onSubmit={handleGroupSubmit}>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Group Name</label>
-                    <input style={styles.input} value={groupForm.name} onChange={e => setGroupForm({ ...groupForm, name: e.target.value })} required placeholder="e.g., Sales Team" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Description</label>
-                    <input style={styles.input} value={groupForm.description} onChange={e => setGroupForm({ ...groupForm, description: e.target.value })} placeholder="Brief description" />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Members</label>
-                    <div style={styles.chipContainer}>
-                      {users.map(u => (
-                        <label key={u._id} style={{ ...styles.chip, ...(groupForm.members.includes(u._id) ? styles.chipActiveGreen : {}) }}>
-                          <input type="checkbox" checked={groupForm.members.includes(u._id)} onChange={() => {
-                            const newMembers = groupForm.members.includes(u._id) ? groupForm.members.filter(id => id !== u._id) : [...groupForm.members, u._id];
-                            setGroupForm({ ...groupForm, members: newMembers });
-                          }} style={{ display: 'none' }} />
+                  <div style={{marginBottom:12}}><Label>Group Name *</Label><Inp value={groupForm.name} onChange={e=>setGroupForm({...groupForm,name:e.target.value})} required placeholder="e.g. Sales Team" /></div>
+                  <div style={{marginBottom:12}}><Label>Description</Label><Inp value={groupForm.description} onChange={e=>setGroupForm({...groupForm,description:e.target.value})} placeholder="Brief description" /></div>
+                  <div style={{marginBottom:12}}><Label>Members</Label>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:6,padding:10,border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fafbff',maxHeight:110,overflowY:'auto'}}>
+                      {users.map(u=>(
+                        <label key={u._id} style={{padding:'4px 12px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',background:groupForm.members.includes(u._id)?'#dcfce7':'#fff',border:`1.5px solid ${groupForm.members.includes(u._id)?'#16a34a':'#e2e8f0'}`,color:groupForm.members.includes(u._id)?'#15803d':'#64748b',transition:'all 0.15s'}}>
+                          <input type="checkbox" style={{display:'none'}} checked={groupForm.members.includes(u._id)} onChange={()=>{const n=groupForm.members.includes(u._id)?groupForm.members.filter(i=>i!==u._id):[...groupForm.members,u._id];setGroupForm({...groupForm,members:n});}} />
                           {u.firstName} {u.lastName}
                         </label>
                       ))}
                     </div>
                   </div>
-                  <button type="submit" style={styles.submitBtn}>{editingItem ? 'Update' : 'Create'} Group</button>
+                  <PriBtn type="submit">{editingItem?'Update':'Create'} Group</PriBtn>
                 </form>
               )}
             </div>
           </div>
         )}
+
+        {/* ─── USER DETAIL PANEL (left, on row click) ────────── */}
+        {selectedUser&&!showPanel&&(()=>{
+          const su=selectedUser;
+          const tc=TYPE_CFG[su.userType]||TYPE_CFG.TENANT_USER;
+          const userGroups=groups.filter(g=>g.members?.some(m=>(m._id||m)===su._id));
+          return(
+            <div className="xFadeUp" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.12)',overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
+              {/* drag handle */}
+              <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20}} />
+              {/* header */}
+              <div style={{background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 50%,#312e81 100%)',padding:'14px 18px 12px',position:'relative',overflow:'hidden',flexShrink:0}}>
+                <div style={{position:'absolute',top:-40,right:-20,width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(139,92,246,0.45) 0%,transparent 70%)',pointerEvents:'none'}} />
+                <button onClick={()=>setSelectedUser(null)} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.18)',cursor:'pointer',color:'#fff',fontSize:17,display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+                <div style={{position:'relative',zIndex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{width:40,height:40,borderRadius:11,background:avGrad(su.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:15,flexShrink:0,boxShadow:'0 3px 10px rgba(0,0,0,0.25)'}}>{su.firstName?.[0]}{su.lastName?.[0]}</div>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:800,color:'#fff',lineHeight:1.2}}>{su.firstName} {su.lastName}</div>
+                      <div style={{fontSize:10,color:'rgba(255,255,255,0.45)',marginTop:2}}>{su.email}</div>
+                      <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'2px 8px',borderRadius:20,fontSize:10,fontWeight:700,color:'#fff',background:'rgba(255,255,255,0.15)',border:'1px solid rgba(255,255,255,0.18)',marginTop:4}}>
+                        <span style={{width:4,height:4,borderRadius:'50%',background:tc.dot,flexShrink:0}} />{tc.label}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              {/* details body */}
+              <div className="xScroll" style={{padding:'14px 16px',overflowY:'auto',flex:1}}>
+                {[
+                  {ico:'📋',label:'Login Name', val:su.loginName||'—'},
+                  {ico:'🏢',label:'Department',  val:su.department||'—'},
+                  {ico:'📞',label:'Phone',        val:su.phone||'—'},
+                  {ico:'🕐',label:'Last Login',   val:su.lastLogin?new Date(su.lastLogin).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Never'},
+                  {ico:'📅',label:'Joined',        val:new Date(su.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})},
+                ].map(row=>(
+                  <div key={row.label} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'9px 0',borderBottom:'1px solid #f8fafc'}}>
+                    <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{row.ico}</span>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:2}}>{row.label}</div>
+                      <div style={{fontSize:12,fontWeight:600,color:'#0f172a',wordBreak:'break-all'}}>{row.val}</div>
+                    </div>
+                  </div>
+                ))}
+
+                {su.roles?.length>0&&(
+                  <div style={{marginTop:10}}>
+                    <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:6}}>Roles</div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                      {su.roles.map(r=><span key={r._id} style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'linear-gradient(135deg,#f5f3ff,#ede9fe)',color:'#6d28d9',border:'1px solid #ddd6fe'}}>{r.name}</span>)}
+                    </div>
+                  </div>
+                )}
+
+                {userGroups.length>0&&(
+                  <div style={{marginTop:10}}>
+                    <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:6}}>Groups</div>
+                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                      {userGroups.map(g=><span key={g._id} style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'#ecfdf5',color:'#065f46',border:'1px solid #6ee7b7'}}>{g.name}</span>)}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{marginTop:14,display:'flex',gap:8}}>
+                  <button onClick={()=>{setSelectedUser(null);openUserPanel(su);}} style={{flex:1,padding:'8px 0',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>Edit</button>
+                  {su._id!==user._id&&<button onClick={()=>{setSelectedUser(null);openResetModal(su);}} style={{flex:1,padding:'8px 0',border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fff',color:'#64748b',fontSize:12,fontWeight:700,cursor:'pointer'}}>Reset Pwd</button>}
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ════════════════════════════════════════════
+            TABLE CARD — premium compact rows
+        ════════════════════════════════════════════ */}
+        <div style={{flex:1,minWidth:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 2px 4px rgba(0,0,0,0.04),0 10px 32px rgba(79,70,229,0.07)',overflow:'hidden'}}>
+          {/* table card header */}
+          <div style={{padding:'10px 14px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            <div style={{flex:1,minWidth:160}}>
+              <div style={{fontSize:14,fontWeight:800,color:'#0f172a'}}>
+                {activeTab==='users'?'Team Members':activeTab==='roles'?'Permission Roles':'User Groups'}
+              </div>
+              <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>
+                {activeTab==='users'?users.length:activeTab==='roles'?roles.length:groups.length} total records
+              </div>
+            </div>
+            {/* search */}
+            <div style={{position:'relative',minWidth:200}}>
+              <span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',fontSize:13,color:'#94a3b8',pointerEvents:'none'}}>🔍</span>
+              <input className="xInp" value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${activeTab}…`}
+                style={{width:'100%',padding:'7px 11px 7px 30px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:12,color:'#0f172a',background:'#f8fafc',outline:'none',boxSizing:'border-box'}} />
+            </div>
+          </div>
+
+          <div style={{overflowX:'auto'}}>
+            {loading?(
+              <div style={{textAlign:'center',padding:'48px 20px',color:'#94a3b8',fontSize:13}}>Loading...</div>
+            ):(activeTab==='users'?(
+              /* ── USERS — premium table ── */
+              <table style={{width:'100%',borderCollapse:'collapse'}}>
+                <thead>
+                  <tr style={{background:'#f8fafc'}}>
+                    <th style={TH}>Member</th>
+                    <th style={TH}>Type</th>
+                    <th style={TH}>Roles</th>
+                    <th style={TH}>Status</th>
+                    <th style={{...TH,textAlign:'right'}}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                {users.filter(u=>!search||`${u.firstName} ${u.lastName} ${u.email}`.toLowerCase().includes(search.toLowerCase())).map((u,idx)=>{
+                  const tc=TYPE_CFG[u.userType]||TYPE_CFG.TENANT_USER;
+                  const isSelected=selectedUser?._id===u._id;
+                  return(
+                    <tr key={u._id} className="xRow" onClick={()=>setSelectedUser(isSelected?null:u)}
+                      style={{borderBottom:'1px solid #f1f5f9',cursor:'pointer',background:isSelected?'#f5f3ff':'',transition:'all 0.15s',position:'relative'}}>
+
+                      {/* member cell */}
+                      <td style={{...TD,paddingLeft:isSelected?16:20}}>
+                        {isSelected&&<div style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg,#6366f1,#a78bfa)'}} />}
+                        <div style={{display:'flex',alignItems:'center',gap:12}}>
+                          <div style={{position:'relative',flexShrink:0}}>
+                            <div style={{width:34,height:34,borderRadius:10,background:avGrad(u.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:13,boxShadow:'0 2px 8px rgba(0,0,0,0.15)'}}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
+                            <div style={{position:'absolute',bottom:-1,right:-1,width:9,height:9,borderRadius:'50%',background:u.isActive?'#22c55e':'#f43f5e',border:'2px solid #fff',boxShadow:u.isActive?'0 0 4px rgba(34,197,94,0.7)':'none'}} />
+                          </div>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:'#0f172a',lineHeight:1.2}}>{u.firstName} {u.lastName}</div>
+                            <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{u.email}</div>
+                            {u.department&&<span style={{fontSize:9,fontWeight:700,color:'#7c3aed',background:'#f5f3ff',padding:'1px 6px',borderRadius:5,marginTop:2,display:'inline-block'}}>{u.department}</span>}
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* type */}
+                      <td style={TD}>
+                        <div style={{display:'inline-flex',flexDirection:'column',alignItems:'flex-start',gap:2}}>
+                          <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'4px 12px',borderRadius:20,fontSize:11,fontWeight:700,color:tc.c,background:tc.bg,border:`1.5px solid ${tc.b}`}}>
+                            <span style={{width:6,height:6,borderRadius:'50%',background:tc.dot,flexShrink:0}} />{tc.label}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* roles */}
+                      <td style={TD}>
+                        {u.roles?.length>0
+                          ?<div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                            {u.roles.map(r=><span key={r._id} style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:6,background:'#eef2ff',color:'#4338ca',border:'1px solid #c7d2fe'}}>{r.name}</span>)}
+                           </div>
+                          :<span style={{fontSize:12,color:'#cbd5e1'}}>—</span>}
+                      </td>
+
+                      {/* status */}
+                      <td style={TD}>
+                        <span style={{display:'inline-flex',alignItems:'center',gap:5,padding:'3px 9px',borderRadius:20,fontSize:10,fontWeight:700,background:u.isActive?'#f0fdf4':'#fff1f2',color:u.isActive?'#16a34a':'#be123c',border:`1px solid ${u.isActive?'#86efac':'#fca5a5'}`}}>
+                          <span style={{width:6,height:6,borderRadius:'50%',background:u.isActive?'#22c55e':'#f43f5e',flexShrink:0,boxShadow:u.isActive?'0 0 5px rgba(34,197,94,0.8)':'none'}} />
+                          {u.isActive?'Active':'Inactive'}
+                        </span>
+                      </td>
+
+                      {/* actions */}
+                      <td style={{...TD,textAlign:'right'}}>
+                        <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+                          <button onClick={e=>{e.stopPropagation();openUserPanel(u);}} title="Edit"
+                            style={{height:26,padding:'0 10px',borderRadius:7,border:'1px solid #e0e7ff',background:'#eef2ff',color:'#4f46e5',cursor:'pointer',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4,transition:'all 0.15s',whiteSpace:'nowrap'}}>
+                            ✏️ Edit
+                          </button>
+                          {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();openResetModal(u);}} title="Reset password"
+                            style={{height:26,width:26,borderRadius:7,border:'1px solid #fef3c7',background:'#fffbeb',color:'#d97706',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,transition:'all 0.15s'}}>🔑</button>}
+                          {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();handleDeleteUser(u);}} title="Delete"
+                            style={{height:26,width:26,borderRadius:7,border:'1px solid #ffe4e6',background:'#fff1f2',color:'#e11d48',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,transition:'all 0.15s'}}>🗑️</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+                </tbody>
+              </table>
+            ):(
+              <table style={{width:'100%',borderCollapse:'collapse',minWidth:540}}>
+                <thead>
+                  <tr>
+                    {activeTab==='roles'&&<>
+                      <th style={TH}>Role</th>
+                      <th style={TH}>Description</th>
+                      <th style={TH}>Rules</th>
+                      <th style={{...TH,textAlign:'right',paddingRight:18}}>Actions</th>
+                    </>}
+                    {activeTab==='groups'&&<>
+                      <th style={TH}>Group</th>
+                      <th style={TH}>Description</th>
+                      <th style={TH}>Members</th>
+                      <th style={{...TH,textAlign:'right',paddingRight:18}}>Actions</th>
+                    </>}
+                  </tr>
+                </thead>
+                <tbody>
+
+                  {/* ── ROLES ──────────────────────────────── */}
+                  {activeTab==='roles'&&roles.map(r=>(
+                    <tr key={r._id} className="xRow" style={{borderBottom:'1px solid #f8fafc'}}>
+                      <td style={TD}>
+                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                          <div style={{width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>🛡️</div>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>{r.name}</div>
+                            <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{r.forUserTypes?.map(t=>TYPE_CFG[t]?.label||t).join(' · ')}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td style={{...TD,color:'#64748b',fontSize:12}}>{r.description||'—'}</td>
+                      <td style={TD}><span style={{fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,background:'#f5f3ff',color:'#6d28d9',border:'1px solid #ddd6fe'}}>{r.permissions?.length||0} rules</span></td>
+                      <td style={{...TD,textAlign:'right'}}>
+                        <div className="xActs" style={{display:'flex',gap:5,justifyContent:'flex-end'}}>
+                          <button className="xActBtn" onClick={()=>openRolePanel(r)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#eff6ff',color:'#2563eb',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>✏️</button>
+                          {r.roleType!=='system'&&<button className="xActBtn" onClick={()=>handleDeleteRole(r)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#fff1f2',color:'#e11d48',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>🗑️</button>}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+
+                  {/* ── GROUPS ─────────────────────────────── */}
+                  {activeTab==='groups'&&groups.map(g=>(
+                    <tr key={g._id} className="xRow" style={{borderBottom:'1px solid #f8fafc'}}>
+                      <td style={TD}>
+                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                          <div style={{width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#0891b2,#38bdf8)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>📂</div>
+                          <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>{g.name}</div>
+                        </div>
+                      </td>
+                      <td style={{...TD,color:'#64748b',fontSize:12}}>{g.description||'—'}</td>
+                      <td style={TD}><span style={{fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,background:'#ecfdf5',color:'#065f46',border:'1px solid #6ee7b7'}}>{g.members?.length||0} members</span></td>
+                      <td style={{...TD,textAlign:'right'}}>
+                        <div className="xActs" style={{display:'flex',gap:5,justifyContent:'flex-end'}}>
+                          <button className="xActBtn" onClick={()=>openGroupPanel(g)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#eff6ff',color:'#2563eb',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>✏️</button>
+                          <button className="xActBtn" onClick={()=>handleDeleteGroup(g)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#fff1f2',color:'#e11d48',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+
+                </tbody>
+              </table>
+            ))}
+          </div>
+
+          {!loading&&((activeTab==='users'&&!users.length)||(activeTab==='roles'&&!roles.length)||(activeTab==='groups'&&!groups.length))&&(
+            <div style={{textAlign:'center',padding:'52px 20px'}}>
+              <div style={{fontSize:44,opacity:.18,marginBottom:10}}>{activeTab==='users'?'👥':activeTab==='roles'?'🛡️':'📂'}</div>
+              <div style={{fontSize:13,fontWeight:700,color:'#334155',marginBottom:4}}>No {activeTab} yet</div>
+              <div style={{fontSize:12,color:'#94a3b8'}}>Click "+ Add" above to get started</div>
+            </div>
+          )}
+        </div>
+
       </div>
 
-
+      {/* ════════════════════════════════════════════
+          RESET PASSWORD MODAL
+      ════════════════════════════════════════════ */}
+      {resetModal.open&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(7,4,20,0.7)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div className="xModalIn" style={{background:'#fff',borderRadius:20,width:'100%',maxWidth:420,boxShadow:'0 30px 80px rgba(0,0,0,0.28)',overflow:'hidden'}}>
+            <div style={{padding:'12px 18px',background:'linear-gradient(135deg,#0f0c29,#1e1b4b,#0d1b4b)',position:'relative',overflow:'hidden'}}>
+              <div style={{position:'absolute',top:-30,right:-20,width:100,height:100,borderRadius:'50%',background:'radial-gradient(circle,rgba(124,58,237,0.4) 0%,transparent 70%)',pointerEvents:'none'}} />
+              <button onClick={()=>setResetModal({open:false,userId:null,userName:''})} style={{position:'absolute',top:10,right:12,width:24,height:24,borderRadius:6,background:'rgba(255,255,255,.12)',border:'1px solid rgba(255,255,255,.18)',color:'#fff',fontSize:15,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+              <div style={{display:'flex',alignItems:'center',gap:10,position:'relative',zIndex:1}}>
+                <div style={{width:32,height:32,borderRadius:9,background:'rgba(124,58,237,.25)',border:'1px solid rgba(124,58,237,.4)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>🔑</div>
+                <div>
+                  <div style={{fontSize:14,fontWeight:800,color:'#fff',lineHeight:1.2}}>Reset Password</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,.45)',marginTop:1}}>for <strong style={{color:'#a78bfa'}}>{resetModal.userName}</strong></div>
+                </div>
+              </div>
+            </div>
+            <div style={{padding:'22px 24px'}}>
+              <form onSubmit={handleReset}>
+                <div style={{marginBottom:14}}>
+                  <Label>New Password</Label>
+                  <div style={{position:'relative'}}>
+                    <Inp type={showRPwd?'text':'password'} style={{paddingRight:34}} value={resetForm.newPassword} onChange={e=>setResetForm({...resetForm,newPassword:e.target.value})} placeholder="Minimum 4 characters" required />
+                    <button type="button" onClick={()=>setShowRPwd(v=>!v)} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showRPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
+                  </div>
+                </div>
+                <div style={{marginBottom:20}}>
+                  <Label>Confirm Password</Label>
+                  <Inp type={showRPwd?'text':'password'} style={resetForm.confirmPassword&&resetForm.newPassword!==resetForm.confirmPassword?{borderColor:'#ef4444'}:{}} value={resetForm.confirmPassword} onChange={e=>setResetForm({...resetForm,confirmPassword:e.target.value})} placeholder="Re-enter password" required />
+                  {resetForm.confirmPassword&&resetForm.newPassword!==resetForm.confirmPassword&&<span style={{fontSize:10,color:'#ef4444',marginTop:3,display:'block'}}>Passwords do not match</span>}
+                </div>
+                <div style={{display:'flex',gap:10}}>
+                  <button type="button" onClick={()=>setResetModal({open:false,userId:null,userName:''})} style={{flex:1,padding:'10px 0',border:'1.5px solid #e2e8f0',borderRadius:10,background:'#f8fafc',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
+                  <PriBtn type="submit" disabled={submitting} style={{flex:1,marginTop:0}}>{submitting?'Resetting...':'Reset Password'}</PriBtn>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };
 
-const styles = {
-  wrapper: { display: 'flex', gap: '16px', padding: '16px', minHeight: 'calc(100vh - 120px)' },
-  headerCard: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '16px',
-    padding: '16px 20px',
-    background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-    borderRadius: '12px',
-    border: '1px solid #e2e8f0',
-    boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
-  },
-  headerLeft: { display: 'flex', alignItems: 'center', gap: '14px' },
-  headerIcon: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '12px',
-    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '22px',
-    boxShadow: '0 4px 12px rgba(59,130,246,0.3)'
-  },
-  title: { fontSize: '18px', fontWeight: '700', color: '#1e293b', margin: 0 },
-  subtitle: { fontSize: '12px', color: '#64748b', margin: '4px 0 0', maxWidth: '300px' },
-  addBtn: {
-    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-    color: '#fff',
-    border: 'none',
-    padding: '10px 18px',
-    borderRadius: '8px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '13px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    boxShadow: '0 4px 12px rgba(59,130,246,0.3)',
-    transition: 'transform 0.2s, box-shadow 0.2s'
-  },
-  success: { background: '#dcfce7', color: '#16a34a', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '12px' },
-  error: { background: '#fef2f2', color: '#dc2626', padding: '10px', borderRadius: '6px', marginBottom: '12px', fontSize: '12px' },
-  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '16px' },
-  statCard: {
-    background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)',
-    padding: '14px',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    cursor: 'pointer',
-    transition: 'all 0.2s'
-  },
-  activeStatCard: {
-    background: 'linear-gradient(135deg, rgb(120, 245, 240) 0%, rgb(200, 255, 252) 100%)',
-    border: '2px solid #14b8a6',
-    boxShadow: '0 4px 12px rgba(20, 184, 166, 0.3)'
-  },
-  statNum: { fontSize: '24px', fontWeight: '700', color: '#1e293b' },
-  statLabel: { fontSize: '11px', color: '#64748b', textTransform: 'uppercase' },
-  tableCard: { background: '#fff', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse' },
-  th: { textAlign: 'left', padding: '10px 12px', fontSize: '10px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' },
-  tr: { borderBottom: '1px solid #f1f5f9' },
-  td: { padding: '10px 12px', fontSize: '12px', color: '#1e293b' },
-  cellFlex: { display: 'flex', alignItems: 'center', gap: '8px' },
-  avatar: { width: '28px', height: '28px', borderRadius: '6px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: '600', fontSize: '10px' },
-  name: { fontWeight: '600', fontSize: '12px' },
-  badgeBlue: { padding: '3px 8px', borderRadius: '4px', background: '#dbeafe', color: '#1d4ed8', fontSize: '10px', fontWeight: '500' },
-  badgeGreen: { padding: '3px 8px', borderRadius: '4px', background: '#dcfce7', color: '#16a34a', fontSize: '10px', fontWeight: '500' },
-  badgeRed: { padding: '3px 8px', borderRadius: '4px', background: '#fef2f2', color: '#dc2626', fontSize: '10px', fontWeight: '500' },
-  badgePurple: { padding: '3px 8px', borderRadius: '4px', background: '#f3e8ff', color: '#7c3aed', fontSize: '10px', fontWeight: '500' },
-  actions: { display: 'flex', gap: '4px' },
-  actionBtn: { background: '#f1f5f9', border: 'none', width: '26px', height: '26px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' },
-  actionBtnDanger: { background: '#fef2f2', border: 'none', width: '26px', height: '26px', borderRadius: '4px', cursor: 'pointer', fontSize: '11px' },
-  loading: { textAlign: 'center', padding: '30px', color: '#64748b', fontSize: '12px' },
-  empty: { textAlign: 'center', padding: '30px', color: '#94a3b8', fontSize: '12px' },
-  // Panel
-  panel: {
-    width: '320px',
-    background: 'linear-gradient(135deg, rgb(153, 255, 251) 0%, rgb(255, 255, 255) 100%)',
-    borderRadius: '8px',
-    border: '1px solid #e2e8f0',
-    flexShrink: 0,
-    display: 'flex',
-    flexDirection: 'column',
-    maxHeight: 'calc(100vh - 140px)',
-    overflow: 'hidden'
-  },
-  panelHeader: {
-    padding: '12px 14px',
-    borderBottom: '1px solid #e2e8f0',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    background: 'rgba(255,255,255,0.5)'
-  },
-  panelTitle: { fontSize: '14px', fontWeight: '600', color: '#1e293b', margin: 0 },
-  closeBtn: { background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b', padding: 0, lineHeight: 1 },
-  panelBody: { padding: '14px', flex: 1, overflowY: 'auto' },
-  formGrid: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' },
-  formGroup: { marginBottom: '12px' },
-  label: { display: 'block', fontSize: '11px', fontWeight: '500', color: '#475569', marginBottom: '4px' },
-  input: { width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', boxSizing: 'border-box', background: '#fff' },
-  chipContainer: { display: 'flex', flexWrap: 'wrap', gap: '6px', padding: '8px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#f8fafc', maxHeight: '100px', overflowY: 'auto' },
-  chip: { padding: '4px 10px', borderRadius: '12px', fontSize: '10px', cursor: 'pointer', background: '#fff', border: '1px solid #e2e8f0', color: '#64748b' },
-  chipActive: { background: '#dbeafe', border: '1px solid #3b82f6', color: '#1d4ed8' },
-  chipActiveGreen: { background: '#dcfce7', border: '1px solid #16a34a', color: '#16a34a' },
-  permTable: { border: '1px solid #e2e8f0', borderRadius: '6px', overflow: 'hidden', maxHeight: '350px', overflowY: 'auto' },
-  submitBtn: { width: '100%', padding: '10px', border: 'none', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#fff', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '12px', marginTop: '8px' },
-  dropdownTrigger: { width: '100%', padding: '8px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '12px', background: '#fff', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#1e293b', textAlign: 'left' },
-  dropdownList: { position: 'absolute', top: 'calc(100% + 4px)', left: 0, right: 0, background: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 100, maxHeight: '160px', overflowY: 'auto' },
-  dropdownItem: { display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 10px', cursor: 'pointer', fontSize: '12px', borderBottom: '1px solid #f1f5f9' },
-  // Modal
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' },
-  modal: { background: '#fff', borderRadius: '14px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', width: '100%', maxWidth: '440px', display: 'flex', flexDirection: 'column', maxHeight: '90vh', overflow: 'hidden' },
-  modalHeader: { padding: '16px 18px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 },
-  modalBody: { padding: '16px 18px', overflowY: 'auto', flex: 1 },
-  createNewBtn: { background: 'none', border: 'none', color: '#3b82f6', fontSize: '11px', fontWeight: '600', cursor: 'pointer', padding: 0, whiteSpace: 'nowrap' },
-  backBtn: { padding: '9px 16px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#f8fafc', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' },
-  tagBlue: { padding: '2px 8px', background: '#dbeafe', color: '#1d4ed8', borderRadius: '10px', fontSize: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' },
-  tagGreen: { padding: '2px 8px', background: '#dcfce7', color: '#16a34a', borderRadius: '10px', fontSize: '10px', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '4px' },
-  tagX: { background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '12px', lineHeight: 1, opacity: 0.7 },
-  subStepBack: { padding: '5px 10px', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#f8fafc', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 },
-  // Inline form card (below stats, above table)
-  inlineFormCard: { width: '360px', flexShrink: 0, background: '#fff', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', overflow: 'visible' },
-  inlineFormBody: { padding: '14px 16px' },
-  inlineFormGrid: { display: 'flex', flexDirection: 'column', gap: '0px' }
-};
+const TH = { padding:'8px 14px', fontSize:10, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'0.8px', borderBottom:'1px solid #f1f5f9', textAlign:'left', whiteSpace:'nowrap', background:'#f8fafc' };
+const TD = { padding:'9px 14px', fontSize:13, color:'#334155', verticalAlign:'middle' };
 
 export default TeamManagement;

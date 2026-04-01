@@ -942,6 +942,44 @@ const DataCenter = () => {
                         </div>
                       );
                     })()}
+
+                    {/* Audit Info — only for TENANT_ADMIN and above */}
+                    {(user?.userType === 'TENANT_ADMIN' || user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN') && (
+                      <div style={{ marginTop: '16px', padding: '10px', background: '#fefce8', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                        <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#92400e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Audit Information</h4>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                          <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}>
+                            <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>IMPORTED BY</p>
+                            <p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                              {selectedCandidateData.importedBy
+                                ? `${selectedCandidateData.importedBy.firstName} ${selectedCandidateData.importedBy.lastName}`
+                                : '-'}
+                            </p>
+                          </div>
+                          <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px' }}>
+                            <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>IMPORTED ON</p>
+                            <p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                              {selectedCandidateData.importedAt ? new Date(selectedCandidateData.importedAt).toLocaleDateString() : '-'}
+                            </p>
+                          </div>
+                          {selectedCandidateData.importedBy?.email && (
+                            <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px', gridColumn: 'span 2' }}>
+                              <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>EMAIL</p>
+                              <p style={{ fontSize: '12px', fontWeight: '600', margin: 0, color: '#3B82F6' }}>{selectedCandidateData.importedBy.email}</p>
+                            </div>
+                          )}
+                          {selectedCandidateData.movedBy && (
+                            <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '5px', gridColumn: 'span 2' }}>
+                              <p style={{ fontSize: '9px', color: '#92400e', marginBottom: '2px', fontWeight: '600' }}>MOVED TO LEADS BY</p>
+                              <p style={{ fontSize: '12px', fontWeight: '600', margin: 0 }}>
+                                {selectedCandidateData.movedBy.firstName} {selectedCandidateData.movedBy.lastName}
+                                <span style={{ fontSize: '11px', color: '#6B7280', marginLeft: '6px' }}>({selectedCandidateData.movedBy.email})</span>
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

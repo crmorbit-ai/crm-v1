@@ -4,7 +4,7 @@ const Tenant = require('../models/Tenant');
 const Subscription = require('../models/Subscription');
 const SubscriptionPlan = require('../models/SubscriptionPlan');
 const { successResponse, errorResponse } = require('../utils/response');
-const { canManageUser } = require('../utils/permissions');
+const { canManageUser, getUserHierarchyLevel } = require('../utils/permissions');
 const { logActivity } = require('../middleware/activityLogger');
 const { sendUserInvitationEmail } = require('../utils/emailService');
 const { trackChanges } = require('../utils/changeTracker');
@@ -26,6 +26,24 @@ const getUsers = async (req, res) => {
     // Tenant users can only see users in their tenant
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       query.tenant = req.user.tenant;
+
+      // Hierarchy-based filtering: users can only see users at or below their own level
+      // e.g., TENANT_USER cannot see TENANT_ADMIN or TENANT_MANAGER
+      const currentLevel = getUserHierarchyLevel(req.user.userType);
+      const allUserTypes = ['SAAS_OWNER', 'SAAS_ADMIN', 'TENANT_ADMIN', 'TENANT_MANAGER', 'TENANT_USER'];
+      const allowedUserTypes = allUserTypes.filter(
+        (type) => getUserHierarchyLevel(type) <= currentLevel
+      );
+
+      if (userType) {
+        // If a specific userType filter is requested, check if it's allowed
+        if (!allowedUserTypes.includes(userType)) {
+          return errorResponse(res, 403, 'Access denied');
+        }
+        query.userType = userType;
+      } else {
+        query.userType = { $in: allowedUserTypes };
+      }
     }
 
     // Apply filters
@@ -37,7 +55,7 @@ const getUsers = async (req, res) => {
       ];
     }
 
-    if (userType) {
+    if (!query.userType && userType) {
       query.userType = userType;
     }
 
@@ -100,6 +118,14 @@ const getUser = async (req, res) => {
     // Check if current user can view this user
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       if (user.tenant && user.tenant._id.toString() !== req.user.tenant.toString()) {
+        return errorResponse(res, 403, 'Access denied');
+      }
+
+      // Hierarchy check: cannot view users with higher hierarchy level
+      // e.g., TENANT_USER cannot view TENANT_ADMIN's profile
+      const currentLevel = getUserHierarchyLevel(req.user.userType);
+      const targetLevel = getUserHierarchyLevel(user.userType);
+      if (targetLevel > currentLevel) {
         return errorResponse(res, 403, 'Access denied');
       }
     }
@@ -580,6 +606,48 @@ const assignGroups = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Reset a user's password (by admin)
+ * @route   PUT /api/users/:id/reset-password
+ * @access  Private (TENANT_ADMIN, SAAS_OWNER, SAAS_ADMIN)
+ */
+const resetUserPassword = async (req, res) => {
+  try {
+    const { newPassword } = req.body;
+
+    if (!newPassword || newPassword.length < 4) {
+      return errorResponse(res, 400, 'Password must be at least 4 characters');
+    }
+
+    const user = await User.findById(req.params.id);
+    if (!user) return errorResponse(res, 404, 'User not found');
+
+    // Tenant isolation: non-SAAS admins can only reset passwords within their tenant
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      if (!user.tenant || user.tenant.toString() !== req.user.tenant.toString()) {
+        return errorResponse(res, 403, 'Access denied');
+      }
+      // Tenant admin cannot reset another tenant admin's password
+      if (user.userType === 'TENANT_ADMIN' && user._id.toString() !== req.user._id.toString()) {
+        return errorResponse(res, 403, 'Cannot reset another admin\'s password');
+      }
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await User.findByIdAndUpdate(req.params.id, { password: hashedPassword });
+
+    await logActivity(req, 'user.password_reset', 'User', user._id, {
+      targetUser: `${user.firstName} ${user.lastName} (${user.email})`,
+      resetBy: `${req.user.firstName} ${req.user.lastName} (${req.user.email})`
+    });
+
+    successResponse(res, 200, 'Password reset successfully');
+  } catch (error) {
+    console.error('Reset password error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getUsers,
   getUser,
@@ -587,5 +655,6 @@ module.exports = {
   updateUser,
   deleteUser,
   assignRoles,
-  assignGroups
+  assignGroups,
+  resetUserPassword
 };
