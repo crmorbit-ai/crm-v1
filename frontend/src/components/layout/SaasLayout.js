@@ -176,9 +176,9 @@ const SaasLayout = ({ children, title }) => {
                   padding: '14px 16px',
                   fontSize: '14px',
                   fontWeight: isActive(item.path) ? '600' : '500',
-                  color: isActive(item.path) ? '#3b82f6' : '#64748b',
+                  color: isActive(item.path) ? '#fff' : '#64748b',
                   textDecoration: 'none',
-                  background: isActive(item.path) ? '#eff6ff' : 'transparent',
+                  background: isActive(item.path) ? '#3b82f6' : 'transparent',
                   borderBottom: '1px solid #f1f5f9'
                 }}
               >
@@ -615,8 +615,9 @@ export const DetailPanel = ({ title, onClose, children }) => {
   return (
     <div style={{
       flex: '0 0 45%',
+      order: -1,
       background: '#fff',
-      borderLeft: '1px solid #e2e8f0',
+      borderRight: '1px solid #e2e8f0',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden'

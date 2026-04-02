@@ -627,7 +627,7 @@ const Tenants = () => {
                           {status}
                           {t.deletionRequest?.status==='pending'&&<div style={{fontSize:9,marginTop:1,color:isSelected?'#dc2626':'#dc2626',fontWeight:700}}>DEL REQ</div>}
                         </td>
-                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:isSelected?null:'#eff6ff',color:'#3730a3',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
+                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:isSelected?null:({Enterprise:'#f59e0b',Professional:'#8b5cf6',Basic:'#3b82f6',Free:'#64748b'}[t.subscription?.planName]||'#3b82f6'),color:'#fff',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center',fontSize:11,fontWeight:700,color:'#374151'}}>{t.userCount||0}<span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>/{t.subscription?.maxUsers||'∞'}</span></td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontSize:11,color:'#6b7280'}}>{formatDate(t.createdAt)}</td>
                         <td className="xTd xPin" style={{background:rowBg||undefined,textAlign:'center'}}>
@@ -680,7 +680,7 @@ const Tenants = () => {
           );
 
           return (
-            <div style={{flex:isMobile?'1':'0 0 41%',width:isMobile?'100%':undefined,minWidth:0,background:'#fff',borderRadius:8,border:'1px solid #d1d5db',overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:isMobile?'none':'82vh',boxShadow:'0 2px 8px rgba(0,0,0,0.07)'}}>
+            <div style={{flex:isMobile?'1':'0 0 41%',order:-1,width:isMobile?'100%':undefined,minWidth:0,background:'#fff',borderRadius:8,border:'1px solid #d1d5db',overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:isMobile?'none':'82vh',boxShadow:'0 2px 8px rgba(0,0,0,0.07)'}}>
               {/* Dark header */}
               <div style={{background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 50%,#312e81 100%)',padding:'11px 14px 10px',flexShrink:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
