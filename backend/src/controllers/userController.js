@@ -78,6 +78,7 @@ const getUsers = async (req, res) => {
         }
       })
       .populate('tenant', 'organizationName slug')
+      .populate('addedBy', 'firstName lastName email')
       .select('-password')
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -144,7 +145,7 @@ const getUser = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, userType, tenant, roles, groups, loginName, department, viewingPin } = req.body;
+    const { email, password, firstName, lastName, userType, tenant, roles, groups, loginName, department, subDepartment, personalEmail, officeEmail, phone, alternatePhone, reportingManager, viewingPin } = req.body;
 
     // Validation
     if (!email || !password || !firstName || !lastName || !userType) {
@@ -252,8 +253,15 @@ const createUser = async (req, res) => {
       groups: groups || [],
       isActive: true,
       isProfileComplete: true,  // Admin-created users don't need profile completion
-      ...(loginName && { loginName }),
-      ...(department && { department }),
+      ...(loginName        && { loginName }),
+      ...(department       && { department }),
+      ...(subDepartment    && { subDepartment }),
+      ...(personalEmail    && { personalEmail }),
+      ...(officeEmail      && { officeEmail }),
+      ...(phone            && { phone }),
+      ...(alternatePhone   && { alternatePhone }),
+      ...(reportingManager && { reportingManager }),
+      addedBy: req.user._id,
       ...(hashedPin && { viewingPin: hashedPin, isViewingPinSet: true })
     };
 
@@ -326,7 +334,7 @@ const updateUser = async (req, res) => {
     }
 
     // Fields that can be updated
-    const allowedFields = ['firstName', 'lastName', 'phone', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions', 'loginName', 'department'];
+    const allowedFields = ['firstName', 'lastName', 'phone', 'alternatePhone', 'personalEmail', 'officeEmail', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions', 'loginName', 'department', 'subDepartment', 'reportingManager'];
 
     // SAAS owners and TENANT_ADMIN can change userType
     if (req.body.userType && (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN' || req.user.userType === 'TENANT_ADMIN')) {
@@ -648,10 +656,87 @@ const resetUserPassword = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Bulk create users from CSV data
+ * @route   POST /api/users/bulk
+ * @access  Private
+ */
+const bulkCreateUsers = async (req, res) => {
+  try {
+    const { users: usersData } = req.body;
+    if (!Array.isArray(usersData) || usersData.length === 0) {
+      return errorResponse(res, 400, 'No users provided');
+    }
+    if (usersData.length > 100) {
+      return errorResponse(res, 400, 'Maximum 100 users per bulk import');
+    }
+
+    const tenantId = req.user.tenant;
+
+    // Check subscription limit once
+    const tenantData = await Tenant.findById(tenantId).populate('subscription.plan');
+    if (!tenantData) return errorResponse(res, 404, 'Organization not found');
+    if (!tenantData.subscription || !['active', 'trial'].includes(tenantData.subscription.status)) {
+      return errorResponse(res, 403, 'No active subscription');
+    }
+    let plan = tenantData.subscription.plan;
+    if (!plan || !plan.limits) plan = await SubscriptionPlan.findById(tenantData.subscription.plan);
+    const currentCount = await User.countDocuments({ tenant: tenantId, isActive: true });
+    const maxUsers = plan?.limits?.users ?? Infinity;
+    const slotsLeft = maxUsers === -1 ? Infinity : maxUsers - currentCount;
+    if (slotsLeft < usersData.length) {
+      return errorResponse(res, 403, `Only ${slotsLeft} user slot(s) remaining in your plan`);
+    }
+
+    const results = [];
+    for (let i = 0; i < usersData.length; i++) {
+      const row = usersData[i];
+      try {
+        const { firstName, lastName, email, password, userType = 'TENANT_USER', phone, loginName, department } = row;
+        if (!firstName || !lastName || !email || !password) {
+          results.push({ row: i + 1, email, status: 'failed', error: 'Missing required fields' });
+          continue;
+        }
+        const exists = await User.findOne({ email: email.toLowerCase() });
+        if (exists) {
+          results.push({ row: i + 1, email, status: 'failed', error: 'Email already exists' });
+          continue;
+        }
+        const newUser = await User.create({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.toLowerCase().trim(),
+          password,
+          userType,
+          tenant: tenantId,
+          phone: phone || '',
+          loginName: loginName || `${firstName}.${lastName}`.toLowerCase().replace(/\s+/g, ''),
+          department: department || '',
+          addedBy: req.user._id,
+          isActive: true,
+          isProfileComplete: true,
+          emailVerified: true,
+        });
+        results.push({ row: i + 1, email, status: 'created', userId: newUser._id });
+      } catch (err) {
+        results.push({ row: i + 1, email: row.email, status: 'failed', error: err.message });
+      }
+    }
+
+    const created = results.filter(r => r.status === 'created').length;
+    const failed  = results.filter(r => r.status === 'failed').length;
+    return res.status(200).json({ success: true, message: `${created} created, ${failed} failed`, results });
+  } catch (error) {
+    console.error('Bulk create error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getUsers,
   getUser,
   createUser,
+  bulkCreateUsers,
   updateUser,
   deleteUser,
   assignRoles,

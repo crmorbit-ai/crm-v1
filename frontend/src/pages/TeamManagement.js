@@ -44,6 +44,31 @@ const TYPE_CFG = {
 
 const SVG_EYE_ON  = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
 const SVG_EYE_OFF = <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
+const SVG_COPY = <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>;
+const SVG_CHECK = <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>;
+
+const Label   = ({children}) => <div style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:6}}>{children}</div>;
+const Inp     = ({style={}, ...p}) => <input {...p} className="xInp" style={{width:'100%',padding:'10px 13px',border:'1.5px solid #e2e8f0',borderRadius:10,fontSize:14,color:'#0f172a',background:'#fff',outline:'none',boxSizing:'border-box',...style}} />;
+const PriBtn  = ({children,style={}, ...p}) => <button {...p} className="xPriBtn" style={{width:'100%',padding:'12px',border:'none',borderRadius:11,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,boxShadow:'0 4px 14px rgba(79,70,229,0.35)',transition:'all 0.2s',marginTop:8,...style}}>{children}</button>;
+const CopyBtn = ({fkey, val, copied, onCopy, style={}}) => (
+  <button type="button" title="Copy" onClick={()=>onCopy(fkey, val)}
+    style={{position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',
+      background:copied===fkey?'#dcfce7':'#f8fafc',border:`1px solid ${copied===fkey?'#86efac':'#cbd5e1'}`,
+      borderRadius:5,cursor:'pointer',color:copied===fkey?'#16a34a':'#475569',
+      width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',
+      transition:'all 0.15s',flexShrink:0,...style}}>
+    {copied===fkey?SVG_CHECK:SVG_COPY}
+  </button>
+);
+const CopyBtnInline = ({fkey, val, copied, onCopy}) => (
+  <button type="button" title="Copy" onClick={()=>onCopy(fkey, val)}
+    style={{background:copied===fkey?'#dcfce7':'#f8fafc',border:`1px solid ${copied===fkey?'#86efac':'#cbd5e1'}`,
+      borderRadius:5,cursor:'pointer',color:copied===fkey?'#16a34a':'#475569',
+      width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',
+      transition:'all 0.15s',flexShrink:0}}>
+    {copied===fkey?SVG_CHECK:SVG_COPY}
+  </button>
+);
 
 const TeamManagement = () => {
   const { user } = useAuth();
@@ -63,7 +88,15 @@ const TeamManagement = () => {
   const [subStep, setSubStep]         = useState(null);
   const [qRole, setQRole]   = useState({ name:'', description:'', permissions:[], forUserTypes:['TENANT_USER','TENANT_MANAGER'] });
   const [qGroup, setQGroup] = useState({ name:'', description:'' });
-  const [userForm, setUserForm] = useState({ firstName:'', lastName:'', email:'', password:'', userType:'TENANT_USER', phone:'', loginName:'', department:'', viewingPin:'', roles:[], groups:[] });
+  const [userForm, setUserForm] = useState({ firstName:'', lastName:'', email:'', personalEmail:'', officeEmail:'', password:'', userType:'TENANT_USER', phone:'', alternatePhone:'', loginName:'', department:'', subDepartment:'', reportingManager:'', viewingPin:'', roles:[], groups:[] });
+  const [copied, setCopied] = useState('');
+  const copyVal = (key, val) => { if(!val) return; navigator.clipboard.writeText(val).then(()=>{ setCopied(key); setTimeout(()=>setCopied(''),1500); }); };
+  const [bulkModal, setBulkModal]     = useState(false);
+  const [bulkRows, setBulkRows]       = useState([]);
+  const [bulkError, setBulkError]     = useState('');
+  const [bulkResult, setBulkResult]   = useState(null);
+  const [bulkSubmitting, setBulkSubmitting] = useState(false);
+  const [reportTab, setReportTab]       = useState('activity');
   const [showPwd, setShowPwd] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [roleForm, setRoleForm]   = useState({ name:'', description:'', permissions:[], forUserTypes:['TENANT_USER','TENANT_MANAGER'] });
@@ -130,8 +163,8 @@ const TeamManagement = () => {
     setShowRoleDD(false); setShowGroupDD(false); setShowPwd(false); setShowPin(false);
     const ug = u ? groups.filter(g=>g.members?.some(m=>(m._id||m)===u._id)).map(g=>g._id) : [];
     setUserForm(u
-      ? {firstName:u.firstName,lastName:u.lastName,email:u.email,password:'',userType:u.userType,phone:u.phone||'',loginName:u.loginName||'',department:u.department||'',viewingPin:'',roles:u.roles?.map(r=>r._id)||[],groups:ug}
-      : {firstName:'',lastName:'',email:'',password:'',userType:'TENANT_USER',phone:'',loginName:'',department:'',viewingPin:'',roles:[],groups:[]});
+      ? {firstName:u.firstName,lastName:u.lastName,email:u.email,personalEmail:u.personalEmail||'',officeEmail:u.officeEmail||'',password:'',userType:u.userType,phone:u.phone||'',alternatePhone:u.alternatePhone||'',loginName:u.loginName||'',department:u.department||'',subDepartment:u.subDepartment||'',reportingManager:u.reportingManager?._id||u.reportingManager||'',viewingPin:'',roles:u.roles?.map(r=>r._id)||[],groups:ug}
+      : {firstName:'',lastName:'',email:'',personalEmail:'',officeEmail:'',password:'',userType:'TENANT_USER',phone:'',alternatePhone:'',loginName:'',department:'',subDepartment:'',reportingManager:'',viewingPin:'',roles:[],groups:[]});
     setShowPanel(true);
   };
   const openRolePanel  = (r=null) => { setPanelMode('role');  setEditingItem(r); setRoleForm(r?{name:r.name,description:r.description||'',permissions:r.permissions||[],forUserTypes:r.forUserTypes||['TENANT_USER','TENANT_MANAGER']}:{name:'',description:'',permissions:[],forUserTypes:['TENANT_USER','TENANT_MANAGER']}); setShowPanel(true); };
@@ -151,6 +184,17 @@ const TeamManagement = () => {
   const handleDeleteUser  = async u => { if(!window.confirm(`Delete ${u.firstName}?`)) return; try{ await userService.deleteUser(u._id);  showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
   const handleDeleteRole  = async r => { if(!window.confirm(`Delete "${r.name}"?`)) return; try{ await roleService.deleteRole(r._id);   showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
   const handleDeleteGroup = async g => { if(!window.confirm(`Delete "${g.name}"?`)) return; try{ await groupService.deleteGroup(g._id); showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
+
+  const toggleActive = async (u) => {
+    const action = u.isActive ? 'deactivate' : 'activate';
+    if(!window.confirm(`${u.isActive?'Deactivate':'Activate'} user "${u.firstName} ${u.lastName}"?`)) return;
+    try {
+      await userService.updateUser(u._id, { isActive: !u.isActive });
+      showMsg(`User ${action}d successfully`);
+      loadData();
+      if(selectedUser?._id === u._id) setSelectedUser(p => ({...p, isActive: !u.isActive}));
+    } catch(e) { if(e?.isPermissionDenied) return; showMsg(e.message||'Failed', true); }
+  };
 
   const openResetModal = u => { setResetModal({open:true,userId:u._id,userName:`${u.firstName} ${u.lastName}`}); setResetForm({newPassword:'',confirmPassword:''}); setShowRPwd(false); };
   const handleReset = async e => {
@@ -199,10 +243,7 @@ const TeamManagement = () => {
     setUserStep(2);
   };
 
-  /* ─ shared tiny components ──────────────────────────────────── */
-  const Label = ({children}) => <div style={{fontSize:11,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:6}}>{children}</div>;
-  const Inp   = ({style={}, ...p}) => <input {...p} className="xInp" style={{width:'100%',padding:'10px 13px',border:'1.5px solid #e2e8f0',borderRadius:10,fontSize:14,color:'#0f172a',background:'#fff',outline:'none',boxSizing:'border-box',...style}} />;
-  const PriBtn = ({children,style={}, ...p}) => <button {...p} className="xPriBtn" style={{width:'100%',padding:'12px',border:'none',borderRadius:11,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6,boxShadow:'0 4px 14px rgba(79,70,229,0.35)',transition:'all 0.2s',marginTop:8,...style}}>{children}</button>;
+  /* ─ copy helper (state lives here, passed as props to outside components) ─ */
 
   const PermTable = ({hasP,toggleP}) => (
     <div style={{border:'1.5px solid #e2e8f0',borderRadius:10,overflow:'hidden',maxHeight:260,overflowY:'auto'}}>
@@ -283,6 +324,36 @@ const TeamManagement = () => {
         .xFadeUp  { animation:xFadeUp  0.2s ease; }
         .xModalIn { animation:xModalIn 0.2s ease; }
         .xToastIn { animation:xToastIn 0.2s ease; }
+
+        /* ── RESPONSIVE ── */
+        @media (max-width:900px){
+          .xHeroTabs   { flex-wrap:wrap !important; gap:4px !important; }
+          .xStatsRow   { grid-template-columns:repeat(2,1fr) !important; }
+          .xActBtns    { flex-wrap:wrap !important; }
+          .xContentRow { flex-direction:column !important; align-items:stretch !important; }
+          .xPanel      { width:100% !important; max-width:100% !important; }
+          .xTableWrap  { overflow-x:auto; }
+          .xRptStats   { grid-template-columns:repeat(2,1fr) !important; }
+          .xRptLayout  { flex-direction:column !important; }
+          .xRptSidebar { width:100% !important; flex-direction:row !important; flex-wrap:nowrap !important; overflow-x:auto; padding:8px 12px !important; gap:4px !important; border-right:none !important; border-bottom:1px solid rgba(255,255,255,0.1); }
+          .xRptSidebar > div:first-child { display:none !important; }
+          .xRptSidebar > div:last-child  { display:none !important; }
+          .xRptSideBtn { flex-direction:column !important; padding:8px 12px !important; min-width:80px; border-left:none !important; border-bottom:3px solid transparent; }
+          .xRptSideBtn.xRptActive { border-left:none !important; border-bottom:3px solid #10b981 !important; background:rgba(255,255,255,0.12) !important; }
+          .xRptSideBtnDesc { display:none !important; }
+          .xDeptGrid   { grid-template-columns:1fr !important; }
+          .xSumStrip   { grid-template-columns:1fr !important; }
+          .xRptSumCards { grid-template-columns:repeat(2,1fr) !important; }
+          .xBulkGrid   { grid-template-columns:1fr !important; }
+        }
+        @media (max-width:540px){
+          .xStatsRow   { grid-template-columns:1fr !important; }
+          .xRptStats   { grid-template-columns:repeat(2,1fr) !important; }
+          .xRptSumCards { grid-template-columns:1fr !important; }
+          .xDeptGrid   { grid-template-columns:1fr !important; }
+          .xHeroTitle  { font-size:17px !important; }
+          .xHeroSub    { display:none !important; }
+        }
       `}</style>
 
       {/* ── toast ──────────────────────────────────────────── */}
@@ -306,17 +377,15 @@ const TeamManagement = () => {
         <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(rgba(255,255,255,0.04) 1px,transparent 1px)',backgroundSize:'26px 26px',pointerEvents:'none'}} />
 
         <div style={{padding:'14px 20px 0',position:'relative',zIndex:1}}>
-          <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.38)',letterSpacing:'2px',textTransform:'uppercase',marginBottom:5}}>Organisation / Team</div>
-          <h2 style={{margin:0,fontSize:21,fontWeight:900,color:'#fff',letterSpacing:'-0.3px',lineHeight:1.15}}>
-            {activeTab==='users'?<>Team <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Management</span></>
-             :activeTab==='roles'?<>Roles &amp; <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Permissions</span></>
-             :<>User <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Groups</span></>}
+          <div className="xHeroSub" style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.38)',letterSpacing:'2px',textTransform:'uppercase',marginBottom:5}}>Organisation / Team</div>
+          <h2 className="xHeroTitle" style={{margin:0,fontSize:21,fontWeight:900,color:'#fff',letterSpacing:'-0.3px',lineHeight:1.15}}>
+            <>Team <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Management</span></>
           </h2>
         </div>
 
         {/* tab pills */}
-        <div style={{padding:'10px 20px 14px',position:'relative',zIndex:1,display:'flex',gap:6}}>
-          {[{k:'users',l:'Members',c:users.length},{k:'roles',l:'Roles',c:roles.length},{k:'groups',l:'Groups',c:groups.length}].map(t=>(
+        <div className="xHeroTabs" style={{padding:'10px 20px 14px',position:'relative',zIndex:1,display:'flex',gap:6}}>
+          {[{k:'users',l:'Members',c:users.length},{k:'roles',l:'Roles',c:roles.length},{k:'groups',l:'Groups',c:groups.length},{k:'reports',l:'📊 Reports',c:''}].map(t=>(
             <button key={t.k} className={`xTabBtn${activeTab===t.k?' xActive':''}`} onClick={()=>setActiveTab(t.k)}
               style={{padding:'7px 16px',borderRadius:9,border:'1px solid rgba(255,255,255,0.13)',background:'transparent',color:'rgba(255,255,255,0.55)',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
               {t.l}
@@ -329,7 +398,7 @@ const TeamManagement = () => {
       {/* ════════════════════════════════════════════
           STATS ROW — each card has its own dark glass bg
       ════════════════════════════════════════════ */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:12}}>
+      {activeTab!=='reports'&&<div className="xStatsRow" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:12}}>
         {[
           {k:'users',  ico:'👥', label:'Team Members', val:users.length,  bg:'linear-gradient(135deg,#eef2ff 0%,#e0e7ff 100%)', numColor:'#4338ca', labelColor:'#6366f1', iconBg:'linear-gradient(135deg,#818cf8,#6366f1)', border:'#c7d2fe'},
           {k:'roles',  ico:'🛡️', label:'Custom Roles', val:roles.length,  bg:'linear-gradient(135deg,#ecfeff 0%,#cffafe 100%)', numColor:'#0e7490', labelColor:'#06b6d4', iconBg:'linear-gradient(135deg,#22d3ee,#06b6d4)', border:'#a5f3fc'},
@@ -347,10 +416,10 @@ const TeamManagement = () => {
             {activeTab===s.k&&<div style={{position:'absolute',bottom:0,left:0,right:0,height:2.5,background:s.iconBg}} />}
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* ADD BUTTON — left aligned below stats */}
-      <div style={{marginBottom:12}}>
+      {activeTab!=='reports'&&<div className="xActBtns" style={{marginBottom:12,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <button
           onClick={()=>activeTab==='users'?openUserPanel():activeTab==='roles'?openRolePanel():openGroupPanel()}
           style={{background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',border:'none',padding:'8px 18px',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:8,boxShadow:'0 4px 18px rgba(79,70,229,0.38)',transition:'all 0.2s'}}
@@ -360,16 +429,24 @@ const TeamManagement = () => {
           <span style={{width:22,height:22,background:'rgba(255,255,255,0.2)',borderRadius:6,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,fontWeight:300,lineHeight:1}}>+</span>
           Add {activeTab==='users'?'Member':activeTab==='roles'?'Role':'Group'}
         </button>
-      </div>
+        {activeTab==='users'&&(
+          <button onClick={()=>{setBulkModal(true);setBulkRows([]);setBulkError('');setBulkResult(null);}}
+            style={{background:'#fff',color:'#374151',border:'1.5px solid #e2e8f0',padding:'8px 16px',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:7,transition:'all 0.2s'}}
+            onMouseEnter={e=>{e.currentTarget.style.borderColor='#6366f1';e.currentTarget.style.color='#4f46e5';}}
+            onMouseLeave={e=>{e.currentTarget.style.borderColor='#e2e8f0';e.currentTarget.style.color='#374151';}}>
+            <span style={{fontSize:15}}>📥</span> Bulk Import
+          </button>
+        )}
+      </div>}
 
       {/* ════════════════════════════════════════════
           CONTENT — form (optional) + table
       ════════════════════════════════════════════ */}
-      <div style={{display:'flex',gap:18,alignItems:'flex-start'}}>
+      {activeTab!=='reports'&&<div className="xContentRow" style={{display:'flex',gap:18,alignItems:'flex-start'}}>
 
         {/* ─── INLINE USER FORM ────────────────────────────── */}
         {showPanel&&panelMode==='user'&&(
-          <div className="xFadeUp" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.13)',overflow:'hidden',position:'relative'}}>
+          <div className="xFadeUp xPanel" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.13)',overflow:'hidden',position:'relative'}}>
             {/* drag handle */}
             <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20,background:'transparent'}} title="Drag to resize" />
             {/* header */}
@@ -432,53 +509,132 @@ const TeamManagement = () => {
                     </div>
                   </div>
 
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <div style={{marginBottom:12}}>
+                  {/* Row 1: First Name + Last Name */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div>
                       <Label>First Name *</Label>
                       <Inp value={userForm.firstName} onChange={e=>{const f=e.target.value;setUserForm(p=>({...p,firstName:f,loginName:(f+(p.lastName?'.'+p.lastName:'')).toLowerCase().replace(/\s+/g,'')}));}} placeholder="John" />
                     </div>
-                    <div style={{marginBottom:12}}>
+                    <div>
                       <Label>Last Name *</Label>
                       <Inp value={userForm.lastName} onChange={e=>{const l=e.target.value;setUserForm(p=>({...p,lastName:l,loginName:((p.firstName?p.firstName+'.':'')+l).toLowerCase().replace(/\s+/g,'')}));}} placeholder="Doe" />
                     </div>
                   </div>
 
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <div style={{marginBottom:12}}>
-                      <Label>Email *</Label>
-                      <Inp type="email" value={userForm.email} onChange={e=>setUserForm({...userForm,email:e.target.value})} placeholder="john@co.com" disabled={!!editingItem} />
+                  {/* Row 2: Login Name + Password */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div>
+                      <Label>Login Name{userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)&&<span style={{textTransform:'none',fontWeight:400,color:'#ef4444',marginLeft:6}}>— taken</span>}</Label>
+                      <div style={{position:'relative'}}>
+                        <Inp style={{paddingRight:34,...(userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)?{borderColor:'#ef4444'}:{})}} value={userForm.loginName} onChange={e=>setUserForm({...userForm,loginName:e.target.value.toLowerCase().replace(/\s+/g,'')})} placeholder="john.doe" />
+                        <CopyBtn fkey="loginName" val={userForm.loginName} copied={copied} onCopy={copyVal} />
+                      </div>
                     </div>
-                    {!editingItem&&(
-                      <div style={{marginBottom:12}}>
-                        <Label>Password *</Label>
-                        <div style={{position:'relative'}}>
-                          <Inp type={showPwd?'text':'password'} style={{paddingRight:34}} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} placeholder="Min. 4 chars" />
-                          <button type="button" onClick={()=>setShowPwd(p=>!p)} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
+                    <div>
+                      <Label>Password {editingItem?<span style={{textTransform:'none',fontWeight:400,color:'#94a3b8'}}>— leave blank</span>:'*'}</Label>
+                      <div style={{position:'relative'}}>
+                        <Inp type={showPwd?'text':'password'} style={{paddingRight:56}} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} placeholder="Min. 4 chars" />
+                        <div style={{position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',display:'flex',gap:4,alignItems:'center'}}>
+                          <CopyBtnInline fkey="password" val={userForm.password} copied={copied} onCopy={copyVal} />
+                          <button type="button" onClick={()=>setShowPwd(p=>!p)} style={{background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
                         </div>
                       </div>
-                    )}
+                    </div>
                   </div>
 
-                  <div style={{marginBottom:12}}>
-                    <Label>Login Name{userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)&&<span style={{textTransform:'none',fontWeight:400,color:'#ef4444',marginLeft:6}}>— taken</span>}</Label>
-                    <Inp style={userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)?{borderColor:'#ef4444'}:{}} value={userForm.loginName} onChange={e=>setUserForm({...userForm,loginName:e.target.value.toLowerCase().replace(/\s+/g,'')})} placeholder="john.doe" />
+                  {/* Row 3: Login Email (used for login) */}
+                  <div style={{marginBottom:10}}>
+                    <Label>Email * <span style={{textTransform:'none',fontWeight:400,color:'#94a3b8',letterSpacing:0}}>— used for login</span></Label>
+                    <div style={{position:'relative'}}>
+                      <Inp type="email" style={{paddingRight:70}} value={userForm.email} onChange={e=>setUserForm({...userForm,email:e.target.value})} placeholder="john@example.com" disabled={!!editingItem} />
+                      <CopyBtn fkey="email" val={userForm.email} copied={copied} onCopy={copyVal} />
+                    </div>
                   </div>
 
-                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
-                    <div style={{marginBottom:12}}>
+                  {/* Row 4: Personal Email + Office Email */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div>
+                      <Label>Personal Email</Label>
+                      <div style={{position:'relative'}}>
+                        <Inp type="email" style={{paddingRight:70}} value={userForm.personalEmail} onChange={e=>setUserForm({...userForm,personalEmail:e.target.value})} placeholder="john@gmail.com" />
+                        <CopyBtn fkey="personalEmail" val={userForm.personalEmail} copied={copied} onCopy={copyVal} />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Work Email</Label>
+                      <div style={{position:'relative'}}>
+                        <Inp type="email" style={{paddingRight:70}} value={userForm.officeEmail} onChange={e=>setUserForm({...userForm,officeEmail:e.target.value})} placeholder="john@company.com" />
+                        <CopyBtn fkey="officeEmail" val={userForm.officeEmail} copied={copied} onCopy={copyVal} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Row 4: Department + Sub Department */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div>
                       <Label>Department</Label>
                       <select className="xInp" style={{width:'100%',padding:'8px 28px 8px 11px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:13,color:userForm.department?'#0f172a':'#94a3b8',background:'#fff',outline:'none',boxSizing:'border-box',appearance:'none',backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",backgroundRepeat:'no-repeat',backgroundPosition:'right 10px center'}}
-                        value={userForm.department} onChange={e=>setUserForm({...userForm,department:e.target.value})}>
+                        value={userForm.department} onChange={e=>setUserForm({...userForm,department:e.target.value,subDepartment:''})}>
                         <option value="">— Select —</option>
-                        {['Sales','Marketing','Finance','Operations','Human Resources','IT','Customer Support','Product','Legal','Administration'].map(d=><option key={d}>{d}</option>)}
+                        {['Sales','Marketing','Finance','Operations','Human Resources','IT','Customer Support','Product','Legal','Administration','Others'].map(d=><option key={d}>{d}</option>)}
                       </select>
                     </div>
-                    <div style={{marginBottom:12}}>
+                    <div>
+                      <Label>Sub Department</Label>
+                      <Inp value={userForm.subDepartment} onChange={e=>setUserForm({...userForm,subDepartment:e.target.value})} placeholder="e.g. Inside Sales" />
+                    </div>
+                  </div>
+
+                  {/* Row 5: Phone + Alternate Phone */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div>
                       <Label>Phone</Label>
                       <Inp value={userForm.phone} onChange={e=>setUserForm({...userForm,phone:e.target.value})} placeholder="+91 00000 00000" />
                     </div>
+                    <div>
+                      <Label>Alternate Phone</Label>
+                      <Inp value={userForm.alternatePhone} onChange={e=>setUserForm({...userForm,alternatePhone:e.target.value})} placeholder="+91 00000 00000" />
+                    </div>
                   </div>
 
+                  {/* Row 6: Reporting Manager + Created By */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div>
+                      <Label>Reporting Manager</Label>
+                      <Inp value={userForm.reportingManager} onChange={e=>setUserForm({...userForm,reportingManager:e.target.value})} placeholder="Enter manager name" />
+                    </div>
+                    <div>
+                      <Label>Created By</Label>
+                      {editingItem ? (
+                        <div style={{padding:'8px 12px',border:'1.5px solid #f1f5f9',borderRadius:10,background:'#f8fafc',minHeight:42,display:'flex',alignItems:'center',gap:8}}>
+                          {(() => {
+                            const creator = editingItem.addedBy;
+                            const name = creator ? `${creator.firstName||''} ${creator.lastName||''}`.trim() : user?.firstName ? `${user.firstName} ${user.lastName}`.trim() : '—';
+                            const initial = name[0]?.toUpperCase() || '?';
+                            const dt = editingItem.createdAt ? new Date(editingItem.createdAt) : null;
+                            const dateStr = dt ? `${dt.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})} ${dt.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}` : '';
+                            return <>
+                              <span style={{width:24,height:24,borderRadius:'50%',background:avGrad(initial),display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff',flexShrink:0}}>{initial}</span>
+                              <div style={{minWidth:0}}>
+                                <div style={{fontSize:12,fontWeight:700,color:'#0f172a',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{name}</div>
+                                {dateStr&&<div style={{fontSize:10,color:'#94a3b8',marginTop:1}}>{dateStr}</div>}
+                              </div>
+                            </>;
+                          })()}
+                        </div>
+                      ) : (
+                        <div style={{padding:'8px 12px',border:'1.5px solid #f1f5f9',borderRadius:10,background:'#f8fafc',minHeight:42,display:'flex',alignItems:'center',gap:8}}>
+                          <span style={{width:24,height:24,borderRadius:'50%',background:avGrad(user?.firstName||'?'),display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:800,color:'#fff',flexShrink:0}}>{(user?.firstName||'?')[0].toUpperCase()}</span>
+                          <div>
+                            <div style={{fontSize:12,fontWeight:700,color:'#0f172a'}}>{user?.firstName} {user?.lastName}</div>
+                            <div style={{fontSize:10,color:'#94a3b8'}}>{new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})} {new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 7: Viewing PIN */}
                   <div style={{marginBottom:14}}>
                     <Label>Viewing PIN (4 digits){editingItem&&<span style={{textTransform:'none',fontWeight:400,color:'#94a3b8',marginLeft:6}}>leave blank to keep</span>}</Label>
                     <div style={{position:'relative'}}>
@@ -573,7 +729,7 @@ const TeamManagement = () => {
 
         {/* ─── ROLE / GROUP PANEL (left, same flex row as table) ── */}
         {showPanel&&panelMode!=='user'&&(
-          <div className="xFadeUp" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.13)',display:'flex',flexDirection:'column',maxHeight:'calc(100vh - 160px)',overflow:'hidden',position:'relative'}}>
+          <div className="xFadeUp xPanel" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.13)',display:'flex',flexDirection:'column',maxHeight:'calc(100vh - 160px)',overflow:'hidden',position:'relative'}}>
             {/* drag handle */}
             <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20}} />
             <div style={{background:'linear-gradient(135deg,#4f46e5 0%,#6d28d9 60%,#7c3aed 100%)',padding:'13px 18px 11px',position:'relative',overflow:'hidden',flexShrink:0}}>
@@ -632,7 +788,7 @@ const TeamManagement = () => {
           const tc=TYPE_CFG[su.userType]||TYPE_CFG.TENANT_USER;
           const userGroups=groups.filter(g=>g.members?.some(m=>(m._id||m)===su._id));
           return(
-            <div className="xFadeUp" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.12)',overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
+            <div className="xFadeUp xPanel" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(79,70,229,0.12)',overflow:'hidden',display:'flex',flexDirection:'column',position:'relative'}}>
               {/* drag handle */}
               <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20}} />
               {/* header */}
@@ -653,44 +809,73 @@ const TeamManagement = () => {
                 </div>
               </div>
               {/* details body */}
-              <div className="xScroll" style={{padding:'14px 16px',overflowY:'auto',flex:1}}>
-                {[
-                  {ico:'📋',label:'Login Name', val:su.loginName||'—'},
-                  {ico:'🏢',label:'Department',  val:su.department||'—'},
-                  {ico:'📞',label:'Phone',        val:su.phone||'—'},
-                  {ico:'🕐',label:'Last Login',   val:su.lastLogin?new Date(su.lastLogin).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Never'},
-                  {ico:'📅',label:'Joined',        val:new Date(su.createdAt).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})},
-                ].map(row=>(
-                  <div key={row.label} style={{display:'flex',alignItems:'flex-start',gap:10,padding:'9px 0',borderBottom:'1px solid #f8fafc'}}>
-                    <span style={{fontSize:14,flexShrink:0,marginTop:1}}>{row.ico}</span>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:2}}>{row.label}</div>
-                      <div style={{fontSize:12,fontWeight:600,color:'#0f172a',wordBreak:'break-all'}}>{row.val}</div>
-                    </div>
-                  </div>
-                ))}
+              <div className="xScroll" style={{padding:'12px 14px',overflowY:'auto',flex:1}}>
 
-                {su.roles?.length>0&&(
-                  <div style={{marginTop:10}}>
-                    <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:6}}>Roles</div>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                      {su.roles.map(r=><span key={r._id} style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'linear-gradient(135deg,#f5f3ff,#ede9fe)',color:'#6d28d9',border:'1px solid #ddd6fe'}}>{r.name}</span>)}
+                {/* Section helper */}
+                {(()=>{
+                  const SLabel = ({children}) => <div style={{fontSize:9,fontWeight:800,color:'#6366f1',textTransform:'uppercase',letterSpacing:'1px',margin:'12px 0 6px',paddingBottom:4,borderBottom:'1.5px solid #e0e7ff'}}>{children}</div>;
+                  const DRow = ({ico,label,val}) => val&&val!=='—'?(
+                    <div style={{display:'flex',alignItems:'flex-start',gap:8,padding:'6px 0',borderBottom:'1px solid #f8fafc'}}>
+                      <span style={{fontSize:13,flexShrink:0,marginTop:1,width:18,textAlign:'center'}}>{ico}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.6px',marginBottom:1}}>{label}</div>
+                        <div style={{fontSize:12,fontWeight:600,color:'#0f172a',wordBreak:'break-all'}}>{val}</div>
+                      </div>
                     </div>
-                  </div>
-                )}
+                  ):null;
 
-                {userGroups.length>0&&(
-                  <div style={{marginTop:10}}>
-                    <div style={{fontSize:9,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.7px',marginBottom:6}}>Groups</div>
-                    <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                      {userGroups.map(g=><span key={g._id} style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'#ecfdf5',color:'#065f46',border:'1px solid #6ee7b7'}}>{g.name}</span>)}
-                    </div>
-                  </div>
-                )}
+                  return <>
+                    <SLabel>Account Info</SLabel>
+                    <DRow ico="📋" label="Login Name"    val={su.loginName||'—'} />
+                    <DRow ico="✉️" label="Login Email"   val={su.email||'—'} />
+                    <DRow ico="📧" label="Personal Email" val={su.personalEmail||'—'} />
+                    <DRow ico="🏢" label="Work Email"    val={su.officeEmail||'—'} />
 
-                <div style={{marginTop:14,display:'flex',gap:8}}>
-                  <button onClick={()=>{setSelectedUser(null);openUserPanel(su);}} style={{flex:1,padding:'8px 0',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>Edit</button>
-                  {su._id!==user._id&&<button onClick={()=>{setSelectedUser(null);openResetModal(su);}} style={{flex:1,padding:'8px 0',border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fff',color:'#64748b',fontSize:12,fontWeight:700,cursor:'pointer'}}>Reset Pwd</button>}
+                    <SLabel>Contact</SLabel>
+                    <DRow ico="📞" label="Phone"          val={su.phone||'—'} />
+                    <DRow ico="📱" label="Alternate Phone" val={su.alternatePhone||'—'} />
+
+                    <SLabel>Organisation</SLabel>
+                    <DRow ico="🏛️" label="Department"     val={su.department||'—'} />
+                    <DRow ico="📂" label="Sub Department"  val={su.subDepartment||'—'} />
+                    <DRow ico="👔" label="Reporting Manager" val={su.reportingManager||'—'} />
+
+                    {su.roles?.length>0&&(
+                      <div style={{marginTop:10}}>
+                        <SLabel>Roles</SLabel>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                          {su.roles.map(r=><span key={r._id} style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'linear-gradient(135deg,#f5f3ff,#ede9fe)',color:'#6d28d9',border:'1px solid #ddd6fe'}}>{r.name}</span>)}
+                        </div>
+                      </div>
+                    )}
+
+                    {userGroups.length>0&&(
+                      <div style={{marginTop:10}}>
+                        <SLabel>Groups</SLabel>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+                          {userGroups.map(g=><span key={g._id} style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'#ecfdf5',color:'#065f46',border:'1px solid #6ee7b7'}}>{g.name}</span>)}
+                        </div>
+                      </div>
+                    )}
+                  </>;
+                })()}
+
+                <div style={{marginTop:14,display:'flex',flexDirection:'column',gap:7}}>
+                  <div style={{display:'flex',gap:7}}>
+                    <button onClick={()=>{setSelectedUser(null);openUserPanel(su);}} style={{flex:1,padding:'8px 0',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>✏️ Edit</button>
+                    {su._id!==user._id&&<button onClick={()=>{setSelectedUser(null);openResetModal(su);}} style={{flex:1,padding:'8px 0',border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fff',color:'#64748b',fontSize:12,fontWeight:700,cursor:'pointer'}}>🔑 Reset Pwd</button>}
+                  </div>
+                  {su._id!==user._id&&(
+                    <button onClick={()=>toggleActive(su)} style={{
+                      width:'100%',padding:'8px 0',borderRadius:9,fontSize:12,fontWeight:700,cursor:'pointer',
+                      border:`1.5px solid ${su.isActive?'#fde68a':'#bbf7d0'}`,
+                      background:su.isActive?'#fffbeb':'#f0fdf4',
+                      color:su.isActive?'#b45309':'#15803d',
+                      display:'flex',alignItems:'center',justifyContent:'center',gap:6
+                    }}>
+                      {su.isActive ? '⏸ Deactivate User' : '▶ Activate User'}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -700,7 +885,7 @@ const TeamManagement = () => {
         {/* ════════════════════════════════════════════
             TABLE CARD — premium compact rows
         ════════════════════════════════════════════ */}
-        <div style={{flex:1,minWidth:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 2px 4px rgba(0,0,0,0.04),0 10px 32px rgba(79,70,229,0.07)',overflow:'hidden'}}>
+        <div className="xTableWrap" style={{flex:1,minWidth:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 2px 4px rgba(0,0,0,0.04),0 10px 32px rgba(79,70,229,0.07)',overflow:'hidden'}}>
           {/* table card header */}
           <div style={{padding:'10px 14px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
             <div style={{flex:1,minWidth:160}}>
@@ -791,6 +976,10 @@ const TeamManagement = () => {
                             style={{height:26,padding:'0 10px',borderRadius:7,border:'1px solid #e0e7ff',background:'#eef2ff',color:'#4f46e5',cursor:'pointer',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4,transition:'all 0.15s',whiteSpace:'nowrap'}}>
                             ✏️ Edit
                           </button>
+                          {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();toggleActive(u);}} title={u.isActive?'Deactivate':'Activate'}
+                            style={{height:26,padding:'0 9px',borderRadius:7,border:`1px solid ${u.isActive?'#fde68a':'#bbf7d0'}`,background:u.isActive?'#fffbeb':'#f0fdf4',color:u.isActive?'#b45309':'#15803d',cursor:'pointer',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4,transition:'all 0.15s',whiteSpace:'nowrap'}}>
+                            {u.isActive?'⏸ Deactivate':'▶ Activate'}
+                          </button>}
                           {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();openResetModal(u);}} title="Reset password"
                             style={{height:26,width:26,borderRadius:7,border:'1px solid #fef3c7',background:'#fffbeb',color:'#d97706',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,transition:'all 0.15s'}}>🔑</button>}
                           {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();handleDeleteUser(u);}} title="Delete"
@@ -879,7 +1068,7 @@ const TeamManagement = () => {
           )}
         </div>
 
-      </div>
+      </div>}
 
       {/* ════════════════════════════════════════════
           RESET PASSWORD MODAL
@@ -917,6 +1106,681 @@ const TeamManagement = () => {
                   <PriBtn type="submit" disabled={submitting} style={{flex:1,marginTop:0}}>{submitting?'Resetting...':'Reset Password'}</PriBtn>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════ REPORTS PAGE (full tab) ══════════ */}
+      {activeTab==='reports'&&(()=>{
+        const now   = new Date();
+        const month = now.getMonth();
+        const year  = now.getFullYear();
+
+        // ── helpers ──
+        const daysSince = d => d ? Math.floor((Date.now()-new Date(d))/86400000) : null;
+        const fmtDate   = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
+        const fmtDT     = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})+' '+new Date(d).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '—';
+
+        // ── report data ──
+        const activityData = [...users].sort((a,b)=>{ const da=a.lastLogin?new Date(a.lastLogin):0,db=b.lastLogin?new Date(b.lastLogin):0; return db-da; });
+        const newUsersData = users.filter(u=>{ const d=new Date(u.createdAt); return d.getMonth()===month&&d.getFullYear()===year; });
+        const deptMap      = {};
+        users.forEach(u=>{ const d=u.department||'Unassigned'; if(!deptMap[d])deptMap[d]={total:0,active:0,inactive:0}; deptMap[d].total++; u.isActive?deptMap[d].active++:deptMap[d].inactive++; });
+        const deptData     = Object.entries(deptMap).sort((a,b)=>b[1].total-a[1].total);
+        const roleMap      = {};
+        users.forEach(u=>{ (u.roles||[]).forEach(r=>{ const n=r.name||r; if(!roleMap[n])roleMap[n]=0; roleMap[n]++; }); if(!u.roles||u.roles.length===0){ if(!roleMap['No Role'])roleMap['No Role']=0; roleMap['No Role']++; } });
+        const roleData     = Object.entries(roleMap).sort((a,b)=>b[1]-a[1]);
+
+        // ── CSV export ──
+        const exportCSV = (rows, cols, filename) => {
+          const header = cols.map(c=>c.label).join(',');
+          const body   = rows.map(r=>cols.map(c=>{ const v=c.val(r); return `"${String(v||'').replace(/"/g,'""')}"`; }).join(',')).join('\n');
+          const a=document.createElement('a'); a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(header+'\n'+body); a.download=filename+'.csv'; a.click();
+        };
+
+        const TH2 = {padding:'9px 14px',fontSize:10,fontWeight:800,color:'#94a3b8',textTransform:'uppercase',letterSpacing:'0.7px',textAlign:'left',whiteSpace:'nowrap',borderBottom:'1px solid #f1f5f9',background:'#f8fafc'};
+        const TD2 = {padding:'9px 14px',fontSize:12,color:'#374151',borderBottom:'1px solid #f8fafc',verticalAlign:'middle'};
+
+        const activeUsers   = users.filter(u=>u.isActive).length;
+        const inactiveUsers = users.length - activeUsers;
+        const newThisMonth  = users.filter(u=>{ const d=new Date(u.createdAt); return d.getMonth()===month&&d.getFullYear()===year; }).length;
+        const STAT_CARDS = [
+          {ico:'👥',label:'Total Members',  val:users.length,  tab:'list',     bg:'linear-gradient(180deg,#6366f1,#8b5cf6)', ibg:'#eef2ff', nc:'#4338ca', bc:'#6366f1', lbc:'#e0e7ff', sh:'rgba(99,102,241,0.22)'},
+          {ico:'✅',label:'Active Users',    val:activeUsers,   tab:'activity', bg:'linear-gradient(180deg,#10b981,#34d399)', ibg:'#ecfdf5', nc:'#065f46', bc:'#10b981', lbc:'#bbf7d0', sh:'rgba(16,185,129,0.22)'},
+          {ico:'⏸',label:'Inactive Users',  val:inactiveUsers, tab:'activity', bg:'linear-gradient(180deg,#f43f5e,#fb7185)', ibg:'#fff1f2', nc:'#be123c', bc:'#f43f5e', lbc:'#fecdd3', sh:'rgba(244,63,94,0.22)'},
+          {ico:'✨',label:'New This Month',  val:newThisMonth,  tab:'new',      bg:'linear-gradient(180deg,#f59e0b,#fbbf24)', ibg:'#fffbeb', nc:'#92400e', bc:'#f59e0b', lbc:'#fde68a', sh:'rgba(245,158,11,0.22)'},
+        ];
+
+        const SIDEBAR_ITEMS = [
+          {k:'activity',ico:'🕐',l:'User Activity',   desc:'Login history'},
+          {k:'list',    ico:'📋',l:'User List',        desc:'All users detail'},
+          {k:'dept',    ico:'🏛️',l:'Department-wise',  desc:'Dept breakdown'},
+          {k:'role',    ico:'🎭',l:'Role-wise',         desc:'Role distribution'},
+          {k:'new',     ico:'✨',l:'New Users',         desc:'Joined this month'},
+        ];
+
+        return(
+          <div style={{display:'flex',flexDirection:'column',gap:14}}>
+
+            {/* ── Summary stat cards ── */}
+            <div className="xRptStats" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:10}}>
+              {STAT_CARDS.map(s=>(
+                <div key={s.label} onClick={()=>setReportTab(s.tab)}
+                  style={{background:'#fff',borderRadius:12,padding:'10px 14px',border:`1.5px solid ${reportTab===s.tab?s.bc:s.lbc}`,boxShadow:reportTab===s.tab?`0 4px 16px ${s.sh}`:'0 1px 4px rgba(0,0,0,0.06)',cursor:'pointer',transition:'all 0.18s',display:'flex',alignItems:'center',gap:12,position:'relative',overflow:'hidden'}}
+                  onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-1px)';e.currentTarget.style.boxShadow=`0 6px 18px ${s.sh}`;}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='';e.currentTarget.style.boxShadow=reportTab===s.tab?`0 4px 16px ${s.sh}`:'0 1px 4px rgba(0,0,0,0.06)';}}>
+                  <div style={{position:'absolute',top:0,left:0,bottom:0,width:3,background:s.bg,borderRadius:'12px 0 0 12px'}} />
+                  <div style={{width:36,height:36,borderRadius:10,background:s.ibg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>{s.ico}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontSize:22,fontWeight:900,color:s.nc,lineHeight:1}}>{s.val}</div>
+                    <div style={{fontSize:10,fontWeight:700,color:'#64748b',marginTop:2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{s.label}</div>
+                  </div>
+                  {reportTab===s.tab&&<div style={{width:7,height:7,borderRadius:'50%',background:s.bc,flexShrink:0,boxShadow:`0 0 6px ${s.bc}`}} />}
+                </div>
+              ))}
+            </div>
+
+            {/* ── Main layout: sidebar + content ── */}
+            <div className="xRptLayout" style={{display:'flex',gap:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',overflow:'hidden',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 12px 30px rgba(79,70,229,0.08)',minHeight:500}}>
+
+              {/* Sidebar */}
+              <div className="xRptSidebar" style={{width:210,flexShrink:0,background:'linear-gradient(180deg,#0f0c29 0%,#1e1b4b 60%,#0d1b4b 100%)',padding:'20px 0',display:'flex',flexDirection:'column',gap:2}}>
+                <div style={{padding:'0 16px 14px',borderBottom:'1px solid rgba(255,255,255,0.07)',marginBottom:6}}>
+                  <div style={{fontSize:9,fontWeight:700,color:'rgba(255,255,255,0.35)',letterSpacing:'2px',textTransform:'uppercase'}}>Report Type</div>
+                </div>
+                {SIDEBAR_ITEMS.map(item=>{
+                  const active = reportTab===item.k;
+                  return(
+                    <button key={item.k} onClick={()=>setReportTab(item.k)}
+                      className={`xRptSideBtn${active?' xRptActive':''}`}
+                      style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',background:active?'rgba(255,255,255,0.1)':'transparent',border:'none',cursor:'pointer',textAlign:'left',transition:'all 0.15s',position:'relative',borderLeft:active?'3px solid #10b981':'3px solid transparent',marginLeft:0}}>
+                      <div style={{width:32,height:32,borderRadius:9,background:active?'rgba(16,185,129,0.2)':'rgba(255,255,255,0.07)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:15,flexShrink:0,transition:'all 0.15s'}}>{item.ico}</div>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:700,color:active?'#fff':'rgba(255,255,255,0.55)',transition:'color 0.15s'}}>{item.l}</div>
+                        <div className="xRptSideBtnDesc" style={{fontSize:10,color:'rgba(255,255,255,0.28)',marginTop:1}}>{item.desc}</div>
+                      </div>
+                    </button>
+                  );
+                })}
+                <div style={{flex:1}} />
+                <div style={{padding:'12px 16px',borderTop:'1px solid rgba(255,255,255,0.07)'}}>
+                  <div style={{fontSize:9,color:'rgba(255,255,255,0.25)',textAlign:'center'}}>{now.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>
+                </div>
+              </div>
+
+              {/* Content panel */}
+              <div className="xScroll" style={{flex:1,overflowY:'auto',padding:20}}>
+
+                {/* Content header */}
+                {(()=>{
+                  const meta = {
+                    activity:{ title:'User Activity Report',    sub:'Login history & inactivity overview',     ico:'🕐', c:'#4338ca' },
+                    list:    { title:'Complete User List',       sub:'All user details across the team',         ico:'📋', c:'#0e7490' },
+                    dept:    { title:'Department-wise Breakdown',sub:'User distribution by department',          ico:'🏛️', c:'#7e22ce' },
+                    role:    { title:'Role-wise Distribution',   sub:'Users grouped by assigned roles',          ico:'🎭', c:'#b45309' },
+                    new:     { title:`New Users — ${now.toLocaleDateString('en-IN',{month:'long',year:'numeric'})}`, sub:'Members who joined this month', ico:'✨', c:'#065f46' },
+                  };
+                  const m = meta[reportTab];
+                  return(
+                    <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:18,paddingBottom:16,borderBottom:'1.5px solid #f1f5f9'}}>
+                      <div style={{width:42,height:42,borderRadius:12,background:`linear-gradient(135deg,${m.c}22,${m.c}44)`,border:`1.5px solid ${m.c}33`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0}}>{m.ico}</div>
+                      <div>
+                        <div style={{fontSize:16,fontWeight:800,color:'#0f172a',lineHeight:1.2}}>{m.title}</div>
+                        <div style={{fontSize:11,color:'#64748b',marginTop:3}}>{m.sub}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── 1. USER ACTIVITY ── */}
+                {reportTab==='activity'&&(
+                  <div>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                      <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>Login Activity — All Users</div>
+                      <button onClick={()=>exportCSV(activityData,[
+                        {label:'Name',         val:u=>`${u.firstName} ${u.lastName}`},
+                        {label:'Email',        val:u=>u.email},
+                        {label:'Role',         val:u=>u.userType},
+                        {label:'Department',   val:u=>u.department||'—'},
+                        {label:'Status',       val:u=>u.isActive?'Active':'Inactive'},
+                        {label:'Last Login',   val:u=>fmtDT(u.lastLogin)},
+                        {label:'Inactive Days',val:u=>{ const d=daysSince(u.lastLogin); return d===null?'Never logged in':d+' days'; }},
+                        {label:'Joined',       val:u=>fmtDate(u.createdAt)},
+                      ],'user_activity_report')} style={{padding:'6px 14px',background:'#ecfdf5',border:'1px solid #6ee7b7',borderRadius:7,fontSize:11,fontWeight:700,color:'#059669',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>⬇ Export CSV</button>
+                    </div>
+                    <div style={{border:'1px solid #e2e8f0',borderRadius:10,overflow:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',minWidth:860}}>
+                        <thead><tr>{['#','Name','Department','Status','Last Login','Inactive Since','Created By','Joined'].map(h=><th key={h} style={TH2}>{h}</th>)}</tr></thead>
+                        <tbody>{activityData.map((u,i)=>{
+                          const ds=daysSince(u.lastLogin);
+                          const urgent=ds===null||ds>30;
+                          return(
+                            <tr key={u._id} style={{background:i%2?'#f8fafc':'#fff'}}>
+                              <td style={{...TD2,color:'#94a3b8',width:28}}>{i+1}</td>
+                              <td style={TD2}>
+                                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                                  <div style={{width:30,height:30,borderRadius:8,background:avGrad(u.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:11,flexShrink:0}}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
+                                  <div>
+                                    <div style={{fontWeight:700,color:'#0f172a',fontSize:12}}>{u.firstName} {u.lastName}</div>
+                                    <div style={{fontSize:10,color:'#94a3b8'}}>{u.email}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={TD2}>{u.department||<span style={{color:'#cbd5e1'}}>—</span>}</td>
+                              <td style={TD2}><span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:u.isActive?'#f0fdf4':'#fff1f2',color:u.isActive?'#16a34a':'#dc2626',border:`1px solid ${u.isActive?'#86efac':'#fca5a5'}`}}>{u.isActive?'Active':'Inactive'}</span></td>
+                              <td style={TD2}>
+                                {u.lastLogin
+                                  ? <div>
+                                      <div style={{fontSize:11,color:'#374151'}}>{fmtDT(u.lastLogin)}</div>
+                                    </div>
+                                  : <span style={{color:'#f59e0b',fontWeight:600,fontSize:11}}>Never</span>}
+                              </td>
+                              <td style={TD2}><span style={{fontWeight:600,color:urgent?'#dc2626':'#16a34a',fontSize:11}}>{ds===null?'Never logged in':ds===0?'Today':ds+' days ago'}</span></td>
+                              <td style={TD2}>
+                                {u.addedBy
+                                  ? <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                      <div style={{width:24,height:24,borderRadius:'50%',background:avGrad(u.addedBy.firstName||'?'),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:9,flexShrink:0}}>{(u.addedBy.firstName||'?')[0].toUpperCase()}</div>
+                                      <span style={{fontSize:11,fontWeight:600,color:'#374151'}}>{u.addedBy.firstName} {u.addedBy.lastName}</span>
+                                    </div>
+                                  : <span style={{color:'#cbd5e1',fontSize:11}}>—</span>}
+                              </td>
+                              <td style={TD2}>{fmtDate(u.createdAt)}</td>
+                            </tr>
+                          );
+                        })}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── 2. USER LIST ── */}
+                {reportTab==='list'&&(
+                  <div>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                      <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>Complete User List</div>
+                      <button onClick={()=>exportCSV(users,[
+                        {label:'First Name',      val:u=>u.firstName},
+                        {label:'Last Name',       val:u=>u.lastName},
+                        {label:'Login Email',     val:u=>u.email},
+                        {label:'Personal Email',  val:u=>u.personalEmail||''},
+                        {label:'Work Email',      val:u=>u.officeEmail||''},
+                        {label:'Phone',           val:u=>u.phone||''},
+                        {label:'Alternate Phone', val:u=>u.alternatePhone||''},
+                        {label:'Role',            val:u=>u.userType},
+                        {label:'Department',      val:u=>u.department||''},
+                        {label:'Sub Department',  val:u=>u.subDepartment||''},
+                        {label:'Reporting Manager',val:u=>u.reportingManager||''},
+                        {label:'Status',          val:u=>u.isActive?'Active':'Inactive'},
+                        {label:'Login Name',      val:u=>u.loginName||''},
+                        {label:'Last Login',      val:u=>fmtDT(u.lastLogin)},
+                        {label:'Created By',      val:u=>u.addedBy?`${u.addedBy.firstName} ${u.addedBy.lastName}`:''},
+                        {label:'Joined',          val:u=>fmtDate(u.createdAt)},
+                      ],'user_list_report')} style={{padding:'6px 14px',background:'#ecfdf5',border:'1px solid #6ee7b7',borderRadius:7,fontSize:11,fontWeight:700,color:'#059669',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>⬇ Export CSV</button>
+                    </div>
+                    <div style={{border:'1px solid #e2e8f0',borderRadius:10,overflow:'auto'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse',minWidth:900}}>
+                        <thead><tr>{['#','Name','Role','Department','Phone','Status','Last Login','Created By','Joined'].map(h=><th key={h} style={TH2}>{h}</th>)}</tr></thead>
+                        <tbody>{users.map((u,i)=>{
+                          const ds = u.lastLogin ? Math.floor((Date.now()-new Date(u.lastLogin))/86400000) : null;
+                          return(
+                          <tr key={u._id} style={{background:i%2?'#f8fafc':'#fff'}}>
+                            <td style={{...TD2,color:'#94a3b8',width:28}}>{i+1}</td>
+                            <td style={TD2}>
+                              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                                <div style={{width:30,height:30,borderRadius:8,background:avGrad(u.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:11,flexShrink:0}}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
+                                <div>
+                                  <div style={{fontWeight:700,color:'#0f172a',fontSize:12}}>{u.firstName} {u.lastName}</div>
+                                  <div style={{fontSize:10,color:'#94a3b8'}}>{u.email}</div>
+                                  {u.loginName&&<div style={{fontSize:9,color:'#c4b5fd'}}>@{u.loginName}</div>}
+                                </div>
+                              </div>
+                            </td>
+                            <td style={TD2}><span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:6,background:'#eef2ff',color:'#4338ca'}}>{u.userType?.replace('TENANT_','')}</span></td>
+                            <td style={TD2}>
+                              <div style={{fontSize:12,color:'#374151'}}>{u.department||<span style={{color:'#cbd5e1'}}>—</span>}</div>
+                              {u.subDepartment&&<div style={{fontSize:10,color:'#94a3b8'}}>{u.subDepartment}</div>}
+                            </td>
+                            <td style={TD2}>
+                              <div style={{fontSize:11}}>{u.phone||<span style={{color:'#cbd5e1'}}>—</span>}</div>
+                              {u.alternatePhone&&<div style={{fontSize:10,color:'#94a3b8'}}>{u.alternatePhone}</div>}
+                            </td>
+                            <td style={TD2}><span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:u.isActive?'#f0fdf4':'#fff1f2',color:u.isActive?'#16a34a':'#dc2626'}}>{u.isActive?'Active':'Inactive'}</span></td>
+                            <td style={TD2}>
+                              {u.lastLogin
+                                ? <div>
+                                    <div style={{fontSize:11,color:'#374151'}}>{fmtDate(u.lastLogin)}</div>
+                                    <div style={{fontSize:10,color:ds>30?'#dc2626':'#16a34a',fontWeight:600}}>{ds===0?'Today':ds+' days ago'}</div>
+                                  </div>
+                                : <span style={{fontSize:10,fontWeight:600,color:'#f59e0b'}}>Never</span>}
+                            </td>
+                            <td style={TD2}>
+                              {u.addedBy
+                                ? <div style={{display:'flex',alignItems:'center',gap:6}}>
+                                    <div style={{width:24,height:24,borderRadius:'50%',background:avGrad(u.addedBy.firstName||'?'),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:9,flexShrink:0}}>{(u.addedBy.firstName||'?')[0].toUpperCase()}</div>
+                                    <div>
+                                      <div style={{fontSize:11,fontWeight:600,color:'#374151'}}>{u.addedBy.firstName} {u.addedBy.lastName}</div>
+                                      <div style={{fontSize:9,color:'#94a3b8'}}>{fmtDate(u.createdAt)}</div>
+                                    </div>
+                                  </div>
+                                : <span style={{color:'#cbd5e1',fontSize:11}}>—</span>}
+                            </td>
+                            <td style={TD2}><div style={{fontSize:11}}>{fmtDate(u.createdAt)}</div></td>
+                          </tr>
+                          );
+                        })}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── 3. DEPARTMENT-WISE ── */}
+                {reportTab==='dept'&&(()=>{
+                  const DCOLS = [
+                    ['#6366f1','#818cf8','#eef2ff'],['#0ea5e9','#38bdf8','#e0f2fe'],
+                    ['#10b981','#34d399','#ecfdf5'],['#f59e0b','#fbbf24','#fffbeb'],
+                    ['#ec4899','#f472b6','#fdf2f8'],['#8b5cf6','#a78bfa','#f5f3ff'],
+                    ['#14b8a6','#2dd4bf','#f0fdfa'],['#ef4444','#f87171','#fff1f2'],
+                  ];
+                  // build enhanced map with user list
+                  const deptEx = {};
+                  users.forEach(u=>{ const d=u.department||'Unassigned'; if(!deptEx[d])deptEx[d]={total:0,active:0,inactive:0,list:[]}; deptEx[d].total++; u.isActive?deptEx[d].active++:deptEx[d].inactive++; deptEx[d].list.push(u); });
+                  const deptRows = Object.entries(deptEx).sort((a,b)=>b[1].total-a[1].total);
+                  const bestActive = deptRows.reduce((a,b)=>((b[1].active/b[1].total)>(a[1].active/a[1].total)?b:a), deptRows[0]||['—',{active:0,total:1}]);
+
+                  return(
+                    <div>
+                      {/* Export button */}
+                      <div style={{display:'flex',justifyContent:'flex-end',marginBottom:16}}>
+                        <button onClick={()=>exportCSV(deptRows.map(([d,v])=>({dept:d,...v})),[
+                          {label:'Department',val:r=>r.dept},{label:'Total',val:r=>r.total},
+                          {label:'Active',val:r=>r.active},{label:'Inactive',val:r=>r.inactive},
+                          {label:'Active %',val:r=>Math.round((r.active/r.total)*100)+'%'},
+                        ],'department_report')} style={{padding:'7px 16px',background:'#ecfdf5',border:'1px solid #6ee7b7',borderRadius:8,fontSize:11,fontWeight:700,color:'#059669',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>
+                          ⬇ Export CSV
+                        </button>
+                      </div>
+
+                      {/* Summary strip */}
+                      <div className="xSumStrip" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10,marginBottom:20}}>
+                        {[
+                          {ico:'🏛️',label:'Departments',   val:deptRows.length,        sub:'across the team',          c:'#6366f1',bg:'linear-gradient(135deg,#eef2ff,#e0e7ff)'},
+                          {ico:'🏆',label:'Most Staffed',  val:deptRows[0]?.[0]||'—',  sub:`${deptRows[0]?.[1].total||0} members`,  c:'#0e7490',bg:'linear-gradient(135deg,#ecfeff,#cffafe)'},
+                          {ico:'✅',label:'Best Active Rate',val:bestActive[0],          sub:`${Math.round((bestActive[1].active/bestActive[1].total)*100)}% active`, c:'#15803d',bg:'linear-gradient(135deg,#f0fdf4,#dcfce7)'},
+                        ].map(s=>(
+                          <div key={s.label} style={{background:s.bg,borderRadius:12,padding:'14px 16px',border:'1px solid rgba(0,0,0,0.04)'}}>
+                            <div style={{display:'flex',alignItems:'center',gap:10}}>
+                              <div style={{width:36,height:36,borderRadius:10,background:`${s.c}22`,border:`1.5px solid ${s.c}33`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:17,flexShrink:0}}>{s.ico}</div>
+                              <div>
+                                <div style={{fontSize:15,fontWeight:900,color:s.c,lineHeight:1.1}}>{s.val}</div>
+                                <div style={{fontSize:10,color:'#64748b',fontWeight:600,marginTop:2}}>{s.label}</div>
+                                <div style={{fontSize:9,color:'#94a3b8',marginTop:1}}>{s.sub}</div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Department list cards */}
+                      <div style={{display:'flex',flexDirection:'column',gap:8,marginBottom:20}}>
+                        {deptRows.map(([dept,v],i)=>{
+                          const [c1,c2]=DCOLS[i%DCOLS.length];
+                          const pct=Math.round((v.active/v.total)*100);
+                          const pctColor=pct>=70?'#16a34a':pct>=40?'#d97706':'#dc2626';
+                          return(
+                            <div key={dept} style={{background:'#fff',borderRadius:11,border:'1px solid #e8edf5',display:'flex',alignItems:'center',gap:14,padding:'11px 16px',boxShadow:'0 1px 4px rgba(0,0,0,0.04)',transition:'box-shadow 0.15s'}}
+                              onMouseEnter={e=>e.currentTarget.style.boxShadow='0 4px 14px rgba(0,0,0,0.09)'}
+                              onMouseLeave={e=>e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.04)'}>
+
+                              {/* rank badge */}
+                              <div style={{width:28,height:28,borderRadius:8,background:`linear-gradient(135deg,${c1},${c2})`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:11,fontWeight:900,flexShrink:0}}>{i+1}</div>
+
+                              {/* dept name + avatars */}
+                              <div style={{minWidth:140,flexShrink:0}}>
+                                <div style={{fontSize:13,fontWeight:800,color:'#0f172a',lineHeight:1.2}}>{dept}</div>
+                                <div style={{display:'flex',alignItems:'center',marginTop:4}}>
+                                  {v.list.slice(0,5).map((u,j)=>(
+                                    <div key={u._id} title={`${u.firstName} ${u.lastName}`}
+                                      style={{width:20,height:20,borderRadius:'50%',background:avGrad(u.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:8,border:'1.5px solid #fff',marginLeft:j>0?-5:0,flexShrink:0}}>
+                                      {u.firstName?.[0]}{u.lastName?.[0]}
+                                    </div>
+                                  ))}
+                                  {v.list.length>5&&<div style={{width:20,height:20,borderRadius:'50%',background:'#f1f5f9',border:'1.5px solid #fff',display:'flex',alignItems:'center',justifyContent:'center',fontSize:7,fontWeight:800,color:'#64748b',marginLeft:-5}}>+{v.list.length-5}</div>}
+                                  <span style={{fontSize:10,color:'#94a3b8',marginLeft:6}}>{v.total} member{v.total!==1?'s':''}</span>
+                                </div>
+                              </div>
+
+                              {/* bar — flex:1 */}
+                              <div style={{flex:1,minWidth:80}}>
+                                <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                                  <span style={{fontSize:10,color:'#64748b'}}>Active rate</span>
+                                  <span style={{fontSize:10,fontWeight:800,color:pctColor}}>{pct}%</span>
+                                </div>
+                                <div style={{height:6,borderRadius:3,background:'#fee2e2',overflow:'hidden'}}>
+                                  <div style={{height:'100%',width:`${pct}%`,background:`linear-gradient(90deg,${c1},${c2})`,borderRadius:3,transition:'width 0.5s'}} />
+                                </div>
+                              </div>
+
+                              {/* stats pills */}
+                              <div style={{display:'flex',gap:6,flexShrink:0}}>
+                                <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'#f0fdf4',border:'1px solid #bbf7d0',fontSize:11,fontWeight:700,color:'#16a34a'}}>
+                                  <span style={{width:6,height:6,borderRadius:'50%',background:'#16a34a',flexShrink:0}} />{v.active}
+                                </span>
+                                <span style={{display:'inline-flex',alignItems:'center',gap:4,padding:'4px 10px',borderRadius:20,background:'#fff1f2',border:'1px solid #fecdd3',fontSize:11,fontWeight:700,color:'#dc2626'}}>
+                                  <span style={{width:6,height:6,borderRadius:'50%',background:'#dc2626',flexShrink:0}} />{v.inactive}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Compact comparison table */}
+                      <div style={{border:'1px solid #e2e8f0',borderRadius:12,overflow:'hidden'}}>
+                        <div style={{padding:'12px 16px',background:'linear-gradient(135deg,#f8fafc,#f1f5f9)',borderBottom:'1px solid #e2e8f0',display:'flex',alignItems:'center',gap:8}}>
+                          <span style={{fontSize:13}}>📊</span>
+                          <span style={{fontSize:12,fontWeight:800,color:'#0f172a'}}>Comparison Table</span>
+                          <span style={{fontSize:10,color:'#64748b',marginLeft:4}}>sorted by headcount</span>
+                        </div>
+                        <table style={{width:'100%',borderCollapse:'collapse'}}>
+                          <thead><tr>{['Rank','Department','Total','Active','Inactive','Active Rate'].map(h=><th key={h} style={TH2}>{h}</th>)}</tr></thead>
+                          <tbody>{deptRows.map(([dept,v],i)=>{
+                            const [c1,c2]=DCOLS[i%DCOLS.length];
+                            const pct=Math.round((v.active/v.total)*100);
+                            return(
+                              <tr key={dept} style={{background:i%2?'#f8fafc':'#fff',transition:'background 0.15s'}}
+                                onMouseEnter={e=>e.currentTarget.style.background='#f0f4ff'}
+                                onMouseLeave={e=>e.currentTarget.style.background=i%2?'#f8fafc':'#fff'}>
+                                <td style={{...TD2,width:40}}>
+                                  <div style={{width:24,height:24,borderRadius:7,background:`linear-gradient(135deg,${c1},${c2})`,display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:10,fontWeight:900}}>{i+1}</div>
+                                </td>
+                                <td style={{...TD2,fontWeight:700,color:'#0f172a'}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                                    <div style={{width:8,height:8,borderRadius:'50%',background:`linear-gradient(135deg,${c1},${c2})`,flexShrink:0}} />
+                                    {dept}
+                                  </div>
+                                </td>
+                                <td style={{...TD2,fontWeight:800,color:c1,fontSize:14}}>{v.total}</td>
+                                <td style={TD2}><span style={{padding:'2px 10px',borderRadius:20,background:'#f0fdf4',color:'#16a34a',fontSize:11,fontWeight:700,border:'1px solid #bbf7d0'}}>{v.active}</span></td>
+                                <td style={TD2}><span style={{padding:'2px 10px',borderRadius:20,background:'#fff1f2',color:'#dc2626',fontSize:11,fontWeight:700,border:'1px solid #fecdd3'}}>{v.inactive}</span></td>
+                                <td style={{...TD2,minWidth:160}}>
+                                  <div style={{display:'flex',alignItems:'center',gap:8}}>
+                                    <div style={{flex:1,height:7,borderRadius:4,background:'#f1f5f9',overflow:'hidden'}}>
+                                      <div style={{height:'100%',width:`${pct}%`,background:`linear-gradient(90deg,${c1},${c2})`,borderRadius:4}} />
+                                    </div>
+                                    <span style={{fontSize:11,fontWeight:800,color:pct>=70?'#16a34a':pct>=40?'#d97706':'#dc2626',minWidth:34,textAlign:'right'}}>{pct}%</span>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* ── 4. ROLE-WISE ── */}
+                {reportTab==='role'&&(
+                  <div>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                      <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>Role-wise User Count</div>
+                      <button onClick={()=>exportCSV(roleData.map(([r,c])=>({role:r,count:c})),[
+                        {label:'Role',  val:r=>r.role},
+                        {label:'Users', val:r=>r.count},
+                      ],'role_report')} style={{padding:'6px 14px',background:'#ecfdf5',border:'1px solid #6ee7b7',borderRadius:7,fontSize:11,fontWeight:700,color:'#059669',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>⬇ Export CSV</button>
+                    </div>
+                    <div className="xRptSumCards" style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(160px,1fr))',gap:10,marginBottom:16}}>
+                      {roleData.map(([role,count],i)=>{
+                        const grads=['linear-gradient(135deg,#6366f1,#8b5cf6)','linear-gradient(135deg,#0ea5e9,#6366f1)','linear-gradient(135deg,#10b981,#0ea5e9)','linear-gradient(135deg,#f59e0b,#ef4444)','linear-gradient(135deg,#ec4899,#8b5cf6)'];
+                        return(
+                          <div key={role} style={{background:grads[i%grads.length],borderRadius:10,padding:'14px 16px',color:'#fff'}}>
+                            <div style={{fontSize:26,fontWeight:900,lineHeight:1}}>{count}</div>
+                            <div style={{fontSize:11,fontWeight:700,marginTop:4,opacity:0.85}}>{role}</div>
+                            <div style={{fontSize:10,opacity:0.6,marginTop:2}}>{Math.round((count/users.length)*100)}% of users</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse'}}>
+                        <thead><tr>{['Role','Users','% of Total','Bar'].map(h=><th key={h} style={TH2}>{h}</th>)}</tr></thead>
+                        <tbody>{roleData.map(([role,count],i)=>(
+                          <tr key={role} style={{background:i%2?'#f8fafc':'#fff'}}>
+                            <td style={{...TD2,fontWeight:700}}>{role}</td>
+                            <td style={{...TD2,fontWeight:700,color:'#6366f1'}}>{count}</td>
+                            <td style={TD2}>{Math.round((count/users.length)*100)}%</td>
+                            <td style={{...TD2,minWidth:160}}><div style={{height:6,borderRadius:3,background:'#f1f5f9'}}><div style={{height:'100%',width:`${Math.round((count/users.length)*100)}%`,background:'linear-gradient(90deg,#6366f1,#8b5cf6)',borderRadius:3}} /></div></td>
+                          </tr>
+                        ))}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* ── 5. NEW USERS THIS MONTH ── */}
+                {reportTab==='new'&&(
+                  <div>
+                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}}>
+                      <div>
+                        <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>New Users — {now.toLocaleDateString('en-IN',{month:'long',year:'numeric'})}</div>
+                        <div style={{fontSize:11,color:'#64748b',marginTop:2}}>{newUsersData.length} users joined this month</div>
+                      </div>
+                      <button onClick={()=>exportCSV(newUsersData,[
+                        {label:'Name',       val:u=>`${u.firstName} ${u.lastName}`},
+                        {label:'Email',      val:u=>u.email},
+                        {label:'Role',       val:u=>u.userType},
+                        {label:'Department', val:u=>u.department||''},
+                        {label:'Status',     val:u=>u.isActive?'Active':'Inactive'},
+                        {label:'Created By', val:u=>u.addedBy?`${u.addedBy.firstName} ${u.addedBy.lastName}`:''},
+                        {label:'Joined',     val:u=>fmtDT(u.createdAt)},
+                      ],'new_users_report')} style={{padding:'6px 14px',background:'#ecfdf5',border:'1px solid #6ee7b7',borderRadius:7,fontSize:11,fontWeight:700,color:'#059669',cursor:'pointer',display:'flex',alignItems:'center',gap:5}}>⬇ Export CSV</button>
+                    </div>
+                    {newUsersData.length===0?(
+                      <div style={{textAlign:'center',padding:'48px 20px',color:'#94a3b8',fontSize:13}}>No new users this month</div>
+                    ):(
+                      <div style={{border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse'}}>
+                          <thead><tr>{['#','Name','Email','Role','Department','Created By','Joined On'].map(h=><th key={h} style={TH2}>{h}</th>)}</tr></thead>
+                          <tbody>{newUsersData.map((u,i)=>(
+                            <tr key={u._id} style={{background:i%2?'#f8fafc':'#fff'}}>
+                              <td style={{...TD2,color:'#94a3b8',width:32}}>{i+1}</td>
+                              <td style={TD2}>
+                                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                                  <div style={{width:28,height:28,borderRadius:8,background:avGrad(u.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:800,fontSize:11,flexShrink:0}}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
+                                  <div style={{fontWeight:700,color:'#0f172a'}}>{u.firstName} {u.lastName}</div>
+                                </div>
+                              </td>
+                              <td style={{...TD2,fontSize:11}}>{u.email}</td>
+                              <td style={TD2}><span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:6,background:'#eef2ff',color:'#4338ca'}}>{u.userType?.replace('TENANT_','')}</span></td>
+                              <td style={TD2}>{u.department||<span style={{color:'#cbd5e1'}}>—</span>}</td>
+                              <td style={TD2}>
+                                {u.addedBy
+                                  ? <div style={{display:'flex',alignItems:'center',gap:5}}>
+                                      <span style={{width:20,height:20,borderRadius:'50%',background:avGrad(u.addedBy.firstName||'?'),display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:800,color:'#fff'}}>{(u.addedBy.firstName||'?')[0].toUpperCase()}</span>
+                                      <span style={{fontSize:11,fontWeight:600}}>{u.addedBy.firstName} {u.addedBy.lastName}</span>
+                                    </div>
+                                  : <span style={{color:'#94a3b8'}}>—</span>
+                                }
+                              </td>
+                              <td style={TD2}>{fmtDT(u.createdAt)}</td>
+                            </tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ══════════ BULK IMPORT MODAL ══════════ */}
+      {bulkModal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(15,23,42,0.65)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:1000,padding:16,backdropFilter:'blur(3px)'}}>
+          <div style={{background:'#fff',borderRadius:14,overflow:'hidden',width:'100%',maxWidth:780,maxHeight:'90vh',display:'flex',flexDirection:'column',boxShadow:'0 24px 60px rgba(0,0,0,0.25)'}}>
+
+            {/* Header */}
+            <div style={{background:'linear-gradient(135deg,#0f0c29,#1e1b4b,#0d1b4b)',padding:'16px 20px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <div style={{width:38,height:38,borderRadius:10,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18}}>📥</div>
+                <div>
+                  <div style={{fontSize:15,fontWeight:800,color:'#fff'}}>Bulk Import Users</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,0.5)',marginTop:1}}>
+                    Upload CSV · Max 100 users · Created by: <span style={{color:'#a5b4fc',fontWeight:700}}>{user?.firstName} {user?.lastName}</span> · {new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})} {new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+                  </div>
+                </div>
+              </div>
+              <button onClick={()=>setBulkModal(false)} style={{background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.2)',borderRadius:7,color:'#fff',width:28,height:28,cursor:'pointer',fontSize:16,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+            </div>
+
+            <div style={{padding:20,overflowY:'auto',flex:1}}>
+              {!bulkResult ? (
+                <>
+                  {/* Step 1: Download template + upload */}
+                  <div className="xBulkGrid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:16}}>
+                    <div style={{background:'#f8fafc',border:'1.5px dashed #c7d2fe',borderRadius:10,padding:'14px 16px'}}>
+                      <div style={{fontSize:12,fontWeight:700,color:'#1e293b',marginBottom:4}}>Step 1 — Download Template</div>
+                      <div style={{fontSize:11,color:'#64748b',marginBottom:10}}>Fill the CSV with user data. Required: firstName, lastName, email, password.</div>
+                      <button onClick={()=>{
+                        const csv = 'firstName,lastName,email,password,userType,phone,loginName,department\nJohn,Doe,john@example.com,pass1234,TENANT_USER,+91 9000000001,john.doe,Sales\nJane,Smith,jane@example.com,pass1234,TENANT_MANAGER,+91 9000000002,jane.smith,Marketing';
+                        const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+                        a.download = 'users_template.csv'; a.click();
+                      }} style={{background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',border:'none',borderRadius:8,padding:'8px 14px',fontSize:12,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:6}}>
+                        ⬇ Download Template
+                      </button>
+                    </div>
+                    <div style={{background:'#f8fafc',border:'1.5px dashed #c7d2fe',borderRadius:10,padding:'14px 16px',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer',position:'relative'}}
+                      onClick={()=>document.getElementById('csvFileInput').click()}>
+                      <div style={{fontSize:28}}>📂</div>
+                      <div style={{fontSize:12,fontWeight:700,color:'#1e293b'}}>Click to Upload CSV</div>
+                      <div style={{fontSize:11,color:'#94a3b8'}}>.csv files only</div>
+                      <input id="csvFileInput" type="file" accept=".csv" style={{display:'none'}} onChange={e=>{
+                        const file = e.target.files[0]; if(!file) return;
+                        const reader = new FileReader();
+                        reader.onload = ev => {
+                          setBulkError(''); setBulkRows([]);
+                          const lines = ev.target.result.split('\n').map(l=>l.trim()).filter(Boolean);
+                          if(lines.length < 2){ setBulkError('CSV must have header + at least 1 data row'); return; }
+                          const headers = lines[0].split(',').map(h=>h.trim().toLowerCase());
+                          const required = ['firstname','lastname','email','password'];
+                          const missing = required.filter(r=>!headers.includes(r));
+                          if(missing.length){ setBulkError(`Missing columns: ${missing.join(', ')}`); return; }
+                          const rows = lines.slice(1).map((line,i)=>{
+                            const vals = line.split(',').map(v=>v.trim());
+                            const obj = {};
+                            headers.forEach((h,idx)=>{ obj[h]=vals[idx]||''; });
+                            return {
+                              _idx: i+1,
+                              firstName: obj.firstname||'', lastName: obj.lastname||'',
+                              email: obj.email||'', password: obj.password||'',
+                              userType: obj.usertype||'TENANT_USER',
+                              phone: obj.phone||'', loginName: obj.loginname||'',
+                              department: obj.department||'',
+                              _error: (!obj.firstname||!obj.lastname||!obj.email||!obj.password)?'Missing required fields':''
+                            };
+                          });
+                          if(rows.length>100){ setBulkError('Max 100 users per import'); return; }
+                          setBulkRows(rows);
+                        };
+                        reader.readAsText(file);
+                        e.target.value='';
+                      }} />
+                    </div>
+                  </div>
+
+                  {bulkError&&<div style={{background:'#fef2f2',border:'1px solid #fca5a5',borderRadius:8,padding:'9px 14px',fontSize:12,color:'#dc2626',fontWeight:600,marginBottom:12}}>⚠ {bulkError}</div>}
+
+                  {/* Preview table */}
+                  {bulkRows.length>0&&(
+                    <>
+                      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+                        <div style={{fontSize:12,fontWeight:700,color:'#1e293b'}}>{bulkRows.length} users ready · {bulkRows.filter(r=>r._error).length} with errors</div>
+                        <button onClick={()=>setBulkRows([])} style={{fontSize:11,color:'#ef4444',background:'none',border:'none',cursor:'pointer',fontWeight:600}}>Clear</button>
+                      </div>
+                      <div style={{border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',maxHeight:280,overflowY:'auto'}}>
+                        <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+                          <thead>
+                            <tr style={{background:'#1e293b'}}>
+                              {['#','First Name','Last Name','Email','Password','Role','Phone','Dept','Status'].map(h=>(
+                                <th key={h} style={{padding:'7px 10px',color:'#94a3b8',fontWeight:700,fontSize:10,textTransform:'uppercase',textAlign:'left',whiteSpace:'nowrap'}}>{h}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {bulkRows.map((r,i)=>(
+                              <tr key={i} style={{background:r._error?'#fff5f5':i%2?'#f8fafc':'#fff',borderBottom:'1px solid #f1f5f9'}}>
+                                <td style={{padding:'6px 10px',color:'#94a3b8',fontWeight:600}}>{r._idx}</td>
+                                <td style={{padding:'6px 10px',fontWeight:600,color:r.firstName?'#0f172a':'#ef4444'}}>{r.firstName||'—'}</td>
+                                <td style={{padding:'6px 10px',color:r.lastName?'#0f172a':'#ef4444'}}>{r.lastName||'—'}</td>
+                                <td style={{padding:'6px 10px',color:r.email?'#0f172a':'#ef4444'}}>{r.email||'—'}</td>
+                                <td style={{padding:'6px 10px',color:'#94a3b8'}}>{'•'.repeat(Math.min(r.password?.length||0,8))}</td>
+                                <td style={{padding:'6px 10px'}}><span style={{fontSize:10,fontWeight:700,padding:'1px 7px',borderRadius:20,background:r.userType==='TENANT_ADMIN'?'#fffbeb':r.userType==='TENANT_MANAGER'?'#f5f3ff':'#eff6ff',color:r.userType==='TENANT_ADMIN'?'#92400e':r.userType==='TENANT_MANAGER'?'#5b21b6':'#1e40af'}}>{r.userType?.replace('TENANT_','')}</span></td>
+                                <td style={{padding:'6px 10px',color:'#475569'}}>{r.phone||'—'}</td>
+                                <td style={{padding:'6px 10px',color:'#475569'}}>{r.department||'—'}</td>
+                                <td style={{padding:'6px 10px'}}>{r._error?<span style={{color:'#ef4444',fontSize:10,fontWeight:700}}>⚠ Error</span>:<span style={{color:'#16a34a',fontSize:10,fontWeight:700}}>✓ Ready</span>}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                      <div style={{display:'flex',gap:8,marginTop:14,justifyContent:'flex-end'}}>
+                        <button onClick={()=>setBulkModal(false)} style={{padding:'9px 18px',border:'1.5px solid #e2e8f0',borderRadius:9,background:'#f8fafc',color:'#374151',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
+                        <button disabled={bulkSubmitting||bulkRows.filter(r=>!r._error).length===0} onClick={async()=>{
+                          const valid = bulkRows.filter(r=>!r._error);
+                          if(!valid.length) return;
+                          setBulkSubmitting(true);
+                          try {
+                            const res = await userService.bulkCreateUsers(valid.map(({_idx,_error,...rest})=>rest));
+                            setBulkResult(res); loadData();
+                          } catch(e){ setBulkError(e.response?.data?.message||'Import failed'); }
+                          finally { setBulkSubmitting(false); }
+                        }} style={{padding:'9px 22px',border:'none',borderRadius:9,background:bulkSubmitting?'#94a3b8':'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:13,fontWeight:700,cursor:bulkSubmitting?'not-allowed':'pointer',display:'flex',alignItems:'center',gap:7}}>
+                          {bulkSubmitting?'Importing...':'Import '+bulkRows.filter(r=>!r._error).length+' Users'}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </>
+              ) : (
+                /* Results screen */
+                <div style={{textAlign:'center'}}>
+                  <div style={{fontSize:40,marginBottom:12}}>{bulkResult.results?.filter(r=>r.status==='failed').length===0?'🎉':'⚠️'}</div>
+                  <div style={{fontSize:16,fontWeight:800,color:'#0f172a',marginBottom:4}}>{bulkResult.message}</div>
+                  <div style={{fontSize:12,color:'#64748b',marginBottom:16}}>Import complete</div>
+                  <div style={{border:'1px solid #e2e8f0',borderRadius:10,overflow:'hidden',maxHeight:280,overflowY:'auto',textAlign:'left',marginBottom:16}}>
+                    <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
+                      <thead><tr style={{background:'#1e293b'}}>
+                        {['Row','Email','Status','Created By','Note'].map(h=><th key={h} style={{padding:'7px 12px',fontWeight:700,color:'#94a3b8',fontSize:10,textTransform:'uppercase',borderBottom:'1px solid #334155',textAlign:'left',whiteSpace:'nowrap'}}>{h}</th>)}
+                      </tr></thead>
+                      <tbody>{bulkResult.results?.map((r,i)=>(
+                        <tr key={i} style={{borderBottom:'1px solid #f8fafc',background:r.status==='failed'?'#fff5f5':i%2?'#f8fafc':'#fff'}}>
+                          <td style={{padding:'6px 12px',color:'#94a3b8'}}>{r.row}</td>
+                          <td style={{padding:'6px 12px',color:'#0f172a',fontWeight:500}}>{r.email}</td>
+                          <td style={{padding:'6px 12px'}}><span style={{fontSize:10,fontWeight:700,padding:'2px 8px',borderRadius:20,background:r.status==='created'?'#dcfce7':'#fee2e2',color:r.status==='created'?'#15803d':'#dc2626'}}>{r.status==='created'?'✓ Created':'✗ Failed'}</span></td>
+                          <td style={{padding:'6px 12px'}}>
+                            {r.status==='created'
+                              ? <div style={{display:'flex',alignItems:'center',gap:5}}>
+                                  <span style={{width:20,height:20,borderRadius:'50%',background:avGrad(user?.firstName||'?'),display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:9,fontWeight:800,color:'#fff',flexShrink:0}}>{(user?.firstName||'?')[0].toUpperCase()}</span>
+                                  <div>
+                                    <div style={{fontSize:11,fontWeight:600,color:'#0f172a',lineHeight:1.2}}>{user?.firstName} {user?.lastName}</div>
+                                    <div style={{fontSize:9,color:'#94a3b8'}}>{new Date().toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'})}</div>
+                                  </div>
+                                </div>
+                              : <span style={{color:'#94a3b8',fontSize:11}}>—</span>
+                            }
+                          </td>
+                          <td style={{padding:'6px 12px',fontSize:11,color:'#64748b'}}>{r.error||'—'}</td>
+                        </tr>
+                      ))}</tbody>
+                    </table>
+                  </div>
+                  <button onClick={()=>setBulkModal(false)} style={{padding:'10px 28px',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer'}}>Done</button>
+                </div>
+              )}
             </div>
           </div>
         </div>

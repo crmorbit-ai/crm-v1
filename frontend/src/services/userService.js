@@ -39,5 +39,10 @@ export const userService = {
   resetUserPassword: async (id, newPassword) => {
     const response = await api.put(`/users/${id}/reset-password`, { newPassword });
     return response.data;
+  },
+
+  bulkCreateUsers: async (users) => {
+    const response = await api.post('/users/bulk', { users });
+    return response.data;
   }
 };

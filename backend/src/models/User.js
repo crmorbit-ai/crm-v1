@@ -73,11 +73,30 @@ const userSchema = new mongoose.Schema({
   phone: {
     type: String
   },
+  alternatePhone: {
+    type: String
+  },
+  personalEmail: {
+    type: String,
+    trim: true
+  },
+  officeEmail: {
+    type: String,
+    trim: true
+  },
   loginName: {
     type: String,
     trim: true
   },
   department: {
+    type: String,
+    trim: true
+  },
+  subDepartment: {
+    type: String,
+    trim: true
+  },
+  reportingManager: {
     type: String,
     trim: true
   },

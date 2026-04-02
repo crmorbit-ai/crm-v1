@@ -4,6 +4,7 @@ const {
   getUsers,
   getUser,
   createUser,
+  bulkCreateUsers,
   updateUser,
   deleteUser,
   assignRoles,
@@ -20,6 +21,7 @@ router.use(protect);
 router.get('/', requirePermission('user_management', 'read'), getUsers);
 router.get('/:id', requirePermission('user_management', 'read'), getUser);
 router.post('/', requirePermission('user_management', 'create'), createUser);
+router.post('/bulk', requirePermission('user_management', 'create'), bulkCreateUsers);
 router.put('/:id', requirePermission('user_management', 'update'), updateUser);
 router.delete('/:id', requirePermission('user_management', 'delete'), deleteUser);
 
