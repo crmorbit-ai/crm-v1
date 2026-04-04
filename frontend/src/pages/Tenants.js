@@ -3,9 +3,12 @@ import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { tenantService } from '../services/tenantService';
 import { API_URL } from '../config/api.config';
+import { useAuth } from '../context/AuthContext';
 import SaasLayout, { StatCard, Card, Badge, Button, Table, DetailPanel, InfoRow, useWindowSize } from '../components/layout/SaasLayout';
 
 const Tenants = () => {
+  const { user } = useAuth();
+  const isManager = user?.saasRole === 'Manager';
   const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState({ total: 0, active: 0, trial: 0, suspended: 0, deletionRequested: 0 });
   const [loading, setLoading] = useState(true);
@@ -14,9 +17,13 @@ const Tenants = () => {
   const [filterStatus, setFilterStatus] = useState(searchParams.get('status') || 'all');
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [allTenants, setAllTenants] = useState([]);
+  const [managers, setManagers] = useState([]);
+  const [assigningManager, setAssigningManager] = useState(false);
+  const [checkedTenants, setCheckedTenants] = useState(new Set());
+  const [bulkManagerId, setBulkManagerId] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
-  const { isMobile } = useWindowSize();
+  const { isMobile, isTablet } = useWindowSize();
 
   // PIN Verification States
   const [isPinSet, setIsPinSet] = useState(false);
@@ -56,6 +63,7 @@ const Tenants = () => {
     checkPinStatus();
     loadTenants();
     loadStats();
+    loadManagers();
   }, []);
 
   // Sync filter with URL params when navigating from another page
@@ -91,6 +99,7 @@ const Tenants = () => {
   };
 
   const loadStats = async () => {
+    if (isManager) return; // Managers get stats from their filtered tenant list
     try {
       const data = await tenantService.getTenantStats();
       setStats({
@@ -102,17 +111,93 @@ const Tenants = () => {
     } catch (err) { console.error(err); }
   };
 
+  const loadManagers = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/saas-admins/managers`, { headers: getAuthHeader() });
+      setManagers(res.data?.data?.managers || []);
+    } catch (err) { console.error('Load managers failed:', err); }
+  };
+
+  const handleAssignManager = async (tenantId, managerId) => {
+    try {
+      setAssigningManager(true);
+      await axios.post(`${API_URL}/tenants/${tenantId}/assign-manager`, { managerId: managerId || null }, { headers: getAuthHeader() });
+      await loadTenants();
+      setSelectedTenant(prev => prev ? {
+        ...prev,
+        assignedManager: managerId ? managers.find(m => m._id === managerId) : null
+      } : null);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign manager');
+    } finally {
+      setAssigningManager(false);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (!bulkManagerId || checkedTenants.size === 0) return;
+    try {
+      setAssigningManager(true);
+      await axios.post(`${API_URL}/tenants/bulk-assign-manager`, {
+        managerId: bulkManagerId,
+        tenantIds: [...checkedTenants]
+      }, { headers: getAuthHeader() });
+      setCheckedTenants(new Set());
+      setBulkManagerId('');
+      await loadTenants();
+      alert(`✅ ${checkedTenants.size} tenant(s) assigned`);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to assign');
+    } finally {
+      setAssigningManager(false);
+    }
+  };
+
+  const toggleCheck = (e, id) => {
+    e.stopPropagation();
+    setCheckedTenants(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAllVisible = (e) => {
+    e.stopPropagation();
+    const visibleIds = paginatedTenants.map(t => t._id);
+    const allChecked = visibleIds.every(id => checkedTenants.has(id));
+    setCheckedTenants(prev => {
+      const next = new Set(prev);
+      if (allChecked) visibleIds.forEach(id => next.delete(id));
+      else visibleIds.forEach(id => next.add(id));
+      return next;
+    });
+  };
+
   const loadTenants = async () => {
     try {
       setLoading(true);
       setError(null);
-      // Load all tenants for client-side filtering
-      const data = await tenantService.getTenants({ page: 1, limit: 1000 });
+      // Load all tenants (managers see only assigned tenants)
+      const params = { page: 1, limit: 1000 };
+      if (isManager) params.assignedManager = 'me';
+      const data = await tenantService.getTenants(params);
       const tenantList = data.tenants || data || [];
       setAllTenants(tenantList);
       // Count deletion requests from loaded data
       const deletionCount = tenantList.filter(t => t.deletionRequest?.status === 'pending').length;
-      setStats(prev => ({ ...prev, deletionRequested: deletionCount }));
+      // For managers: compute stats from their filtered list
+      if (isManager) {
+        setStats({
+          total: tenantList.length,
+          active: tenantList.filter(t => t.subscription?.status === 'active').length,
+          trial: tenantList.filter(t => t.subscription?.status === 'trial').length,
+          suspended: tenantList.filter(t => t.isSuspended).length,
+          deletionRequested: deletionCount
+        });
+      } else {
+        setStats(prev => ({ ...prev, deletionRequested: deletionCount }));
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load tenants');
     } finally { setLoading(false); }
@@ -515,8 +600,17 @@ const Tenants = () => {
         </div>
       </div>
 
+      {/* Manager banner */}
+      {isManager && (
+        <div style={{background:'linear-gradient(135deg,#4c1d95,#6d28d9)',borderRadius:8,padding:'8px 14px',marginBottom:10,display:'flex',alignItems:'center',gap:10}}>
+          <span style={{fontSize:14}}>👤</span>
+          <span style={{fontSize:12,fontWeight:700,color:'#fff'}}>Manager View</span>
+          <span style={{fontSize:11,color:'rgba(255,255,255,0.65)'}}>— You are viewing only your assigned organizations ({allTenants.length})</span>
+        </div>
+      )}
+
       {/* STATS */}
-      <div style={{display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(5,1fr)',gap:isMobile?6:8,marginBottom:10}}>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'repeat(3,1fr)':'repeat(5,1fr)',gap:isMobile?6:8,marginBottom:10}}>
         {[
           {k:'total',label:'Total Tenants',val:stats.total,            grad:'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)', hov:'linear-gradient(135deg,#4f46e5 0%,#7c3aed 50%,#0891b2 100%)', f:()=>setFilterStatus('all'),               act:filterStatus==='all'},
           {k:'act',  label:'Active',       val:stats.active,           grad:'linear-gradient(135deg,#10b981 0%,#16a34a 50%,#84cc16 100%)', hov:'linear-gradient(135deg,#059669 0%,#15803d 50%,#65a30d 100%)', f:()=>setFilterStatus('active'),            act:filterStatus==='active'},
@@ -549,8 +643,39 @@ const Tenants = () => {
       <div style={{display:'flex',flexDirection:isMobile?'column':'row',gap:12,minHeight:isMobile?'auto':400}}>
         {/* EXCEL TABLE SIDE */}
         <div style={{flex:(!isMobile&&selectedTenant&&isPinVerified)?'0 0 58%':'1',minWidth:0,display:'flex',flexDirection:'column',gap:0}}>
+          {/* Floating bulk-assign bar */}
+          {checkedTenants.size > 0 && !isManager && (
+            <div style={{background:'linear-gradient(135deg,#0f0c29,#1e1b4b)',borderRadius:'8px 8px 0 0',padding:'8px 12px',display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',border:'1px solid rgba(99,102,241,0.4)',borderBottom:'none'}}>
+              <div style={{width:22,height:22,borderRadius:'50%',background:'#f59e0b',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:900,color:'#fff',flexShrink:0}}>{checkedTenants.size}</div>
+              <span style={{fontSize:12,fontWeight:700,color:'#fff'}}>tenant{checkedTenants.size!==1?'s':''} selected</span>
+              <span style={{fontSize:11,color:'rgba(255,255,255,0.4)'}}>→ Assign to manager:</span>
+              <select
+                value={bulkManagerId}
+                onChange={e=>setBulkManagerId(e.target.value)}
+                style={{flex:1,minWidth:160,padding:'5px 9px',border:'1px solid rgba(255,255,255,0.2)',borderRadius:6,fontSize:11,outline:'none',background:'rgba(255,255,255,0.1)',color:'#fff',fontWeight:600}}
+              >
+                <option value="" style={{color:'#374151'}}>— Select Manager —</option>
+                {managers.filter(m=>m.isActive).map(m=>(
+                  <option key={m._id} value={m._id} style={{color:'#374151'}}>{m.firstName} {m.lastName}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleBulkAssign}
+                disabled={!bulkManagerId || assigningManager}
+                style={{background:bulkManagerId?'linear-gradient(135deg,#f59e0b,#f97316)':'rgba(255,255,255,0.1)',color:'#fff',border:'none',padding:'6px 14px',borderRadius:6,fontSize:11,fontWeight:700,cursor:bulkManagerId?'pointer':'not-allowed',whiteSpace:'nowrap',opacity:assigningManager?0.7:1}}
+              >
+                {assigningManager ? 'Assigning...' : '✅ Assign'}
+              </button>
+              <button
+                onClick={()=>{setCheckedTenants(new Set());setBulkManagerId('');}}
+                style={{background:'rgba(239,68,68,0.15)',color:'#fca5a5',border:'1px solid rgba(239,68,68,0.3)',padding:'5px 10px',borderRadius:6,fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}
+              >✕ Clear</button>
+              {managers.length===0&&<span style={{fontSize:10,color:'#fbbf24'}}>No managers yet — create one in SAAS Admins</span>}
+            </div>
+          )}
+
           {/* Toolbar */}
-          <div style={{background:'#fff',borderRadius:'8px 8px 0 0',border:'1px solid #d1d5db',borderBottom:'none',padding:'8px 12px',display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
+          <div style={{background:'#fff',borderRadius:checkedTenants.size>0&&!isManager?'0':'8px 8px 0 0',border:'1px solid #d1d5db',borderBottom:'none',padding:'8px 12px',display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
             <input type="text" placeholder="🔍 Search organization, ID..." value={searchTerm} onChange={e=>setSearchTerm(e.target.value)}
               autoComplete="off" autoCorrect="off" autoCapitalize="off" spellCheck="false" name="tenant-search-unique"
               style={{flex:1,minWidth:140,padding:'5px 10px',border:'1px solid #d1d5db',borderRadius:5,fontSize:12,outline:'none',background:'#f9fafb'}} />
@@ -573,17 +698,29 @@ const Tenants = () => {
             ):(
               <table style={{width:'100%',borderCollapse:'collapse',tableLayout:isMobile?'auto':'fixed',minWidth:isMobile?'auto':600}}>
                 {!isMobile&&<colgroup>
-                  <col style={{width:36}} />
-                  <col style={{width:'28%'}} />
-                  <col style={{width:'14%'}} />
-                  <col style={{width:'11%'}} />
-                  <col style={{width:'11%'}} />
-                  <col style={{width:'13%'}} />
-                  <col style={{width:'13%'}} />
-                  <col style={{width:80}} />
+                  {!isManager&&<col style={{width:34}} />}
+                  <col style={{width:30}} />
+                  <col style={{width:'26%'}} />
+                  <col style={{width:'12%'}} />
+                  <col style={{width:'9%'}} />
+                  <col style={{width:'9%'}} />
+                  <col style={{width:'9%'}} />
+                  <col style={{width:'10%'}} />
+                  <col style={{width:'10%'}} />
+                  <col style={{width:64}} />
                 </colgroup>}
                 <thead>
                   <tr>
+                    {!isManager&&(
+                      <th className="xTh" style={{textAlign:'center',padding:'6px 8px'}}>
+                        <input type="checkbox"
+                          checked={paginatedTenants.length>0&&paginatedTenants.every(t=>checkedTenants.has(t._id))}
+                          onChange={toggleAllVisible}
+                          onClick={e=>e.stopPropagation()}
+                          style={{cursor:'pointer',width:14,height:14,accentColor:'#6366f1'}}
+                        />
+                      </th>
+                    )}
                     <th className="xTh xNum">#</th>
                     <th className="xTh">Company</th>
                     <th className={`xTh${isMobile?' xHideM':''}`}>Org ID</th>
@@ -591,15 +728,17 @@ const Tenants = () => {
                     <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Plan</th>
                     <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Users</th>
                     <th className={`xTh${isMobile?' xHideM':''}`}>Created</th>
-                    <th className="xTh xPin" style={{textAlign:'center'}}>Action</th>
+                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Manager</th>
+                    <th className="xTh xPin" style={{textAlign:'center'}}>View</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paginatedTenants.length===0?(
-                    <tr><td colSpan={8} style={{padding:'28px',textAlign:'center',color:'#94a3b8',fontSize:13,border:'1px solid #e2e6eb'}}>No tenants found</td></tr>
+                    <tr><td colSpan={isManager?9:10} style={{padding:'28px',textAlign:'center',color:'#94a3b8',fontSize:13,border:'1px solid #e2e6eb'}}>No tenants found</td></tr>
                   ):paginatedTenants.map((t,i)=>{
                     const status=getTenantStatus(t);
                     const isSelected=selectedTenant?._id===t._id;
+                    const isChecked=checkedTenants.has(t._id);
                     const statusCell={
                       active:   {bg:'#16a34a',color:'#fff',fw:700},
                       trial:    {bg:'#0ea5e9',color:'#fff',fw:700},
@@ -607,9 +746,16 @@ const Tenants = () => {
                     }[status]||{bg:'#475569',color:'#fff',fw:600};
                     const grads=['linear-gradient(135deg,#6366f1,#4f46e5)','linear-gradient(135deg,#8b5cf6,#7c3aed)','linear-gradient(135deg,#06b6d4,#0891b2)','linear-gradient(135deg,#10b981,#059669)','linear-gradient(135deg,#f59e0b,#d97706)','linear-gradient(135deg,#ef4444,#dc2626)','linear-gradient(135deg,#ec4899,#db2777)','linear-gradient(135deg,#14b8a6,#0d9488)'];
                     const grad=grads[(t.organizationName?.charCodeAt(0)||0)%grads.length];
-                    const rowBg=isSelected?null:i%2===0?'#fff':'#f9fafb';
+                    const rowBg=isChecked?'#eff6ff':isSelected?null:i%2===0?'#fff':'#f9fafb';
                     return (
                       <tr key={t._id} className={`xRow${isSelected?' xSel':''}`} onClick={()=>handleTenantClick(t)}>
+                        {!isManager&&(
+                          <td className="xTd" style={{background:rowBg||undefined,textAlign:'center',padding:'6px 8px'}} onClick={e=>toggleCheck(e,t._id)}>
+                            <input type="checkbox" checked={isChecked} onChange={()=>{}}
+                              style={{cursor:'pointer',width:14,height:14,accentColor:'#6366f1',pointerEvents:'none'}}
+                            />
+                          </td>
+                        )}
                         <td className="xTd xNum" style={{background:rowBg||undefined}}>{startIndex+i+1}</td>
                         <td className="xTd" style={{background:rowBg||undefined}}>
                           <div style={{display:'flex',alignItems:'center',gap:7}}>
@@ -630,10 +776,21 @@ const Tenants = () => {
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:isSelected?null:({Enterprise:'#f59e0b',Professional:'#8b5cf6',Basic:'#3b82f6',Free:'#64748b'}[t.subscription?.planName]||'#3b82f6'),color:'#fff',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center',fontSize:11,fontWeight:700,color:'#374151'}}>{t.userCount||0}<span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>/{t.subscription?.maxUsers||'∞'}</span></td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontSize:11,color:'#6b7280'}}>{formatDate(t.createdAt)}</td>
+                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center'}}>
+                          {t.assignedManager ? (
+                            <span title={`${t.assignedManager.firstName} ${t.assignedManager.lastName}`}
+                              style={{display:'inline-flex',alignItems:'center',gap:4,background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:20,padding:'2px 7px',fontSize:9,fontWeight:700,color:'#6d28d9',maxWidth:80,overflow:'hidden'}}>
+                              <span>👤</span>
+                              <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.assignedManager.firstName}</span>
+                            </span>
+                          ) : (
+                            <span style={{fontSize:9,color:'#d1d5db'}}>—</span>
+                          )}
+                        </td>
                         <td className="xTd xPin" style={{background:rowBg||undefined,textAlign:'center'}}>
                           <button onClick={e=>{e.stopPropagation();handleTenantClick(t);}}
-                            style={{background:isPinVerified?'linear-gradient(135deg,#6366f1,#4f46e5)':'#e5e7eb',color:isPinVerified?'#fff':'#6b7280',border:'none',padding:'4px 10px',borderRadius:4,fontSize:10,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:3}}>
-                            {isPinVerified?'👁 View':'🔒'}
+                            style={{background:isPinVerified?'linear-gradient(135deg,#6366f1,#4f46e5)':'linear-gradient(135deg,#475569,#334155)',color:'#fff',border:'none',padding:'5px 10px',borderRadius:5,fontSize:10,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+                            {isPinVerified?<><span>👁</span><span>View</span></>:<><span>🔒</span><span>PIN</span></>}
                           </button>
                         </td>
                       </tr>
@@ -779,13 +936,51 @@ const Tenants = () => {
                   </Sec>
                 )}
 
-                {/* Action */}
-                <div style={{padding:'10px 12px',borderTop:'1px solid #e2e8f0',background:'#f9fafb'}}>
-                  {getTenantStatus(t)==='suspended'
-                    ?<button onClick={()=>handleActivate(t._id)} style={{width:'100%',padding:'7px',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>✅ Activate Tenant</button>
-                    :<button onClick={()=>handleSuspend(t._id)} style={{width:'100%',padding:'7px',background:'linear-gradient(135deg,#dc2626,#b91c1c)',color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>🚫 Suspend Tenant</button>
-                  }
-                </div>
+                {/* Manager Assignment Info */}
+                {t.assignedManager && (
+                  <Sec label="Assigned Manager" accent="#8b5cf6">
+                    <div style={{padding:'8px 10px'}}>
+                      {/* Manager card */}
+                      <div style={{display:'flex',alignItems:'center',gap:9,background:'#f5f3ff',borderRadius:7,padding:'8px 10px',marginBottom:7}}>
+                        <div style={{width:32,height:32,borderRadius:'50%',background:'linear-gradient(135deg,#8b5cf6,#6366f1)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#fff',flexShrink:0}}>
+                          {t.assignedManager.firstName?.[0]}{t.assignedManager.lastName?.[0]}
+                        </div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:12,fontWeight:700,color:'#4c1d95'}}>{t.assignedManager.firstName} {t.assignedManager.lastName}</div>
+                          <div style={{fontSize:10,color:'#7c3aed',overflow:'hidden',textOverflow:'ellipsis'}}>{t.assignedManager.email}</div>
+                        </div>
+                        <span style={{background:'#8b5cf6',color:'#fff',fontSize:8,fontWeight:800,padding:'2px 6px',borderRadius:20,letterSpacing:0.5,flexShrink:0}}>MANAGER</span>
+                      </div>
+                      {/* Who assigned + when */}
+                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                        {t.assignedManagerBy && (
+                          <div style={{background:'#f8fafc',borderRadius:5,padding:'5px 8px',border:'1px solid #e2e8f0'}}>
+                            <div style={{fontSize:8,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:0.5,marginBottom:2}}>Assigned By</div>
+                            <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{t.assignedManagerBy.firstName} {t.assignedManagerBy.lastName}</div>
+                            <div style={{fontSize:9,color:'#64748b',overflow:'hidden',textOverflow:'ellipsis'}}>{t.assignedManagerBy.email}</div>
+                          </div>
+                        )}
+                        {t.assignedManagerAt && (
+                          <div style={{background:'#f8fafc',borderRadius:5,padding:'5px 8px',border:'1px solid #e2e8f0'}}>
+                            <div style={{fontSize:8,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:0.5,marginBottom:2}}>Assigned On</div>
+                            <div style={{fontSize:11,fontWeight:700,color:'#1e293b'}}>{new Date(t.assignedManagerAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
+                            <div style={{fontSize:9,color:'#64748b'}}>{new Date(t.assignedManagerAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </Sec>
+                )}
+
+                {/* Action — hidden for managers */}
+                {!isManager && (
+                  <div style={{padding:'10px 12px',borderTop:'1px solid #e2e8f0',background:'#f9fafb'}}>
+                    {getTenantStatus(t)==='suspended'
+                      ?<button onClick={()=>handleActivate(t._id)} style={{width:'100%',padding:'7px',background:'linear-gradient(135deg,#16a34a,#15803d)',color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>✅ Activate Tenant</button>
+                      :<button onClick={()=>handleSuspend(t._id)} style={{width:'100%',padding:'7px',background:'linear-gradient(135deg,#dc2626,#b91c1c)',color:'#fff',border:'none',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer'}}>🚫 Suspend Tenant</button>
+                    }
+                  </div>
+                )}
               </div>
             </div>
           );

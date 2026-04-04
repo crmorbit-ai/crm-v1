@@ -47,12 +47,19 @@ const getTenants = async (req, res) => {
       query['deletionRequest.status'] = req.query.deletionStatus;
     }
 
+    // Filter by assigned manager
+    if (req.query.assignedManager) {
+      query.assignedManager = req.query.assignedManager === 'me' ? req.user._id : req.query.assignedManager;
+    }
+
     // Get total count
     const total = await Tenant.countDocuments(query);
 
     // Get tenants with pagination
     const tenants = await Tenant.find(query)
       .populate('reseller', 'firstName lastName email')
+      .populate('assignedManager', 'firstName lastName email')
+      .populate('assignedManagerBy', 'firstName lastName email')
       .limit(parseInt(limit))
       .skip((parseInt(page) - 1) * parseInt(limit))
       .sort({ createdAt: -1 });
@@ -91,7 +98,9 @@ const getTenants = async (req, res) => {
 const getTenant = async (req, res) => {
   try {
     const tenant = await Tenant.findById(req.params.id)
-      .populate('reseller', 'firstName lastName email');
+      .populate('reseller', 'firstName lastName email')
+      .populate('assignedManager', 'firstName lastName email')
+      .populate('assignedManagerBy', 'firstName lastName email');
 
     if (!tenant) {
       return errorResponse(res, 404, 'Tenant not found');
@@ -535,6 +544,87 @@ const recoverTenant = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Assign a manager to a tenant
+ * @route   POST /api/tenants/:id/assign-manager
+ * @access  SAAS_OWNER only
+ */
+const assignManager = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { managerId } = req.body;
+
+    const tenant = await Tenant.findById(id);
+    if (!tenant) {
+      return errorResponse(res, 404, 'Tenant not found');
+    }
+
+    if (managerId) {
+      const manager = await User.findById(managerId);
+      if (!manager || manager.saasRole !== 'Manager') {
+        return errorResponse(res, 400, 'Invalid manager — user must have saasRole: Manager');
+      }
+      tenant.assignedManager = managerId;
+      tenant.assignedManagerAt = new Date();
+      tenant.assignedManagerBy = req.user._id;
+    } else {
+      tenant.assignedManager = null;
+      tenant.assignedManagerAt = null;
+      tenant.assignedManagerBy = null;
+    }
+
+    await tenant.save();
+    await tenant.populate('assignedManager', 'firstName lastName email');
+    await tenant.populate('assignedManagerBy', 'firstName lastName email');
+
+    successResponse(res, 200, 'Manager assigned successfully', { tenant });
+  } catch (error) {
+    console.error('Assign Manager Error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Bulk assign a manager to multiple tenants
+ * @route   POST /api/tenants/bulk-assign-manager
+ * @access  SAAS_OWNER only
+ * @body    { managerId, tenantIds: [] }
+ */
+const bulkAssignManager = async (req, res) => {
+  try {
+    const { managerId, tenantIds } = req.body;
+
+    if (!Array.isArray(tenantIds)) {
+      return errorResponse(res, 400, 'tenantIds must be an array');
+    }
+
+    if (managerId) {
+      const manager = await User.findById(managerId);
+      if (!manager || manager.saasRole !== 'Manager') {
+        return errorResponse(res, 400, 'Invalid manager — user must have saasRole: Manager');
+      }
+    }
+
+    // Set assignedManager for all specified tenants
+    const now = new Date();
+    await Tenant.updateMany(
+      { _id: { $in: tenantIds } },
+      { $set: {
+        assignedManager: managerId || null,
+        assignedManagerAt: managerId ? now : null,
+        assignedManagerBy: managerId ? req.user._id : null
+      }}
+    );
+
+    successResponse(res, 200, `Manager ${managerId ? 'assigned to' : 'removed from'} ${tenantIds.length} tenant(s)`, {
+      updated: tenantIds.length
+    });
+  } catch (error) {
+    console.error('Bulk Assign Manager Error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getTenants,
   getTenant,
@@ -546,5 +636,7 @@ module.exports = {
   requestDeletion,
   approveDeletion,
   rejectDeletion,
-  recoverTenant
+  recoverTenant,
+  assignManager,
+  bulkAssignManager
 };

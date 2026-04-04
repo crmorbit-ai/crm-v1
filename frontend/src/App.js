@@ -110,7 +110,7 @@ import Loading from './components/common/Loading';
 import AIChatWidget from './components/ai/AIChatWidget';
 
 // Protected route wrapper
-const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false, skipProfileCheck = false }) => {
+const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false, skipProfileCheck = false, allowManager = false }) => {
   const { user, loading, isSaasOwner } = useAuth();
 
   if (loading) {
@@ -135,6 +135,11 @@ const ProtectedRoute = ({ children, requireSaas = false, requireTenant = false, 
 
   // Tenant routes are blocked for SAAS owners
   if (requireTenant && isSaasOwner()) {
+    return <Navigate to="/saas/dashboard" replace />;
+  }
+
+  // Managers can only access Dashboard and Tenants — redirect everything else
+  if (user.userType === 'SAAS_ADMIN' && user.saasRole === 'Manager' && !allowManager) {
     return <Navigate to="/saas/dashboard" replace />;
   }
 
@@ -196,9 +201,9 @@ function AppRoutes() {
       
 
       {/* 🚀 RESELLER PROTECTED ROUTES */}
-      
+
       <Route path="/reseller/dashboard" element={<ResellerDashboard />} />
-      
+
 
       {/* Protected routes - Tenant Only */}
       <Route path="/dashboard" element={
@@ -446,12 +451,12 @@ function AppRoutes() {
 
       {/* SAAS Owner routes */}
       <Route path="/saas/dashboard" element={
-        <ProtectedRoute requireSaas>
+        <ProtectedRoute requireSaas allowManager={true}>
           <SaasDashboard />
         </ProtectedRoute>
       } />
       <Route path="/saas/tenants" element={
-        <ProtectedRoute requireSaas>
+        <ProtectedRoute requireSaas allowManager={true}>
           <Tenants />
         </ProtectedRoute>
       } />

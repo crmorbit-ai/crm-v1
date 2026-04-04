@@ -799,8 +799,30 @@ const resetViewingPin = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get all Managers (SAAS_ADMIN with saasRole: 'Manager')
+ * @route   GET /api/saas-admins/managers
+ * @access  SAAS_OWNER, SAAS_ADMIN
+ */
+const getManagers = async (req, res) => {
+  try {
+    const managers = await User.find({
+      userType: { $in: ['SAAS_OWNER', 'SAAS_ADMIN'] },
+      saasRole: 'Manager'
+    })
+      .select('firstName lastName email saasRole isActive')
+      .sort({ firstName: 1 });
+
+    successResponse(res, 200, 'Managers fetched', { managers });
+  } catch (error) {
+    console.error('Get Managers Error:', error);
+    errorResponse(res, 500, error.message);
+  }
+};
+
 module.exports = {
   getAllSaasAdmins,
+  getManagers,
   initiateSaasAdmin,
   verifySaasAdmin,
   resendOtp,

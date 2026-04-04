@@ -228,7 +228,7 @@ module.exports = {
   restrictTo,
   requireTenant,
   requireSaasAccess,
-  requireReseller, // 🚀 NEW
+  requireReseller,
   verifyTenantContext,
-  requireProfileComplete // 🆕 NEW
+  requireProfileComplete
 };

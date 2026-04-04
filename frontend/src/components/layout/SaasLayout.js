@@ -59,7 +59,9 @@ const SaasLayout = ({ children, title }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const navItems = [
+  const isManager = user?.saasRole === 'Manager';
+
+  const allNavItems = [
     { path: '/saas/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/saas/tenants', label: 'Tenants', icon: '🏢' },
     { path: '/saas/notifications', label: 'Notifications', icon: '🔔', badge: pendingDeletions },
@@ -69,6 +71,11 @@ const SaasLayout = ({ children, title }) => {
     { path: '/saas/admins', label: 'Admins', icon: '👥' },
     { path: '/support-admin', label: 'Support', icon: '🎧' },
   ];
+
+  // Managers can only see Dashboard and Tenants
+  const navItems = isManager
+    ? allNavItems.filter(item => ['/saas/dashboard', '/saas/tenants'].includes(item.path))
+    : allNavItems;
 
   const isActive = (path) => location.pathname === path;
 

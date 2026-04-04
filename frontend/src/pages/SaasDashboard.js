@@ -2,6 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { tenantService } from '../services/tenantService';
 import { subscriptionService } from '../services/subscriptionService';
+import { useAuth } from '../context/AuthContext';
 import SaasLayout, { useWindowSize } from '../components/layout/SaasLayout';
 
 /* ── formatters ── */
@@ -81,20 +82,30 @@ const SaasDashboard = () => {
   const [billings, setBillings]       = useState([]);
   const [loading, setLoading]         = useState(true);
   const [now]                         = useState(new Date());
+  const [myTenants, setMyTenants]     = useState([]);
   const navigate                      = useNavigate();
-  const { isMobile }                  = useWindowSize();
+  const { isMobile, isTablet }        = useWindowSize();
+  const { user }                      = useAuth();
+
+  const isManager = user?.saasRole === 'Manager';
 
   useEffect(()=>{ load(); },[]);
 
   const load = async () => {
     try {
       setLoading(true);
-      const [tStats, bRes] = await Promise.all([
-        tenantService.getTenantStats(),
-        subscriptionService.getAllSubscriptions({})
-      ]);
-      setTenantStats(tStats);
-      if(bRes.success) setBillings(bRes.data.subscriptions||[]);
+      if (isManager) {
+        // Manager: load only their assigned tenants
+        const data = await tenantService.getTenants({ assignedManager: 'me', limit: 1000 });
+        setMyTenants(data.tenants || data || []);
+      } else {
+        const [tStats, bRes] = await Promise.all([
+          tenantService.getTenantStats(),
+          subscriptionService.getAllSubscriptions({})
+        ]);
+        setTenantStats(tStats);
+        if(bRes.success) setBillings(bRes.data.subscriptions||[]);
+      }
     } catch(e){ console.error(e); }
     finally{ setLoading(false); }
   };
@@ -171,6 +182,136 @@ const SaasDashboard = () => {
       </div>
     </SaasLayout>
   );
+
+  /* ══ MANAGER DASHBOARD ══ */
+  if(isManager) {
+    const mActive   = myTenants.filter(t=>t.subscription?.status==='active').length;
+    const mTrial    = myTenants.filter(t=>t.subscription?.status==='trial').length;
+    const mSuspended= myTenants.filter(t=>t.isSuspended).length;
+    const statusColor = {active:'#16a34a',trial:'#0ea5e9',suspended:'#dc2626',expired:'#dc2626'};
+    const planColor   = {Enterprise:'#f59e0b',Professional:'#8b5cf6',Basic:'#3b82f6',Free:'#64748b'};
+    return (
+      <SaasLayout title="Dashboard">
+        <style>{`@keyframes mF{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}`}</style>
+        {/* Manager Header */}
+        <div style={{background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 50%,#312e81 100%)',borderRadius:14,padding:'18px 22px',marginBottom:16,display:'flex',alignItems:'center',gap:14,border:'1px solid rgba(255,255,255,0.08)',animation:'mF 0.4s ease'}}>
+          <div style={{width:46,height:46,borderRadius:12,background:'linear-gradient(135deg,#f59e0b,#f97316)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,fontWeight:900,color:'#fff',flexShrink:0}}>
+            {user?.firstName?.[0]}{user?.lastName?.[0]}
+          </div>
+          <div style={{flex:1}}>
+            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+              <div style={{fontSize:16,fontWeight:800,color:'#fff'}}>{user?.firstName} {user?.lastName}</div>
+              <span style={{background:'linear-gradient(135deg,#f59e0b,#f97316)',color:'#fff',fontSize:9,fontWeight:800,padding:'2px 8px',borderRadius:20,letterSpacing:1}}>MANAGER</span>
+            </div>
+            <div style={{fontSize:11,color:'rgba(255,255,255,0.45)',marginTop:3}}>You are managing {myTenants.length} assigned organization{myTenants.length!==1?'s':''}</div>
+          </div>
+          <button onClick={load} style={{background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.12)',borderRadius:7,color:'rgba(255,255,255,0.55)',fontSize:11,padding:'7px 13px',cursor:'pointer',fontWeight:600}}>↺ Sync</button>
+        </div>
+
+        {/* Manager KPI Cards */}
+        <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'repeat(3,1fr)':'repeat(4,1fr)',gap:10,marginBottom:16}}>
+          {[
+            {l:'Assigned',v:myTenants.length,c:'#a5b4fc',c2:'#67e8f9',g:'linear-gradient(135deg,#0f0c29,#1a1060)'},
+            {l:'Active',   v:mActive,         c:'#6ee7b7',c2:'#34d399',g:'linear-gradient(135deg,#0a2a1a,#0f3d25)'},
+            {l:'Trial',    v:mTrial,          c:'#fde68a',c2:'#fbbf24',g:'linear-gradient(135deg,#1a130a,#2e200f)'},
+            {l:'Suspended',v:mSuspended,      c:'#fbcfe8',c2:'#f472b6',g:'linear-gradient(135deg,#1a0a10,#2e0f1a)'},
+          ].map((s,i)=>(
+            <div key={i} style={{position:'relative',borderRadius:14,padding:'16px 14px',overflow:'hidden',cursor:'default',border:'1px solid rgba(255,255,255,0.1)'}}>
+              <div style={{position:'absolute',inset:0,background:s.g,zIndex:0}}/>
+              <div style={{position:'absolute',top:-40,left:'20%',width:120,height:120,borderRadius:'50%',background:`radial-gradient(circle,${s.c}33,transparent 65%)`,zIndex:0,pointerEvents:'none'}}/>
+              <div style={{position:'absolute',top:0,left:'15%',right:'15%',height:1,background:`linear-gradient(90deg,transparent,${s.c},transparent)`,zIndex:1}}/>
+              <div style={{position:'relative',zIndex:1}}>
+                <div style={{fontSize:28,fontWeight:900,color:'#fff',lineHeight:1,fontFamily:'monospace'}}>{s.v}</div>
+                <div style={{fontSize:10,fontWeight:600,color:'rgba(255,255,255,0.55)',textTransform:'uppercase',letterSpacing:1,marginTop:8}}>{s.l}</div>
+              </div>
+              <div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:`linear-gradient(90deg,${s.c}00,${s.c},${s.c2},${s.c2}00)`,borderRadius:'0 0 14px 14px'}}/>
+            </div>
+          ))}
+        </div>
+
+        {/* Assigned Tenants List */}
+        <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:12,overflow:'hidden',borderTop:'3px solid #8b5cf6',animation:'mF 0.5s ease'}}>
+          <div style={{padding:'14px 16px',borderBottom:'1px solid #f1f5f9',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:800,color:'#1e293b'}}>My Assigned Organizations</div>
+              <div style={{fontSize:11,color:'#64748b',marginTop:1}}>{myTenants.length} organization{myTenants.length!==1?'s':''} under your management</div>
+            </div>
+            <button onClick={()=>navigate('/saas/tenants')} style={{background:'linear-gradient(135deg,#8b5cf6,#6366f1)',color:'#fff',border:'none',borderRadius:7,padding:'7px 14px',fontSize:11,fontWeight:700,cursor:'pointer'}}>View All →</button>
+          </div>
+          {myTenants.length===0?(
+            <div style={{padding:'40px',textAlign:'center',color:'#94a3b8',fontSize:13}}>No tenants assigned yet. Ask the primary owner to assign tenants to you.</div>
+          ):(
+            <div style={{overflowX:'auto'}}>
+              <table style={{width:'100%',borderCollapse:'collapse'}}>
+                <thead>
+                  <tr style={{background:'#f8fafc'}}>
+                    <th style={{padding:'8px 14px',textAlign:'left',fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid #e2e8f0'}}>#</th>
+                    <th style={{padding:'8px 14px',textAlign:'left',fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid #e2e8f0'}}>Organization</th>
+                    <th style={{padding:'8px 14px',textAlign:'center',fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid #e2e8f0'}}>Status</th>
+                    <th style={{padding:'8px 14px',textAlign:'center',fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid #e2e8f0'}}>Plan</th>
+                    <th style={{padding:'8px 14px',textAlign:'center',fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid #e2e8f0'}}>Users</th>
+                    <th style={{padding:'8px 14px',textAlign:'left',fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid #e2e8f0'}}>Assigned On</th>
+                    <th style={{padding:'8px 14px',textAlign:'left',fontSize:10,fontWeight:700,color:'#64748b',textTransform:'uppercase',letterSpacing:0.5,borderBottom:'1px solid #e2e8f0'}}>Assigned By</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {myTenants.map((t,i)=>{
+                    const st=t.subscription?.status||(t.isSuspended?'suspended':'active');
+                    const sc=statusColor[st]||'#475569';
+                    const pc=planColor[t.subscription?.planName]||'#64748b';
+                    const grad=avG(t.organizationName);
+                    return (
+                      <tr key={t._id} style={{borderBottom:'1px solid #f1f5f9',cursor:'pointer',transition:'background 0.1s'}}
+                        onMouseEnter={e=>e.currentTarget.style.background='#f8fafc'}
+                        onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                        onClick={()=>navigate('/saas/tenants')}
+                      >
+                        <td style={{padding:'10px 14px',fontSize:12,color:'#94a3b8',fontWeight:600}}>{i+1}</td>
+                        <td style={{padding:'10px 14px'}}>
+                          <div style={{display:'flex',alignItems:'center',gap:9}}>
+                            <div style={{width:30,height:30,borderRadius:8,background:grad,display:'flex',alignItems:'center',justifyContent:'center',fontSize:12,fontWeight:700,color:'#fff',flexShrink:0}}>
+                              {t.organizationName?.charAt(0)?.toUpperCase()||'?'}
+                            </div>
+                            <div>
+                              <div style={{fontSize:12,fontWeight:700,color:'#111827'}}>{t.organizationName}</div>
+                              <div style={{fontSize:10,color:'#9ca3af'}}>{t.organizationId||t.contactEmail}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={{padding:'10px 14px',textAlign:'center'}}>
+                          <span style={{background:sc,color:'#fff',fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,textTransform:'uppercase'}}>{st}</span>
+                        </td>
+                        <td style={{padding:'10px 14px',textAlign:'center'}}>
+                          <span style={{background:pc,color:'#fff',fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20}}>{t.subscription?.planName||'Free'}</span>
+                        </td>
+                        <td style={{padding:'10px 14px',textAlign:'center',fontSize:12,fontWeight:700,color:'#374151'}}>{t.userCount||0}</td>
+                        <td style={{padding:'10px 14px'}}>
+                          {t.assignedManagerAt ? (
+                            <div>
+                              <div style={{fontSize:11,fontWeight:600,color:'#1e293b'}}>{new Date(t.assignedManagerAt).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'})}</div>
+                              <div style={{fontSize:10,color:'#94a3b8'}}>{new Date(t.assignedManagerAt).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}</div>
+                            </div>
+                          ) : <span style={{fontSize:11,color:'#d1d5db'}}>—</span>}
+                        </td>
+                        <td style={{padding:'10px 14px'}}>
+                          {t.assignedManagerBy ? (
+                            <div>
+                              <div style={{fontSize:11,fontWeight:600,color:'#1e293b'}}>{t.assignedManagerBy.firstName} {t.assignedManagerBy.lastName}</div>
+                              <div style={{fontSize:10,color:'#94a3b8',overflow:'hidden',textOverflow:'ellipsis',maxWidth:120}}>{t.assignedManagerBy.email}</div>
+                            </div>
+                          ) : <span style={{fontSize:11,color:'#d1d5db'}}>—</span>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </SaasLayout>
+    );
+  }
 
   return (
     <SaasLayout title="Dashboard">
@@ -277,7 +418,7 @@ const SaasDashboard = () => {
         <div style={{position:'absolute',top:-60,left:'70%',width:200,height:200,borderRadius:'50%',background:'radial-gradient(circle,rgba(236,72,153,0.35),transparent 65%)',zIndex:0,pointerEvents:'none'}}/>
         <div style={{position:'absolute',top:-40,left:'88%',width:170,height:170,borderRadius:'50%',background:'radial-gradient(circle,rgba(239,68,68,0.4),transparent 65%)',zIndex:0,pointerEvents:'none'}}/>
 
-        <div style={{position:'relative',zIndex:1,display:'grid',gridTemplateColumns:isMobile?'repeat(2,1fr)':'repeat(5,1fr)',gap:10}}>
+        <div style={{position:'relative',zIndex:1,display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'repeat(3,1fr)':'repeat(5,1fr)',gap:10}}>
           {[
             {l:'Total',     v:total,            c:'#a5b4fc', c2:'#67e8f9', to:'/saas/tenants'},
             {l:'Active',    v:active,           c:'#6ee7b7', c2:'#34d399', to:'/saas/tenants?status=active'},

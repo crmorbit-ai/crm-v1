@@ -231,6 +231,24 @@ const tenantSchema = new mongoose.Schema({
   },
   
   // ============================================
+  // 👤 MANAGER ASSIGNMENT
+  // ============================================
+  assignedManager: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  assignedManagerAt: {
+    type: Date,
+    default: null
+  },
+  assignedManagerBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+
+  // ============================================
   // 🚀 RESELLER INTEGRATION
   // ============================================
   reseller: {

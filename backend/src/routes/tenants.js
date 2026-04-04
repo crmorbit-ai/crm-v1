@@ -11,7 +11,9 @@ const {
   requestDeletion,
   approveDeletion,
   rejectDeletion,
-  recoverTenant
+  recoverTenant,
+  assignManager,
+  bulkAssignManager
 } = require('../controllers/tenantController');
 const { protect, requireSaasAccess, requireTenant } = require('../middleware/auth');
 
@@ -30,6 +32,10 @@ router.put('/:id', updateTenant);
 router.post('/:id/suspend', suspendTenant);
 router.post('/:id/activate', activateTenant);
 router.delete('/:id', deleteTenant);
+
+// Manager assignment (SAAS Owner only)
+router.post('/bulk-assign-manager', bulkAssignManager);
+router.post('/:id/assign-manager', assignManager);
 
 // Deletion request management (SAAS Admin only)
 router.post('/:id/approve-deletion', approveDeletion);

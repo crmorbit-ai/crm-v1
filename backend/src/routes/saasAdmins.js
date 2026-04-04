@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, requireSaasAccess } = require('../middleware/auth');
 const {
   getAllSaasAdmins,
+  getManagers,
   initiateSaasAdmin,
   verifySaasAdmin,
   resendOtp,
@@ -46,6 +47,7 @@ const requirePrimaryOwner = (req, res, next) => {
 
 // Routes accessible by all SAAS admins
 router.get('/me', getMyProfile);
+router.get('/managers', getManagers);
 router.post('/set-viewing-credentials', setViewingCredentials);
 router.post('/verify-viewing-credentials', verifyViewingCredentials);
 router.post('/forgot-viewing-credentials', forgotViewingCredentials);

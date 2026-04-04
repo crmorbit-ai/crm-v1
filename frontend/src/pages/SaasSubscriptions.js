@@ -68,7 +68,7 @@ const SaasSubscriptions = () => {
   const [toast, setToast]   = useState({msg:'',ok:true});
   const [sortBy, setSortBy] = useState('amount');
   const pageSize = 15;
-  const { isMobile } = useWindowSize();
+  const { isMobile, isTablet } = useWindowSize();
 
   useEffect(()=>{ loadSubscriptions(); },[]);
   useEffect(()=>{ const s=searchParams.get('status'); if(s&&s!==filterStatus) setFilterStatus(s); },[searchParams]);
@@ -178,7 +178,7 @@ const SaasSubscriptions = () => {
         <div style={{position:'relative',zIndex:1,padding:'24px 28px'}}>
 
           {/* top bar */}
-          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16,marginBottom:0}}>
+          <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:16,marginBottom:0,flexDirection:isMobile?'column':'row'}}>
             <div>
               <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:8}}>
                 <div style={{width:8,height:8,borderRadius:'50%',background:'#22c55e',boxShadow:'0 0 8px #22c55e'}} className="ssPulse" />
@@ -196,7 +196,7 @@ const SaasSubscriptions = () => {
             </div>
 
             {/* Revenue trio */}
-            <div style={{display:'flex',gap:0,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,overflow:'hidden',backdropFilter:'blur(12px)'}}>
+            <div style={{display:'flex',gap:0,background:'rgba(255,255,255,0.04)',border:'1px solid rgba(255,255,255,0.08)',borderRadius:16,overflow:'hidden',backdropFilter:'blur(12px)',flexWrap:isMobile?'wrap':'nowrap'}}>
               {[
                 {label:'MRR',val:revenue?.monthlyRecurring||0, c:'#a78bfa'},
                 {label:'ARR',val:(revenue?.monthlyRecurring||0)*12, c:'#67e8f9'},
@@ -214,7 +214,7 @@ const SaasSubscriptions = () => {
       </div>
 
       {/* ── STATS ROW ── */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginBottom:16}}>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'repeat(3,1fr)':'repeat(5,1fr)',gap:10,marginBottom:16}}>
         {[
           {label:'Total',     val:stats.total,     k:'all',       g:'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)', gh:'linear-gradient(135deg,#4f46e5,#7c3aed,#0891b2)'},
           {label:'Active',    val:stats.active,    k:'active',    g:'linear-gradient(135deg,#10b981 0%,#059669 50%,#16a34a 100%)', gh:'linear-gradient(135deg,#059669,#047857,#15803d)'},

@@ -417,7 +417,8 @@ const getMe = async (req, res) => {
         subscription: user.tenant.subscription
       } : null,
       roles: user.roles || [],
-      groups: user.groups || []
+      groups: user.groups || [],
+      saasRole: user.saasRole || null
     };
 
     successResponse(res, 200, 'User profile retrieved', userResponse);

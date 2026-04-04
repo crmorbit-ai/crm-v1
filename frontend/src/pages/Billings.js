@@ -90,7 +90,7 @@ const Billings = () => {
   const [period,setPeriod]=useState('6M');
   const [selected,setSelected]=useState(null);
   const [actionLoading,setActionLoading]=useState(false);
-  const {width}=useWindowSize();
+  const {width,isMobile,isTablet}=useWindowSize();
   const compact=width<1100;
 
   const handleAction = async (updates) => {
@@ -253,7 +253,7 @@ const Billings = () => {
       `}</style>
 
       {/* ══ PAGE HEADER ══ */}
-      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12}}>
+      <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:20,flexWrap:'wrap',gap:12,flexDirection:isMobile?'column':'row'}}>
         <div>
           <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:4}}>
             <div style={{width:7,height:7,borderRadius:'50%',background:'#10b981',boxShadow:'0 0 10px #10b981',animation:'bP 2s infinite'}}/>
@@ -301,7 +301,7 @@ const Billings = () => {
       </div>
 
       {/* ══ KPI STAT CARDS ══ */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:10,marginBottom:16}}>
+      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr 1fr':isTablet?'repeat(3,1fr)':'repeat(5,1fr)',gap:10,marginBottom:16}}>
         {KPI_CARDS.map((s,i)=>{
           const on = statusFilter===s.k;
           return (
