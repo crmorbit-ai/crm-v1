@@ -123,6 +123,7 @@ app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/templates', require('./routes/templates'));
 app.use('/api/document-templates', require('./routes/documentTemplates'));
 app.use('/api/social',            require('./routes/social'));
+app.use('/api/org-hierarchy',     require('./routes/orgHierarchy'));
 
 
 app.use((req, res) => {

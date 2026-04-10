@@ -88,7 +88,7 @@ const TeamManagement = () => {
   const [subStep, setSubStep]         = useState(null);
   const [qRole, setQRole]   = useState({ name:'', description:'', permissions:[], forUserTypes:['TENANT_USER','TENANT_MANAGER'] });
   const [qGroup, setQGroup] = useState({ name:'', description:'' });
-  const [userForm, setUserForm] = useState({ firstName:'', lastName:'', email:'', personalEmail:'', officeEmail:'', password:'', userType:'TENANT_USER', phone:'', alternatePhone:'', loginName:'', department:'', subDepartment:'', reportingManager:'', viewingPin:'', roles:[], groups:[] });
+  const [userForm, setUserForm] = useState({ firstName:'', lastName:'', email:'', personalEmail:'', officeEmail:'', password:'', userType:'TENANT_USER', phone:'', alternatePhone:'', loginName:'', department:'', subDepartment:'', reportingManager:'', viewingPin:'', roles:[], groups:[], designation:'', reportsTo:'' });
   const [copied, setCopied] = useState('');
   const copyVal = (key, val) => { if(!val) return; navigator.clipboard.writeText(val).then(()=>{ setCopied(key); setTimeout(()=>setCopied(''),1500); }); };
   const [bulkModal, setBulkModal]     = useState(false);
@@ -163,8 +163,8 @@ const TeamManagement = () => {
     setShowRoleDD(false); setShowGroupDD(false); setShowPwd(false); setShowPin(false);
     const ug = u ? groups.filter(g=>g.members?.some(m=>(m._id||m)===u._id)).map(g=>g._id) : [];
     setUserForm(u
-      ? {firstName:u.firstName,lastName:u.lastName,email:u.email,personalEmail:u.personalEmail||'',officeEmail:u.officeEmail||'',password:'',userType:u.userType,phone:u.phone||'',alternatePhone:u.alternatePhone||'',loginName:u.loginName||'',department:u.department||'',subDepartment:u.subDepartment||'',reportingManager:u.reportingManager?._id||u.reportingManager||'',viewingPin:'',roles:u.roles?.map(r=>r._id)||[],groups:ug}
-      : {firstName:'',lastName:'',email:'',personalEmail:'',officeEmail:'',password:'',userType:'TENANT_USER',phone:'',alternatePhone:'',loginName:'',department:'',subDepartment:'',reportingManager:'',viewingPin:'',roles:[],groups:[]});
+      ? {firstName:u.firstName,lastName:u.lastName,email:u.email,personalEmail:u.personalEmail||'',officeEmail:u.officeEmail||'',password:'',userType:u.userType,phone:u.phone||'',alternatePhone:u.alternatePhone||'',loginName:u.loginName||'',department:u.department||'',subDepartment:u.subDepartment||'',reportingManager:u.reportingManager?._id||u.reportingManager||'',viewingPin:'',roles:u.roles?.map(r=>r._id)||[],groups:ug,designation:u.designation||'',reportsTo:u.reportsTo?._id||u.reportsTo||''}
+      : {firstName:'',lastName:'',email:'',personalEmail:'',officeEmail:'',password:'',userType:'TENANT_USER',phone:'',alternatePhone:'',loginName:'',department:'',subDepartment:'',reportingManager:'',viewingPin:'',roles:[],groups:[],designation:'',reportsTo:''});
     setShowPanel(true);
   };
   const openRolePanel  = (r=null) => { setPanelMode('role');  setEditingItem(r); setRoleForm(r?{name:r.name,description:r.description||'',permissions:r.permissions||[],forUserTypes:r.forUserTypes||['TENANT_USER','TENANT_MANAGER']}:{name:'',description:'',permissions:[],forUserTypes:['TENANT_USER','TENANT_MANAGER']}); setShowPanel(true); };
@@ -585,6 +585,24 @@ const TeamManagement = () => {
                     </div>
                   </div>
 
+                  {/* Row 4b: Designation + Reports To */}
+                  <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+                    <div>
+                      <Label>Designation</Label>
+                      <Inp value={userForm.designation} onChange={e=>setUserForm({...userForm,designation:e.target.value})} placeholder="e.g. Sales Manager" />
+                    </div>
+                    <div>
+                      <Label>Reports To</Label>
+                      <select className="xInp" style={{width:'100%',padding:'8px 28px 8px 11px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:13,color:userForm.reportsTo?'#0f172a':'#94a3b8',background:'#fff',outline:'none',boxSizing:'border-box',appearance:'none',backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",backgroundRepeat:'no-repeat',backgroundPosition:'right 10px center'}}
+                        value={userForm.reportsTo} onChange={e=>setUserForm({...userForm,reportsTo:e.target.value})}>
+                        <option value="">— None —</option>
+                        {users.filter(u=>u._id!==(editingItem?._id)).map(u=>(
+                          <option key={u._id} value={u._id}>{u.firstName} {u.lastName}{u.designation?` · ${u.designation}`:''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
                   {/* Row 5: Phone + Alternate Phone */}
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
                     <div>
@@ -836,9 +854,11 @@ const TeamManagement = () => {
                     <DRow ico="📱" label="Alternate Phone" val={su.alternatePhone||'—'} />
 
                     <SLabel>Organisation</SLabel>
+                    <DRow ico="💼" label="Designation"     val={su.designation||'—'} />
                     <DRow ico="🏛️" label="Department"     val={su.department||'—'} />
                     <DRow ico="📂" label="Sub Department"  val={su.subDepartment||'—'} />
                     <DRow ico="👔" label="Reporting Manager" val={su.reportingManager||'—'} />
+                    {su.reportsTo&&<DRow ico="↑" label="Reports To" val={typeof su.reportsTo==='object'?`${su.reportsTo.firstName} ${su.reportsTo.lastName}${su.reportsTo.designation?' · '+su.reportsTo.designation:''}`:su.reportsTo} />}
 
                     {su.roles?.length>0&&(
                       <div style={{marginTop:10}}>
@@ -937,7 +957,8 @@ const TeamManagement = () => {
                           </div>
                           <div>
                             <div style={{fontSize:13,fontWeight:700,color:'#0f172a',lineHeight:1.2}}>{u.firstName} {u.lastName}</div>
-                            <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{u.email}</div>
+                            <div style={{fontSize:11,color:'#94a3b8',marginTop:1}}>{u.designation||u.email}</div>
+                            <div style={{fontSize:10,color:'#b0b7c3',marginTop:1}}>{u.designation&&u.email}</div>
                             {u.department&&<span style={{fontSize:9,fontWeight:700,color:'#7c3aed',background:'#f5f3ff',padding:'1px 6px',borderRadius:5,marginTop:2,display:'inline-block'}}>{u.department}</span>}
                           </div>
                         </div>

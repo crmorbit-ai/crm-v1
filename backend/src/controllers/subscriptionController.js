@@ -332,11 +332,51 @@ const updateTenantSubscription = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Update subscription plan features/limits (SAAS Admin)
+ * @route   PUT /api/subscriptions/plans/:planId
+ * @access  SAAS Admin only
+ */
+const updatePlan = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    const { features, limits, price, displayName, description, isPopular } = req.body;
+
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan) return errorResponse(res, 404, 'Plan not found');
+
+    // Merge features
+    if (features && typeof features === 'object') {
+      Object.keys(features).forEach(key => {
+        plan.features[key] = features[key];
+      });
+    }
+    // Merge limits
+    if (limits && typeof limits === 'object') {
+      Object.keys(limits).forEach(key => {
+        plan.limits[key] = limits[key];
+      });
+    }
+    if (price !== undefined) plan.price = { ...plan.price, ...price };
+    if (displayName !== undefined) plan.displayName = displayName;
+    if (description !== undefined) plan.description = description;
+    if (isPopular !== undefined) plan.isPopular = isPopular;
+
+    await plan.save();
+
+    return successResponse(res, 200, 'Plan updated successfully', { plan });
+  } catch (error) {
+    console.error('updatePlan error:', error);
+    return errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getAllPlans,
   getCurrentSubscription,
   upgradePlan,
   cancelSubscription,
   getAllSubscriptions,
-  updateTenantSubscription
+  updateTenantSubscription,
+  updatePlan
 };

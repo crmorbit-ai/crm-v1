@@ -100,6 +100,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  designation: {
+    type: String,
+    trim: true
+  },
+  reportsTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
   // For SAAS_OWNER and SAAS_ADMIN: their department/role in SAAS company
   saasRole: {
     type: String

@@ -100,6 +100,20 @@ export const updateTenantSubscription = async (tenantId, updates) => {
   }
 };
 
+// Update subscription plan features/limits (SAAS Admin)
+export const updatePlan = async (planId, updates) => {
+  try {
+    const response = await axios.put(
+      `${API_URL}/plans/${planId}`,
+      updates,
+      getAuthHeader()
+    );
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
 export const subscriptionService = {
   getAllPlans,
   getCurrentSubscription,
@@ -107,5 +121,6 @@ export const subscriptionService = {
   completePayment,
   cancelSubscription,
   getAllSubscriptions,
-  updateTenantSubscription
+  updateTenantSubscription,
+  updatePlan
 };

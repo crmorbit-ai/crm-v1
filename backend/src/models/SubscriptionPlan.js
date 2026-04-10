@@ -117,6 +117,10 @@ const subscriptionPlanSchema = new mongoose.Schema({
     },
     
     // Premium Features
+    crossOrgHierarchy: {
+      type: Boolean,
+      default: false
+    },
     whiteLabeling: {
       type: Boolean,
       default: false

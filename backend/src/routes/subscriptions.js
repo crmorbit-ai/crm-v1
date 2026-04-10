@@ -6,7 +6,8 @@ const {
   upgradePlan,
   cancelSubscription,
   getAllSubscriptions,
-  updateTenantSubscription
+  updateTenantSubscription,
+  updatePlan
 } = require('../controllers/subscriptionController');
 const { protect } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
@@ -32,6 +33,7 @@ router.post('/cancel', protect, requirePermission('subscription_management', 'ma
 
 // SAAS Admin routes
 router.get('/all', protect, requireSaasAccess, getAllSubscriptions);
+router.put('/plans/:planId', protect, requireSaasAccess, updatePlan);
 router.put('/:tenantId', protect, requireSaasAccess, updateTenantSubscription);
 
 module.exports = router;

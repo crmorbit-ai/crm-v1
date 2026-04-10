@@ -79,6 +79,7 @@ const getUsers = async (req, res) => {
       })
       .populate('tenant', 'organizationName slug')
       .populate('addedBy', 'firstName lastName email')
+      .populate('reportsTo', 'firstName lastName designation department profilePicture')
       .select('-password')
       .limit(limit * 1)
       .skip((page - 1) * limit)
@@ -145,7 +146,7 @@ const getUser = async (req, res) => {
  */
 const createUser = async (req, res) => {
   try {
-    const { email, password, firstName, lastName, userType, tenant, roles, groups, loginName, department, subDepartment, personalEmail, officeEmail, phone, alternatePhone, reportingManager, viewingPin } = req.body;
+    const { email, password, firstName, lastName, userType, tenant, roles, groups, loginName, department, subDepartment, personalEmail, officeEmail, phone, alternatePhone, reportingManager, viewingPin, designation, reportsTo } = req.body;
 
     // Validation
     if (!email || !password || !firstName || !lastName || !userType) {
@@ -261,6 +262,8 @@ const createUser = async (req, res) => {
       ...(phone            && { phone }),
       ...(alternatePhone   && { alternatePhone }),
       ...(reportingManager && { reportingManager }),
+      ...(designation      && { designation }),
+      ...(reportsTo        && { reportsTo }),
       addedBy: req.user._id,
       ...(hashedPin && { viewingPin: hashedPin, isViewingPinSet: true })
     };
@@ -334,7 +337,7 @@ const updateUser = async (req, res) => {
     }
 
     // Fields that can be updated
-    const allowedFields = ['firstName', 'lastName', 'phone', 'alternatePhone', 'personalEmail', 'officeEmail', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions', 'loginName', 'department', 'subDepartment', 'reportingManager'];
+    const allowedFields = ['firstName', 'lastName', 'phone', 'alternatePhone', 'personalEmail', 'officeEmail', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions', 'loginName', 'department', 'subDepartment', 'reportingManager', 'designation', 'reportsTo'];
 
     // SAAS owners and TENANT_ADMIN can change userType
     if (req.body.userType && (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN' || req.user.userType === 'TENANT_ADMIN')) {
@@ -350,7 +353,7 @@ const updateUser = async (req, res) => {
     // Update fields
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        user[field] = req.body[field];
+        user[field] = (field === 'reportsTo' && req.body[field] === '') ? null : req.body[field];
       }
     });
 

@@ -46,3 +46,15 @@ export const userService = {
     return response.data;
   }
 };
+
+export const orgHierarchyService = {
+  getOrgList: async () => {
+    const response = await api.get('/org-hierarchy/tenants');
+    return response.data;
+  },
+
+  getOrgUsers: async (targetTenantId) => {
+    const response = await api.get(`/org-hierarchy/${targetTenantId}/users`);
+    return response.data;
+  },
+};

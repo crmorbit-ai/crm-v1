@@ -42,6 +42,7 @@ import Profile from './pages/Profile';
 
 // User management (Settings)
 import TeamManagement from './pages/TeamManagement';
+import OrgChart from './pages/OrgChart';
 import TemplateManagement from './pages/TemplateManagement';
 import NotificationSettings from './pages/NotificationSettings';
 import DocumentTemplates from './pages/DocumentTemplates';
@@ -62,6 +63,7 @@ import ActivityLogs from './pages/ActivityLogs';
 
 import Subscription from './pages/Subscription';
 import SaasSubscriptions from './pages/SaasSubscriptions';
+import SaasPlans from './pages/SaasPlans';
 
 
 
@@ -417,6 +419,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/org-chart" element={
+        <ProtectedRoute requireTenant>
+          <OrgChart />
+        </ProtectedRoute>
+      } />
+
       <Route path="/templates" element={
         <ProtectedRoute requireTenant>
           <TemplateManagement />
@@ -467,6 +475,12 @@ function AppRoutes() {
       <Route path="/saas/subscriptions" element={
         <ProtectedRoute requireSaas>
           <SaasSubscriptions />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/saas/plans" element={
+        <ProtectedRoute requireSaas>
+          <SaasPlans />
         </ProtectedRoute>
       } />
       
