@@ -1047,12 +1047,72 @@ const bulkUploadLeads = async (req, res) => {
 
     const createdLeads = [];
 
+    // Common column header → standard Lead field name mapping
+    const STANDARD_FIELD_MAP = {
+      'name':            'name',
+      'fullname':        'name',
+      'full name':       'name',
+      'firstname':       'firstName',
+      'first name':      'firstName',
+      'lastname':        'lastName',
+      'last name':       'lastName',
+      'email':           'email',
+      'emailaddress':    'email',
+      'email address':   'email',
+      'phone':           'phone',
+      'mobile':          'phone',
+      'phonenumber':     'phone',
+      'phone number':    'phone',
+      'contact':         'phone',
+      'company':         'company',
+      'organization':    'company',
+      'companyname':     'company',
+      'company name':    'company',
+      'designation':     'designation',
+      'title':           'designation',
+      'jobtitle':        'designation',
+      'job title':       'designation',
+      'position':        'designation',
+      'role':            'designation',
+      'department':      'department',
+      'dept':            'department',
+      'division':        'department',
+      'city':            'city',
+      'location':        'city',
+      'country':         'country',
+      'state':           'state',
+      'website':         'website',
+      'url':             'website',
+      'industry':        'industry',
+      'source':          'source',
+      'leadsource':      'source',
+      'lead source':     'source',
+      'status':          'leadStatus',
+      'leadstatus':      'leadStatus',
+      'lead status':     'leadStatus',
+      'rating':          'rating',
+      'description':     'description',
+      'notes':           'description',
+      'address':         'address',
+      'linkedin':        'linkedIn',
+      'twitter':         'twitter',
+      'facebook':        'facebook',
+    };
+
+    // Convert any column header to a safe camelCase key
+    const toCamelKey = (str) =>
+      str.trim()
+        .replace(/[^a-zA-Z0-9\s_]/g, '')
+        .replace(/\s+(.)/g, (_, c) => c.toUpperCase())
+        .replace(/^(.)/, c => c.toLowerCase())
+        .replace(/\s+/g, '');
+
     // Process each lead
     for (let i = 0; i < leadsData.length; i++) {
       const row = leadsData[i];
 
       try {
-        // 🆕 Build leadData dynamically from field definitions
+        // Build leadData dynamically from field definitions
         const leadData = {
           tenant,
           owner: null, // 🔧 Keep UNASSIGNED on bulk upload
@@ -1061,6 +1121,7 @@ const bulkUploadLeads = async (req, res) => {
         };
 
         const customFields = {};
+        const mappedColKeys = new Set(); // track which CSV columns were handled by FieldDefinitions
 
         // Helper function to find value in row with case-insensitive matching
         const findValueInRow = (row, field) => {
@@ -1075,31 +1136,34 @@ const bulkUploadLeads = async (req, res) => {
           for (const key of Object.keys(row)) {
             const lowerKey = key.toLowerCase().trim();
             if (lowerKey === lowerLabel || lowerKey === lowerFieldName) {
+              mappedColKeys.add(key);
               return row[key];
             }
-            // Also check without spaces (e.g., "firstname" matches "First Name")
             if (lowerKey.replace(/\s+/g, '') === lowerLabel.replace(/\s+/g, '')) {
+              mappedColKeys.add(key);
               return row[key];
             }
             if (lowerKey.replace(/\s+/g, '') === lowerFieldName.replace(/\s+/g, '')) {
+              mappedColKeys.add(key);
               return row[key];
             }
           }
 
           // Try camelCase to space conversion
           const spacedFieldName = field.fieldName.replace(/([A-Z])/g, ' $1').trim();
-          if (row[spacedFieldName] !== undefined) return row[spacedFieldName];
+          if (row[spacedFieldName] !== undefined) {
+            mappedColKeys.add(spacedFieldName);
+            return row[spacedFieldName];
+          }
 
           return undefined;
         };
 
         // Process each field definition
         fieldDefinitions.forEach(field => {
-          // Try to get value from CSV using flexible matching
           const value = findValueInRow(row, field);
 
           if (value !== undefined && value !== null && value !== '') {
-            // Convert value based on field type
             let processedValue = value;
 
             switch (field.fieldType) {
@@ -1108,34 +1172,26 @@ const bulkUploadLeads = async (req, res) => {
               case 'percentage':
                 processedValue = parseFloat(value) || 0;
                 break;
-
               case 'checkbox':
                 processedValue = value === 'Yes' || value === 'yes' || value === 'true' || value === '1' || value === true;
                 break;
-
               case 'multi_select':
-                if (typeof value === 'string') {
-                  processedValue = value.split(',').map(v => v.trim());
-                }
+                if (typeof value === 'string') processedValue = value.split(',').map(v => v.trim());
                 break;
-
               case 'date':
               case 'datetime':
                 processedValue = new Date(value);
                 break;
-
               default:
                 processedValue = String(value).trim();
             }
 
-            // Store in appropriate location
             if (field.isStandardField) {
               leadData[field.fieldName] = processedValue;
             } else {
               customFields[field.fieldName] = processedValue;
             }
           } else if (field.defaultValue !== null && field.defaultValue !== undefined) {
-            // Use default value if no value provided
             if (field.isStandardField) {
               leadData[field.fieldName] = field.defaultValue;
             } else {
@@ -1144,16 +1200,36 @@ const bulkUploadLeads = async (req, res) => {
           }
         });
 
+        // ── Save ALL remaining columns not handled by FieldDefinitions ──────
+        // Since Lead schema has strict:false, every column from the file is preserved
+        for (const [colKey, colVal] of Object.entries(row)) {
+          if (mappedColKeys.has(colKey)) continue;
+          if (colVal === undefined || colVal === null || colVal === '') continue;
+
+          const lk = colKey.toLowerCase().trim();
+
+          // Map to standard field name if known
+          if (STANDARD_FIELD_MAP[lk]) {
+            const stdField = STANDARD_FIELD_MAP[lk];
+            if (!leadData[stdField]) leadData[stdField] = colVal; // don't overwrite if already set
+          } else {
+            // Save as camelCase key directly on the document (strict:false allows this)
+            const camelKey = toCamelKey(colKey);
+            if (camelKey && !leadData[camelKey]) leadData[camelKey] = colVal;
+          }
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         // Add customFields to leadData if any exist
         if (Object.keys(customFields).length > 0) {
           leadData.customFields = customFields;
         }
 
         // Validate - at least one identifying field required
-        if (!leadData.firstName && !leadData.lastName && !leadData.email && !leadData.company) {
+        if (!leadData.firstName && !leadData.lastName && !leadData.name && !leadData.email && !leadData.company) {
           errors.push({
             row: i + 2,
-            error: 'At least one of First Name, Last Name, Email, or Company is required'
+            error: 'At least one of Name, Email, or Company is required'
           });
           continue;
         }
@@ -1627,6 +1703,26 @@ const assignLeadToUser = async (req, res) => {
   }
 };
 
+const bulkDeleteLeads = async (req, res) => {
+  try {
+    const { ids, deleteAll } = req.body;
+    const tenantId = req.user.tenant?.toString();
+
+    if (deleteAll) {
+      await Lead.updateMany({ tenant: tenantId, isActive: true }, { isActive: false });
+      return successResponse(res, 200, 'All leads deleted');
+    }
+
+    if (!Array.isArray(ids) || ids.length === 0)
+      return errorResponse(res, 400, 'ids array required');
+
+    await Lead.updateMany({ _id: { $in: ids }, tenant: tenantId }, { isActive: false });
+    successResponse(res, 200, `${ids.length} leads deleted`);
+  } catch (err) {
+    errorResponse(res, 500, err.message);
+  }
+};
+
 module.exports = {
   getLeads,
   getLead,
@@ -1639,5 +1735,6 @@ module.exports = {
   downloadSampleTemplate,
   getLeadStats,
   assignLeadsToGroup,
-  assignLeadToUser
+  assignLeadToUser,
+  bulkDeleteLeads,
 };

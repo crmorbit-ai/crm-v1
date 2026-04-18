@@ -59,5 +59,11 @@ export const leadService = {
   assignLeadToUser: async (leadId, userId, role) => {
     const response = await api.post(`/leads/${leadId}/assign`, { userId, role });
     return response;
-  }
+  },
+
+  // Bulk delete selected leads or all leads
+  bulkDeleteLeads: async (ids = [], deleteAll = false) => {
+    const response = await api.post('/leads/bulk-delete', { ids, deleteAll });
+    return response;
+  },
 };

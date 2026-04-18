@@ -244,6 +244,8 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                 <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'audit_logs']}>
                   <NavItem to="/users" label="Users" permission="user_management" />
                   <NavItem to="/org-chart" label="Org Chart" permission="user_management" />
+                  <NavItem to="/org-hierarchy" label="Org Hierarchy" permission="user_management" />
+                  <NavItem to="/role-template" label="Role Template" permission="user_management" />
                   <NavItem to="/notifications" label="Notifications" />
                   <NavItem to="/notification-settings" label="Notification Settings" />
                   <NavItem to="/activity-logs" label="Audit Logs" permission="audit_logs" />

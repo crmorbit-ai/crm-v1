@@ -1457,6 +1457,20 @@ const Leads = () => {
   const canManageProducts = hasPermission('product_management', 'create');
   const canDeleteLead = hasPermission('lead_management', 'delete');
 
+  const handleBulkDelete = async (deleteAll = false) => {
+    const count = deleteAll ? 'ALL leads' : `${selectedLeads.length} selected leads`;
+    if (!window.confirm(`Delete ${count}? This cannot be undone.`)) return;
+    try {
+      await leadService.bulkDeleteLeads(selectedLeads, deleteAll);
+      setSuccess(deleteAll ? 'All leads deleted!' : `${selectedLeads.length} leads deleted!`);
+      setSelectedLeads([]);
+      loadLeads();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to delete leads');
+    }
+  };
+
   const handleDeleteLead = async (e, leadId) => {
     e.stopPropagation();
     if (!window.confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
@@ -2544,6 +2558,13 @@ const Leads = () => {
             <Upload className="h-4 w-4 mr-1" /> Bulk Upload
           </button>
         )}
+        {/* Delete All */}
+        {canDeleteLead && (
+          <button onClick={() => handleBulkDelete(true)}
+            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'#f43f5e', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(244,63,94,0.3)' }}>
+            <Trash2 className="h-4 w-4" /> Delete All
+          </button>
+        )}
       </div>
       {/* Inline Add Product Form - Compact */}
       {showAddProductForm && (
@@ -2722,6 +2743,12 @@ const Leads = () => {
                 style={{ padding:'4px 10px', borderRadius:'6px', border:'none', background:'#3b82f6', color:'#fff', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>
                 Assign to Group
               </button>
+              {canDeleteLead && (
+                <button onClick={() => handleBulkDelete(false)}
+                  style={{ padding:'4px 10px', borderRadius:'6px', border:'none', background:'#f43f5e', color:'#fff', fontSize:'11px', fontWeight:'700', cursor:'pointer', display:'flex', alignItems:'center', gap:4 }}>
+                  🗑 Delete Selected
+                </button>
+              )}
             </div>
           )}
         </div>

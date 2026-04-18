@@ -14,7 +14,8 @@ const {
   downloadSampleTemplate,
   getLeadStats,
   assignLeadsToGroup,
-  assignLeadToUser
+  assignLeadToUser,
+  bulkDeleteLeads,
 } = require('../controllers/leadController');
 const {
   verifyEmailAddress,
@@ -106,6 +107,12 @@ router.get('/stats',
 router.post('/:id/convert',
   requirePermission('lead_management', 'convert'),
   convertLead
+);
+
+// Bulk delete
+router.post('/bulk-delete',
+  requirePermission('lead_management', 'delete'),
+  bulkDeleteLeads
 );
 
 // 🆕 Group assignment routes

@@ -63,6 +63,12 @@ const connectDataCenterDB = async () => {
       dataCenterConnection.model('UserProduct', UserProduct.schema);
     }
 
+    // OrgNode — dual-write org hierarchy to Data Center DB
+    const OrgNode = require('../models/OrgNode');
+    if (!dataCenterConnection.models.OrgNode) {
+      dataCenterConnection.model('OrgNode', OrgNode.schema);
+    }
+
     console.log(`✅ Data Center DB Connected: ${dataCenterConnection.host}`);
 
     // Handle connection events

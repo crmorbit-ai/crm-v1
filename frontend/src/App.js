@@ -43,6 +43,8 @@ import Profile from './pages/Profile';
 // User management (Settings)
 import TeamManagement from './pages/TeamManagement';
 import OrgChart from './pages/OrgChart';
+import OrgHierarchy from './pages/OrgHierarchy';
+import RoleTemplateBuilder from './pages/RoleTemplateBuilder';
 import TemplateManagement from './pages/TemplateManagement';
 import NotificationSettings from './pages/NotificationSettings';
 import DocumentTemplates from './pages/DocumentTemplates';
@@ -422,6 +424,18 @@ function AppRoutes() {
       <Route path="/org-chart" element={
         <ProtectedRoute requireTenant>
           <OrgChart />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/org-hierarchy" element={
+        <ProtectedRoute requireTenant>
+          <OrgHierarchy />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/role-template" element={
+        <ProtectedRoute requireTenant>
+          <RoleTemplateBuilder />
         </ProtectedRoute>
       } />
 

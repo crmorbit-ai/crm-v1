@@ -124,6 +124,8 @@ app.use('/api/templates', require('./routes/templates'));
 app.use('/api/document-templates', require('./routes/documentTemplates'));
 app.use('/api/social',            require('./routes/social'));
 app.use('/api/org-hierarchy',     require('./routes/orgHierarchy'));
+app.use('/api/org-nodes',         require('./routes/orgNodes'));
+app.use('/api/role-templates',    require('./routes/roleTemplates'));
 
 
 app.use((req, res) => {
