@@ -318,6 +318,16 @@ try {
   app.use('/api/social', require('../src/routes/social'));
   console.log('  ✅ template routes loaded');
 
+  // Org Hierarchy & Role Templates
+  app.use('/api/org-hierarchy',  require('../src/routes/orgHierarchy'));
+  app.use('/api/org-nodes',      require('../src/routes/orgNodes'));
+  app.use('/api/role-templates', require('../src/routes/roleTemplates'));
+  console.log('  ✅ org hierarchy routes loaded');
+
+  // Monetization
+  app.use('/api/monetization', require('../src/routes/monetization'));
+  console.log('  ✅ monetization routes loaded');
+
   // SAAS Admin & AI Routes
   app.use('/api/saas-admins', require('../src/routes/saasAdmins'));
   app.use('/api/viewing-pin', require('../src/routes/viewingPin'));
