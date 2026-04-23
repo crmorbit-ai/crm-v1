@@ -1,7 +1,10 @@
 const SubscriptionPlan = require('../models/SubscriptionPlan');
-const Tenant = require('../models/Tenant');
-const Payment = require('../models/Payment');
+const Tenant           = require('../models/Tenant');
+const Payment          = require('../models/Payment');
+const PlanHistory      = require('../models/PlanHistory');
 const { successResponse, errorResponse } = require('../utils/response');
+
+const PLAN_ORDER = { Free:0, Basic:1, Professional:2, Enterprise:3 };
 
 /**
  * @desc    Get all subscription plans
@@ -93,7 +96,7 @@ const getCurrentSubscription = async (req, res) => {
  */
 const upgradePlan = async (req, res) => {
   try {
-    const { planId, billingCycle } = req.body;
+    const { planId, billingCycle, reason } = req.body;
     const tenantId = req.user.tenant._id || req.user.tenant;
     
     // Validation
@@ -133,6 +136,26 @@ const upgradePlan = async (req, res) => {
     // 🎯 DEMO MODE - AUTO ACTIVATE WITHOUT PAYMENT
     // ============================================
     
+    // Save plan change history BEFORE updating
+    const fromPlan  = tenant.subscription?.planName || 'Free';
+    const fromOrder = PLAN_ORDER[fromPlan] ?? 0;
+    const toOrder   = PLAN_ORDER[plan.name] ?? 0;
+    const changeType = fromPlan === plan.name ? 'new'
+      : toOrder > fromOrder ? 'upgrade'
+      : 'downgrade';
+
+    await PlanHistory.create({
+      tenant:      tenantId,
+      fromPlan,
+      toPlan:      plan.name,
+      changeType,
+      billingCycle,
+      amount,
+      reason:      reason || '',
+      changedBy:   'tenant',
+      changedAt:   new Date(),
+    });
+
     // Update tenant subscription immediately
     tenant.subscription.plan = plan._id;
     tenant.subscription.planName = plan.name;
@@ -199,25 +222,51 @@ const cancelSubscription = async (req, res) => {
   try {
     const { reason } = req.body;
     const tenantId = req.user.tenant._id || req.user.tenant;
-    
-    const tenant = await Tenant.findById(tenantId);
+
+    const [tenant, freePlan] = await Promise.all([
+      Tenant.findById(tenantId),
+      SubscriptionPlan.findOne({ name: 'Free', isActive: true }),
+    ]);
+
     if (!tenant) {
       return errorResponse(res, 404, 'Tenant not found');
     }
-    
-    // Update subscription
-    tenant.subscription.status = 'cancelled';
-    tenant.subscription.autoRenew = false;
-    tenant.subscription.cancelledAt = new Date();
-    tenant.subscription.cancellationReason = reason;
-    
-    await tenant.save();
-    
-    successResponse(res, 200, 'Subscription cancelled', {
-      message: 'Your subscription will remain active until ' + 
-        (tenant.subscription.endDate ? tenant.subscription.endDate.toLocaleDateString() : 'end of period')
+    if (!freePlan) {
+      return errorResponse(res, 404, 'Free plan not found');
+    }
+
+    const fromPlan = tenant.subscription?.planName || 'Unknown';
+
+    // Save downgrade history with cancel reason
+    await PlanHistory.create({
+      tenant:      tenantId,
+      fromPlan,
+      toPlan:      'Free',
+      changeType:  'downgrade',
+      reason:      reason || 'Plan cancelled by tenant',
+      billingCycle:'monthly',
+      amount:      0,
+      changedBy:   'tenant',
+      changedAt:   new Date(),
     });
-    
+
+    // Downgrade to Free — no payment needed, keep account active
+    tenant.subscription.plan           = freePlan._id;
+    tenant.subscription.planName       = 'Free';
+    tenant.subscription.status         = 'active';
+    tenant.subscription.billingCycle   = 'monthly';
+    tenant.subscription.amount         = 0;
+    tenant.subscription.isTrialActive  = false;
+    tenant.subscription.autoRenew      = false;
+    tenant.subscription.cancelledAt    = new Date();
+    tenant.subscription.cancellationReason = reason || 'Plan cancelled by tenant';
+
+    await tenant.save();
+
+    successResponse(res, 200, 'Plan cancelled — moved to Free', {
+      message: `Your plan has been downgraded to Free. Previous plan: ${fromPlan}`
+    });
+
   } catch (error) {
     console.error('Cancel subscription error:', error);
     errorResponse(res, 500, 'Server error');

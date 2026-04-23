@@ -67,6 +67,7 @@ const SaasLayout = ({ children, title }) => {
     { path: '/saas/notifications', label: 'Notifications', icon: '🔔', badge: pendingDeletions },
     { path: '/saas/subscriptions', label: 'Subscriptions', icon: '💳' },
     { path: '/saas/plans', label: 'Plans', icon: '📋' },
+    { path: '/saas/monetization', label: 'Monetization', icon: '📈' },
     { path: '/saas/billings', label: 'Billings', icon: '💰' },
     { path: '/saas/resellers', label: 'Resellers', icon: '🤝' },
     { path: '/saas/admins', label: 'Admins', icon: '👥' },

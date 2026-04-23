@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { tenantCheckAccess } from '../../services/monetizationService';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
 import { ScrollArea } from '../ui/scroll-area';
@@ -13,6 +14,13 @@ import {
 const Sidebar = ({ isOpen, onClose, isMobile }) => {
   const location = useLocation();
   const { hasPermission, isSaasOwner } = useAuth();
+  const [hasMonetization, setHasMonetization] = useState(false);
+
+  useEffect(() => {
+    if (!isSaasOwner()) {
+      tenantCheckAccess().then(d => setHasMonetization(!!d?.hasAccess)).catch(() => {});
+    }
+  }, []);
 
   const [openSections, setOpenSections] = useState(() => {
     const saved = localStorage.getItem('sidebarOpenSections');
@@ -250,6 +258,13 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                   <NavItem to="/notification-settings" label="Notification Settings" />
                   <NavItem to="/activity-logs" label="Audit Logs" permission="audit_logs" />
                 </NavSection>
+
+                {/* Sales Monetization — only if plan has feature */}
+                {hasMonetization && (
+                  <NavSection title="Monetization" section="monetization">
+                    <NavItem to="/monetization" label="Sales Dashboard" />
+                  </NavSection>
+                )}
 
                 {/* Support - always visible */}
                 <NavSection title="Support" section="support">

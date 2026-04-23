@@ -16,7 +16,8 @@ const FEATURE_LABELS = {
   taskManagement:    { label: 'Task Management',    group: 'Core' },
   emailIntegration:  { label: 'Email Integration',  group: 'Advanced' },
   customFields:      { label: 'Custom Fields',      group: 'Advanced' },
-  crossOrgHierarchy: { label: 'Cross-Org Hierarchy', group: 'Premium' },
+  crossOrgHierarchy: { label: 'Cross-Org Hierarchy',   group: 'Premium' },
+  salesMonetization: { label: 'Sales Monetization',    group: 'Premium' },
 };
 
 const LIMIT_LABELS = {

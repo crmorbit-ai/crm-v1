@@ -6,6 +6,7 @@ const Opportunity = require('../models/Opportunity');
 const Account = require('../models/Account');
 const Contact = require('../models/Contact');
 const Task = require('../models/Task');
+const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { createNotification } = require('../services/notificationService');
@@ -114,6 +115,10 @@ const createOpportunity = async (req, res) => {
       contract: contractData.url ? contractData : undefined,
       owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
     });
+
+    // Update tenant usage count
+    await Tenant.findByIdAndUpdate(tenant, { $inc: { 'usage.deals': 1 } });
+
     await opportunity.populate('owner', 'firstName lastName email');
     await opportunity.populate('accountManager', 'firstName lastName email');
     await opportunity.populate('account', 'accountName');
@@ -264,6 +269,10 @@ const deleteOpportunity = async (req, res) => {
     opportunity.isActive = false;
     opportunity.lastModifiedBy = req.user._id;
     await opportunity.save();
+
+    // Update tenant usage count
+    await Tenant.findByIdAndUpdate(opportunity.tenant, { $inc: { 'usage.deals': -1 } });
+
     await logActivity(req, 'opportunity.deleted', 'Opportunity', opportunity._id, { opportunityName: opportunity.opportunityName });
     successResponse(res, 200, 'Opportunity deleted successfully');
   } catch (error) {

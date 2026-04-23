@@ -66,6 +66,8 @@ import ActivityLogs from './pages/ActivityLogs';
 import Subscription from './pages/Subscription';
 import SaasSubscriptions from './pages/SaasSubscriptions';
 import SaasPlans from './pages/SaasPlans';
+import Monetization from './pages/Monetization';
+import TenantMonetization from './pages/TenantMonetization';
 
 
 
@@ -367,6 +369,13 @@ function AppRoutes() {
   </ProtectedRoute>
 } />
 
+{/* 💰 TENANT MONETIZATION */}
+<Route path="/monetization" element={
+  <ProtectedRoute requireTenant>
+    <TenantMonetization />
+  </ProtectedRoute>
+} />
+
 {/* 🎫 SUPPORT TICKET ROUTES */}
 <Route path="/support" element={
   <ProtectedRoute requireTenant>
@@ -495,6 +504,12 @@ function AppRoutes() {
       <Route path="/saas/plans" element={
         <ProtectedRoute requireSaas>
           <SaasPlans />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/saas/monetization" element={
+        <ProtectedRoute requireSaas>
+          <Monetization />
         </ProtectedRoute>
       } />
       

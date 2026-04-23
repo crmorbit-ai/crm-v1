@@ -121,6 +121,10 @@ const subscriptionPlanSchema = new mongoose.Schema({
       type: Boolean,
       default: false
     },
+    salesMonetization: {
+      type: Boolean,
+      default: false
+    },
     whiteLabeling: {
       type: Boolean,
       default: false

@@ -1,6 +1,7 @@
-const Tenant = require('../models/Tenant');
-const User = require('../models/User');
+const Tenant      = require('../models/Tenant');
+const User        = require('../models/User');
 const Subscription = require('../models/Subscription');
+const PlanHistory = require('../models/PlanHistory');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const {
@@ -252,6 +253,23 @@ const deleteTenant = async (req, res) => {
       return errorResponse(res, 404, 'Tenant not found');
     }
 
+    // Record churn in PlanHistory before deleting
+    await PlanHistory.create({
+      tenant:     tenant._id,
+      fromPlan:   tenant.subscription?.planName || 'Free',
+      toPlan:     tenant.subscription?.planName || 'Free',
+      changeType: 'cancel',
+      reason:     'Organization deleted by SAAS admin',
+      changedBy:  'admin',
+      changedAt:  new Date(),
+    }).catch(() => {});
+
+    // Mark cancelledAt for churn tracking
+    tenant.subscription.cancelledAt        = new Date();
+    tenant.subscription.cancellationReason = 'Organization deleted by SAAS admin';
+    tenant.subscription.status             = 'cancelled';
+    await tenant.save().catch(() => {});
+
     // Delete all users associated with this tenant
     await User.deleteMany({ tenant: tenant._id });
 
@@ -413,13 +431,29 @@ const approveDeletion = async (req, res) => {
     const permanentDeleteAt = new Date();
     permanentDeleteAt.setDate(permanentDeleteAt.getDate() + 45);
 
-    tenant.deletionRequest.status = 'approved';
-    tenant.deletionRequest.approvedAt = new Date();
-    tenant.deletionRequest.approvedBy = req.user._id;
+    tenant.deletionRequest.status           = 'approved';
+    tenant.deletionRequest.approvedAt       = new Date();
+    tenant.deletionRequest.approvedBy       = req.user._id;
     tenant.deletionRequest.permanentDeleteAt = permanentDeleteAt;
-    tenant.isActive = false;
+    tenant.isActive                          = false;
+
+    // Record churn
+    tenant.subscription.cancelledAt        = new Date();
+    tenant.subscription.cancellationReason = 'Organization deletion request approved';
+    tenant.subscription.status             = 'cancelled';
 
     await tenant.save();
+
+    // Save plan history
+    await PlanHistory.create({
+      tenant:     tenant._id,
+      fromPlan:   tenant.subscription?.planName || 'Free',
+      toPlan:     tenant.subscription?.planName || 'Free',
+      changeType: 'cancel',
+      reason:     'Deletion request approved — 45 day window',
+      changedBy:  'admin',
+      changedAt:  new Date(),
+    }).catch(() => {});
 
     // Block all tenant users
     await User.updateMany({ tenant: tenant._id }, { isActive: false });

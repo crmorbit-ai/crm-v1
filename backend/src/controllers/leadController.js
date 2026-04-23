@@ -4,6 +4,7 @@ const Account = require('../models/Account');
 const Contact = require('../models/Contact');
 const Opportunity = require('../models/Opportunity');
 const FieldDefinition = require('../models/FieldDefinition');
+const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
@@ -385,6 +386,9 @@ const createLead = async (req, res) => {
 
     const lead = await Lead.create(leadData);
 
+    // Update tenant usage count
+    await Tenant.findByIdAndUpdate(tenant, { $inc: { 'usage.leads': 1 } });
+
     console.log('✅ Lead created successfully:', lead._id);
 
     // Populate fields
@@ -763,6 +767,9 @@ const deleteLead = async (req, res) => {
     lead.isActive = false;
     lead.lastModifiedBy = req.user._id;
     await lead.save();
+
+    // Update tenant usage count
+    await Tenant.findByIdAndUpdate(lead.tenant, { $inc: { 'usage.leads': -1 } });
 
     await logActivity(req, 'lead.deleted', 'Lead', lead._id, {
       firstName: lead.firstName,

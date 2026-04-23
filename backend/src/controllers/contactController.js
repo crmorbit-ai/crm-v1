@@ -3,6 +3,7 @@ const Contact = require('../models/Contact');
 const Account = require('../models/Account');
 const Opportunity = require('../models/Opportunity');
 const Task = require('../models/Task');
+const Tenant = require('../models/Tenant');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
@@ -115,6 +116,9 @@ const createContact = async (req, res) => {
       mailingAddress: { street: mailingStreet, city: mailingCity, state: mailingState, country: mailingCountry, zipCode: mailingZipCode },
       description, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
     });
+    // Update tenant usage count
+    await Tenant.findByIdAndUpdate(tenant, { $inc: { 'usage.contacts': 1 } });
+
     await contact.populate('account', 'accountName accountNumber');
     await contact.populate('owner', 'firstName lastName email');
     await logActivity(req, 'contact.created', 'Contact', contact._id, { firstName: contact.firstName, lastName: contact.lastName, email: contact.email });
@@ -210,6 +214,10 @@ const deleteContact = async (req, res) => {
     contact.isActive = false;
     contact.lastModifiedBy = req.user._id;
     await contact.save();
+
+    // Update tenant usage count
+    await Tenant.findByIdAndUpdate(contact.tenant, { $inc: { 'usage.contacts': -1 } });
+
     await logActivity(req, 'contact.deleted', 'Contact', contact._id, { firstName: contact.firstName, lastName: contact.lastName });
     successResponse(res, 200, 'Contact deleted successfully');
   } catch (error) {

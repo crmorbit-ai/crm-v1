@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const passport = require('./config/passport');
 const connectDB = require('./config/database');
+const { autoTrackFeature } = require('./middleware/trackFeature');
 const { connectDataCenterDB } = require('./config/database');
 const imapIdleService = require('./services/imapIdleService');
 const emailSyncJob = require('./jobs/emailSyncJob');
@@ -73,6 +74,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
+app.use(autoTrackFeature);
 app.use('/uploads', express.static('uploads'));
 
 // Health Check
@@ -126,6 +128,7 @@ app.use('/api/social',            require('./routes/social'));
 app.use('/api/org-hierarchy',     require('./routes/orgHierarchy'));
 app.use('/api/org-nodes',         require('./routes/orgNodes'));
 app.use('/api/role-templates',    require('./routes/roleTemplates'));
+app.use('/api/monetization',      require('./routes/monetization'));
 
 
 app.use((req, res) => {

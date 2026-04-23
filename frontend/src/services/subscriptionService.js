@@ -34,11 +34,11 @@ export const getCurrentSubscription = async () => {
 };
 
 // Upgrade plan
-export const upgradePlan = async (planId, billingCycle) => {
+export const upgradePlan = async (planId, billingCycle, reason = '') => {
   try {
     const response = await axios.post(
       `${API_URL}/upgrade`,
-      { planId, billingCycle },
+      { planId, billingCycle, reason },
       getAuthHeader()
     );
     return response.data;

@@ -13,6 +13,13 @@ const Subscription = () => {
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [hoveredPlanId, setHoveredPlanId] = useState(null);
   const [hoveredStatCard, setHoveredStatCard] = useState(null);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState('');
+  const [cancelOther, setCancelOther] = useState('');
+  const [cancelling, setCancelling] = useState(false);
+  const [upgradeTarget, setUpgradeTarget] = useState(null); // plan to upgrade to
+  const [upgradeReason, setUpgradeReason] = useState('');
+  const [upgradeOther, setUpgradeOther] = useState('');
 
   // Clean Professional Styles
   const glassStyles = {
@@ -182,14 +189,24 @@ const Subscription = () => {
     }
   };
 
-  const handleUpgrade = async (plan) => {
+  const handleUpgrade = (plan) => {
     if (!plan) return;
-    
+    setUpgradeTarget(plan);
+    setUpgradeReason('');
+    setUpgradeOther('');
+  };
+
+  const confirmUpgrade = async () => {
+    if (!upgradeTarget) return;
+    const reason = upgradeOther.trim() ? `${upgradeReason} — ${upgradeOther.trim()}` : upgradeReason;
+    if (!reason.trim()) { alert('Please select a reason'); return; }
     try {
       setUpgrading(true);
-      const response = await subscriptionService.upgradePlan(plan._id, billingCycle);
-      
+      const response = await subscriptionService.upgradePlan(upgradeTarget._id, billingCycle, reason);
       if (response.success) {
+        setUpgradeTarget(null);
+        setUpgradeReason('');
+        setUpgradeOther('');
         alert('✅ ' + response.message);
         loadData();
       }
@@ -197,7 +214,26 @@ const Subscription = () => {
       alert('❌ ' + (error.message || 'Failed to upgrade plan'));
     } finally {
       setUpgrading(false);
-      setSelectedPlan(null);
+    }
+  };
+
+  const handleCancel = async () => {
+    const reason = cancelOther.trim() ? `${cancelReason} — ${cancelOther.trim()}` : cancelReason;
+    if (!reason.trim()) { alert('Please select a reason'); return; }
+    try {
+      setCancelling(true);
+      const response = await subscriptionService.cancelSubscription(reason);
+      if (response.success) {
+        setShowCancelModal(false);
+        setCancelReason('');
+        setCancelOther('');
+        alert('Your plan has been cancelled and moved to Free.');
+        loadData();
+      }
+    } catch (error) {
+      alert('Failed to cancel: ' + (error.message || 'Server error'));
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -418,6 +454,18 @@ const Subscription = () => {
               </div>
             )}
           </div>
+
+          {/* Cancel Plan Button — only if not Free/Basic */}
+          {sub?.planName && !['Free','Basic'].includes(sub.planName) && (
+            <div style={{ textAlign: 'right', marginBottom: '8px' }}>
+              <button
+                onClick={() => setShowCancelModal(true)}
+                style={{ background: 'none', border: '1px solid #fca5a5', color: '#f43f5e', borderRadius: '8px', padding: '7px 16px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}
+              >
+                Cancel Plan
+              </button>
+            </div>
+          )}
 
           {/* Trial Warning */}
           {status?.isTrialActive && status?.trialDaysRemaining <= 5 && (
@@ -990,6 +1038,120 @@ const Subscription = () => {
 `}</style>
 
       </div>
+
+      {/* ── Upgrade Plan Modal ── */}
+      {upgradeTarget && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, padding:32, width:'100%', maxWidth:440, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize:24, marginBottom:8, textAlign:'center' }}>🚀</div>
+            <h3 style={{ fontSize:18, fontWeight:800, color:'#0f172a', textAlign:'center', marginBottom:4 }}>
+              Upgrade to {upgradeTarget.displayName}?
+            </h3>
+            <p style={{ fontSize:12, color:'#94a3b8', textAlign:'center', marginBottom:24 }}>Tell us why you're upgrading — helps us improve!</p>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'#475569', display:'block', marginBottom:8 }}>Reason for upgrading</label>
+              {[
+                'Need more users',
+                'Reached plan limits',
+                'Need advanced features',
+                'Business is growing',
+                'Better support needed',
+                'Other',
+              ].map(r => (
+                <label key={r} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, marginBottom:4, cursor:'pointer', background: upgradeReason===r ? '#ede9fe' : '#f8fafc', border: upgradeReason===r ? '1px solid #8b5cf6' : '1px solid #f1f5f9' }}>
+                  <input type="radio" name="upgradeReason" value={r} checked={upgradeReason===r} onChange={()=>setUpgradeReason(r)} style={{ accentColor:'#8b5cf6' }}/>
+                  <span style={{ fontSize:13, color:'#0f172a', fontWeight: upgradeReason===r?700:400 }}>{r}</span>
+                </label>
+              ))}
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'#475569', display:'block', marginBottom:6 }}>Additional details <span style={{fontWeight:400,color:'#94a3b8'}}>(optional)</span></label>
+              <textarea
+                value={upgradeOther}
+                onChange={e=>setUpgradeOther(e.target.value)}
+                placeholder="Add any additional details here..."
+                rows={2}
+                style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #e2e8f0', fontSize:13, resize:'none', boxSizing:'border-box' }}
+              />
+            </div>
+
+            <div style={{ display:'flex', gap:10, marginTop:8 }}>
+              <button
+                onClick={()=>{ setUpgradeTarget(null); setUpgradeReason(''); setUpgradeOther(''); }}
+                style={{ flex:1, padding:'11px', borderRadius:8, border:'1px solid #e2e8f0', background:'#fff', color:'#64748b', fontSize:13, fontWeight:700, cursor:'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmUpgrade}
+                disabled={upgrading || !upgradeReason}
+                style={{ flex:1, padding:'11px', borderRadius:8, border:'none', background: upgrading||!upgradeReason ? '#e2e8f0' : '#5db9de', color: upgrading||!upgradeReason ? '#94a3b8' : '#fff', fontSize:13, fontWeight:700, cursor: upgrading||!upgradeReason ? 'not-allowed' : 'pointer' }}
+              >
+                {upgrading ? 'Processing...' : 'Confirm Upgrade'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Plan Modal ── */}
+      {showCancelModal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.5)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}>
+          <div style={{ background:'#fff', borderRadius:16, padding:32, width:'100%', maxWidth:440, boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ fontSize:24, marginBottom:8, textAlign:'center' }}>😔</div>
+            <h3 style={{ fontSize:18, fontWeight:800, color:'#0f172a', textAlign:'center', marginBottom:4 }}>Cancel Your Plan?</h3>
+            <p style={{ fontSize:12, color:'#94a3b8', textAlign:'center', marginBottom:24 }}>Your account will move to the Free plan. Please tell us why.</p>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'#475569', display:'block', marginBottom:8 }}>Reason for cancelling</label>
+              {[
+                'Too expensive',
+                'Missing features I need',
+                'Switching to a competitor',
+                'Business closed / paused',
+                'Technical issues',
+                'Not using it enough',
+                'Other',
+              ].map(r => (
+                <label key={r} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:8, marginBottom:4, cursor:'pointer', background: cancelReason===r ? '#ede9fe' : '#f8fafc', border: cancelReason===r ? '1px solid #8b5cf6' : '1px solid #f1f5f9' }}>
+                  <input type="radio" name="cancelReason" value={r} checked={cancelReason===r} onChange={()=>setCancelReason(r)} style={{ accentColor:'#8b5cf6' }}/>
+                  <span style={{ fontSize:13, color:'#0f172a', fontWeight: cancelReason===r?700:400 }}>{r}</span>
+                </label>
+              ))}
+            </div>
+
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontSize:12, fontWeight:700, color:'#475569', display:'block', marginBottom:6 }}>Additional details <span style={{fontWeight:400,color:'#94a3b8'}}>(optional)</span></label>
+              <textarea
+                value={cancelOther}
+                onChange={e=>setCancelOther(e.target.value)}
+                placeholder="Add any additional details here..."
+                rows={2}
+                style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid #e2e8f0', fontSize:13, resize:'none', boxSizing:'border-box' }}
+              />
+            </div>
+
+            <div style={{ display:'flex', gap:10, marginTop:8 }}>
+              <button
+                onClick={()=>{ setShowCancelModal(false); setCancelReason(''); setCancelOther(''); }}
+                style={{ flex:1, padding:'11px', borderRadius:8, border:'1px solid #e2e8f0', background:'#fff', color:'#64748b', fontSize:13, fontWeight:700, cursor:'pointer' }}
+              >
+                Keep My Plan
+              </button>
+              <button
+                onClick={handleCancel}
+                disabled={cancelling || !cancelReason}
+                style={{ flex:1, padding:'11px', borderRadius:8, border:'none', background: cancelling||!cancelReason ? '#e2e8f0' : '#f43f5e', color: cancelling||!cancelReason ? '#94a3b8' : '#fff', fontSize:13, fontWeight:700, cursor: cancelling||!cancelReason ? 'not-allowed' : 'pointer' }}
+              >
+                {cancelling ? 'Cancelling...' : 'Yes, Cancel Plan'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </DashboardLayout>
   );
 };
