@@ -129,6 +129,7 @@ app.use('/api/org-hierarchy',     require('./routes/orgHierarchy'));
 app.use('/api/org-nodes',         require('./routes/orgNodes'));
 app.use('/api/role-templates',    require('./routes/roleTemplates'));
 app.use('/api/monetization',      require('./routes/monetization'));
+app.use('/api/feedback',          require('./routes/feedback'));
 
 
 app.use((req, res) => {

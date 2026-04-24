@@ -77,6 +77,7 @@ import ProductMarketplace from './pages/ProductMarketplace';
 import Products from './pages/Products';
 import Support from './pages/Support';
 import SupportAdmin from './pages/SupportAdmin';
+import Feedback from './pages/Feedback';
 import ProductCategories from './pages/ProductCategories';
 
 // Field Customization (Product Team)
@@ -388,6 +389,18 @@ function AppRoutes() {
   </ProtectedRoute>
 } />
 
+{/* 💬 FEEDBACK */}
+<Route path="/feedback" element={
+  <ProtectedRoute requireTenant>
+    <Feedback />
+  </ProtectedRoute>
+} />
+<Route path="/saas/feedback" element={
+  <ProtectedRoute requireSaas>
+    <Feedback />
+  </ProtectedRoute>
+} />
+
       {/* CRM Routes - Tenant Only */}
       <Route path="/leads" element={
         <ProtectedRoute requireTenant>
@@ -603,6 +616,7 @@ const AIChat = () => {
 
   return <AIChatWidget />;
 };
+
 
 function App() {
   return (

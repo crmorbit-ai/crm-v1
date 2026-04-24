@@ -328,6 +328,10 @@ try {
   app.use('/api/monetization', require('../src/routes/monetization'));
   console.log('  ✅ monetization routes loaded');
 
+  // Feedback
+  app.use('/api/feedback', require('../src/routes/feedback'));
+  console.log('  ✅ feedback routes loaded');
+
   // SAAS Admin & AI Routes
   app.use('/api/saas-admins', require('../src/routes/saasAdmins'));
   app.use('/api/viewing-pin', require('../src/routes/viewingPin'));

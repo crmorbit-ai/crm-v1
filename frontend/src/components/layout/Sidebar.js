@@ -13,8 +13,9 @@ import {
 
 const Sidebar = ({ isOpen, onClose, isMobile }) => {
   const location = useLocation();
-  const { hasPermission, isSaasOwner } = useAuth();
+  const { hasPermission, isSaasOwner, user } = useAuth();
   const [hasMonetization, setHasMonetization] = useState(false);
+  const isTenantAdmin = ['TENANT_ADMIN', 'TENANT_MANAGER'].includes(user?.userType);
 
   useEffect(() => {
     if (!isSaasOwner()) {
@@ -269,6 +270,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                 {/* Support - always visible */}
                 <NavSection title="Support" section="support">
                   <NavItem to="/support" label="My Tickets" />
+                  <NavItem to="/feedback" label={isTenantAdmin ? "Feedback Inbox" : "Feedback"} />
                 </NavSection>
 
               </>
