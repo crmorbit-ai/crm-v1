@@ -59,20 +59,21 @@ const SENT = {
   negative: { label:'Negative', color:'#dc2626', bg:'#fef2f2', icon:'😞' },
 };
 
-/* ─── Gradient stat card CSS ─── */
+/* ─── Stat card CSS ─── */
 const STAT_CSS = `
-  .fbStat { cursor:pointer; border-radius:10px; padding:12px 16px; transition:transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease; }
-  .fbStat:hover { transform:translateY(-3px) scale(1.03); filter:brightness(1.15); box-shadow:0 8px 24px rgba(0,0,0,0.28) !important; }
+  .fbStat { cursor:pointer; border-radius:10px; padding:14px 18px; transition:transform 0.15s ease, box-shadow 0.15s ease; background:#fff; }
+  .fbStat:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.1) !important; }
   .fbStat:active { transform:translateY(0) scale(0.98); }
 `;
 
-const GradStat = ({ label, value, grad, hov, active, onClick }) => (
+const GradStat = ({ label, value, color, active, onClick }) => (
   <div className="fbStat" onClick={onClick}
-    style={{ background:grad, boxShadow: active?'0 4px 18px rgba(0,0,0,0.3)':'0 2px 8px rgba(0,0,0,0.15)',
-      outline: active?'2px solid rgba(255,255,255,0.5)':'none', outlineOffset:3, flex:'1 1 0', minWidth:100 }}>
-    <div style={{ fontSize:24, fontWeight:900, color:'#fff', lineHeight:1, marginBottom:4, textShadow:'0 1px 3px rgba(0,0,0,0.2)', fontVariantNumeric:'tabular-nums' }}>{value}</div>
-    <div style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,0.85)', textTransform:'uppercase', letterSpacing:'0.5px' }}>{label}</div>
-    {active && <div style={{ width:20, height:2, background:'rgba(255,255,255,0.6)', borderRadius:1, marginTop:6 }}/>}
+    style={{ border: active ? `2px solid ${color}` : '1.5px solid #e8edf2',
+      boxShadow: active ? `0 0 0 3px ${color}18, 0 2px 8px rgba(0,0,0,0.06)` : '0 1px 3px rgba(0,0,0,0.05)',
+      flex:'1 1 0', minWidth:100, background: active ? `${color}08` : '#fff' }}>
+    <div style={{ fontSize:26, fontWeight:800, color: active ? color : '#0f172a', lineHeight:1, marginBottom:5, fontVariantNumeric:'tabular-nums' }}>{value}</div>
+    <div style={{ fontSize:10, fontWeight:700, color: active ? color : '#94a3b8', textTransform:'uppercase', letterSpacing:'0.6px' }}>{label}</div>
+    {active && <div style={{ width:18, height:2, background:color, borderRadius:1, marginTop:6 }}/>}
   </div>
 );
 
@@ -682,13 +683,13 @@ const TenantAdminView = () => {
             {analytics && (
               <div style={{ display:'flex', gap:8 }}>
                 {[
-                  {k:'all',      l:'Total',    v:analytics.total,                 grad:'linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4)', f:()=>setFilters(p=>({...p,tenantAdminStatus:''})),                  act:!filters.tenantAdminStatus},
-                  {k:'pending',  l:'Pending',  v:analytics.open,                  grad:'linear-gradient(135deg,#f59e0b,#d97706,#ea580c)', f:()=>setFilters(p=>({...p,tenantAdminStatus:'pending'})),            act:filters.tenantAdminStatus==='pending'},
-                  {k:'resolved', l:'Resolved', v:analytics.resolved,              grad:'linear-gradient(135deg,#10b981,#16a34a,#84cc16)', f:()=>setFilters(p=>({...p,tenantAdminStatus:'resolved'})),           act:filters.tenantAdminStatus==='resolved'},
-                  {k:'escalated',l:'Escalated',v:analytics.escalated,             grad:'linear-gradient(135deg,#ec4899,#dc2626,#9f1239)', f:()=>setFilters(p=>({...p,tenantAdminStatus:'escalated'})),          act:filters.tenantAdminStatus==='escalated'},
-                  {k:'positive', l:'Positive', v:`${analytics.positiveRate||0}%`, grad:'linear-gradient(135deg,#0ea5e9,#6366f1,#8b5cf6)', f:()=>setFilters(p=>({...p,tenantAdminStatus:''})),                   act:false},
+                  {k:'all',      l:'Total',    v:analytics.total,                 c:'#6366f1', f:()=>setFilters(p=>({...p,tenantAdminStatus:''})),           act:!filters.tenantAdminStatus},
+                  {k:'pending',  l:'Pending',  v:analytics.open,                  c:'#f59e0b', f:()=>setFilters(p=>({...p,tenantAdminStatus:'pending'})),     act:filters.tenantAdminStatus==='pending'},
+                  {k:'resolved', l:'Resolved', v:analytics.resolved,              c:'#10b981', f:()=>setFilters(p=>({...p,tenantAdminStatus:'resolved'})),    act:filters.tenantAdminStatus==='resolved'},
+                  {k:'escalated',l:'Escalated',v:analytics.escalated,             c:'#ef4444', f:()=>setFilters(p=>({...p,tenantAdminStatus:'escalated'})),   act:filters.tenantAdminStatus==='escalated'},
+                  {k:'positive', l:'Positive', v:`${analytics.positiveRate||0}%`, c:'#10b981', f:()=>{},                                                      act:false},
                 ].map(s=>(
-                  <GradStat key={s.k} label={s.l} value={s.v} grad={s.grad} active={s.act} onClick={s.f}/>
+                  <GradStat key={s.k} label={s.l} value={s.v} color={s.c} active={s.act} onClick={s.f}/>
                 ))}
               </div>
             )}
@@ -955,11 +956,11 @@ const TenantAdminView = () => {
         {tab==='insights' && analytics && (
           <div style={{ flex:1, overflowY:'auto', padding:'28px 32px', background:'#f8fafc' }}>
             <div style={{ display:'flex', gap:8, marginBottom:28, flexWrap:'wrap' }}>
-              <GradStat label="Total"     value={analytics.total}                 grad="linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:''})); }}/>
-              <GradStat label="Pending"   value={analytics.open}                  grad="linear-gradient(135deg,#f59e0b,#d97706,#ea580c)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'pending'})); }}/>
-              <GradStat label="Resolved"  value={analytics.resolved}              grad="linear-gradient(135deg,#10b981,#16a34a,#84cc16)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'resolved'})); }}/>
-              <GradStat label="Escalated" value={analytics.escalated}             grad="linear-gradient(135deg,#ec4899,#dc2626,#9f1239)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'escalated'})); }}/>
-              <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} grad="linear-gradient(135deg,#0ea5e9,#6366f1,#8b5cf6)" active={false} onClick={()=>{}}/>
+              <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:''})); }}/>
+              <GradStat label="Pending"   value={analytics.open}                  color="#f59e0b" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'pending'})); }}/>
+              <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'resolved'})); }}/>
+              <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'escalated'})); }}/>
+              <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false} onClick={()=>{}}/>
             </div>
             <h2 style={{ margin:'0 0 6px', fontSize:18, fontWeight:800, color:'#0f172a', letterSpacing:-0.3 }}>Business Intelligence</h2>
             <p style={{ margin:'0 0 22px', fontSize:13, color:'#64748b' }}>What your users are saying — last 30 days</p>
@@ -1181,12 +1182,12 @@ const SaasAdminView = () => {
             {/* KPI strip — clickable gradient cards */}
             {analytics && (
               <div style={{ display:'flex', gap:8 }}>
-                <GradStat label="Total"     value={analytics.total}                 grad="linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4)" active={!filters.escalatedOnly&&!filters.status} onClick={()=>setFilters(p=>({...p,escalatedOnly:false,status:''}))}/>
-                <GradStat label="Escalated" value={analytics.escalated}             grad="linear-gradient(135deg,#ec4899,#dc2626,#9f1239)" active={filters.escalatedOnly}                    onClick={()=>setFilters(p=>({...p,escalatedOnly:!p.escalatedOnly,status:''}))}/>
-                <GradStat label="Open"      value={analytics.open}                  grad="linear-gradient(135deg,#f59e0b,#d97706,#ea580c)" active={filters.status==='new'}                   onClick={()=>setFilters(p=>({...p,status:p.status==='new'?'':'new',escalatedOnly:false}))}/>
-                <GradStat label="Resolved"  value={analytics.resolved}              grad="linear-gradient(135deg,#10b981,#16a34a,#84cc16)" active={filters.status==='resolved'}              onClick={()=>setFilters(p=>({...p,status:p.status==='resolved'?'':'resolved',escalatedOnly:false}))}/>
-                <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} grad="linear-gradient(135deg,#0ea5e9,#6366f1,#8b5cf6)" active={false}                                   onClick={()=>{}}/>
-                <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} grad="linear-gradient(135deg,#f97316,#ea580c,#7c3aed)" active={false}                                   onClick={()=>{}}/>
+                <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={!filters.escalatedOnly&&!filters.status} onClick={()=>setFilters(p=>({...p,escalatedOnly:false,status:''}))}/>
+                <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={filters.escalatedOnly}                    onClick={()=>setFilters(p=>({...p,escalatedOnly:!p.escalatedOnly,status:''}))}/>
+                <GradStat label="Open"      value={analytics.open}                  color="#f59e0b" active={filters.status==='new'}                   onClick={()=>setFilters(p=>({...p,status:p.status==='new'?'':'new',escalatedOnly:false}))}/>
+                <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={filters.status==='resolved'}              onClick={()=>setFilters(p=>({...p,status:p.status==='resolved'?'':'resolved',escalatedOnly:false}))}/>
+                <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false}                                   onClick={()=>{}}/>
+                <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} color="#ef4444" active={false}                                   onClick={()=>{}}/>
               </div>
             )}
           </div>
@@ -1499,12 +1500,12 @@ const SaasAdminView = () => {
             ) : analytics && (
               <>
                 <div style={{ display:'flex', gap:8, marginBottom:28, flexWrap:'wrap' }}>
-                  <GradStat label="Total"     value={analytics.total}                 grad="linear-gradient(135deg,#6366f1,#8b5cf6,#06b6d4)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:false,status:''})); }}/>
-                  <GradStat label="Escalated" value={analytics.escalated}             grad="linear-gradient(135deg,#ec4899,#dc2626,#9f1239)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:true,status:''})); }}/>
-                  <GradStat label="Open"      value={analytics.open}                  grad="linear-gradient(135deg,#f59e0b,#d97706,#ea580c)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'new',escalatedOnly:false})); }}/>
-                  <GradStat label="Resolved"  value={analytics.resolved}              grad="linear-gradient(135deg,#10b981,#16a34a,#84cc16)" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'resolved',escalatedOnly:false})); }}/>
-                  <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} grad="linear-gradient(135deg,#0ea5e9,#6366f1,#8b5cf6)" active={false} onClick={()=>{}}/>
-                  <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} grad="linear-gradient(135deg,#f97316,#ea580c,#7c3aed)" active={false} onClick={()=>{}}/>
+                  <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:false,status:''})); }}/>
+                  <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:true,status:''})); }}/>
+                  <GradStat label="Open"      value={analytics.open}                  color="#f59e0b" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'new',escalatedOnly:false})); }}/>
+                  <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'resolved',escalatedOnly:false})); }}/>
+                  <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false} onClick={()=>{}}/>
+                  <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} color="#ef4444" active={false} onClick={()=>{}}/>
                 </div>
 
                 <h2 style={{ margin:'0 0 6px', fontSize:18, fontWeight:800, color:'#0f172a', letterSpacing:-0.3 }}>Business Intelligence</h2>
