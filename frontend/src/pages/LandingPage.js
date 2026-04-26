@@ -79,7 +79,7 @@ const CSS = `
     padding: 12px 0;
   }
   .lp-nav-inner {
-    max-width: 1200px; margin: 0 auto; padding: 0 28px;
+    max-width: 1440px; margin: 0 auto; padding: 0 40px;
     display: flex; align-items: center; justify-content: space-between;
   }
   .lp-logo { display: flex; align-items: center; gap: 10px; }
@@ -126,7 +126,7 @@ const CSS = `
     position: relative; padding: 160px 0 100px; min-height: 100vh;
     display: flex; align-items: center;
   }
-  .hero-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; position: relative; z-index: 2; }
+  .hero-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; position: relative; z-index: 2; }
   .hero-social-proof {
     display: inline-flex; align-items: center; gap: 12px;
     background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
@@ -211,7 +211,7 @@ const CSS = `
     border-bottom: 1px solid rgba(255,255,255,0.05); padding: 14px 0;
   }
   .trusted-inner {
-    max-width: 1200px; margin: 0 auto; padding: 0 28px;
+    max-width: 1440px; margin: 0 auto; padding: 0 40px;
     display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap;
   }
   .trusted-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: rgba(255,255,255,0.4); }
@@ -219,7 +219,7 @@ const CSS = `
 
   /* Stats */
   .stats-section { padding: 80px 0; position: relative; }
-  .stats-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+  .stats-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
   .stat-card {
     background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07);
@@ -261,7 +261,7 @@ const CSS = `
 
   /* Feature spotlight */
   .spotlight-section { padding: 100px 0; position: relative; }
-  .spotlight-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+  .spotlight-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
   .spotlight-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
   .spotlight-grid.reverse { direction: rtl; }
   .spotlight-grid.reverse > * { direction: ltr; }
@@ -306,7 +306,7 @@ const CSS = `
 
   /* Feature grid */
   .features-section { padding: 100px 0; background: rgba(255,255,255,0.01); }
-  .features-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+  .features-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
   .features-head { text-align: center; margin-bottom: 60px; }
   .features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
   .feat-card {
@@ -322,7 +322,7 @@ const CSS = `
 
   /* New features */
   .new-section { padding: 100px 0; }
-  .new-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+  .new-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
   .new-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 48px; }
   .new-card {
     background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
@@ -340,7 +340,7 @@ const CSS = `
 
   /* Partner/Reseller */
   .partner-section { padding: 100px 0; background: rgba(255,255,255,0.01); }
-  .partner-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+  .partner-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
   .partner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
   .partner-card {
     background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(59,130,246,0.08) 100%);
@@ -379,7 +379,7 @@ const CSS = `
 
   /* Footer */
   .footer { padding: 60px 0 32px; border-top: 1px solid rgba(255,255,255,0.06); }
-  .footer-inner { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+  .footer-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
   .footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
   .footer-brand-desc { font-size: 14px; color: rgba(255,255,255,0.35); line-height: 1.7; margin: 16px 0 0; max-width: 280px; }
   .footer-col-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px; }
@@ -595,6 +595,11 @@ const ALL_FEATURES = [
   { icon: '📊', title: 'Data Center', desc: 'Global prospect and candidate database with advanced filtering and bulk operations.', color: '#6366f1', tags: ['Global DB', 'Bulk Ops', 'Filter'] },
   { icon: '📑', title: 'Document Templates', desc: 'Reusable document templates with variable substitution and one-click PDF generation.', color: '#ec4899', tags: ['Templates', 'PDF', 'Variables'] },
   { icon: '📈', title: 'Activity & Audit Logs', desc: 'Complete audit trail of all actions across the platform with filtering and export.', color: '#8b5cf6', tags: ['Audit', 'Compliance', 'Logs'] },
+  { icon: '📞', title: 'Calls Management', desc: 'Log, track, and analyze all sales calls with outcome tracking and entity linking.', color: '#06b6d4', tags: ['Call Log', 'Outcomes', 'Tracking'] },
+  { icon: '🔔', title: 'Notifications', desc: 'Real-time in-app notifications with smart alerts for tasks, deals, tickets, and team activity.', color: '#f97316', tags: ['Real-time', 'Alerts', 'Settings'] },
+  { icon: '📧', title: 'Email Templates', desc: 'Pre-built and custom email templates for outreach, follow-ups, and automated campaigns.', color: '#3b82f6', tags: ['Templates', 'Outreach', 'Campaigns'] },
+  { icon: '💳', title: 'Subscriptions & Plans', desc: 'Full subscription lifecycle — plan creation, upgrades, billing cycles, and Razorpay payment integration.', color: '#10b981', tags: ['Plans', 'Billing', 'Razorpay'] },
+  { icon: '🏢', title: 'Multi-Tenant SaaS', desc: 'Complete SAAS architecture — tenant isolation, white-label, admin panel, and tenant analytics.', color: '#7c3aed', tags: ['Multi-tenant', 'White-label', 'Isolation'] },
 ];
 
 const NEW_FEATURES = [
@@ -640,7 +645,7 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [statsRef, statsInView] = useInView(0.3);
-  const c1 = useCounter(30, 1800, statsInView);
+  const c1 = useCounter(25, 1800, statsInView);
   const c2 = useCounter(500, 2000, statsInView);
   const c3 = useCounter(99, 1600, statsInView);
   const c4 = useCounter(18, 1400, statsInView);
@@ -660,9 +665,9 @@ const LandingPage = () => {
       <nav className={`lp-nav${isScrolled ? ' scrolled' : ''}`}>
         <div className="lp-nav-inner">
           <div className="lp-logo">
-            <div className="lp-logo-box">CRM</div>
-            <span className="lp-logo-text">Orbit</span>
-            <span className="lp-logo-badge">SAAS</span>
+            <div style={{ background: '#fff', borderRadius: 8, padding: '6px 10px' }}>
+              <img src="/logo.png" alt="CRM Logo" style={{ height: 22, width: 'auto', objectFit: 'contain', display: 'block' }} />
+            </div>
           </div>
           <div className="lp-nav-links">
             <a href="#features" className="lp-nav-link">Features</a>
@@ -699,7 +704,7 @@ const LandingPage = () => {
               </h1>
 
               <p className="hero-sub">
-                All-in-one CRM with <span>30+ modules</span>, complete B2B workflow, AI assistant, and multi-tenant architecture — built for teams that mean business.
+                All-in-one CRM with <span>25+ modules</span>, complete B2B workflow, AI assistant, and multi-tenant architecture — built for teams that mean business.
               </p>
 
               <div className="hero-ctas">
@@ -714,7 +719,7 @@ const LandingPage = () => {
               <div className="hero-badges">
                 <div className="hero-badge"><div className="hero-badge-dot"/> Multi-Tenant SaaS</div>
                 <div className="hero-badge"><div className="hero-badge-dot" style={{ background: '#3b82f6' }}/> AI Powered</div>
-                <div className="hero-badge"><div className="hero-badge-dot" style={{ background: '#f59e0b' }}/> 30+ Modules</div>
+                <div className="hero-badge"><div className="hero-badge-dot" style={{ background: '#f59e0b' }}/> 25+ Modules</div>
                 <div className="hero-badge"><div className="hero-badge-dot" style={{ background: '#ec4899' }}/> No-Code Fields</div>
               </div>
             </div>
@@ -810,7 +815,8 @@ const LandingPage = () => {
              '📦 Purchase Orders', '🧾 Invoices', '✅ Tasks', '📅 Meetings', '📞 Calls', '✉️ Email Inbox',
              '📊 Data Center', '🎫 Support Tickets', '💬 Feedback', '🌐 Social Media', '🏛️ Org Hierarchy',
              '🤝 Resellers', '🔧 Field Builder', '📦 Products', '💰 Monetization', '🤖 AI Assistant',
-             '👨‍💼 Users & Roles', '📑 Doc Templates', '📈 Audit Logs'].map((item, i) => (
+             '👨‍💼 Users & Roles', '📑 Doc Templates', '📈 Audit Logs', '🔔 Notifications',
+             '📧 Email Templates', '💳 Subscriptions & Plans', '🏢 Multi-Tenant', '🛒 Product Marketplace'].map((item, i) => (
               <span key={`${r}-${i}`} className="marquee-chip">{item}</span>
             ))
           )}
@@ -950,7 +956,7 @@ const LandingPage = () => {
               Everything You Need,<br />
               <span style={{ background: 'linear-gradient(135deg,#a78bfa,#60a5fa,#34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Nothing You Don't</span>
             </h2>
-            <p className="sec-sub" style={{ textAlign: 'center', margin: '16px auto 0' }}>30+ powerful modules covering every aspect of your sales, operations, and customer management.</p>
+            <p className="sec-sub" style={{ textAlign: 'center', margin: '16px auto 0' }}>25+ powerful modules covering every aspect of your sales, operations, and customer management.</p>
           </div>
           <div className="features-grid">
             {ALL_FEATURES.map((f, i) => (
@@ -1002,6 +1008,43 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* ── UPCOMING FEATURES ── */}
+      <section style={{ padding: '100px 0' }}>
+        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 40px' }}>
+          <div style={{ textAlign: 'center', marginBottom: 48 }}>
+            <div className="sec-label blue" style={{ margin: '0 auto 16px' }}>🔮 COMING SOON</div>
+            <h2 className="sec-title" style={{ textAlign: 'center' }}>
+              What's <span style={{ background: 'linear-gradient(135deg,#60a5fa,#a78bfa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Coming Next</span>
+            </h2>
+            <p className="sec-sub" style={{ textAlign: 'center', margin: '16px auto 0' }}>We're building powerful features — stay tuned for what's next.</p>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            {[
+              { icon: '🤖', title: 'AI Assistant', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', desc: 'Gemini AI powered assistant for email drafting, lead scoring, sales insights, and smart summaries — directly inside your CRM.', tags: ['Gemini AI', 'Auto-draft', 'Insights'] },
+              { icon: '📱', title: 'Mobile App', color: '#3b82f6', bg: 'rgba(59,130,246,0.12)', border: 'rgba(59,130,246,0.25)', desc: 'Native iOS & Android app to manage leads, tasks, and pipeline on the go — full offline support with smart sync.', tags: ['iOS', 'Android', 'Offline'] },
+              { icon: '📊', title: 'Advanced Analytics', color: '#a855f7', bg: 'rgba(168,85,247,0.12)', border: 'rgba(168,85,247,0.25)', desc: 'Deep sales analytics with custom dashboards, revenue forecasting, team performance tracking, and exportable reports.', tags: ['Dashboards', 'Forecast', 'Reports'] },
+            ].map((f, i) => (
+              <div key={i} style={{ background: f.bg, border: `1px solid ${f.border}`, borderRadius: 18, padding: 28, position: 'relative', overflow: 'hidden', transition: 'all 0.3s' }}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; }}
+                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}>
+                {/* Coming Soon badge */}
+                <div style={{ position: 'absolute', top: 16, right: 16, fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', padding: '3px 10px', borderRadius: 20 }}>
+                  Coming Soon
+                </div>
+                <div style={{ width: 52, height: 52, borderRadius: 14, background: f.bg, border: `1px solid ${f.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 18 }}>{f.icon}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 10 }}>{f.title}</div>
+                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.65, marginBottom: 16 }}>{f.desc}</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {f.tags.map((t, j) => (
+                    <span key={j} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: f.bg, color: f.color, border: `1px solid ${f.border}` }}>{t}</span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── RESELLER / PARTNER ── */}
       <section className="partner-section" id="partner">
         <div className="partner-inner">
@@ -1020,7 +1063,7 @@ const LandingPage = () => {
               {[
                 { icon: '💰', title: 'Recurring Commissions', desc: 'Earn on every tenant you onboard and retain — monthly recurring revenue.' },
                 { icon: '📊', title: 'Partner Dashboard', desc: 'Full visibility into your referred tenants, revenue, and commission status.' },
-                { icon: '🛠️', title: 'White-Label Ready', desc: 'Present CRM Orbit as your own product to your clients.' },
+                { icon: '🛠️', title: 'White-Label Ready', desc: 'Present Unified CRM as your own product to your clients.' },
                 { icon: '🎓', title: 'Training & Support', desc: 'Dedicated onboarding, training materials, and priority support.' },
               ].map((f, i) => (
                 <div key={i} className="partner-feature">
@@ -1046,7 +1089,7 @@ const LandingPage = () => {
               Ready to Transform<br />
               <span style={{ background: 'linear-gradient(135deg,#a78bfa,#60a5fa,#34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Your Business?</span>
             </h2>
-            <p className="cta-sub">Join hundreds of businesses already using CRM Orbit to close more deals, manage better, and grow faster.</p>
+            <p className="cta-sub">Join hundreds of businesses already using Unified CRM to close more deals, manage better, and grow faster.</p>
             <div className="cta-buttons">
               <button className="cta-btn-main" onClick={() => navigate('/register')}>Start Free Trial →</button>
               <button className="cta-btn-ghost" onClick={() => navigate('/reseller/register')}>Become a Partner</button>
@@ -1064,44 +1107,84 @@ const LandingPage = () => {
       <footer className="footer">
         <div className="footer-inner">
           <div className="footer-top">
+            {/* Brand + Social */}
             <div>
-              <div className="lp-logo">
-                <div className="lp-logo-box">CRM</div>
-                <span className="lp-logo-text">Orbit</span>
+              <div style={{ background: '#fff', borderRadius: 8, padding: '6px 10px', display: 'inline-block', marginBottom: 16 }}>
+                <img src="/logo.png" alt="CRM Logo" style={{ height: 20, width: 'auto', objectFit: 'contain', display: 'block' }} />
               </div>
-              <p className="footer-brand-desc">All-in-one multi-tenant CRM platform with 30+ modules, B2B workflow automation, and AI-powered insights for modern businesses.</p>
+              <p className="footer-brand-desc">Complete CRM solution with B2B workflow, email integration, team management, and more.</p>
+              {/* Social media icons */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
+                {/* Instagram */}
+                <a href="https://www.instagram.com/texoraai" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(225,48,108,0.2)'; e.currentTarget.style.borderColor = 'rgba(225,48,108,0.5)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                  <svg width="18" height="18" viewBox="0 0 24 24">
+                    <defs>
+                      <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
+                        <stop offset="0%" stopColor="#FFDC80"/><stop offset="25%" stopColor="#F77737"/>
+                        <stop offset="50%" stopColor="#E1306C"/><stop offset="75%" stopColor="#C13584"/>
+                        <stop offset="100%" stopColor="#833AB4"/>
+                      </linearGradient>
+                    </defs>
+                    <path fill="url(#ig-grad)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                  </svg>
+                </a>
+                {/* X / Twitter */}
+                <a href="https://x.com/texoraai" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                </a>
+                {/* LinkedIn */}
+                <a href="https://www.linkedin.com/company/texora-ai/" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,102,194,0.2)'; e.currentTarget.style.borderColor = 'rgba(10,102,194,0.5)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                  <svg width="18" height="18" fill="#0A66C2" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
+                </a>
+                {/* YouTube */}
+                <a href="https://www.youtube.com/@Texoraai" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,0,0,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,0,0,0.5)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
+                  <svg width="18" height="18" fill="#FF0000" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                </a>
+              </div>
             </div>
+
+            {/* Product */}
             <div>
               <div className="footer-col-title">Product</div>
-              {['Features', 'What\'s New', 'Pricing', 'Integrations', 'Security'].map((l, i) => (
-                <button key={i} className="footer-link">{l}</button>
-              ))}
+              <a href="#features" className="footer-link">Features</a>
+              <button className="footer-link" onClick={() => navigate('/security')}>Security</button>
+              <button className="footer-link" onClick={() => navigate('/integrations')}>Integrations</button>
+              <button className="footer-link" onClick={() => navigate('/about')}>About Us</button>
             </div>
-            <div>
-              <div className="footer-col-title">Platform</div>
-              {['Sales CRM', 'B2B Workflow', 'Team Management', 'Feedback', 'AI Assistant'].map((l, i) => (
-                <button key={i} className="footer-link">{l}</button>
-              ))}
-            </div>
+
+            {/* Company */}
             <div>
               <div className="footer-col-title">Company</div>
-              {[
-                { label: 'About Us', action: () => navigate('/about') },
-                { label: 'Partner Program', action: () => navigate('/reseller/register') },
-                { label: 'Sign In', action: () => navigate('/login') },
-                { label: 'Get Started', action: () => navigate('/register') },
-                { label: 'Security', action: () => navigate('/security') },
-              ].map((l, i) => (
-                <button key={i} className="footer-link" onClick={l.action}>{l.label}</button>
-              ))}
+              <button className="footer-link" onClick={() => navigate('/about')}>About Us</button>
+              <a href="https://texora.ai/career" target="_blank" rel="noopener noreferrer" className="footer-link">Careers</a>
+              <a href="https://texora.ai/contact" target="_blank" rel="noopener noreferrer" className="footer-link">Contact</a>
+              <a href="https://texora.ai/blogs" target="_blank" rel="noopener noreferrer" className="footer-link">Blog</a>
+            </div>
+
+            {/* Partners */}
+            <div>
+              <div className="footer-col-title">Partners</div>
+              <button className="footer-link" onClick={() => navigate('/reseller/register')}>Become a Partner</button>
+              <button className="footer-link" onClick={() => navigate('/reseller/login')}>Partner Login</button>
+              <button className="footer-link" onClick={() => navigate('/partner-resources')}>Partner Resources</button>
+              <button className="footer-link" onClick={() => navigate('/login')}>Sign In</button>
+              <button className="footer-link" onClick={() => navigate('/register')}>Get Started Free</button>
             </div>
           </div>
+
           <div className="footer-bottom">
-            <div className="footer-copy">© {new Date().getFullYear()} CRM Orbit. All rights reserved.</div>
+            <div className="footer-copy">© {new Date().getFullYear()} Unified CRM. All rights reserved.</div>
             <div style={{ display: 'flex', gap: 24 }}>
-              {['Privacy Policy', 'Terms of Service', 'Cookie Policy'].map((l, i) => (
-                <button key={i} className="footer-link" style={{ marginBottom: 0 }}>{l}</button>
-              ))}
+              <a href="https://texora.ai/privacy-policy" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ marginBottom: 0 }}>Privacy Policy</a>
+              <a href="https://texora.ai/terms-of-service" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ marginBottom: 0 }}>Terms of Service</a>
             </div>
           </div>
         </div>
