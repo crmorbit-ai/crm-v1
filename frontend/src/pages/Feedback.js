@@ -4,7 +4,7 @@ import SaasLayout from '../components/layout/SaasLayout';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import axios from 'axios';
 
-const BASE = process.env.REACT_APP_API_URL || '';
+const BASE = (process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
 const authH = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
 
 const api = {
