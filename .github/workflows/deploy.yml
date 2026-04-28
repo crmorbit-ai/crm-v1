@@ -1,0 +1,75 @@
+name: Deploy CRM
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          cat > .env << 'ENVEOF'
+          REACT_APP_API_URL=${{ secrets.REACT_APP_API_URL }}
+          MONGODB_URI=${{ secrets.MONGODB_URI }}
+          DATA_CENTER_MONGODB_URI=${{ secrets.DATA_CENTER_MONGODB_URI }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_EXPIRE=${{ secrets.JWT_EXPIRE }}
+          ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
+          SAAS_ADMIN_EMAILS=${{ secrets.SAAS_ADMIN_EMAILS }}
+          ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }}
+          FRONTEND_URL=${{ secrets.FRONTEND_URL }}
+          BACKEND_URL=${{ secrets.BACKEND_URL }}
+          ALLOWED_FRONTEND_URLS=${{ secrets.ALLOWED_FRONTEND_URLS }}
+          SMTP_HOST=${{ secrets.SMTP_HOST }}
+          SMTP_PORT=${{ secrets.SMTP_PORT }}
+          SMTP_USER=${{ secrets.SMTP_USER }}
+          SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }}
+          EMAIL_FROM=${{ secrets.EMAIL_FROM }}
+          EMAIL_FROM_NAME=${{ secrets.EMAIL_FROM_NAME }}
+          CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALLBACK_URL=${{ secrets.GOOGLE_CALLBACK_URL }}
+          LINKEDIN_CLIENT_ID=${{ secrets.LINKEDIN_CLIENT_ID }}
+          LINKEDIN_CLIENT_SECRET=${{ secrets.LINKEDIN_CLIENT_SECRET }}
+          TWITTER_CLIENT_ID=${{ secrets.TWITTER_CLIENT_ID }}
+          TWITTER_CLIENT_SECRET=${{ secrets.TWITTER_CLIENT_SECRET }}
+          TWITTER_CALLBACK_URL=${{ secrets.TWITTER_CALLBACK_URL }}
+          FACEBOOK_APP_ID=${{ secrets.FACEBOOK_APP_ID }}
+          FACEBOOK_APP_SECRET=${{ secrets.FACEBOOK_APP_SECRET }}
+          YOUTUBE_CLIENT_ID=${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET=${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          TWILIO_ACCOUNT_SID=${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN=${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_WHATSAPP_NUMBER=${{ secrets.TWILIO_WHATSAPP_NUMBER }}
+          RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}
+          GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+          ZEROBOUNCE_API_KEY=${{ secrets.ZEROBOUNCE_API_KEY }}
+          NUMVERIFY_API_KEY=${{ secrets.NUMVERIFY_API_KEY }}
+          ENVEOF
+
+      - name: Stop Existing Containers
+        run: docker compose down || true
+
+      - name: Build and Start Containers
+        run: docker compose up -d --build
+
+      - name: Cleanup Old Images
+        run: docker image prune -f
+
+      - name: Verify Deployment
+        run: |
+          sleep 15
+          docker ps
+          curl -f http://localhost:3000 || echo "Frontend still starting..."
+          curl -f http://localhost:4000/api/health || echo "Backend still starting..."
