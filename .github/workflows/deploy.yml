@@ -62,7 +62,7 @@ jobs:
         run: docker compose down || true
 
       - name: Build and Start Containers
-        run: docker compose up -d --build --wait
+        run: docker compose up -d --build
 
       - name: Cleanup Old Images
         run: docker image prune -f
