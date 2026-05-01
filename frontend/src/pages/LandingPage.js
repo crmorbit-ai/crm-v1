@@ -709,7 +709,7 @@ const LandingPage = () => {
 
               <div className="hero-ctas">
                 <button className="hero-cta-main" onClick={() => navigate('/register')}>
-                  Start Free Trial →
+                  Start Free Triall →
                 </button>
                 <button className="hero-cta-ghost" onClick={() => navigate('/login')}>
                   Sign In
