@@ -58,18 +58,20 @@ jobs:
           NUMVERIFY_API_KEY=${{ secrets.NUMVERIFY_API_KEY }}
           ENVEOF
 
-      - name: Stop Existing Containers
-        run: docker compose down || true
+      - name: Build Docker Images
+        run: docker compose build
 
-      - name: Build and Start Containers
-        run: docker compose up -d --build
+      - name: Stop and Start Containers
+        run: |
+          docker compose down || true
+          docker compose up -d
 
       - name: Cleanup Old Images
         run: docker image prune -f
 
       - name: Verify Deployment
         run: |
-          sleep 15
+          sleep 10
           docker ps
           curl -f http://localhost:3000 || echo "Frontend still starting..."
           curl -f http://localhost:4000/api/health || echo "Backend still starting..."
