@@ -292,6 +292,22 @@ const TeamManagement = () => {
   return (
     <DashboardLayout>
       <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .teammgmt-grid4,.teammgmt-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .teammgmt-grid2{grid-template-columns:1fr!important;}
+    .teammgmt-split{flex-direction:column!important;}
+    .teammgmt-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .teammgmt-panel{width:100%!important;}
+    .teammgmt-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .teammgmt-form-row{grid-template-columns:1fr!important;}
+    .teammgmt-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .teammgmt-grid4,.teammgmt-grid3,.teammgmt-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
+      <style>{`
         .xInp:focus        { border-color:#4f46e5 !important; box-shadow:0 0 0 3px rgba(79,70,229,0.12) !important; }
         .xInp:disabled     { background:#f8fafc !important; color:#94a3b8 !important; }
         .xPriBtn:hover:not(:disabled) { transform:translateY(-1px); box-shadow:0 7px 22px rgba(79,70,229,0.42) !important; }

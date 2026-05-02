@@ -160,6 +160,22 @@ export default function DocumentTemplates() {
   return (
     <DashboardLayout title="Document Templates">
       <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .document-grid4,.document-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .document-grid2{grid-template-columns:1fr!important;}
+    .document-split{flex-direction:column!important;}
+    .document-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .document-panel{width:100%!important;}
+    .document-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .document-form-row{grid-template-columns:1fr!important;}
+    .document-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .document-grid4,.document-grid3,.document-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
+      <style>{`
         @keyframes fadeInUp    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes slideIn     { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
         @keyframes slideInLeft { from{opacity:0;transform:translateX(-24px)} to{opacity:1;transform:translateX(0)} }

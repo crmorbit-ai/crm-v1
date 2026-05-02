@@ -152,6 +152,22 @@ export default function SaasAdmins() {
   /* ── Loading ── */
   if (checking) return (
     <SaasLayout title="Team">
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .saasadmi-grid4,.saasadmi-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .saasadmi-grid2{grid-template-columns:1fr!important;}
+    .saasadmi-split{flex-direction:column!important;}
+    .saasadmi-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .saasadmi-panel{width:100%!important;}
+    .saasadmi-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .saasadmi-form-row{grid-template-columns:1fr!important;}
+    .saasadmi-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .saasadmi-grid4,.saasadmi-grid3,.saasadmi-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       <style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:400 }}>
         <div style={{ width:24, height:24, borderRadius:'50%', border:'2px solid #6366f1', borderTopColor:'transparent', animation:'spin 0.7s linear infinite' }}/>

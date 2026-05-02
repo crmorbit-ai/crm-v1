@@ -44,6 +44,22 @@ const Row = ({ node, depth, all, onEdit, onDelete, onAddChild, onMove, isAdmin, 
 
   return (
     <div>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .orghiera-grid4,.orghiera-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .orghiera-grid2{grid-template-columns:1fr!important;}
+    .orghiera-split{flex-direction:column!important;}
+    .orghiera-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .orghiera-panel{width:100%!important;}
+    .orghiera-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .orghiera-form-row{grid-template-columns:1fr!important;}
+    .orghiera-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .orghiera-grid4,.orghiera-grid3,.orghiera-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       <div style={{ display: 'flex', alignItems: 'center', paddingLeft: depth * 24 }}>
 
         {/* Vertical line + elbow connector */}

@@ -276,7 +276,23 @@ const Products = () => {
         return <div key="articleNumber"><label style={lStyle}>SKU {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label><input type="text" name="articleNumber" value={formData.articleNumber} onChange={handleChange} required style={iStyle} onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /></div>;
       case 'category':
         return (
-          <div key="category"><label style={lStyle}>Category {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
+          <div key="category">
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .products-grid4,.products-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .products-grid2{grid-template-columns:1fr!important;}
+    .products-split{flex-direction:column!important;}
+    .products-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .products-panel{width:100%!important;}
+    .products-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .products-form-row{grid-template-columns:1fr!important;}
+    .products-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .products-grid4,.products-grid3,.products-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style><label style={lStyle}>Category {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
             <div style={{ display: 'flex', gap: '4px' }}>
               <select name="category" value={formData.category} onChange={handleChange} required style={{ ...iStyle, flex: 1, cursor: 'pointer' }}>
                 <option value="">Select Category</option>

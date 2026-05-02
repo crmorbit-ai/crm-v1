@@ -191,6 +191,22 @@ export default function TemplateManagement() {
   return (
     <DashboardLayout title="Template Management">
       <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .template-grid4,.template-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .template-grid2{grid-template-columns:1fr!important;}
+    .template-split{flex-direction:column!important;}
+    .template-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .template-panel{width:100%!important;}
+    .template-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .template-form-row{grid-template-columns:1fr!important;}
+    .template-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .template-grid4,.template-grid3,.template-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
+      <style>{`
         @keyframes slideInLeft { from { opacity:0; transform:translateX(-24px); } to { opacity:1; transform:translateX(0); } }
         @keyframes fadeInUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
         .tm-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.10) !important; }

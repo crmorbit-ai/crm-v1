@@ -186,6 +186,22 @@ const CountryCascadeSelect = ({ value, onChange }) => {
 
   return (
     <div ref={ref} style={{ position: 'relative' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .leads-grid4,.leads-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .leads-grid2{grid-template-columns:1fr!important;}
+    .leads-split{flex-direction:column!important;}
+    .leads-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .leads-panel{width:100%!important;}
+    .leads-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .leads-form-row{grid-template-columns:1fr!important;}
+    .leads-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .leads-grid4,.leads-grid3,.leads-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>Country</label>
 
       {/* Trigger — same compact height as state/city selects */}

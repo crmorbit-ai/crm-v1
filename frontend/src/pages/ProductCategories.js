@@ -164,6 +164,22 @@ const ProductCategories = () => {
 
   return (
     <DashboardLayout title="Product Categories">
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .productc-grid4,.productc-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .productc-grid2{grid-template-columns:1fr!important;}
+    .productc-split{flex-direction:column!important;}
+    .productc-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .productc-panel{width:100%!important;}
+    .productc-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .productc-form-row{grid-template-columns:1fr!important;}
+    .productc-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .productc-grid4,.productc-grid3,.productc-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       {success && (
         <div style={{ padding: '16px 20px', background: 'linear-gradient(135deg, #DCFCE7 0%, #BBF7D0 100%)', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600', boxShadow: '0 4px 15px rgba(34, 197, 94, 0.2)' }}>
           {success}

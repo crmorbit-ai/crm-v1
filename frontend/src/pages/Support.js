@@ -131,8 +131,21 @@ const Support = () => {
     </DashboardLayout>
   );
 
+  const mobileCSS = `
+    @media(max-width:768px){
+      #support-split-container { flex-direction: column !important; overflow: visible !important; }
+      #support-split-container > div[style*="flex: 0"] { flex: none !important; width: 100% !important; max-height: none !important; }
+      #support-split-container > div[style*="flex: 1"] { flex: none !important; width: 100% !important; }
+      .support-divider { display: none !important; }
+      .resp-grid-4 { grid-template-columns: repeat(2,1fr) !important; }
+      .support-toolbar { flex-wrap: wrap !important; }
+      .support-toolbar select { flex: 1 1 calc(50% - 4px) !important; min-width: 0 !important; }
+    }
+  `;
+
   return (
     <DashboardLayout title="Support Center">
+      <style>{mobileCSS}</style>
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
 
         {/* Fixed top */}
@@ -274,7 +287,7 @@ const Support = () => {
 
           {/* Divider */}
           {showCreateForm && (
-            <div onMouseDown={handleDividerDrag} title="Drag to resize"
+            <div className="support-divider" onMouseDown={handleDividerDrag} title="Drag to resize"
               style={{ width: '6px', flexShrink: 0, background: '#e2e8f0', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', zIndex: 10 }}
               onMouseEnter={e => e.currentTarget.style.background = '#fed7aa'}
               onMouseLeave={e => e.currentTarget.style.background = '#e2e8f0'}>

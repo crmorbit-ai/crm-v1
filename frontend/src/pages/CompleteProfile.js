@@ -136,6 +136,22 @@ const CompleteProfile = () => {
       case 1:
         return (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .complete-grid4,.complete-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .complete-grid2{grid-template-columns:1fr!important;}
+    .complete-split{flex-direction:column!important;}
+    .complete-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .complete-panel{width:100%!important;}
+    .complete-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .complete-form-row{grid-template-columns:1fr!important;}
+    .complete-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .complete-grid4,.complete-grid3,.complete-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
             <div>
               <label style={labelStyle}>Organization Name *</label>
               <input type="text" name="organizationName" value={formData.organizationName} onChange={handleChange} placeholder="Your company name" style={inputStyle} />

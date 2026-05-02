@@ -274,6 +274,22 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
       switch (wizardStep) {
         case 0: return (
           <div style={{ display: 'grid', gap: '14px' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .purchase-grid4,.purchase-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .purchase-grid2{grid-template-columns:1fr!important;}
+    .purchase-split{flex-direction:column!important;}
+    .purchase-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .purchase-panel{width:100%!important;}
+    .purchase-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .purchase-form-row{grid-template-columns:1fr!important;}
+    .purchase-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .purchase-grid4,.purchase-grid3,.purchase-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
             {!isEdit && poTemplates.length > 0 && (
               <div style={{ padding:'10px 12px', background:'#faf5ff', borderRadius:'10px', border:'1px solid #e9d5ff' }}>
                 <div style={{ fontSize:'10px', fontWeight:'700', color:'#7c3aed', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>⚡ Apply Template</div>

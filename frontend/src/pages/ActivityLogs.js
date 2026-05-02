@@ -139,6 +139,7 @@ const ActivityLogs = () => {
         </button>
       }
     >
+      <style>{`@media(max-width:768px){.activity-grid4,.activity-grid3{grid-template-columns:repeat(2,1fr)!important;}.activity-grid2,.activity-split{grid-template-columns:1fr!important;flex-direction:column!important;}.activity-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}}@media(max-width:480px){.activity-grid4,.activity-grid3,.activity-grid2{grid-template-columns:1fr!important;}}`}</style>
       {success && (
         <div style={{
           padding: '16px 20px',

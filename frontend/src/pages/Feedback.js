@@ -172,8 +172,24 @@ const Btn = ({ children, onClick, disabled, variant='primary', size='md', fullWi
         transition:'all 0.15s', whiteSpace:'nowrap', width:fullWidth?'100%':'auto',
         display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6,
         outline:'none', letterSpacing:0.1 }}
-      onMouseEnter={e=>{ if(!disabled) e.currentTarget.style.opacity='0.9'; }}
+      onMouseEnter={e=> { if(!disabled) e.currentTarget.style.opacity='0.9'; }}
       onMouseLeave={e=>{ if(!disabled) e.currentTarget.style.opacity='1'; }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .feedback-grid4,.feedback-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .feedback-grid2{grid-template-columns:1fr!important;}
+    .feedback-split{flex-direction:column!important;}
+    .feedback-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .feedback-panel{width:100%!important;}
+    .feedback-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .feedback-form-row{grid-template-columns:1fr!important;}
+    .feedback-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .feedback-grid4,.feedback-grid3,.feedback-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       {children}
     </button>
   );

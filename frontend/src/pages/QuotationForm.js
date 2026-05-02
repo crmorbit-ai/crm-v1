@@ -124,6 +124,22 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
     switch (wizardStep) {
       case 0: return (
         <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .quotatio-grid4,.quotatio-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .quotatio-grid2{grid-template-columns:1fr!important;}
+    .quotatio-split{flex-direction:column!important;}
+    .quotatio-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .quotatio-panel{width:100%!important;}
+    .quotatio-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .quotatio-form-row{grid-template-columns:1fr!important;}
+    .quotatio-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .quotatio-grid4,.quotatio-grid3,.quotatio-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
           {/* Template selector — shown at the very start */}
           {!isEdit && quotationTemplates.length > 0 && (
             <div style={{ padding:'10px 12px', background:'#f8fafc', borderRadius:'10px', border:'1px solid #e2e8f0' }}>

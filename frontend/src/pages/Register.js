@@ -84,6 +84,22 @@ const Register = () => {
       position: 'relative',
       overflow: 'hidden'
     }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .register-grid4,.register-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .register-grid2{grid-template-columns:1fr!important;}
+    .register-split{flex-direction:column!important;}
+    .register-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .register-panel{width:100%!important;}
+    .register-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .register-form-row{grid-template-columns:1fr!important;}
+    .register-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .register-grid4,.register-grid3,.register-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       {/* Background glow effects */}
       <div style={{
         position: 'absolute',

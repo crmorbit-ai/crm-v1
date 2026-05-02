@@ -6,6 +6,16 @@ import { API_URL } from '../config/api.config';
 import templateService from '../services/templateService';
 import '../styles/crm.css';
 
+const meetingsResponsiveCss = `
+  @media (max-width: 768px) {
+    .meetings-split-container { flex-direction: column !important; overflow: visible !important; }
+    .meetings-form-panel { flex: none !important; width: 100% !important; max-height: none !important; border-right: none !important; border-bottom: 1px solid #e0e0e0 !important; }
+    .meetings-divider { display: none !important; }
+    .meetings-table-panel { flex: none !important; width: 100% !important; }
+    .meetings-grid-2col { grid-template-columns: 1fr !important; }
+  }
+`;
+
 const Meetings = () => {
   const navigate = useNavigate();
   const { hasPermission } = useAuth();
@@ -171,6 +181,7 @@ const Meetings = () => {
 
   return (
     <DashboardLayout title="Meetings">
+      <style>{meetingsResponsiveCss}</style>
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
 
         {/* Fixed top */}
@@ -212,11 +223,11 @@ const Meetings = () => {
         </div>
 
         {/* Split panel */}
-        <div id="meetings-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <div id="meetings-split-container" className="meetings-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
           {/* Left: Create Form */}
           {showCreateForm && (
-            <div style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="meetings-form-panel" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
               {/* Form header */}
               <div style={{ background: 'linear-gradient(135deg, #2e1065 0%, #4c1d95 100%)', flexShrink: 0, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

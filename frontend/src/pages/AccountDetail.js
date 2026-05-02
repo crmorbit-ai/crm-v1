@@ -68,6 +68,22 @@ const AccountDetail = () => {
 
   return (
     <DashboardLayout title={account.accountName}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .accountd-grid4,.accountd-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .accountd-grid2{grid-template-columns:1fr!important;}
+    .accountd-split{flex-direction:column!important;}
+    .accountd-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .accountd-panel{width:100%!important;}
+    .accountd-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .accountd-form-row{grid-template-columns:1fr!important;}
+    .accountd-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .accountd-grid4,.accountd-grid3,.accountd-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       <div className="crm-card" style={{marginBottom:'20px'}}>
         <div style={{padding:'24px'}}>
           <div style={{display:'flex',gap:'12px',marginBottom:'16px'}}>

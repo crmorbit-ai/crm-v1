@@ -5,6 +5,17 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import InvoiceForm from './InvoiceForm';
 import '../styles/crm.css';
 
+const mobileCSS = `
+  @media (max-width: 768px) {
+    #invoices-split-container { flex-direction: column !important; }
+    #invoices-split-container > div[style*="col-resize"] { display: none !important; }
+    .inv-panel-form { flex: none !important; width: 100% !important; max-height: 60vh; overflow-y: auto; border-right: none !important; border-bottom: 1px solid #e0e0e0 !important; }
+    .inv-panel-table { flex: none !important; width: 100% !important; }
+    .inv-page-wrapper { height: auto !important; overflow: visible !important; }
+    .inv-page-wrapper > div[style*="flexShrink: 0"], .inv-page-wrapper > div[style*="flex-shrink: 0"] { padding: 0 8px 8px 8px !important; }
+  }
+`;
+
 const Invoices = () => {
   const navigate = useNavigate();
   const [invoices, setInvoices] = useState([]);
@@ -92,7 +103,8 @@ const Invoices = () => {
 
   return (
     <DashboardLayout title="Invoices">
-      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
+      <style>{mobileCSS}</style>
+      <div className="inv-page-wrapper" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
 
         {/* Fixed top: Header + Stats — never moves */}
         <div style={{ flexShrink: 0, padding: '0 16px 12px 16px' }}>
@@ -146,7 +158,7 @@ const Invoices = () => {
         {/* Split panel — form left, table right */}
         <div id="invoices-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {showCreateForm && (
-            <div style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="inv-panel-form" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
               <InvoiceForm embedded onClose={() => setShowCreateForm(false)} onSuccess={() => { setShowCreateForm(false); fetchInvoices(); fetchStats(); }} />
             </div>
           )}
@@ -158,7 +170,7 @@ const Invoices = () => {
               <div style={{ width: '2px', height: '40px', borderRadius: '99px', background: 'rgba(0,0,0,0.15)' }} />
             </div>
           )}
-          <div style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
+          <div className="inv-panel-table" style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
           {/* Table Card */}
           <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>

@@ -135,8 +135,18 @@ const Calls = () => {
     return colors[result] || '#6B7280';
   };
 
+  const mobileCSS = `
+    @media(max-width:768px){
+      .resp-grid-4 { grid-template-columns: 1fr 1fr !important; }
+      .calls-span2 { grid-column: span 1 !important; }
+      .calls-span4 { grid-column: span 1 !important; }
+      .crm-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    }
+  `;
+
   return (
     <DashboardLayout title="Calls">
+      <style>{mobileCSS}</style>
       {success && <div className="alert-success">{success}</div>}
       {error && <div className="alert-error">{error}</div>}
 
@@ -158,7 +168,7 @@ const Calls = () => {
           <div style={{ padding: '16px' }}>
             <form onSubmit={handleCreate}>
               <div className="resp-grid-4">
-                <div style={{ gridColumn: 'span 2' }}>
+                <div className="calls-span2" style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Subject *</label>
                   <input type="text" className="crm-form-input" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
                 </div>
@@ -209,7 +219,7 @@ const Calls = () => {
                     ))}
                   </select>
                 </div>
-                <div style={{ gridColumn: 'span 4' }}>
+                <div className="calls-span4" style={{ gridColumn: 'span 4' }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
                   <textarea className="crm-form-input" rows="2" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical' }} />
                 </div>

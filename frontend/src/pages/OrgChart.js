@@ -293,6 +293,17 @@ const OrgChart = () => {
         @media (max-width: 768px) {
           .oc-header-stats { display: none !important; }
           .oc-header-search { width: 130px !important; }
+          .oc-main-layout { flex-direction: column !important; }
+          .oc-left-panel { width: 100% !important; min-width: unset !important; max-height: 180px !important; overflow-y: auto !important; border-radius: 0 !important; }
+          .oc-topbar { padding: 0 12px !important; height: 56px !important; }
+          .oc-topbar-title { font-size: 15px !important; }
+          .oc-topbar-right button > span:not(:first-child) { display: none !important; }
+          .oc-topbar-right { gap: 4px !important; flex-wrap: nowrap !important; }
+        }
+        @media (max-width: 480px) {
+          .oc-header-stats { display: none !important; }
+          .oc-left-panel { max-height: 140px !important; }
+          .oc-topbar { height: 52px !important; }
         }
       `}</style>
 
@@ -314,7 +325,7 @@ const OrgChart = () => {
             <div style={{position:'absolute',inset:0,backgroundImage:'radial-gradient(rgba(255,255,255,0.025) 1px,transparent 1px)',backgroundSize:'20px 20px'}} />
           </div>
 
-          <div style={{position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'space-between',gap:16,height:72}}>
+          <div className="oc-topbar" style={{position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,height:72}}>
 
             {/* LEFT — Title + stats */}
             <div style={{display:'flex',alignItems:'center',gap:20}}>
@@ -325,7 +336,7 @@ const OrgChart = () => {
                 </div>
                 <div>
                   <div style={{fontSize:9,fontWeight:800,color:'rgba(255,255,255,0.3)',letterSpacing:'2px',textTransform:'uppercase',lineHeight:1}}>Organisation</div>
-                  <div style={{fontSize:20,fontWeight:900,letterSpacing:'-0.5px',lineHeight:1.2,marginTop:2}}>
+                  <div className="oc-topbar-title" style={{fontSize:20,fontWeight:900,letterSpacing:'-0.5px',lineHeight:1.2,marginTop:2,whiteSpace:'nowrap'}}>
                     <span style={{color:'#fff'}}>Org </span>
                     <span style={{background:'linear-gradient(90deg,#a78bfa,#67e8f9)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'}}>Chart</span>
                   </div>
@@ -356,7 +367,7 @@ const OrgChart = () => {
             </div>
 
             {/* RIGHT — Controls */}
-            <div style={{display:'flex',alignItems:'center',gap:8}}>
+            <div className="oc-topbar-right" style={{display:'flex',alignItems:'center',gap:8,flexShrink:0}}>
 
               {/* Org switcher */}
               {crossOrgAccess && (
@@ -445,10 +456,10 @@ const OrgChart = () => {
         </div>
 
         {/* ══ BODY ════════════════════════════════════════════ */}
-        <div style={{ display:'flex', flex:1, overflow:'hidden', borderRadius:'20px 20px 20px 20px', gap:2, background:'#e8edf5' }}>
+        <div className="oc-main-layout" style={{ display:'flex', flex:1, overflow:'hidden', borderRadius:'20px 20px 20px 20px', gap:2, background:'#e8edf5' }}>
 
           {/* ── LEFT SIDEBAR ───────────────────────────────── */}
-          <div style={{
+          <div className="oc-left-panel" style={{
             width: leftOpen ? 220 : 48, flexShrink:0,
             background:'#0f172a',
             display:'flex', flexDirection:'column',

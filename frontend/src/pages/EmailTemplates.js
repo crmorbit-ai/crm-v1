@@ -171,6 +171,22 @@ export default function EmailTemplates() {
   if (showForm) {
     return (
       <DashboardLayout title="Email Templates">
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .emailtem-grid4,.emailtem-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .emailtem-grid2{grid-template-columns:1fr!important;}
+    .emailtem-split{flex-direction:column!important;}
+    .emailtem-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .emailtem-panel{width:100%!important;}
+    .emailtem-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .emailtem-form-row{grid-template-columns:1fr!important;}
+    .emailtem-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .emailtem-grid4,.emailtem-grid3,.emailtem-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
         <style>{`
           @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
           .et-btn { cursor:pointer; transition:all .15s; border:none; font-family:inherit; }

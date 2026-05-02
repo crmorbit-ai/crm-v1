@@ -154,6 +154,15 @@ const SaasSubscriptions = () => {
         .ssScroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.08); border-radius:4px; }
         .ssScroll::-webkit-scrollbar-track { background:transparent; }
         .ssInp:focus { outline:none; border-color:#6366f1 !important; box-shadow:0 0 0 3px rgba(99,102,241,0.15) !important; }
+        @media(max-width:768px){
+          .ssMainWrap { flex-direction:column !important; }
+          .ssLeftPanel { flex:1 1 100% !important; }
+          .ssRightPanel { flex:0 0 100% !important; min-width:100% !important; order:-1; }
+          .ssRevTrio { flex-wrap:wrap !important; }
+          .ssRevTrio > div { flex:1 1 40% !important; border-right:none !important; border-bottom:1px solid rgba(255,255,255,0.06); }
+          .ssUsageGrid { grid-template-columns:repeat(2,1fr) !important; }
+          .ssTableWrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+        }
       `}</style>
 
       {/* ── TOAST ── */}
@@ -238,7 +247,7 @@ const SaasSubscriptions = () => {
       {/* ════════════════════════════════════
           MAIN CONTENT
       ════════════════════════════════════ */}
-      <div style={{display:'flex',gap:14,alignItems:'flex-start',flexWrap:isMobile?'wrap':'nowrap'}}>
+      <div className="ssMainWrap" style={{display:'flex',gap:14,alignItems:'flex-start',flexWrap:isMobile?'wrap':'nowrap'}}>
 
         {/* ── LEFT PANEL ── */}
         <div style={{flex:selectedTenant&&!isMobile?'0 0 58%':'1',minWidth:0,display:'flex',flexDirection:'column',gap:10}}>

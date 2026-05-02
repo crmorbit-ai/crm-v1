@@ -251,11 +251,27 @@ const Opportunities = () => {
   const wonDeals = opportunities.filter(o => o.stage === 'Closed Won').length;
   const activeDeals = opportunities.filter(o => !['Closed Won','Closed Lost'].includes(o.stage)).length;
 
+  const oppResponsiveCss = `
+    @media (max-width: 768px) {
+      .opp-stats-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+      .opp-header { flex-direction: column !important; align-items: flex-start !important; }
+      .opp-header button { width: 100%; justify-content: center; }
+      .opp-form-modal { width: calc(100vw - 32px) !important; max-width: 100% !important; padding: 18px !important; }
+      .opp-kanban-wrap { gap: 10px !important; padding-bottom: 12px !important; }
+      .opp-kanban-col { min-width: 240px !important; max-width: 240px !important; }
+    }
+    @media (max-width: 480px) {
+      .opp-stats-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
+      .opp-kanban-col { min-width: 220px !important; max-width: 220px !important; }
+    }
+  `;
+
   return (
     <DashboardLayout title="Deal Pipeline">
+      <style>{oppResponsiveCss}</style>
 
       {/* ── Page Header ── */}
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'20px',flexWrap:'wrap',gap:'12px'}}>
+      <div className="opp-header" style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'20px',flexWrap:'wrap',gap:'12px'}}>
         <div>
           <h1 style={{margin:0,fontSize:'22px',fontWeight:'700',color:'#0f172a',letterSpacing:'-0.3px'}}>Deal Pipeline</h1>
           <p style={{margin:'3px 0 0',fontSize:'13px',color:'#94a3b8'}}>Drag & drop deals across stages to update progress</p>

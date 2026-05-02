@@ -333,6 +333,12 @@ const SaasDashboard = () => {
         .dAlertRow:hover{background:#fef9ec;}
         .dHeroMetric{flex:1;padding:14px 18px;position:relative;overflow:hidden;min-width:0;transition:background 0.2s;}
         .dHeroMetric:hover{background:rgba(255,255,255,0.03)!important;}
+        @media(max-width:768px){
+          .dHeroMetric{border-left:none !important;border-top:1px solid rgba(255,255,255,0.05);}
+          .dNavGrid{grid-template-columns:1fr 1fr !important;}
+          .dMainGrid{grid-template-columns:1fr !important;}
+          .dBottomGrid{grid-template-columns:1fr !important;}
+        }
       `}</style>
 
       {/* ══ HERO STRIP ══ */}
@@ -365,7 +371,7 @@ const SaasDashboard = () => {
           </div>
         </div>
 
-        <div style={{position:'relative',display:'flex',alignItems:'stretch',flexWrap:isMobile?'wrap':'nowrap'}}>
+        <div style={{position:'relative',display:'flex',alignItems:'stretch',flexWrap:'wrap'}}>
           {/* Brand */}
           <div style={{padding:'14px 20px',borderRight:'1px solid rgba(255,255,255,0.06)',flexShrink:0,display:'flex',flexDirection:'column',justifyContent:'center',minWidth:180,gap:6}}>
             <div style={{display:'flex',alignItems:'center',gap:7}}>
@@ -450,7 +456,7 @@ const SaasDashboard = () => {
       </div>
 
       {/* ══ MAIN GRID ══ */}
-      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':selectedLayout(),gap:14,marginBottom:14,animation:'dF 0.4s ease'}}>
+      <div className="dMainGrid" style={{display:'grid',gridTemplateColumns:isMobile?'1fr':selectedLayout(),gap:14,marginBottom:14,animation:'dF 0.4s ease'}}>
 
         {/* ── Revenue Trend ── */}
         <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px',borderTop:'3px solid #10b981'}}>
@@ -530,7 +536,7 @@ const SaasDashboard = () => {
       </div>
 
       {/* ══ BOTTOM ROW ══ */}
-      <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:14,marginBottom:14,animation:'dF 0.5s ease'}}>
+      <div className="dBottomGrid" style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'1fr 1fr',gap:14,marginBottom:14,animation:'dF 0.5s ease'}}>
 
         {/* ── Alerts ── */}
         <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px',borderTop:'3px solid #ef4444'}}>
@@ -587,7 +593,7 @@ const SaasDashboard = () => {
         <div style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:14,padding:'18px 20px',borderTop:'3px solid #6366f1'}}>
           <div style={{fontSize:13,fontWeight:800,color:'#1e293b',marginBottom:4}}>Quick Navigation</div>
           <div style={{fontSize:11,color:'#64748b',marginBottom:14}}>Jump to any section instantly</div>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+          <div className="dNavGrid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
             {NAV.map((n,i)=>(
               <div key={i} className="dNav" onClick={()=>navigate(n.to)}
                 style={{background:n.g,boxShadow:'0 2px 8px rgba(0,0,0,0.1)'}}>

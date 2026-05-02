@@ -90,6 +90,22 @@ const AuditLogs = () => {
         background: style.bg,
         color: style.color
       }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .auditlog-grid4,.auditlog-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .auditlog-grid2{grid-template-columns:1fr!important;}
+    .auditlog-split{flex-direction:column!important;}
+    .auditlog-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .auditlog-panel{width:100%!important;}
+    .auditlog-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .auditlog-form-row{grid-template-columns:1fr!important;}
+    .auditlog-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .auditlog-grid4,.auditlog-grid3,.auditlog-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
         {action}
       </span>
     );

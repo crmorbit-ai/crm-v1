@@ -6,6 +6,15 @@ import socketService from '../services/socketService';
 import { useAuth } from '../context/AuthContext';
 import '../styles/crm.css';
 
+const emailResponsiveCss = `
+  @media (max-width: 768px) {
+    .email-layout { flex-direction: column !important; height: auto !important; overflow: visible !important; }
+    .email-sidebar { display: none !important; }
+    .email-list { flex: 1 1 100% !important; width: 100% !important; }
+    .email-detail { flex: 1 1 100% !important; width: 100% !important; border-left: none !important; border-top: 1px solid #e0e0e0 !important; }
+  }
+`;
+
 const EmailInbox = () => {
   const { user } = useAuth();
   const [emails, setEmails] = useState([]);
@@ -189,6 +198,7 @@ const EmailInbox = () => {
 
   return (
     <DashboardLayout>
+      <style>{emailResponsiveCss}</style>
       {/* Email Compose Modal */}
       {showCompose && (
         <EmailCompose
@@ -233,7 +243,7 @@ const EmailInbox = () => {
       )}
 
       {/* Gmail-style Layout */}
-      <div style={{
+      <div className="email-layout" style={{
         display: 'flex',
         height: 'calc(100vh - 100px)',
         gap: '0',
@@ -241,7 +251,7 @@ const EmailInbox = () => {
       }}>
 
         {/* Left Sidebar - Gmail Style */}
-        <div style={{
+        <div className="email-sidebar" style={{
           width: '260px',
           backgroundColor: 'white',
           borderRight: '1px solid #e0e0e0',
@@ -393,7 +403,7 @@ const EmailInbox = () => {
         </div>
 
         {/* Email List - Gmail Style */}
-        <div style={{
+        <div className="email-list" style={{
           flex: selectedEmail ? '0 0 400px' : '1',
           backgroundColor: 'white',
           display: 'flex',
@@ -548,7 +558,7 @@ const EmailInbox = () => {
 
         {/* Email Detail - Gmail Style */}
         {selectedEmail && (
-          <div style={{
+          <div className="email-detail" style={{
             flex: 1,
             backgroundColor: 'white',
             borderLeft: '1px solid #e0e0e0',

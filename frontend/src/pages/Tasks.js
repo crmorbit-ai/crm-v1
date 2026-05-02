@@ -7,6 +7,15 @@ import { accountService } from '../services/accountService';
 import templateService from '../services/templateService';
 import '../styles/crm.css';
 
+const tasksResponsiveCss = `
+  @media (max-width: 768px) {
+    .tasks-split-container { flex-direction: column !important; overflow: visible !important; }
+    .tasks-form-panel { flex: none !important; width: 100% !important; max-height: none !important; border-right: none !important; border-bottom: 1px solid #e0e0e0 !important; }
+    .tasks-divider { display: none !important; }
+    .tasks-kanban-panel { flex: none !important; width: 100% !important; overflow-x: auto !important; }
+  }
+`;
+
 const Tasks = () => {
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -162,6 +171,7 @@ const Tasks = () => {
 
   return (
     <DashboardLayout title="Tasks">
+      <style>{tasksResponsiveCss}</style>
       <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
 
         {/* Fixed top */}
@@ -202,11 +212,11 @@ const Tasks = () => {
         </div>
 
         {/* Split panel */}
-        <div id="tasks-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+        <div id="tasks-split-container" className="tasks-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
           {/* Left: Create Form */}
           {showCreateForm && (
-            <div style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="tasks-form-panel" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
               {/* Form header */}
               <div style={{ background: 'linear-gradient(135deg, #172554 0%, #1e3a8a 100%)', flexShrink: 0, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -474,7 +484,7 @@ const Tasks = () => {
 
           {/* Divider */}
           {showCreateForm && (
-            <div onMouseDown={handleDividerDrag} title="Drag to resize"
+            <div className="tasks-divider" onMouseDown={handleDividerDrag} title="Drag to resize"
               style={{ width: '6px', flexShrink: 0, background: '#e2e8f0', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', zIndex: 10 }}
               onMouseEnter={e => e.currentTarget.style.background = '#93c5fd'}
               onMouseLeave={e => e.currentTarget.style.background = '#e2e8f0'}>
@@ -483,7 +493,7 @@ const Tasks = () => {
           )}
 
           {/* Right: Kanban Board */}
-          <div style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '8px 16px 16px 12px' }}>
+          <div className="tasks-kanban-panel" style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '8px 16px 16px 12px' }}>
             <div style={{ display: 'flex', gap: '12px', minHeight: 'calc(100vh - 330px)', overflowX: 'auto', paddingBottom: '8px' }}>
               {statuses.map(status => {
                 const statusTasks = getTasksByStatus(status.name);

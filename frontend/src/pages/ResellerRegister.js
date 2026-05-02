@@ -95,6 +95,17 @@ const ResellerRegister = () => {
         justifyContent: 'center',
         padding: '40px 20px'
       }}>
+      <style>{`
+  @media(max-width:768px){
+    .auth-box{width:calc(100vw - 32px)!important;max-width:420px!important;padding:24px 20px!important;}
+    .page-grid{grid-template-columns:1fr!important;}
+    .detail-grid{grid-template-columns:1fr!important;}
+    .split-panel{flex-direction:column!important;}
+  }
+  @media(max-width:480px){
+    .auth-box{padding:20px 16px!important;}
+  }
+`}</style>
         <div style={{ maxWidth: '500px', textAlign: 'center' }}>
           <div style={{ fontSize: '64px', marginBottom: '20px' }}>✅</div>
           <h1 style={{ fontSize: '24px', fontWeight: '600', color: '#ffffff', marginBottom: '12px' }}>Application Submitted!</h1>

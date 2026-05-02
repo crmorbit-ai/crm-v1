@@ -149,6 +149,22 @@ const ProductMarketplace = () => {
   if (loading) {
     return (
       <DashboardLayout title="Product Marketplace">
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .productm-grid4,.productm-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .productm-grid2{grid-template-columns:1fr!important;}
+    .productm-split{flex-direction:column!important;}
+    .productm-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .productm-panel{width:100%!important;}
+    .productm-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .productm-form-row{grid-template-columns:1fr!important;}
+    .productm-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .productm-grid4,.productm-grid3,.productm-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
         <div style={{ padding: '60px', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto' }}></div>
           <p style={{ marginTop: '16px', color: '#64748b' }}>Loading products...</p>

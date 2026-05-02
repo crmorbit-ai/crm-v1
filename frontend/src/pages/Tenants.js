@@ -505,6 +505,22 @@ const Tenants = () => {
         const status = getTenantStatus(row);
         return (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .tenants-grid4,.tenants-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .tenants-grid2{grid-template-columns:1fr!important;}
+    .tenants-split{flex-direction:column!important;}
+    .tenants-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .tenants-panel{width:100%!important;}
+    .tenants-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .tenants-form-row{grid-template-columns:1fr!important;}
+    .tenants-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .tenants-grid4,.tenants-grid3,.tenants-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
             <Badge variant={getStatusVariant(status)}>{status}</Badge>
             {row.deletionRequest?.status === 'pending' && (
               <span style={{ background: '#fef2f2', color: '#dc2626', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }}>🗑 DEL REQ</span>
@@ -571,6 +587,11 @@ const Tenants = () => {
         @media (max-width:768px) {
           .xHideM { display:none !important; }
           .xFullM { width:100% !important; }
+          .tSplitWrap { flex-direction:column !important; }
+          .tDetailPanel { flex:1 1 100% !important; order:0 !important; max-height:none !important; width:100% !important; }
+          .tTableSide { flex:1 1 100% !important; }
+          .tAssignGrid { grid-template-columns:1fr !important; }
+          .tKpiRow { grid-template-columns:1fr 1fr !important; }
         }
       `}</style>
 
@@ -640,9 +661,9 @@ const Tenants = () => {
       )}
 
       {/* MAIN */}
-      <div style={{display:'flex',flexDirection:isMobile?'column':'row',gap:12,minHeight:isMobile?'auto':400}}>
+      <div className="tSplitWrap" style={{display:'flex',flexDirection:isMobile?'column':'row',gap:12,minHeight:isMobile?'auto':400}}>
         {/* EXCEL TABLE SIDE */}
-        <div style={{flex:(!isMobile&&selectedTenant&&isPinVerified)?'0 0 58%':'1',minWidth:0,display:'flex',flexDirection:'column',gap:0}}>
+        <div className="tTableSide" style={{flex:(!isMobile&&selectedTenant&&isPinVerified)?'0 0 58%':'1',minWidth:0,display:'flex',flexDirection:'column',gap:0}}>
           {/* Floating bulk-assign bar */}
           {checkedTenants.size > 0 && !isManager && (
             <div style={{background:'linear-gradient(135deg,#0f0c29,#1e1b4b)',borderRadius:'8px 8px 0 0',padding:'8px 12px',display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',border:'1px solid rgba(99,102,241,0.4)',borderBottom:'none'}}>
@@ -837,7 +858,7 @@ const Tenants = () => {
           );
 
           return (
-            <div style={{flex:isMobile?'1':'0 0 41%',order:-1,width:isMobile?'100%':undefined,minWidth:0,background:'#fff',borderRadius:8,border:'1px solid #d1d5db',overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:isMobile?'none':'82vh',boxShadow:'0 2px 8px rgba(0,0,0,0.07)'}}>
+            <div className="tDetailPanel" style={{flex:isMobile?'1':'0 0 41%',order:-1,width:isMobile?'100%':undefined,minWidth:0,background:'#fff',borderRadius:8,border:'1px solid #d1d5db',overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:isMobile?'none':'82vh',boxShadow:'0 2px 8px rgba(0,0,0,0.07)'}}>
               {/* Dark header */}
               <div style={{background:'linear-gradient(135deg,#0f0c29 0%,#1e1b4b 50%,#312e81 100%)',padding:'11px 14px 10px',flexShrink:0}}>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -858,7 +879,7 @@ const Tenants = () => {
               </div>
 
               {/* KPI row */}
-              <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',borderBottom:'1px solid #e2e8f0',flexShrink:0}}>
+              <div className="tKpiRow" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',borderBottom:'1px solid #e2e8f0',flexShrink:0}}>
                 {[
                   {l:'Users',v:`${t.userCount||0}/${t.subscription?.maxUsers||'∞'}`},
                   {l:'Plan',v:t.subscription?.planName||'Free'},
@@ -952,7 +973,7 @@ const Tenants = () => {
                         <span style={{background:'#8b5cf6',color:'#fff',fontSize:8,fontWeight:800,padding:'2px 6px',borderRadius:20,letterSpacing:0.5,flexShrink:0}}>MANAGER</span>
                       </div>
                       {/* Who assigned + when */}
-                      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
+                      <div className="tAssignGrid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6}}>
                         {t.assignedManagerBy && (
                           <div style={{background:'#f8fafc',borderRadius:5,padding:'5px 8px',border:'1px solid #e2e8f0'}}>
                             <div style={{fontSize:8,fontWeight:700,color:'#94a3b8',textTransform:'uppercase',letterSpacing:0.5,marginBottom:2}}>Assigned By</div>

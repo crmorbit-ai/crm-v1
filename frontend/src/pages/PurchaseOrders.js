@@ -5,6 +5,16 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import PurchaseOrderForm from './PurchaseOrderForm';
 import '../styles/crm.css';
 
+const mobileCSS = `
+  @media (max-width: 768px) {
+    #po-split-container { flex-direction: column !important; }
+    #po-split-container > div[style*="col-resize"] { display: none !important; }
+    .po-panel-form { flex: none !important; width: 100% !important; max-height: 60vh; overflow-y: auto; border-right: none !important; border-bottom: 1px solid #e0e0e0 !important; }
+    .po-panel-table { flex: none !important; width: 100% !important; }
+    .po-page-wrapper { height: auto !important; overflow: visible !important; }
+  }
+`;
+
 const PurchaseOrders = () => {
   const navigate = useNavigate();
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -87,7 +97,8 @@ const PurchaseOrders = () => {
 
   return (
     <DashboardLayout title="Purchase Orders">
-      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
+      <style>{mobileCSS}</style>
+      <div className="po-page-wrapper" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
 
         {/* Fixed top: Header + Stats — never moves */}
         <div style={{ flexShrink: 0, padding: '0 16px 12px 16px' }}>
@@ -141,7 +152,7 @@ const PurchaseOrders = () => {
         {/* Split panel — form left, table right */}
         <div id="po-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {showCreateForm && (
-            <div style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="po-panel-form" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
               <PurchaseOrderForm embedded onClose={() => setShowCreateForm(false)} onSuccess={() => { setShowCreateForm(false); fetchPurchaseOrders(); }} />
             </div>
           )}
@@ -153,7 +164,7 @@ const PurchaseOrders = () => {
               <div style={{ width: '2px', height: '40px', borderRadius: '99px', background: 'rgba(0,0,0,0.15)' }} />
             </div>
           )}
-          <div style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
+          <div className="po-panel-table" style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
           {/* Table Card */}
           <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>

@@ -5,6 +5,16 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import QuotationForm from './QuotationForm';
 import '../styles/crm.css';
 
+const mobileCSS = `
+  @media (max-width: 768px) {
+    #quotations-split-container { flex-direction: column !important; }
+    #quotations-split-container > div[style*="col-resize"] { display: none !important; }
+    .quot-panel-form { flex: none !important; width: 100% !important; max-height: 60vh; overflow-y: auto; border-right: none !important; border-bottom: 1px solid #e0e0e0 !important; }
+    .quot-panel-table { flex: none !important; width: 100% !important; }
+    .quot-page-wrapper { height: auto !important; overflow: visible !important; }
+  }
+`;
+
 const Quotations = () => {
   const navigate = useNavigate();
   const [quotations, setQuotations] = useState([]);
@@ -88,7 +98,8 @@ const Quotations = () => {
 
   return (
     <DashboardLayout title="Quotations">
-      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
+      <style>{mobileCSS}</style>
+      <div className="quot-page-wrapper" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
 
         {/* Fixed top: Header + Stats — never moves */}
         <div style={{ flexShrink: 0, padding: '0 16px 12px 16px' }}>
@@ -142,7 +153,7 @@ const Quotations = () => {
         {/* Split panel — form left, table right */}
         <div id="quotations-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {showCreateForm && (
-            <div style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="quot-panel-form" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
               <QuotationForm embedded onClose={() => setShowCreateForm(false)} onSuccess={() => { setShowCreateForm(false); fetchQuotations(); }} />
             </div>
           )}
@@ -154,7 +165,7 @@ const Quotations = () => {
               <div style={{ width: '2px', height: '40px', borderRadius: '99px', background: 'rgba(0,0,0,0.15)' }} />
             </div>
           )}
-          <div style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
+          <div className="quot-panel-table" style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
           {/* Table Card */}
           <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>

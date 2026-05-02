@@ -50,6 +50,22 @@ const ResellerDashboard = () => {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .reseller-grid4,.reseller-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .reseller-grid2{grid-template-columns:1fr!important;}
+    .reseller-split{flex-direction:column!important;}
+    .reseller-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .reseller-panel{width:100%!important;}
+    .reseller-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .reseller-form-row{grid-template-columns:1fr!important;}
+    .reseller-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .reseller-grid4,.reseller-grid3,.reseller-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '48px', marginBottom: '16px' }}>⏳</div>
           <p>Loading dashboard...</p>

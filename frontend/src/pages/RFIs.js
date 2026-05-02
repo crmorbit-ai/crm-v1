@@ -5,6 +5,16 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import RFIForm from './RFIForm';
 import '../styles/crm.css';
 
+const mobileCSS = `
+  @media (max-width: 768px) {
+    #rfi-split-container { flex-direction: column !important; }
+    #rfi-split-container > div[style*="col-resize"] { display: none !important; }
+    .rfi-panel-form { flex: none !important; width: 100% !important; max-height: 60vh; overflow-y: auto; border-right: none !important; border-bottom: 1px solid #e0e0e0 !important; }
+    .rfi-panel-table { flex: none !important; width: 100% !important; }
+    .rfi-page-wrapper { height: auto !important; overflow: visible !important; }
+  }
+`;
+
 const RFIs = () => {
   const navigate = useNavigate();
   const [rfis, setRfis] = useState([]);
@@ -83,7 +93,8 @@ const RFIs = () => {
 
   return (
     <DashboardLayout title="RFIs">
-      <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
+      <style>{mobileCSS}</style>
+      <div className="rfi-page-wrapper" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)', overflow: 'hidden' }}>
 
         {/* Fixed top: Header + Stats — never moves */}
         <div style={{ flexShrink: 0, padding: '0 16px 12px 16px' }}>
@@ -136,7 +147,7 @@ const RFIs = () => {
         {/* Split panel — form left, table right */}
         <div id="rfi-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
           {showCreateForm && (
-            <div style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="rfi-panel-form" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
               <RFIForm embedded onClose={() => setShowCreateForm(false)} onSuccess={() => { setShowCreateForm(false); fetchRFIs(); }} />
             </div>
           )}

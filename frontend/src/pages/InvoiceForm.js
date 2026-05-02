@@ -207,6 +207,22 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
       switch (wizardStep) {
         case 0: return (
           <div style={{ display: 'grid', gap: '14px' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .invoicef-grid4,.invoicef-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .invoicef-grid2{grid-template-columns:1fr!important;}
+    .invoicef-split{flex-direction:column!important;}
+    .invoicef-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .invoicef-panel{width:100%!important;}
+    .invoicef-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .invoicef-form-row{grid-template-columns:1fr!important;}
+    .invoicef-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .invoicef-grid4,.invoicef-grid3,.invoicef-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
             {!isEdit && invoiceTemplates.length > 0 && (
               <div style={{ padding:'10px 12px', background:'#fff1f2', borderRadius:'10px', border:'1px solid #fecdd3' }}>
                 <div style={{ fontSize:'10px', fontWeight:'700', color:'#dc2626', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>⚡ Apply Template</div>

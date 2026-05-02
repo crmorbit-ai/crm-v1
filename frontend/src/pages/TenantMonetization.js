@@ -21,6 +21,22 @@ const BarChart = ({ data, valueKey, labelKey, color='#6366f1', height=120 }) => 
   const max = Math.max(...data.map(d => d[valueKey] || 0), 1);
   return (
     <div style={{ display:'flex', alignItems:'flex-end', gap:4, height, padding:'0 4px' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .tenantmo-grid4,.tenantmo-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .tenantmo-grid2{grid-template-columns:1fr!important;}
+    .tenantmo-split{flex-direction:column!important;}
+    .tenantmo-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .tenantmo-panel{width:100%!important;}
+    .tenantmo-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .tenantmo-form-row{grid-template-columns:1fr!important;}
+    .tenantmo-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .tenantmo-grid4,.tenantmo-grid3,.tenantmo-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       {data.map((d, i) => (
         <div key={i} style={{ flex:1, display:'flex', flexDirection:'column', alignItems:'center', gap:3, height:'100%', justifyContent:'flex-end' }}>
           <div style={{ width:'100%', background:color, borderRadius:'4px 4px 0 0', height:`${((d[valueKey]||0)/max)*100}%`, minHeight:2, opacity:0.85 }} />

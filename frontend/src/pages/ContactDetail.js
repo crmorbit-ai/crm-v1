@@ -232,6 +232,22 @@ const ContactDetail = () => {
 
   return (
     <DashboardLayout title={`${contact.firstName} ${contact.lastName}`}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .contactd-grid4,.contactd-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .contactd-grid2{grid-template-columns:1fr!important;}
+    .contactd-split{flex-direction:column!important;}
+    .contactd-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .contactd-panel{width:100%!important;}
+    .contactd-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .contactd-form-row{grid-template-columns:1fr!important;}
+    .contactd-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .contactd-grid4,.contactd-grid3,.contactd-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       {success && (
         <div style={{ padding: '16px', background: '#DCFCE7', color: '#166534', borderRadius: '8px', marginBottom: '20px' }}>
           {success}

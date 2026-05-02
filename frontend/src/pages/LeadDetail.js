@@ -496,6 +496,22 @@ const LeadDetail = () => {
   if (loading) {
     return (
       <DashboardLayout title="Lead Details">
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .leaddtl-grid4,.leaddtl-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .leaddtl-grid2{grid-template-columns:1fr!important;}
+    .leaddtl-split{flex-direction:column!important;}
+    .leaddtl-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .leaddtl-panel{width:100%!important;}
+    .leaddtl-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .leaddtl-form-row{grid-template-columns:1fr!important;}
+    .leaddtl-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .leaddtl-grid4,.leaddtl-grid3,.leaddtl-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
         <div style={{ padding: '40px', textAlign: 'center' }}>
           <div className="spinner" style={{ margin: '0 auto' }}></div>
           <p style={{ marginTop: '10px' }}>Loading lead...</p>

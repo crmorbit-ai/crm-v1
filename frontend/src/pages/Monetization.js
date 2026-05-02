@@ -61,6 +61,21 @@ const CSS = `
 .mDlBtn:hover{background:#f1f5f9!important;border-color:#cbd5e1!important;}
 .mCardHover{transition:box-shadow 0.2s,transform 0.2s;}
 .mCardHover:hover{box-shadow:0 8px 24px rgba(0,0,0,0.1)!important;transform:translateY(-1px);}
+
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .monetiza-grid4,.monetiza-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .monetiza-grid2{grid-template-columns:1fr!important;}
+    .monetiza-split{flex-direction:column!important;}
+    .monetiza-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .monetiza-panel{width:100%!important;}
+    .monetiza-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .monetiza-form-row{grid-template-columns:1fr!important;}
+    .monetiza-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .monetiza-grid4,.monetiza-grid3,.monetiza-grid2{grid-template-columns:1fr!important;}
+  }
 `;
 
 /* ══════════════════════════════════════

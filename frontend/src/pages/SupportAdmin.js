@@ -87,6 +87,22 @@ const SupportAdmin = () => {
   return (
     <SaasLayout title="Support">
       <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .supporta-grid4,.supporta-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .supporta-grid2{grid-template-columns:1fr!important;}
+    .supporta-split{flex-direction:column!important;}
+    .supporta-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .supporta-panel{width:100%!important;}
+    .supporta-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .supporta-form-row{grid-template-columns:1fr!important;}
+    .supporta-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .supporta-grid4,.supporta-grid3,.supporta-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
+      <style>{`
         @keyframes slideInLeft{from{opacity:0;transform:translateX(-32px)}to{opacity:1;transform:translateX(0)}}
         @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}

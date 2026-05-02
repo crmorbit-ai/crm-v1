@@ -35,6 +35,22 @@ const AreaChart = ({ pts=[], months=[], color='#10b981', h=160 }) => {
   const uid=color.replace(/\W/g,'');
   return (
     <svg viewBox={`0 0 ${VW} ${VH}`} style={{width:'100%',height:VH,display:'block'}}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .billings-grid4,.billings-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .billings-grid2{grid-template-columns:1fr!important;}
+    .billings-split{flex-direction:column!important;}
+    .billings-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .billings-panel{width:100%!important;}
+    .billings-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .billings-form-row{grid-template-columns:1fr!important;}
+    .billings-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .billings-grid4,.billings-grid3,.billings-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       <defs>
         <linearGradient id={`ag${uid}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={color} stopOpacity="0.4"/>

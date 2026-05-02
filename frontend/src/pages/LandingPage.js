@@ -228,7 +228,7 @@ const CSS = `
   .stat-card:first-child { border-radius: 16px 0 0 16px; }
   .stat-card:last-child { border-radius: 0 16px 16px 0; }
   .stat-card:hover { background: rgba(255,255,255,0.07); }
-  .stat-num { font-size: 48px; font-weight: 900; letter-spacing: -2px; line-height: 1; margin-bottom: 8px; }
+  .stat-num { font-size: clamp(28px, 6vw, 48px); font-weight: 900; letter-spacing: -2px; line-height: 1; margin-bottom: 8px; }
   .stat-lbl { font-size: 14px; color: rgba(255,255,255,0.45); font-weight: 500; }
 
   /* Marquee */
@@ -396,24 +396,60 @@ const CSS = `
   @media (max-width: 900px) {
     .hero-section { padding: 120px 0 60px; }
     .hero-h1 { font-size: 38px; }
-    .hero-cards { grid-template-columns: 1fr; }
-    .stats-grid { grid-template-columns: repeat(2, 1fr); }
-    .stat-card:first-child { border-radius: 16px 16px 0 0; }
-    .stat-card:last-child { border-radius: 0 0 16px 16px; }
-    .spotlight-grid { grid-template-columns: 1fr; }
+    .hero-main-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
+    .hero-cards { grid-template-columns: 1fr 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .stats-inner { padding: 0 20px !important; }
+    .stat-card { padding: 24px 16px !important; }
+    .stat-num { font-size: 36px !important; }
+    .spotlight-grid { grid-template-columns: 1fr !important; }
+    .spotlight-grid.reverse { direction: ltr !important; }
+    .spotlight-grid.reverse > * { direction: ltr !important; }
+    .spotlight-inner { padding: 0 20px !important; }
+    .mock-wrap { width: 100% !important; max-width: 100% !important; overflow: hidden !important; }
     .features-grid { grid-template-columns: 1fr 1fr; }
     .new-grid { grid-template-columns: 1fr; }
     .partner-grid { grid-template-columns: 1fr; }
     .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
     .lp-nav-links { display: none; }
     .cta-card { padding: 48px 28px; }
+    .spotlight-section { padding: 60px 0 !important; }
   }
   @media (max-width: 600px) {
+    .hero-main-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
+    .hero-cards { grid-template-columns: 1fr !important; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .stats-inner { padding: 0 16px !important; }
+    .stat-card { padding: 20px 12px !important; }
+    .stat-num { font-size: 28px !important; letter-spacing: -1px !important; }
+    .stat-lbl { font-size: 11px !important; }
     .features-grid { grid-template-columns: 1fr; }
     .footer-top { grid-template-columns: 1fr; }
     .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
     .trusted-inner { gap: 16px; }
     .trusted-sep { display: none; }
+    .hero-h1 { font-size: 28px !important; letter-spacing: -1px !important; }
+    .hero-inner { padding: 0 20px !important; }
+    .hero-section { padding: 100px 0 40px !important; }
+    .hero-ctas { flex-direction: column !important; align-items: flex-start !important; }
+    .section-inner { padding: 0 20px !important; }
+    .spotlight-inner { padding: 0 20px !important; }
+    .lp-nav-inner { padding: 0 20px !important; }
+    .footer-inner { padding: 0 20px !important; }
+    .pricing-grid { grid-template-columns: 1fr !important; }
+    .testimonial-grid { grid-template-columns: 1fr !important; }
+    .cta-card { padding: 32px 20px !important; }
+    .hero-proof-text { font-size: 11px !important; }
+    .hero-badges { flex-wrap: wrap !important; gap: 6px !important; }
+    .hero-sub { font-size: 14px !important; }
+    .mock-wrap { width: 100% !important; max-width: 100% !important; }
+  }
+  @media (max-width: 400px) {
+    .hero-h1 { font-size: 22px !important; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+    .hero-cards { grid-template-columns: 1fr !important; }
+    .hero-inner { padding: 0 16px !important; }
+    .stat-num { font-size: 22px !important; }
   }
 `;
 
@@ -644,6 +680,7 @@ const NEW_FEATURES = [
 const LandingPage = () => {
   const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 900);
   const [statsRef, statsInView] = useInView(0.3);
   const c1 = useCounter(25, 1800, statsInView);
   const c2 = useCounter(500, 2000, statsInView);
@@ -654,6 +691,12 @@ const LandingPage = () => {
     const onScroll = () => setIsScrolled(window.scrollY > 40);
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth <= 900);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   return (
@@ -686,7 +729,7 @@ const LandingPage = () => {
       <section className="hero-section" style={{ position: 'relative' }}>
         <div className="orb" style={{ width: 600, height: 600, top: -100, left: '50%', transform: 'translateX(-50%)', background: 'radial-gradient(ellipse, rgba(124,58,237,0.25) 0%, transparent 70%)' }} />
         <div className="hero-inner">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 64, alignItems: 'center' }}>
+          <div className="hero-main-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
             {/* Left */}
             <div>
               <div className="hero-social-proof">

@@ -307,6 +307,21 @@ const Subscription = () => {
 
   return (
     <DashboardLayout title="💳 Subscription & Billing">
+      <style>{`
+        @media (max-width: 768px) {
+          .sub-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .sub-usage-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .sub-plans-grid { grid-template-columns: 1fr !important; }
+          .sub-container { padding: 16px 12px !important; }
+          .sub-glass-card { padding: 20px 16px !important; }
+          .sub-toggle { flex-direction: column !important; width: 100% !important; }
+          .sub-toggle button { width: 100% !important; }
+        }
+        @media (max-width: 480px) {
+          .sub-stats-grid { grid-template-columns: 1fr !important; }
+          .sub-usage-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <div style={{
         ...glassStyles.container,
         background: '#f8f9fa',
@@ -336,7 +351,7 @@ const Subscription = () => {
             </h2>
           </div>
           
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+          <div className="sub-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             
             {/* Plan Info */}
             <div
@@ -514,7 +529,7 @@ const Subscription = () => {
                 <span style={{ fontSize: '18px' }}>📊</span>
                 Current Usage
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
+              <div className="sub-usage-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '12px' }}>
                 <div
                   style={{
                     ...glassStyles.statCard,
@@ -660,7 +675,7 @@ const Subscription = () => {
             <span style={{ fontSize: '20px' }}>🔄</span>
             Choose Billing Cycle
           </h3>
-          <div style={glassStyles.toggle}>
+          <div className="sub-toggle" style={glassStyles.toggle}>
             <button
               onClick={() => setBillingCycle('monthly')}
               style={{
@@ -726,9 +741,9 @@ const Subscription = () => {
             </p>
           </div>
 
-         <div className="plans-grid" style={{
+         <div className="plans-grid sub-plans-grid" style={{
   display: 'grid',
-  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+  gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
   gap: '20px',
   alignItems: 'stretch'
 }}>

@@ -67,6 +67,22 @@ const LocCountrySelect = ({ value, onChange }) => {
   const triggerStyle = { width:'100%', padding:'8px 10px', fontSize:'13px', border:'1px solid #e2e8f0', borderRadius:'6px', background:'#fff', textAlign:'left', cursor:'pointer', display:'flex', alignItems:'center', gap:'7px', outline:'none', color: value ? '#1e293b' : '#94a3b8', boxSizing:'border-box' };
   return (
     <div ref={ref} style={{ position:'relative' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .contacts-grid4,.contacts-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .contacts-grid2{grid-template-columns:1fr!important;}
+    .contacts-split{flex-direction:column!important;}
+    .contacts-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .contacts-panel{width:100%!important;}
+    .contacts-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .contacts-form-row{grid-template-columns:1fr!important;}
+    .contacts-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .contacts-grid4,.contacts-grid3,.contacts-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
       <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>Country</label>
       <button type="button" onClick={() => setOpen(o => !o)} style={triggerStyle}>
         {sel ? <><span style={{ fontSize:'15px', lineHeight:1 }}>{sel.flag}</span><span style={{ flex:1, fontSize:'13px' }}>{sel.name}</span></> : <span style={{ flex:1 }}>-- Select Country --</span>}

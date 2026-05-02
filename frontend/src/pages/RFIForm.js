@@ -121,6 +121,22 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
     switch (wizardStep) {
       case 0: return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .rfiform-grid4,.rfiform-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .rfiform-grid2{grid-template-columns:1fr!important;}
+    .rfiform-split{flex-direction:column!important;}
+    .rfiform-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .rfiform-panel{width:100%!important;}
+    .rfiform-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .rfiform-form-row{grid-template-columns:1fr!important;}
+    .rfiform-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .rfiform-grid4,.rfiform-grid3,.rfiform-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
           {!isEdit && rfiTemplates.length > 0 && (
             <div style={{ padding:'10px 12px', background:'#f0f9ff', borderRadius:'10px', border:'1px solid #bae6fd' }}>
               <div style={{ fontSize:'10px', fontWeight:'700', color:'#0369a1', textTransform:'uppercase', letterSpacing:'0.5px', marginBottom:'8px' }}>⚡ Apply Template</div>

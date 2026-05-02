@@ -160,6 +160,22 @@ const DataCenterDetail = () => {
   if (loading) {
     return (
       <DashboardLayout>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .datacent-grid4,.datacent-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .datacent-grid2{grid-template-columns:1fr!important;}
+    .datacent-split{flex-direction:column!important;}
+    .datacent-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .datacent-panel{width:100%!important;}
+    .datacent-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .datacent-form-row{grid-template-columns:1fr!important;}
+    .datacent-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .datacent-grid4,.datacent-grid3,.datacent-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
         <div style={{ textAlign: 'center', padding: '60px' }}>
           <div className="spinner" style={{ margin: '0 auto' }}></div>
           <p style={{ marginTop: '16px', color: '#64748b', fontSize: '15px', fontWeight: '600' }}>

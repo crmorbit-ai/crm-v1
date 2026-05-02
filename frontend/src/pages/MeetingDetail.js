@@ -96,6 +96,22 @@ const MeetingDetail = () => {
   if (loading) {
     return (
       <DashboardLayout title="Meeting Details">
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .meetingd-grid4,.meetingd-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .meetingd-grid2{grid-template-columns:1fr!important;}
+    .meetingd-split{flex-direction:column!important;}
+    .meetingd-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .meetingd-panel{width:100%!important;}
+    .meetingd-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .meetingd-form-row{grid-template-columns:1fr!important;}
+    .meetingd-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .meetingd-grid4,.meetingd-grid3,.meetingd-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
         <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>
       </DashboardLayout>
     );

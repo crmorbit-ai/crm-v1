@@ -48,6 +48,22 @@ const RoleRow = ({ role, index, total, allRoles, onChange, onDelete, onMoveUp, o
 
   return (
     <div style={{ border: `1.5px solid ${color}30`, borderRadius: 14, marginBottom: 8, background: '#fff', overflow: 'hidden' }}>
+      <style>{`
+  /* ── RESPONSIVE ────────────────── */
+  @media(max-width:768px){
+    .roletemp-grid4,.roletemp-grid3{grid-template-columns:repeat(2,1fr)!important;}
+    .roletemp-grid2{grid-template-columns:1fr!important;}
+    .roletemp-split{flex-direction:column!important;}
+    .roletemp-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
+    .roletemp-panel{width:100%!important;}
+    .roletemp-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+    .roletemp-form-row{grid-template-columns:1fr!important;}
+    .roletemp-hide{display:none!important;}
+  }
+  @media(max-width:480px){
+    .roletemp-grid4,.roletemp-grid3,.roletemp-grid2{grid-template-columns:1fr!important;}
+  }
+`}</style>
 
       {/* Collapsed header */}
       <div style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', cursor:'pointer' }} onClick={() => setOpen(o => !o)}>

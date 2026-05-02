@@ -183,6 +183,29 @@ const Dashboard = () => {
     .lead-pill:hover{transform:translateY(-2px);box-shadow:0 6px 18px rgba(0,0,0,.1)!important;}
     .acct-row:hover{background:#F8FAFC!important;}
     .acct-row{transition:background .15s;}
+    .db-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px;}
+    .db-metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px;}
+    .db-main-grid{display:grid;grid-template-columns:1fr 320px;gap:16px;margin-bottom:16px;align-items:stretch;}
+    .db-bottom-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+    .db-inner-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media(max-width:1024px){
+      .db-kpi-grid{grid-template-columns:repeat(2,1fr)!important;}
+      .db-metrics-grid{grid-template-columns:repeat(2,1fr)!important;}
+      .db-main-grid{grid-template-columns:1fr!important;}
+    }
+    @media(max-width:768px){
+      .db-kpi-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important;}
+      .db-metrics-grid{grid-template-columns:repeat(2,1fr)!important;gap:10px!important;}
+      .db-main-grid{grid-template-columns:1fr!important;}
+      .db-bottom-grid{grid-template-columns:1fr!important;}
+      .db-inner-grid{grid-template-columns:1fr 1fr!important;}
+      .db-hero-right{display:none!important;}
+    }
+    @media(max-width:480px){
+      .db-kpi-grid{grid-template-columns:1fr 1fr!important;}
+      .db-metrics-grid{grid-template-columns:1fr 1fr!important;}
+      .db-inner-grid{grid-template-columns:1fr!important;}
+    }
   `;
 
   return (
@@ -262,7 +285,7 @@ const Dashboard = () => {
       </div>
 
       {/* ═══ KPI CARDS ═════════════════════════════════════════ */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'14px',marginBottom:'16px'}}>
+      <div className="db-kpi-grid">
         {[
           { label:'Total Leads',    val:totalLeads,    new:newLeads,    to:'/leads',         c1:'#1e1b4b', c2:'#4f46e5', icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
           { label:'Accounts',       val:totalAccounts, new:newAccounts, to:'/accounts',      c1:'#4a044e', c2:'#a21caf', icon:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
@@ -309,7 +332,7 @@ const Dashboard = () => {
       </div>
 
       {/* ═══ METRICS ROW ═══════════════════════════════════════ */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'14px',marginBottom:'20px',animationDelay:'.15s'}} className="db-fade">
+      <div className="db-metrics-grid db-fade" style={{animationDelay:'.15s'}}>
         {/* Weighted Pipeline */}
         <div style={{background:'white',borderRadius:'14px',padding:'16px',border:'1px solid #F1F5F9',boxShadow:'0 1px 4px rgba(0,0,0,.05)',display:'flex',alignItems:'center',gap:'12px'}}>
           <Donut pct={totalPipeline>0?Math.min(99,Math.round((weighted/totalPipeline)*100)):0} color="#6366F1" label="weighted"/>
@@ -368,7 +391,7 @@ const Dashboard = () => {
       </div>
 
       {/* ═══ MIDDLE SECTION ════════════════════════════════════ */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 320px',gap:'16px',marginBottom:'16px',alignItems:'stretch'}}>
+      <div className="db-main-grid">
 
         {/* Pipeline Funnel */}
         <div style={{background:'white',borderRadius:'16px',border:'1px solid #F1F5F9',boxShadow:'0 2px 8px rgba(0,0,0,.05)',overflow:'hidden',animationDelay:'.2s'}} className="db-fade">
@@ -424,7 +447,7 @@ const Dashboard = () => {
             <h3 style={{margin:0,fontSize:'15px',fontWeight:'700',color:'#0F172A'}}>Quick Access</h3>
             <p style={{margin:'2px 0 0',fontSize:'11px',color:'#94A3B8'}}>Navigate to key modules</p>
           </div>
-          <div style={{padding:'14px',display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+          <div className="db-inner-grid" style={{padding:'14px'}}>
             {[
               {label:'Leads',        to:'/leads',         color:'#6366F1', bg:'linear-gradient(135deg,#EEF2FF,#F5F3FF)', icon:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2', count:totalLeads },
               {label:'Accounts',     to:'/accounts',      color:'#8B5CF6', bg:'linear-gradient(135deg,#F5F3FF,#EDE9FE)', icon:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', count:totalAccounts },
@@ -450,7 +473,7 @@ const Dashboard = () => {
       </div>
 
       {/* ═══ BOTTOM ROW ════════════════════════════════════════ */}
-      <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'16px',animationDelay:'.3s'}} className="db-fade">
+      <div className="db-bottom-grid db-fade" style={{animationDelay:'.3s'}}>
 
         {/* Lead Status */}
         <div style={{background:'white',borderRadius:'16px',border:'1px solid #F1F5F9',boxShadow:'0 2px 8px rgba(0,0,0,.05)',overflow:'hidden'}}>
