@@ -20,6 +20,14 @@ const ForgotPassword = () => {
     setError('');
     setLoading(true);
 
+    // BUG-8: Validate email format before API call
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address.');
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/auth/forgot-password`, {
         method: 'POST',
@@ -31,6 +39,8 @@ const ForgotPassword = () => {
 
       if (data.success) {
         setSuccess('OTP sent to your email!');
+        // BUG-6: Auto-clear success banner after 4 seconds
+        setTimeout(() => setSuccess(''), 4000);
         setStep(2);
       } else {
         setError(data.message || 'Failed to send OTP');
@@ -207,7 +217,7 @@ const ForgotPassword = () => {
                 className="form-input"
                 placeholder="Enter 6-digit OTP"
                 value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }}
                 required
                 autoFocus
                 maxLength={6}

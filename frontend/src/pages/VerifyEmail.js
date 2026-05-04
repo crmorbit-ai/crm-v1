@@ -12,7 +12,7 @@ const VerifyEmail = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [resendLoading, setResendLoading] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendCooldown, setResendCooldown] = useState(30);
   const [successMessage, setSuccessMessage] = useState('');
 
   const inputRefs = useRef([]);
@@ -35,6 +35,8 @@ const VerifyEmail = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
+    // BUG-7: Clear error when user starts typing
+    if (value) setError('');
     if (value && index < 5) {
       inputRefs.current[index + 1].focus();
     }
@@ -91,6 +93,8 @@ const VerifyEmail = () => {
     try {
       await resendOTP(email);
       setSuccessMessage('New verification code sent to your email!');
+      // BUG-6: Auto-clear success banner after 4 seconds
+      setTimeout(() => setSuccessMessage(''), 4000);
       setResendCooldown(30);
       setOtp(['', '', '', '', '', '']);
       inputRefs.current[0].focus();

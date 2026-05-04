@@ -28,16 +28,28 @@ const Register = () => {
   }, [user, navigate]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    // BUG-1: Reject special characters in name fields
+    if ((name === 'firstName' || name === 'lastName') && value && !/^[A-Za-z\s\-']*$/.test(value)) {
+      return;
+    }
+    setFormData({ ...formData, [name]: value });
     setError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    // BUG-1: Validate name fields
+    if (formData.firstName.length < 2) {
+      setError('First name must be at least 2 characters');
+      return;
+    }
+    if (formData.lastName.length < 2) {
+      setError('Last name must be at least 2 characters');
+      return;
+    }
 
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -46,6 +58,18 @@ const Register = () => {
 
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters');
+      return;
+    }
+
+    if (formData.password.length > 10) {
+      setError('Password must not exceed 10 characters');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -255,6 +279,8 @@ const Register = () => {
                 value={formData.firstName}
                 onChange={handleChange}
                 required
+                maxLength={50}
+                pattern="[A-Za-z\s\-']+"
                 placeholder="John"
                 style={{
                   width: '100%',
@@ -295,6 +321,8 @@ const Register = () => {
                 value={formData.lastName}
                 onChange={handleChange}
                 required
+                maxLength={50}
+                pattern="[A-Za-z\s\-']+"
                 placeholder="Doe"
                 style={{
                   width: '100%',
@@ -336,6 +364,7 @@ const Register = () => {
               value={formData.email}
               onChange={handleChange}
               required
+              maxLength={100}
               placeholder="Enter your email"
               style={{
                 width: '100%',
@@ -376,6 +405,7 @@ const Register = () => {
               value={formData.password}
               onChange={handleChange}
               required
+              maxLength={10}
               placeholder="Create a password"
               style={{
                 width: '100%',
@@ -416,6 +446,7 @@ const Register = () => {
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              maxLength={128}
               placeholder="Confirm your password"
               style={{
                 width: '100%',

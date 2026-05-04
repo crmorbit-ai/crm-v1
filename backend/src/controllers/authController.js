@@ -1177,7 +1177,9 @@ const googleOAuthCallback = async (req, res) => {
 
     console.log('✅ Google OAuth successful for existing user:', existingUser.email);
 
-    res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=${!existingUser.isProfileComplete}`);
+    // If user already has a tenant, they are fully set up — skip profile completion
+    const needsProfileCompletion = !existingUser.isProfileComplete && !existingUser.tenant;
+    res.redirect(`${frontendURL}/auth/callback?token=${token}&requiresProfileCompletion=${needsProfileCompletion}`);
   } catch (error) {
     console.error('Google OAuth callback error:', error);
     res.redirect(`${frontendURL}/login?error=oauth_failed`);

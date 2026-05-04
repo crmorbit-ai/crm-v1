@@ -27,16 +27,51 @@ const ResellerRegister = () => {
   const [success, setSuccess] = useState(false);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    // BUG-29: Reject special characters in name fields
+    if ((name === 'firstName' || name === 'lastName') && value && !/^[A-Za-z\s\-']*$/.test(value)) return;
+    // BUG-31: Phone field — only numbers and + allowed
+    if (name === 'phone' && value && !/^[0-9+]*$/.test(value)) return;
+    // BUG-34: Company name — alphanumeric only
+    if (name === 'companyName' && value && !/^[A-Za-z0-9\s\-&.,()]*$/.test(value)) return;
+    // BUG-34: Occupation — letters, spaces, hyphens only
+    if (name === 'occupation' && value && !/^[A-Za-z\s\-&]*$/.test(value)) return;
+    // BUG-33: Clear error when user types in email field
+    if (name === 'email') setError('');
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
+    // BUG-29: Name validation
+    if (formData.firstName.length < 2) { setError('First name must be at least 2 characters'); return; }
+    if (formData.lastName.length < 2) { setError('Last name must be at least 2 characters'); return; }
+
+    // BUG-31: Phone validation
+    if (formData.phone && formData.phone.replace('+', '').length > 15) {
+      setError('Phone number must not exceed 15 digits'); return;
+    }
+
+    // BUG-34: Company name validation
+    if (!formData.companyName || formData.companyName.trim().length < 2) {
+      setError('Company name must be at least 2 characters'); return;
+    }
+
+    // BUG-32: Password strength validation
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters'); return;
+    }
+    if (formData.password.length > 10) {
+      setError('Password must not exceed 10 characters'); return;
+    }
+    if (!/[A-Z]/.test(formData.password)) {
+      setError('Password must contain at least 1 uppercase letter'); return;
+    }
+    if (!/[0-9]/.test(formData.password)) {
+      setError('Password must contain at least 1 number'); return;
+    }
     // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
@@ -77,9 +112,12 @@ const ResellerRegister = () => {
         }, 3000);
       } else {
         setError(data.message || 'Registration failed');
+        // BUG-30: Auto-dismiss error after 5 seconds
+        setTimeout(() => setError(''), 5000);
       }
     } catch (err) {
       setError('Failed to submit application. Please try again.');
+      setTimeout(() => setError(''), 5000);
     } finally {
       setLoading(false);
     }
@@ -210,9 +248,13 @@ const ResellerRegister = () => {
             borderRadius: '6px',
             color: '#f87171',
             marginBottom: '16px',
-            fontSize: '14px'
+            fontSize: '14px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
           }}>
-            {error}
+            <span>{error}</span>
+            <button onClick={() => setError('')} style={{ background: 'none', border: 'none', color: '#f87171', cursor: 'pointer', fontSize: '18px', lineHeight: 1, padding: '0 0 0 12px' }}>×</button>
           </div>
         )}
 
@@ -259,6 +301,7 @@ const ResellerRegister = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   required
+                  maxLength={50}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -279,6 +322,7 @@ const ResellerRegister = () => {
                   value={formData.lastName}
                   onChange={handleChange}
                   required
+                  maxLength={50}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -319,6 +363,7 @@ const ResellerRegister = () => {
                   value={formData.phone}
                   onChange={handleChange}
                   required
+                  maxLength={15}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -339,6 +384,7 @@ const ResellerRegister = () => {
                   value={formData.password}
                   onChange={handleChange}
                   required
+                  maxLength={10}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -359,6 +405,7 @@ const ResellerRegister = () => {
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
+                  maxLength={10}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -416,6 +463,7 @@ const ResellerRegister = () => {
                   value={formData.companyName}
                   onChange={handleChange}
                   required
+                  maxLength={100}
                   style={{
                     width: '100%',
                     padding: '10px 12px',
@@ -437,6 +485,7 @@ const ResellerRegister = () => {
                   value={formData.occupation}
                   onChange={handleChange}
                   required
+                  maxLength={50}
                   style={{
                     width: '100%',
                     padding: '10px 12px',

@@ -34,9 +34,6 @@ const Login = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
-    setError('');
-    setErrorCode(null);
-    setErrorMeta(null);
   };
 
   const handleSubmit = async (e) => {
@@ -83,6 +80,8 @@ const Login = () => {
       setErrorCode(code);
       setErrorMeta(meta);
       setLoading(false);
+      // BUG-9: Auto-clear error after 6 seconds
+      setTimeout(() => { setError(''); setErrorCode(null); setErrorMeta(null); }, 6000);
     }
   };
 
@@ -345,6 +344,7 @@ const Login = () => {
               value={formData.password}
               onChange={handleChange}
               required
+              maxLength={10}
               placeholder="Enter your password"
               style={{
                 width: '100%',
