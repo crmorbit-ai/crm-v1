@@ -333,8 +333,8 @@ const CSS = `
   .new-card-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
   .new-card-body { flex: 1; }
   .new-badge { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; padding: 2px 10px; border-radius: 20px; margin-bottom: 10px; display: inline-block; }
-  .new-card-title { font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 8px; }
-  .new-card-desc { font-size: 13px; color: rgba(255,255,255,0.45); line-height: 1.6; margin: 0; }
+  .new-card-title { font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 8px; word-break: break-word; }
+  .new-card-desc { font-size: 13px; color: rgba(255,255,255,0.45); line-height: 1.6; margin: 0; word-break: break-word; }
   .new-card-points { list-style: none; padding: 0; margin: 14px 0 0; display: flex; flex-direction: column; gap: 6px; }
   .new-card-point { font-size: 12px; color: rgba(255,255,255,0.5); display: flex; align-items: center; gap: 8px; }
 
@@ -416,6 +416,12 @@ const CSS = `
     .spotlight-section { padding: 60px 0 !important; }
   }
   @media (max-width: 600px) {
+    .new-grid { grid-template-columns: 1fr !important; }
+    .new-card { flex-direction: column !important; gap: 12px !important; }
+    .new-card-icon { width: 40px !important; height: 40px !important; font-size: 18px !important; }
+    .new-card-title { font-size: 15px !important; }
+    .new-card-desc { font-size: 12px !important; }
+    .new-inner { padding: 0 16px !important; }
     .hero-main-grid { grid-template-columns: 1fr !important; gap: 32px !important; }
     .hero-cards { grid-template-columns: 1fr !important; }
     .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }

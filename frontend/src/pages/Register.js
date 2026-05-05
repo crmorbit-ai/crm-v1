@@ -41,6 +41,15 @@ const Register = () => {
     e.preventDefault();
     setError('');
 
+    // BUG-35: Must contain at least one letter
+    if (!/[A-Za-z]/.test(formData.firstName)) {
+      setError('First name must contain at least one letter');
+      return;
+    }
+    if (!/[A-Za-z]/.test(formData.lastName)) {
+      setError('Last name must contain at least one letter');
+      return;
+    }
     // BUG-1: Validate name fields
     if (formData.firstName.length < 2) {
       setError('First name must be at least 2 characters');

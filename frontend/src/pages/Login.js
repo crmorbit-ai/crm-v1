@@ -38,8 +38,17 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+
+    // BUG-36: Strict email validation — no consecutive dots, valid format
+    const emailRegex = /^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(formData.email) || /\.{2,}/.test(formData.email)) {
+      setError('Please enter a valid email address');
+      setTimeout(() => setError(''), 6000);
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await login(formData.email, formData.password);
