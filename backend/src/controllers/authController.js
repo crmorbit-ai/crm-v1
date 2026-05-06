@@ -456,10 +456,16 @@ const forgotPassword = async (req, res) => {
       return errorResponse(res, 400, 'Please provide email');
     }
 
-    const user = await User.findOne({ email, isActive: true });
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return errorResponse(res, 400, 'Please enter a valid email address.');
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase().trim(), isActive: true });
 
     if (!user) {
-      return successResponse(res, 200, 'If an account exists with this email, you will receive an OTP.');
+      return errorResponse(res, 404, 'No account found with this email address. Please check and try again.');
     }
 
     const otp = generateOTP();
@@ -653,12 +659,43 @@ const registerStep1 = async (req, res) => {
       return errorResponse(res, 400, 'Please provide all required fields');
     }
 
-    if (password.length < 6) {
-      return errorResponse(res, 400, 'Password must be at least 6 characters');
+    // Email format & length validation (BUG-40)
+    const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+    const emailTrimmed = email.trim().toLowerCase();
+    if (!emailRegex.test(emailTrimmed)) {
+      return errorResponse(res, 400, 'Please enter a valid email address');
+    }
+    if (emailTrimmed.length > 40) {
+      return errorResponse(res, 400, 'Email address is too long (max 40 characters)');
+    }
+
+    // Name validation
+    if (firstName.trim().length < 2 || lastName.trim().length < 2) {
+      return errorResponse(res, 400, 'First and last name must be at least 2 characters');
+    }
+
+    // Password validation (BUG-39 & BUG-41)
+    if (password.length < 8) {
+      return errorResponse(res, 400, 'Password must be at least 8 characters');
+    }
+    if (password.length > 10) {
+      return errorResponse(res, 400, 'Password must not exceed 10 characters');
+    }
+    if (!/[A-Z]/.test(password)) {
+      return errorResponse(res, 400, 'Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      return errorResponse(res, 400, 'Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      return errorResponse(res, 400, 'Password must contain at least one number');
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return errorResponse(res, 400, 'Password must contain at least one special character');
     }
 
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: emailTrimmed });
 
     if (existingUser) {
       // If user exists but is pending verification, allow re-registration

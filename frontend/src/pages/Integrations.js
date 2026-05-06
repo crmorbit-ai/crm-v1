@@ -1,3 +1,5 @@
+import SharedHeader from '../components/SharedHeader';
+import SharedFooter from '../components/SharedFooter';
 import React from "react";
 import { useNavigate } from "react-router-dom";
 
@@ -79,29 +81,7 @@ const Integrations = () => {
   return (
     <div className="min-h-screen bg-[#0f172a]">
       {/* Navigation */}
-      <nav className="bg-[#0f172a]/90 backdrop-blur-xl shadow-lg py-4 sticky top-0 z-50 border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 flex justify-between items-center">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
-            <div className="bg-white rounded-lg p-1.5">
-              <img src="/logo.png" alt="Logo" className="h-5 w-auto object-contain" />
-            </div>
-          </div>
-          <div className="flex gap-4">
-            <button
-              onClick={() => navigate("/login")}
-              className="px-4 py-2 text-gray-300 font-medium hover:text-white transition"
-            >
-              Sign In
-            </button>
-            <button
-              onClick={() => navigate("/register")}
-              className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-lg hover:shadow-lg hover:shadow-purple-500/25 transition"
-            >
-              Get Started
-            </button>
-          </div>
-        </div>
-      </nav>
+      <SharedHeader />
 
       {/* Hero Section */}
       <section className="py-20 bg-[#0f172a] text-white relative overflow-hidden">
@@ -195,18 +175,7 @@ const Integrations = () => {
       </section>
 
       {/* Footer */}
-      <footer className="bg-[#0f172a] text-white py-12 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
-            <div className="flex items-center gap-4">
-              <div className="bg-white rounded-lg p-1.5">
-                <img src="/logo.png" alt="Logo" className="h-5 w-auto object-contain" />
-              </div>
-              <p className="text-gray-400">© 2026 Unified CRM. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SharedFooter />
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -13,6 +13,7 @@ import VerifyEmail from './pages/VerifyEmail';
 import CompleteProfile from './pages/CompleteProfile';
 import OAuthCallback from './pages/OAuthCallback';
 import LandingPage from './pages/LandingPage';
+import FeatureDetailPage from './pages/FeatureDetailPage';
 import AboutUs from './pages/AboutUs';
 import Security from './pages/Security';
 import Integrations from './pages/Integrations';
@@ -171,11 +172,19 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+function ScrollToTop() {
+  const { pathname } = useLocation();
+  React.useEffect(() => { window.scrollTo({ top: 0, behavior: 'instant' }); }, [pathname]);
+  return null;
+}
+
 function AppRoutes() {
   const { user } = useAuth();
 
   return (
-    <Routes>
+    <>
+      <ScrollToTop />
+      <Routes>
       {/* Public routes - Login & Register Pages */}
       <Route path="/login" element={
         <PublicRoute>
@@ -582,6 +591,7 @@ function AppRoutes() {
 
       {/* Public Info Pages */}
       <Route path="/about" element={<AboutUs />} />
+      <Route path="/feature/:slug" element={<FeatureDetailPage />} />
       <Route path="/security" element={<Security />} />
       <Route path="/integrations" element={<Integrations />} />
       <Route path="/partner-resources" element={<PartnerResources />} />
@@ -602,6 +612,7 @@ function AppRoutes() {
       {/* 404 */}
       <Route path="*" element={<div>404 - Page Not Found</div>} />
     </Routes>
+    </>
   );
 }
 

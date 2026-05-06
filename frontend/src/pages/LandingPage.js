@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import SharedFooter from '../components/SharedFooter';
 
 /* ── Animated counter hook ── */
 const useCounter = (target, duration = 2000, start = false) => {
@@ -378,15 +379,28 @@ const CSS = `
   .cta-btn-ghost:hover { background: rgba(255,255,255,0.1); color: #fff; }
 
   /* Footer */
-  .footer { padding: 60px 0 32px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .footer { padding: 56px 0 28px; background: #070c18; position: relative; }
+  .footer::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg,#7c3aed,#3b82f6,#10b981,#f59e0b,#ec4899); }
   .footer-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; }
-  .footer-top { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; margin-bottom: 48px; }
-  .footer-brand-desc { font-size: 14px; color: rgba(255,255,255,0.35); line-height: 1.7; margin: 16px 0 0; max-width: 280px; }
-  .footer-col-title { font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.35); text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px; }
-  .footer-link { display: block; font-size: 14px; color: rgba(255,255,255,0.5); margin-bottom: 10px; cursor: pointer; transition: color 0.2s; background: none; border: none; text-align: left; }
-  .footer-link:hover { color: rgba(255,255,255,0.85); }
-  .footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 28px; border-top: 1px solid rgba(255,255,255,0.06); }
-  .footer-copy { font-size: 13px; color: rgba(255,255,255,0.3); }
+  .footer-top { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1.3fr; gap: 40px; margin-bottom: 40px; }
+  .footer-brand-desc { font-size: 13px; color: rgba(255,255,255,0.35); line-height: 1.75; margin: 14px 0 0; max-width: 240px; }
+  .footer-col-title { font-size: 13px; font-weight: 800; letter-spacing: 0.3px; margin: 0 0 14px; }
+  .footer-link { display: flex; align-items: center; gap: 7px; font-size: 13px; color: rgba(255,255,255,0.5); margin-bottom: 8px; cursor: pointer; transition: all 0.2s; background: none; border: none; text-align: left; padding: 0; font-family: inherit; text-decoration: none; }
+  .footer-link:hover { color: rgba(255,255,255,0.9); transform: translateX(3px); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .footer-copy { font-size: 12px; color: rgba(255,255,255,0.22); }
+
+  /* Footer accordion */
+  .facc-item { border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .facc-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; cursor: pointer; background: none; border: none; width: 100%; font-family: inherit; }
+  .facc-header:hover .facc-title { color: rgba(255,255,255,0.9); }
+  .facc-icon { font-size: 14px; flex-shrink: 0; }
+  .facc-title { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.5); flex: 1; text-align: left; margin-left: 7px; transition: color 0.2s; }
+  .facc-arrow { font-size: 10px; color: rgba(255,255,255,0.25); transition: transform 0.25s; }
+  .facc-arrow.open { transform: rotate(180deg); }
+  .facc-body { overflow: hidden; transition: max-height 0.3s ease; }
+  .facc-sub { display: flex; align-items: center; gap: 6px; padding: 5px 0 5px 21px; font-size: 12px; color: rgba(255,255,255,0.38); }
+  .facc-dot { width: 4px; height: 4px; border-radius: 50%; flex-shrink: 0; }
 
   /* Fade-in animation */
   .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
@@ -410,7 +424,7 @@ const CSS = `
     .features-grid { grid-template-columns: 1fr 1fr; }
     .new-grid { grid-template-columns: 1fr; }
     .partner-grid { grid-template-columns: 1fr; }
-    .footer-top { grid-template-columns: 1fr 1fr; gap: 32px; }
+    .footer-top { grid-template-columns: 1fr 1fr; gap: 28px; }
     .lp-nav-links { display: none; }
     .cta-card { padding: 48px 28px; }
     .spotlight-section { padding: 60px 0 !important; }
@@ -619,30 +633,56 @@ const MODULES_OPS = [
 ];
 
 const ALL_FEATURES = [
-  { icon: '📋', title: 'Lead Management', desc: 'Capture, qualify, and convert leads with bulk import, pipeline tracking, and smart assignment.', color: '#7c3aed', tags: ['Pipeline', 'Bulk Import', 'Auto-assign'] },
-  { icon: '👥', title: 'Contacts & Accounts', desc: 'Complete B2B contact management with relationship mapping and organization hierarchy.', color: '#3b82f6', tags: ['B2B', 'Relationships', 'Import'] },
-  { icon: '💼', title: 'Opportunities', desc: 'Sales pipeline with stage tracking, probability scoring, and revenue forecasting.', color: '#8b5cf6', tags: ['Pipeline', 'Forecast', 'Stages'] },
-  { icon: '📄', title: 'B2B Sales Workflow', desc: 'RFI → Quotation → PO → Invoice complete workflow with PDF export and approval flows.', color: '#10b981', tags: ['PDF', 'Approval', 'E2E'] },
-  { icon: '✉️', title: 'Email Inbox', desc: 'Built-in email with IMAP sync, real-time tracking, and entity linking to leads/contacts.', color: '#06b6d4', tags: ['IMAP', 'Tracking', 'Sync'] },
-  { icon: '✅', title: 'Tasks & Meetings', desc: 'Task management, meeting scheduling, and call logging with priority and reminder system.', color: '#f59e0b', tags: ['Reminders', 'Calendar', 'Calls'] },
-  { icon: '📦', title: 'Product Catalog', desc: 'Product management with categories, pricing, marketplace, and field customization.', color: '#ef4444', tags: ['Catalog', 'Pricing', 'Categories'] },
-  { icon: '🎯', title: 'Support Tickets', desc: 'Complete helpdesk with SLA tracking, priority management, and multi-tier escalation.', color: '#ec4899', tags: ['SLA', 'Escalation', 'Helpdesk'] },
-  { icon: '💬', title: 'Feedback Management', desc: 'Customer feedback system with sentiment analysis, tenant-to-SAAS escalation, and analytics.', color: '#a855f7', tags: ['Sentiment', 'Analytics', 'New'] },
-  { icon: '🌐', title: 'Social Media', desc: 'Social media post scheduling, management, and engagement tracking across platforms.', color: '#0ea5e9', tags: ['Scheduling', 'Multi-platform', 'New'] },
-  { icon: '🏛️', title: 'Org Hierarchy', desc: 'Visual org chart builder with node management, role templates, and team structure mapping.', color: '#14b8a6', tags: ['Org Chart', 'Roles', 'New'] },
-  { icon: '🤝', title: 'Reseller Program', desc: 'Complete partner ecosystem with commission tracking, multi-tier resellers, and dashboards.', color: '#f97316', tags: ['Commissions', 'Partners', 'Multi-tier'] },
-  { icon: '👨‍💼', title: 'Users & Roles', desc: 'Role-based access control with granular permissions, groups, and custom role templates.', color: '#84cc16', tags: ['RBAC', 'Groups', 'Permissions'] },
-  { icon: '🔧', title: 'Field Customization', desc: 'Custom field builder for any entity. Add, modify, and manage fields without any code.', color: '#f59e0b', tags: ['No-code', 'Custom Fields', 'Flexible'] },
-  { icon: '💰', title: 'Monetization', desc: 'Tenant-level revenue tracking, subscription management, and billing with Razorpay integration.', color: '#10b981', tags: ['Billing', 'Subscriptions', 'Razorpay'] },
-  { icon: '📊', title: 'Data Center', desc: 'Global prospect and candidate database with advanced filtering and bulk operations.', color: '#6366f1', tags: ['Global DB', 'Bulk Ops', 'Filter'] },
-  { icon: '📑', title: 'Document Templates', desc: 'Reusable document templates with variable substitution and one-click PDF generation.', color: '#ec4899', tags: ['Templates', 'PDF', 'Variables'] },
-  { icon: '📈', title: 'Activity & Audit Logs', desc: 'Complete audit trail of all actions across the platform with filtering and export.', color: '#8b5cf6', tags: ['Audit', 'Compliance', 'Logs'] },
-  { icon: '📞', title: 'Calls Management', desc: 'Log, track, and analyze all sales calls with outcome tracking and entity linking.', color: '#06b6d4', tags: ['Call Log', 'Outcomes', 'Tracking'] },
-  { icon: '🔔', title: 'Notifications', desc: 'Real-time in-app notifications with smart alerts for tasks, deals, tickets, and team activity.', color: '#f97316', tags: ['Real-time', 'Alerts', 'Settings'] },
-  { icon: '📧', title: 'Email Templates', desc: 'Pre-built and custom email templates for outreach, follow-ups, and automated campaigns.', color: '#3b82f6', tags: ['Templates', 'Outreach', 'Campaigns'] },
-  { icon: '💳', title: 'Subscriptions & Plans', desc: 'Full subscription lifecycle — plan creation, upgrades, billing cycles, and Razorpay payment integration.', color: '#10b981', tags: ['Plans', 'Billing', 'Razorpay'] },
-  { icon: '🏢', title: 'Multi-Tenant SaaS', desc: 'Complete SAAS architecture — tenant isolation, white-label, admin panel, and tenant analytics.', color: '#7c3aed', tags: ['Multi-tenant', 'White-label', 'Isolation'] },
+  { icon: '📋', title: 'Lead Management', desc: 'Capture, qualify, and convert leads with bulk import, pipeline tracking, and smart assignment.', color: '#7c3aed', tags: ['Pipeline', 'Bulk Import', 'Auto-assign'], details: ['Drag-and-drop Kanban pipeline', 'Bulk CSV import with field mapping', 'Smart auto-assignment rules', 'Lead scoring & prioritization', 'Activity timeline per lead', 'Duplicate detection & merge', 'Convert lead to contact/deal', 'Custom fields support', 'Source tracking & ROI report', 'Role-based data access'] },
+  { icon: '👥', title: 'Contacts & Accounts', desc: 'Complete B2B contact management with relationship mapping and organization hierarchy.', color: '#3b82f6', tags: ['B2B', 'Relationships', 'Import'], details: ['Full 360° contact profiles', 'Parent-child account hierarchy', 'Relationship mapping across companies', 'Bulk import with deduplication', 'Email & call history on profile', 'Custom segments & saved filters', 'Link to leads, deals & tickets', 'Export to CSV / Excel', 'Activity score tracking', 'Custom fields per entity'] },
+  { icon: '💼', title: 'Opportunities', desc: 'Sales pipeline with stage tracking, probability scoring, and revenue forecasting.', color: '#8b5cf6', tags: ['Pipeline', 'Forecast', 'Stages'], details: ['Multi-stage drag-and-drop pipeline', 'Probability scoring per stage', 'Weighted revenue forecasting', 'Individual & team quota tracking', 'Deal activity & history log', 'Win / Loss reason tracking', 'Link products to deals', 'Expected close date alerts', 'One-click convert to invoice', 'Pipeline analytics dashboard'] },
+  { icon: '📄', title: 'B2B Sales Workflow', desc: 'RFI → Quotation → PO → Invoice complete workflow with PDF export and approval flows.', color: '#10b981', tags: ['PDF', 'Approval', 'E2E'], details: ['RFI creation & tracking', 'Quotation builder with line items', 'GST / tax rule configuration', 'Purchase Order generation', 'Invoice with payment tracking', 'One-click branded PDF export', 'Multi-level approval workflow', 'Document versioning history', 'Currency & discount support', 'Full audit trail per document'] },
+  { icon: '✉️', title: 'Email Inbox', desc: 'Built-in email with IMAP sync, real-time tracking, and entity linking to leads/contacts.', color: '#06b6d4', tags: ['IMAP', 'Tracking', 'Sync'], details: ['Connect Gmail / Outlook / any IMAP', 'Two-way email sync in real time', 'Real-time open & click tracking', 'Auto-link emails to leads & contacts', 'Full conversation thread view', 'Rich text composer + attachments', 'CC / BCC with auto-complete', 'Inbox, Sent, Draft sync', 'Bulk email actions', 'Email-to-ticket conversion'] },
+  { icon: '✅', title: 'Tasks & Meetings', desc: 'Task management, meeting scheduling, and call logging with priority and reminder system.', color: '#f59e0b', tags: ['Reminders', 'Calendar', 'Calls'], details: ['Create tasks with due date & priority', 'Link tasks to any CRM entity', 'Meeting scheduling with agenda', 'Call logging with outcome notes', 'Email & in-app reminders', 'Calendar day / week / month view', 'Recurring task support', 'Team task visibility for managers', 'Overdue task alerts', 'Activity report by rep'] },
+  { icon: '📦', title: 'Product Catalog', desc: 'Product management with categories, pricing, marketplace, and field customization.', color: '#ef4444', tags: ['Catalog', 'Pricing', 'Categories'], details: ['Unlimited products & categories', 'Multi-tier pricing (retail, wholesale)', 'Product images & media uploads', 'Custom attributes per category', 'Stock & availability flags', 'GST / tax config per product', 'One-click add to quotation', 'Marketplace listing support', 'Bulk product import via CSV', 'Product analytics in reports'] },
+  { icon: '🎯', title: 'Support Tickets', desc: 'Complete helpdesk with SLA tracking, priority management, and multi-tier escalation.', color: '#ec4899', tags: ['SLA', 'Escalation', 'Helpdesk'], details: ['Ticket creation via email / portal', 'SLA targets per priority level', 'Critical / High / Medium / Low priorities', 'Auto-escalation on SLA breach', 'Internal notes + customer replies', 'Ticket categories & custom fields', 'Auto-assign by category rules', 'Real-time status updates to customer', 'Link tickets to contacts & accounts', 'Support analytics dashboard'] },
+  { icon: '💬', title: 'Feedback Management', desc: 'Customer feedback system with sentiment analysis, tenant-to-SAAS escalation, and analytics.', color: '#a855f7', tags: ['Sentiment', 'Analytics', 'New'], details: ['Collect feedback via in-app forms', 'Auto sentiment detection (pos/neu/neg)', '4 categories: bug, feature, complaint, praise', '3-tier escalation workflow', 'Feedback status: open / in-review / resolved', 'Sentiment trend analytics dashboard', 'Team response & resolution tracking', 'Filter by type, date & sentiment', 'Export feedback data to CSV', 'SLA-based escalation rules'] },
+  { icon: '🌐', title: 'Social Media', desc: 'Social media post scheduling, management, and engagement tracking across platforms.', color: '#0ea5e9', tags: ['Scheduling', 'Multi-platform', 'New'], details: ['Connect multiple social accounts', 'Schedule posts in advance', 'Content calendar drag-and-drop view', 'Post queue management', 'Engagement tracking per post', 'Reach & impression analytics', 'Image & media attachments', 'Platform-specific formatting', 'Team collaboration on drafts', 'Auto-publish at optimal times'] },
+  { icon: '🏛️', title: 'Org Hierarchy', desc: 'Visual org chart builder with node management, role templates, and team structure mapping.', color: '#14b8a6', tags: ['Org Chart', 'Roles', 'New'], details: ['Visual drag-and-drop org tree', 'Unlimited depth levels', 'Custom node types & roles', 'Role template library', 'Add employees to each node', 'Department & team grouping', 'Export as PDF / image', 'Manager-report relationship tracking', 'Org chart versioning history', 'Access-controlled viewing'] },
+  { icon: '🤝', title: 'Reseller Program', desc: 'Complete partner ecosystem with commission tracking, multi-tier resellers, and dashboards.', color: '#f97316', tags: ['Commissions', 'Partners', 'Multi-tier'], details: ['Multi-tier reseller hierarchy', 'Auto commission calculation', 'Custom rates per partner tier', 'Partner sales dashboard', 'Reseller-managed customer accounts', 'Partner onboarding portal', 'Commission payout history', 'Performance leaderboard', 'White-label branding support', 'Admin oversight of all partners'] },
+  { icon: '👨‍💼', title: 'Users & Roles', desc: 'Role-based access control with granular permissions, groups, and custom role templates.', color: '#84cc16', tags: ['RBAC', 'Groups', 'Permissions'], details: ['Unlimited custom roles', 'Module-level: view/create/edit/delete', 'User group permission management', 'Built-in Admin / Manager / Rep templates', 'Field-level visibility per role', 'Invite users with pre-assigned role', 'Login & activity audit logs', 'Suspend / reactivate users', 'Manager-scoped data visibility', 'Google OAuth & SSO support'] },
+  { icon: '🔧', title: 'Field Customization', desc: 'Custom field builder for any entity. Add, modify, and manage fields without any code.', color: '#f59e0b', tags: ['No-code', 'Custom Fields', 'Flexible'], details: ['Add fields to any entity', '8+ field types: text, number, date, dropdown…', 'Drag-and-drop field reordering', 'Required field validation', 'Default value configuration', 'Field grouping & sections', 'Role-based field visibility', 'Multi-select & lookup fields', 'Custom field data in exports', 'API access to all custom fields'] },
+  { icon: '💰', title: 'Monetization', desc: 'Tenant-level revenue tracking, subscription management, and billing with Razorpay integration.', color: '#10b981', tags: ['Billing', 'Subscriptions', 'Razorpay'], details: ['Subscription plan builder', 'Razorpay payment integration', 'Auto billing cycles', 'Trial period management', 'Plan upgrade / downgrade flows', 'MRR, ARR & churn analytics', 'Invoice per billing cycle', 'Failed payment retry / dunning', 'Coupon & discount management', 'Tenant-level usage metering'] },
+  { icon: '📊', title: 'Data Center', desc: 'Global prospect and candidate database with advanced filtering and bulk operations.', color: '#6366f1', tags: ['Global DB', 'Bulk Ops', 'Filter'], details: ['Centralized prospect database', 'Advanced multi-condition filtering', 'Bulk import & export', 'Deduplication & smart merge', 'Tag-based segmentation', 'Saved filter views', 'Bulk assign to reps', 'Export selected fields to CSV', 'Data quality health metrics', 'API access for sync'] },
+  { icon: '📑', title: 'Document Templates', desc: 'Reusable document templates with variable substitution and one-click PDF generation.', color: '#ec4899', tags: ['Templates', 'PDF', 'Variables'], details: ['Reusable templates for any doc type', 'Dynamic variable system {{contact.name}}', 'One-click branded PDF generation', 'Rich text editor with formatting', 'Template versioning history', 'Company logo & branding', 'Template categories & library', 'Live preview with real data', 'Share templates across team', 'Export as PDF or Word'] },
+  { icon: '📈', title: 'Activity & Audit Logs', desc: 'Complete audit trail of all actions across the platform with filtering and export.', color: '#8b5cf6', tags: ['Audit', 'Compliance', 'Logs'], details: ['Every action logged automatically', 'Who, what, when & IP tracked', 'Before / after field value comparison', 'Real-time activity feed per entity', 'Global audit log with filters', 'Export to CSV / Excel', 'User activity reports', 'Module-specific log filtering', 'Suspicious activity alerts', 'Retention policy configuration'] },
+  { icon: '📞', title: 'Calls Management', desc: 'Log, track, and analyze all sales calls with outcome tracking and entity linking.', color: '#06b6d4', tags: ['Call Log', 'Outcomes', 'Tracking'], details: ['Log inbound & outbound calls', 'Duration, date & direction tracking', 'Custom outcome options', 'Post-call notes & follow-up tasks', 'Link calls to leads / contacts / tickets', 'Rep call volume analytics', 'Team leaderboard', 'Missed call tracking & alerts', 'Call frequency per contact report', 'Export call logs to CSV'] },
+  { icon: '🔔', title: 'Notifications', desc: 'Real-time in-app notifications with smart alerts for tasks, deals, tickets, and team activity.', color: '#f97316', tags: ['Real-time', 'Alerts', 'Settings'], details: ['Real-time in-app notification bell', 'Task due date & overdue alerts', 'Deal stage change notifications', 'New lead assignment alerts', 'SLA breach warnings', 'Email open tracking notifications', '@mention notifications in notes', 'Daily / weekly digest email', 'Per-type preference control', 'Notification history & mark-read'] },
+  { icon: '📧', title: 'Email Templates', desc: 'Pre-built and custom email templates for outreach, follow-ups, and automated campaigns.', color: '#3b82f6', tags: ['Templates', 'Outreach', 'Campaigns'], details: ['Unlimited custom email templates', 'Dynamic variables {{first_name}} etc.', 'Rich text editor + images & links', 'Template categories & library', 'Pre-built outreach templates', 'Live preview with CRM data', 'One-click send from contact page', 'Open & click rate tracking', 'Template performance analytics', 'Share templates with team'] },
+  { icon: '💳', title: 'Subscriptions & Plans', desc: 'Full subscription lifecycle — plan creation, upgrades, billing cycles, and Razorpay payment integration.', color: '#10b981', tags: ['Plans', 'Billing', 'Razorpay'], details: ['Create plans with custom features', 'Free trial with auto-conversion', 'Plan upgrade / downgrade workflows', 'Proration for mid-cycle changes', 'Razorpay auto-billing', 'Subscription status tracking', 'Automated renewal invoices', 'Cancellation & retention flows', 'MRR & ARR analytics', 'Churn alerts & at-risk detection'] },
+  { icon: '🏢', title: 'Multi-Tenant SaaS', desc: 'Complete SAAS architecture — tenant isolation, white-label, admin panel, and tenant analytics.', color: '#7c3aed', tags: ['Multi-tenant', 'White-label', 'Isolation'], details: ['100% tenant data isolation', 'White-label branding per tenant', 'SAAS admin panel with full control', 'Per-tenant feature flag toggles', 'Tenant usage analytics', 'Admin impersonation for support', 'Tenant onboarding workflow', 'Per-tenant billing management', 'Global search across tenants', 'Platform health monitoring'] },
 ];
+
+const FEAT_SLUG = {
+  'Lead Management':       'lead-management',
+  'Contacts & Accounts':   'lead-management',
+  'Opportunities':         'lead-management',
+  'B2B Sales Workflow':    'sales-finance',
+  'Email Inbox':           'task-management',
+  'Tasks & Meetings':      'task-management',
+  'Product Catalog':       'product',
+  'Support Tickets':       'support',
+  'Feedback Management':   'support',
+  'Social Media':          'automation',
+  'Org Hierarchy':         'access-management',
+  'Reseller Program':      'monetization',
+  'Users & Roles':         'access-management',
+  'Field Customization':   'access-management',
+  'Monetization':          'monetization',
+  'Data Center':           'lead-management',
+  'Document Templates':    'automation',
+  'Activity & Audit Logs': 'access-management',
+  'Calls Management':      'task-management',
+  'Notifications':         'access-management',
+  'Email Templates':       'automation',
+  'Subscriptions & Plans': 'account-management',
+  'Multi-Tenant SaaS':     'monetization',
+};
 
 const NEW_FEATURES = [
   {
@@ -1009,7 +1049,7 @@ const LandingPage = () => {
           </div>
           <div className="features-grid">
             {ALL_FEATURES.map((f, i) => (
-              <div key={i} className="feat-card">
+              <div key={i} className="feat-card" onClick={() => navigate(`/feature/${FEAT_SLUG[f.title] || 'lead-management'}`)} style={{ cursor: 'pointer' }}>
                 <div className="feat-icon" style={{ background: `${f.color}18` }}>{f.icon}</div>
                 <div className="feat-title">{f.title}</div>
                 <p className="feat-desc">{f.desc}</p>
@@ -1017,6 +1057,9 @@ const LandingPage = () => {
                   {f.tags.map((t, j) => (
                     <span key={j} className="feat-tag" style={t === 'New' ? { color: '#a78bfa', background: 'rgba(124,58,237,0.15)' } : {}}>{t}</span>
                   ))}
+                </div>
+                <div style={{ marginTop: 12, fontSize: 11, fontWeight: 600, color: f.color, opacity: 0.7, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  Learn more <span style={{ fontSize: 13 }}>→</span>
                 </div>
               </div>
             ))}
@@ -1153,91 +1196,7 @@ const LandingPage = () => {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer className="footer">
-        <div className="footer-inner">
-          <div className="footer-top">
-            {/* Brand + Social */}
-            <div>
-              <div style={{ background: '#fff', borderRadius: 8, padding: '6px 10px', display: 'inline-block', marginBottom: 16 }}>
-                <img src="/logo.png" alt="CRM Logo" style={{ height: 20, width: 'auto', objectFit: 'contain', display: 'block' }} />
-              </div>
-              <p className="footer-brand-desc">Complete CRM solution with B2B workflow, email integration, team management, and more.</p>
-              {/* Social media icons */}
-              <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-                {/* Instagram */}
-                <a href="https://www.instagram.com/texoraai" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(225,48,108,0.2)'; e.currentTarget.style.borderColor = 'rgba(225,48,108,0.5)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-                  <svg width="18" height="18" viewBox="0 0 24 24">
-                    <defs>
-                      <linearGradient id="ig-grad" x1="0%" y1="100%" x2="100%" y2="0%">
-                        <stop offset="0%" stopColor="#FFDC80"/><stop offset="25%" stopColor="#F77737"/>
-                        <stop offset="50%" stopColor="#E1306C"/><stop offset="75%" stopColor="#C13584"/>
-                        <stop offset="100%" stopColor="#833AB4"/>
-                      </linearGradient>
-                    </defs>
-                    <path fill="url(#ig-grad)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                  </svg>
-                </a>
-                {/* X / Twitter */}
-                <a href="https://x.com/texoraai" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-                  <svg width="16" height="16" fill="#fff" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                </a>
-                {/* LinkedIn */}
-                <a href="https://www.linkedin.com/company/texora-ai/" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(10,102,194,0.2)'; e.currentTarget.style.borderColor = 'rgba(10,102,194,0.5)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-                  <svg width="18" height="18" fill="#0A66C2" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
-                </a>
-                {/* YouTube */}
-                <a href="https://www.youtube.com/@Texoraai" target="_blank" rel="noopener noreferrer" style={{ width: 38, height: 38, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s', textDecoration: 'none' }}
-                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,0,0,0.2)'; e.currentTarget.style.borderColor = 'rgba(255,0,0,0.5)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'; }}>
-                  <svg width="18" height="18" fill="#FF0000" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                </a>
-              </div>
-            </div>
-
-            {/* Product */}
-            <div>
-              <div className="footer-col-title">Product</div>
-              <a href="#features" className="footer-link">Features</a>
-              <button className="footer-link" onClick={() => navigate('/security')}>Security</button>
-              <button className="footer-link" onClick={() => navigate('/integrations')}>Integrations</button>
-              <button className="footer-link" onClick={() => navigate('/about')}>About Us</button>
-            </div>
-
-            {/* Company */}
-            <div>
-              <div className="footer-col-title">Company</div>
-              <button className="footer-link" onClick={() => navigate('/about')}>About Us</button>
-              <a href="https://texora.ai/career" target="_blank" rel="noopener noreferrer" className="footer-link">Careers</a>
-              <a href="https://texora.ai/contact" target="_blank" rel="noopener noreferrer" className="footer-link">Contact</a>
-              <a href="https://texora.ai/blogs" target="_blank" rel="noopener noreferrer" className="footer-link">Blog</a>
-            </div>
-
-            {/* Partners */}
-            <div>
-              <div className="footer-col-title">Partners</div>
-              <button className="footer-link" onClick={() => navigate('/reseller/register')}>Become a Partner</button>
-              <button className="footer-link" onClick={() => navigate('/reseller/login')}>Partner Login</button>
-              <button className="footer-link" onClick={() => navigate('/partner-resources')}>Partner Resources</button>
-              <button className="footer-link" onClick={() => navigate('/login')}>Sign In</button>
-              <button className="footer-link" onClick={() => navigate('/register')}>Get Started Free</button>
-            </div>
-          </div>
-
-          <div className="footer-bottom">
-            <div className="footer-copy">© {new Date().getFullYear()} Unified CRM. All rights reserved.</div>
-            <div style={{ display: 'flex', gap: 24 }}>
-              <a href="https://texora.ai/privacy-policy" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ marginBottom: 0 }}>Privacy Policy</a>
-              <a href="https://texora.ai/terms-of-service" target="_blank" rel="noopener noreferrer" className="footer-link" style={{ marginBottom: 0 }}>Terms of Service</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <SharedFooter />
     </div>
   );
 };
