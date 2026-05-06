@@ -1159,6 +1159,57 @@ const sendAccountRecoveredEmail = async (tenantEmail, orgName, firstName) => {
   return { success: true };
 };
 
+/**
+ * Send Contact Inquiry Reply Email
+ */
+const sendContactInquiryReply = async ({ toName, toEmail, subject, originalMessage, replyText }) => {
+  const transporter = createTransporter();
+  const mailOptions = {
+    from: `"Unified CRM Support" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
+    to: toEmail,
+    subject: `Re: ${subject} — Unified CRM`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background: #f5f5f5; }
+          .container { max-width: 600px; margin: 40px auto; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+          .header { background: linear-gradient(135deg, #6366f1, #8b5cf6); padding: 32px 30px; color: #fff; }
+          .header h1 { margin: 0; font-size: 22px; font-weight: 700; }
+          .header p { margin: 6px 0 0; font-size: 13px; opacity: 0.85; }
+          .content { padding: 32px 30px; }
+          .reply-box { background: #f0fdf4; border-left: 4px solid #10b981; border-radius: 8px; padding: 18px 20px; margin: 20px 0; white-space: pre-wrap; font-size: 14px; color: #1a1a1a; line-height: 1.7; }
+          .original-box { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 14px 18px; margin-top: 24px; font-size: 13px; color: #6b7280; }
+          .original-box strong { display: block; margin-bottom: 6px; color: #374151; font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; }
+          .footer { background: #f9fafb; padding: 20px 30px; text-align: center; border-top: 1px solid #e5e7eb; font-size: 12px; color: #9ca3af; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>💬 Reply to Your Inquiry</h1>
+            <p>Subject: ${subject}</p>
+          </div>
+          <div class="content">
+            <p>Hello <strong>${toName}</strong>,</p>
+            <p>Thank you for reaching out. Here is our response to your inquiry:</p>
+            <div class="reply-box">${replyText}</div>
+            <div class="original-box">
+              <strong>Your Original Message</strong>
+              ${originalMessage}
+            </div>
+          </div>
+          <div class="footer">Unified CRM &copy; ${new Date().getFullYear()} &nbsp;|&nbsp; This is a reply to your contact form submission.</div>
+        </div>
+      </body>
+      </html>
+    `
+  };
+  const info = await transporter.sendMail(mailOptions);
+  return { success: true, messageId: info.messageId };
+};
+
 module.exports = {
   sendPasswordResetOTP,
   sendSignupVerificationOTP,
@@ -1172,5 +1223,6 @@ module.exports = {
   sendDeletionRequestConfirmation,
   sendDeletionApprovedEmail,
   sendDeletionRejectedEmail,
-  sendAccountRecoveredEmail
+  sendAccountRecoveredEmail,
+  sendContactInquiryReply
 };

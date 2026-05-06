@@ -16,6 +16,8 @@ const contactInquirySchema = new mongoose.Schema({
     default: 'New',
   },
   adminNote: { type: String, default: '' },
+  adminReply: { type: String, default: '' },
+  repliedAt: { type: Date },
   ipAddress: { type: String, default: '' },
 }, { timestamps: true });
 

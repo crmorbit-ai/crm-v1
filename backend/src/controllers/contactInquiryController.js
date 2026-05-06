@@ -1,4 +1,5 @@
 const ContactInquiry = require('../models/ContactInquiry');
+const { sendContactInquiryReply } = require('../utils/emailService');
 
 const successResponse = (res, status, message, data = {}) =>
   res.status(status).json({ success: true, message, ...data });
@@ -122,4 +123,38 @@ const deleteInquiry = async (req, res) => {
   }
 };
 
-module.exports = { submitInquiry, getAllInquiries, updateInquiryStatus, deleteInquiry };
+// SAAS Admin — Reply to inquiry (sends email to sender)
+const replyToInquiry = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { replyText } = req.body;
+
+    if (!replyText || !replyText.trim()) {
+      return errorResponse(res, 400, 'Reply text is required');
+    }
+
+    const inquiry = await ContactInquiry.findById(id);
+    if (!inquiry) return errorResponse(res, 404, 'Inquiry not found');
+
+    await sendContactInquiryReply({
+      toName: inquiry.name,
+      toEmail: inquiry.email,
+      subject: inquiry.subject,
+      originalMessage: inquiry.message,
+      replyText: replyText.trim(),
+    });
+
+    const updated = await ContactInquiry.findByIdAndUpdate(
+      id,
+      { status: 'Replied', adminReply: replyText.trim(), repliedAt: new Date() },
+      { new: true }
+    );
+
+    return successResponse(res, 200, 'Reply sent successfully', { inquiry: updated });
+  } catch (error) {
+    console.error('Reply inquiry error:', error);
+    return errorResponse(res, 500, 'Failed to send reply: ' + error.message);
+  }
+};
+
+module.exports = { submitInquiry, getAllInquiries, updateInquiryStatus, deleteInquiry, replyToInquiry };

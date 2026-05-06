@@ -44,7 +44,9 @@ export default function SaasContactInquiries() {
   const [subjectF, setSubjectF]   = useState('All');
   const [selected, setSelected]   = useState(null);
   const [saving, setSaving]       = useState(false);
+  const [replying, setReplying]   = useState(false);
   const [note, setNote]           = useState('');
+  const [replyText, setReplyText] = useState('');
   const [toast, setToast]         = useState('');
 
   const hdrs = { Authorization:`Bearer ${token}`, 'Content-Type':'application/json' };
@@ -67,12 +69,30 @@ export default function SaasContactInquiries() {
 
   useEffect(()=>{load();},[load]);
 
+  // Auto-refresh every 30 seconds
+  useEffect(()=>{
+    const id = setInterval(()=>{ load(); }, 30000);
+    return ()=>clearInterval(id);
+  },[load]);
+
   const open = async (inq) => {
-    setSelected(inq); setNote(inq.adminNote||'');
+    setSelected(inq); setNote(inq.adminNote||''); setReplyText('');
     if(inq.status==='New'){
       await fetch(`${API_URL}/contact-inquiries/${inq._id}`,{method:'PATCH',headers:hdrs,body:JSON.stringify({status:'Read'})});
       load();
     }
+  };
+
+  const sendReply = async () => {
+    if(!selected || !replyText.trim()) return;
+    setReplying(true);
+    try{
+      const r=await fetch(`${API_URL}/contact-inquiries/${selected._id}/reply`,{method:'POST',headers:hdrs,body:JSON.stringify({replyText})});
+      const d=await r.json();
+      if(d.success){setSelected(d.inquiry);setNote(d.inquiry.adminNote||'');setReplyText('');load();showToast('Reply sent to '+selected.email);}
+      else{ showToast('Error: '+(d.message||'Failed to send')); }
+    }catch(e){console.error(e);showToast('Failed to send reply');}
+    finally{setReplying(false);}
   };
 
   const save = async (status) => {
@@ -314,9 +334,27 @@ export default function SaasContactInquiries() {
 
               {/* Admin Note */}
               <div style={{ marginBottom:12 }}>
-                <div style={{ fontSize:10, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:0.6, marginBottom:7 }}>Admin Note</div>
-                <textarea value={note} onChange={e=>setNote(e.target.value)} rows={3} placeholder="Add an internal note…"
+                <div style={{ fontSize:10, fontWeight:700, color:'#6b7280', textTransform:'uppercase', letterSpacing:0.6, marginBottom:7 }}>Internal Note</div>
+                <textarea value={note} onChange={e=>setNote(e.target.value)} rows={2} placeholder="Add an internal note (not sent to user)…"
                   style={{ width:'100%', padding:'9px 11px', fontSize:12, border:'1px solid #e5e7eb', borderRadius:7, color:'#111827', background:'#f9fafb', outline:'none', fontFamily:'inherit', resize:'vertical', boxSizing:'border-box' }} />
+              </div>
+
+              {/* Reply to User */}
+              <div style={{ marginBottom:14, background:'#f0fdf4', border:'1px solid #a7f3d0', borderRadius:9, padding:'12px 14px' }}>
+                <div style={{ fontSize:10, fontWeight:700, color:'#059669', textTransform:'uppercase', letterSpacing:0.6, marginBottom:7 }}>
+                  📧 Reply to User <span style={{ fontWeight:400, color:'#6b7280', textTransform:'none', letterSpacing:0 }}>— sent to {selected.email}</span>
+                </div>
+                {selected.adminReply && (
+                  <div style={{ fontSize:11, color:'#374151', background:'#dcfce7', border:'1px solid #bbf7d0', borderRadius:6, padding:'8px 10px', marginBottom:8, whiteSpace:'pre-wrap' }}>
+                    <span style={{ fontWeight:700, color:'#059669' }}>Last reply: </span>{selected.adminReply}
+                  </div>
+                )}
+                <textarea value={replyText} onChange={e=>setReplyText(e.target.value)} rows={3} placeholder="Type your reply here… This will be emailed to the user."
+                  style={{ width:'100%', padding:'9px 11px', fontSize:12, border:'1px solid #a7f3d0', borderRadius:7, color:'#111827', background:'#fff', outline:'none', fontFamily:'inherit', resize:'vertical', boxSizing:'border-box' }} />
+                <button onClick={sendReply} disabled={replying||!replyText.trim()}
+                  style={{ marginTop:7, width:'100%', padding:'8px', fontSize:12, fontWeight:700, color:'#fff', background: replying||!replyText.trim() ? '#9ca3af' : 'linear-gradient(135deg,#059669,#10b981)', border:'none', borderRadius:7, cursor: replying||!replyText.trim() ? 'not-allowed' : 'pointer', fontFamily:'inherit', boxShadow: replying||!replyText.trim() ? 'none':'0 2px 8px rgba(16,185,129,0.3)' }}>
+                  {replying ? 'Sending…' : '📤 Send Reply Email'}
+                </button>
               </div>
 
               {/* Status buttons */}

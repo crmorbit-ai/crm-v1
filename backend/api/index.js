@@ -336,6 +336,7 @@ try {
   app.use('/api/saas-admins', require('../src/routes/saasAdmins'));
   app.use('/api/viewing-pin', require('../src/routes/viewingPin'));
   app.use('/api/ai', require('../src/routes/ai'));
+  app.use('/api/contact-inquiries', require('../src/routes/contactInquiry'));
   console.log('  ✅ SAAS Admin & AI routes loaded');
 
   console.log('✅ All routes loaded successfully');
