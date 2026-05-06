@@ -14,6 +14,8 @@ import CompleteProfile from './pages/CompleteProfile';
 import OAuthCallback from './pages/OAuthCallback';
 import LandingPage from './pages/LandingPage';
 import FeatureDetailPage from './pages/FeatureDetailPage';
+import ContactUs from './pages/ContactUs';
+import SaasContactInquiries from './pages/SaasContactInquiries';
 import AboutUs from './pages/AboutUs';
 import Security from './pages/Security';
 import Integrations from './pages/Integrations';
@@ -583,6 +585,12 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
 
+      <Route path="/saas/contact-inquiries" element={
+        <ProtectedRoute requireSaas>
+          <SaasContactInquiries />
+        </ProtectedRoute>
+      } />
+
       <Route path="/notifications" element={
         <ProtectedRoute requireTenant>
           <Notifications />
@@ -592,6 +600,7 @@ function AppRoutes() {
       {/* Public Info Pages */}
       <Route path="/about" element={<AboutUs />} />
       <Route path="/feature/:slug" element={<FeatureDetailPage />} />
+      <Route path="/contact" element={<ContactUs />} />
       <Route path="/security" element={<Security />} />
       <Route path="/integrations" element={<Integrations />} />
       <Route path="/partner-resources" element={<PartnerResources />} />

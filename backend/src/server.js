@@ -120,6 +120,7 @@ app.use('/api/user-settings', require('./routes/userSettings'));
 app.use('/api/support-tickets', require('./routes/supportTickets'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/saas-admins', require('./routes/saasAdmins'));
+app.use('/api/contact-inquiries', require('./routes/contactInquiry'));
 app.use('/api/viewing-pin', require('./routes/viewingPin'));
 app.use('/api/notifications', require('./routes/notifications'));
 app.use('/api/templates', require('./routes/templates'));

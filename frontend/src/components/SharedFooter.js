@@ -209,7 +209,7 @@ export default function SharedFooter() {
               </div>
               <LinkItem icon="👋" label="About Us"         color="#34d399" onClick={() => navigate('/about')} />
               <LinkItem icon="💼" label="Careers"          color="#34d399" href="https://texora.ai/career" />
-              <LinkItem icon="📞" label="Contact Us"       color="#34d399" href="https://texora.ai/contact" />
+              <LinkItem icon="📞" label="Contact Us"       color="#34d399" onClick={() => navigate('/contact')} />
               <LinkItem icon="📝" label="Blog"             color="#34d399" href="https://texora.ai/blogs" />
               <LinkItem icon="🔒" label="Privacy Policy"   color="#34d399" href="https://texora.ai/privacy-policy" />
             </div>
