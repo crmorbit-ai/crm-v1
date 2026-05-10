@@ -5,19 +5,19 @@ import SharedFooter from '../components/SharedFooter';
 
 const GROUPS = {
   'lead-management': {
-    icon: '📋', color: '#7c3aed', gradient: 'linear-gradient(135deg,#7c3aed,#3b82f6)',
+    icon: '📋', color: '#1EB980', gradient: 'linear-gradient(135deg,#1EB980,#22c55e)',
     title: 'Lead Management',
     subtitle: 'Capture, qualify and convert every lead — end to end.',
     desc: 'The complete sales front-door. Manage every prospect from first touch to closed deal with pipeline visibility, smart assignment, and full activity history.',
     modules: [
       {
-        icon: '🎯', name: 'Leads', color: '#7c3aed',
+        icon: '🎯', name: 'Leads', color: '#1EB980',
         tagline: 'Capture & convert prospects',
         about: 'Central hub for all incoming prospects. Log leads from web forms, CSV import, or manual entry. Move them through a customizable Kanban pipeline and convert to contacts or opportunities in one click.',
         features: ['Drag-and-drop Kanban pipeline', 'Bulk CSV import with field mapping', 'Smart auto-assignment (round-robin / territory)', 'Lead scoring & priority ranking', 'Activity timeline — calls, emails, notes', 'Duplicate detection & merge', 'Convert to Contact / Opportunity', 'Lead source & ROI tracking', 'Custom fields per pipeline stage'],
       },
       {
-        icon: '👥', name: 'Contacts', color: '#3b82f6',
+        icon: '👥', name: 'Contacts', color: '#22c55e',
         tagline: 'Full 360° contact profiles',
         about: 'Every person your business interacts with — stored, enriched, and linked. See the full history of every email, call, meeting, and deal on one profile page.',
         features: ['360° contact profile view', 'Link to accounts, leads & deals', 'Interaction timeline (email, call, meeting)', 'Custom fields & tags', 'Bulk import with deduplication', 'Segment & filter by any field', 'Export to CSV / Excel', 'Contact activity score tracking'],
@@ -29,7 +29,7 @@ const GROUPS = {
         features: ['Parent-child account hierarchy', 'All contacts linked to account', 'Company-level deal & ticket view', 'Relationship mapping across orgs', 'Custom account fields', 'Industry & size segmentation', 'Account health scoring', 'Bulk import accounts via CSV'],
       },
       {
-        icon: '💼', name: 'Opportunities', color: '#8b5cf6',
+        icon: '💼', name: 'Opportunities', color: '#1EB980',
         tagline: 'Sales pipeline & revenue forecasting',
         about: 'Track deals from qualification to close. See your weighted pipeline, forecast revenue by month or quarter, and understand where deals are stalling — before they slip.',
         features: ['Multi-stage drag-and-drop pipeline', 'Probability scoring per stage', 'Weighted revenue forecasting', 'Individual & team quota tracking', 'Deal timeline & activity log', 'Win / Loss reason capture', 'Link products, contacts & accounts', 'Expected close date alerts', 'One-click convert to invoice'],
@@ -62,7 +62,7 @@ const GROUPS = {
         features: ['Log inbound & outbound calls', 'Duration, date & direction tracking', 'Custom outcome options', 'Post-call notes & follow-up tasks', 'Auto-link to leads / contacts', 'Rep call volume analytics', 'Team call leaderboard', 'Missed call follow-up alerts'],
       },
       {
-        icon: '✉️', name: 'Email Inbox', color: '#8b5cf6',
+        icon: '✉️', name: 'Email Inbox', color: '#1EB980',
         tagline: 'CRM-connected email',
         about: 'Connect your Gmail, Outlook, or any IMAP inbox. Emails auto-link to matching contacts and leads. See open and click tracking in real time — so you know the exact moment to follow up.',
         features: ['Connect Gmail / Outlook / any IMAP', 'Two-way email sync', 'Real-time open & click tracking', 'Auto-link emails to leads & contacts', 'Full conversation thread view', 'Rich text composer + attachments', 'Inbox, Sent & Draft sync', 'Email-to-ticket conversion'],
@@ -71,7 +71,7 @@ const GROUPS = {
   },
 
   'sales-finance': {
-    icon: '📄', color: '#10b981', gradient: 'linear-gradient(135deg,#10b981,#3b82f6)',
+    icon: '📄', color: '#10b981', gradient: 'linear-gradient(135deg,#10b981,#22c55e)',
     title: 'Sales & Finance',
     subtitle: 'Complete B2B document workflow — RFI to Invoice.',
     desc: 'Handle the full B2B sales document lifecycle inside your CRM. From request for information to final invoice — with approvals, PDF export, and a full audit trail.',
@@ -89,7 +89,7 @@ const GROUPS = {
         features: ['Line item builder with auto-calculations', 'GST / tax rule configuration', 'Discount & custom terms', 'Multi-level approval workflow', 'One-click branded PDF export', 'Customer portal sharing', 'Convert quotation to PO', 'Document revision history'],
       },
       {
-        icon: '📦', name: 'Purchase Orders', color: '#8b5cf6',
+        icon: '📦', name: 'Purchase Orders', color: '#1EB980',
         tagline: 'PO management & tracking',
         about: 'Convert accepted quotations into Purchase Orders automatically. Track PO status, delivery timelines, and link everything back to the original opportunity.',
         features: ['Auto-generate PO from quotation', 'PO status tracking', 'Delivery timeline management', 'Vendor & supplier linking', 'PDF export of PO document', 'Link to opportunities & contacts', 'PO approval workflow', 'Convert PO to Invoice'],
@@ -125,13 +125,13 @@ const GROUPS = {
   },
 
   'account-management': {
-    icon: '💳', color: '#6366f1', gradient: 'linear-gradient(135deg,#6366f1,#8b5cf6)',
+    icon: '💳', color: '#1EB980', gradient: 'linear-gradient(135deg,#1EB980,#1EB980)',
     title: 'Account Management',
     subtitle: 'Manage subscriptions and billing for your account.',
     desc: 'View and manage your active subscription plan, upgrade or downgrade, track billing history, and manage payment methods — all from one place.',
     modules: [
       {
-        icon: '💳', name: 'Subscription & Billing', color: '#6366f1',
+        icon: '💳', name: 'Subscription & Billing', color: '#1EB980',
         tagline: 'Plan management & payment history',
         about: 'See your current active plan, the features it includes, and when it renews. Upgrade, downgrade, or cancel — and download invoices for every billing cycle.',
         features: ['Active plan details & features', 'Plan upgrade / downgrade', 'Billing cycle & renewal date', 'Payment history & invoices', 'Razorpay payment integration', 'Trial period countdown', 'Usage & limits overview', 'Auto-renewal notifications'],
@@ -140,7 +140,7 @@ const GROUPS = {
   },
 
   'automation': {
-    icon: '⚡', color: '#0ea5e9', gradient: 'linear-gradient(135deg,#0ea5e9,#6366f1)',
+    icon: '⚡', color: '#0ea5e9', gradient: 'linear-gradient(135deg,#0ea5e9,#1EB980)',
     title: 'Automation',
     subtitle: 'Templates and tools that save your team hours every week.',
     desc: 'Build reusable templates for documents and emails. Schedule and manage social media posts. Automate the repetitive work so your team focuses on selling.',
@@ -152,7 +152,7 @@ const GROUPS = {
         features: ['Templates for any document type', 'Dynamic variables {{contact.name}} etc.', 'One-click branded PDF generation', 'Rich text editor', 'Template versioning', 'Company branding on every doc', 'Live preview with real data', 'Share templates across team'],
       },
       {
-        icon: '📑', name: 'Document Templates', color: '#8b5cf6',
+        icon: '📑', name: 'Document Templates', color: '#1EB980',
         tagline: 'Advanced document automation',
         about: 'Advanced reusable document templates with multi-section layouts, conditional blocks, and approval-ready output. Perfect for complex proposals and contracts.',
         features: ['Multi-section document layouts', 'Conditional content blocks', 'Header, footer & page numbering', 'Approval-ready PDF output', 'Template library & categories', 'Version control & history', 'Export as PDF or Word', 'Bulk document generation'],
@@ -209,7 +209,7 @@ const GROUPS = {
         features: ['Real-time in-app notification bell', 'Task due date & overdue alerts', 'Deal stage change notifications', 'SLA breach warnings', 'Email open tracking alerts', '@mention in notes', 'Daily / weekly digest email', 'Per-type preference control'],
       },
       {
-        icon: '📈', name: 'Audit Logs', color: '#8b5cf6',
+        icon: '📈', name: 'Audit Logs', color: '#1EB980',
         tagline: 'Complete compliance trail',
         about: 'Every action taken in the CRM is logged — who changed what, when, and from which IP. Filter by user, module, or date range and export for compliance reports.',
         features: ['Every action logged automatically', 'Who, what, when & IP tracked', 'Before / after field value diff', 'Real-time activity feed', 'Global audit log with filters', 'Export to CSV / Excel', 'Module-specific filtering', 'Suspicious activity alerts'],
@@ -218,7 +218,7 @@ const GROUPS = {
   },
 
   'support': {
-    icon: '🎯', color: '#ec4899', gradient: 'linear-gradient(135deg,#ec4899,#8b5cf6)',
+    icon: '🎯', color: '#ec4899', gradient: 'linear-gradient(135deg,#ec4899,#1EB980)',
     title: 'Support',
     subtitle: 'Resolve customer issues fast with SLA tracking and escalation.',
     desc: 'Complete helpdesk system with SLA management, multi-tier escalation, and customer feedback — giving your support team full visibility and your customers quick resolutions.',
@@ -239,7 +239,7 @@ const GROUPS = {
   },
 
   'monetization': {
-    icon: '💰', color: '#10b981', gradient: 'linear-gradient(135deg,#10b981,#3b82f6)',
+    icon: '💰', color: '#10b981', gradient: 'linear-gradient(135deg,#10b981,#22c55e)',
     title: 'Monetization',
     subtitle: 'Track revenue, subscriptions, and commissions.',
     desc: 'Full monetization dashboard for sales teams. See MRR, deal revenue, reseller commissions, and subscription analytics — the financial layer of your CRM.',
@@ -257,70 +257,74 @@ const GROUPS = {
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   * { box-sizing: border-box; }
-  body { margin: 0; background: #060b14; }
-  .fdp { font-family: 'Inter',-apple-system,sans-serif; background: #060b14; color: #fff; min-height: 100vh; }
+  html, body { margin: 0; overflow-x: hidden; background: #0f1e2e; }
+  .fdp { font-family: 'Inter',-apple-system,sans-serif; background: #0f1e2e; color: #fff; min-height: 100vh; padding-top: 72px; }
 
-  .stars-bg {
-    position: fixed; inset: 0; pointer-events: none; z-index: 0;
-    background-image:
-      radial-gradient(1px 1px at 15% 25%, rgba(255,255,255,0.5) 0%, transparent 100%),
-      radial-gradient(1.5px 1.5px at 55% 40%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1px 1px at 75% 10%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 20% 70%, rgba(255,255,255,0.4) 0%, transparent 100%),
-      radial-gradient(1.5px 1.5px at 45% 80%, rgba(255,255,255,0.3) 0%, transparent 100%),
-      radial-gradient(1px 1px at 85% 55%, rgba(255,255,255,0.5) 0%, transparent 100%);
-    background-size: 900px 900px;
-    animation: tw 10s ease-in-out infinite alternate;
+  /* Secondary tab nav — like ServiceNow product page */
+  .fdp-subnav {
+    position: sticky; top: 72px; z-index: 90;
+    background: #0f1e2e; border-bottom: 1px solid rgba(255,255,255,0.08);
+    overflow-x: auto; scrollbar-width: none;
   }
-  @keyframes tw { 0%{opacity:0.5} 100%{opacity:1} }
+  .fdp-subnav::-webkit-scrollbar { display: none; }
+  .fdp-subnav-inner {
+    max-width: 1280px; margin: 0 auto; padding: 0 40px;
+    display: flex; gap: 0; min-width: max-content;
+  }
+  .fdp-subnav-tab {
+    padding: 16px 20px; font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.55);
+    background: none; border: none; cursor: pointer; font-family: inherit;
+    border-bottom: 3px solid transparent; transition: all 0.18s; white-space: nowrap;
+  }
+  .fdp-subnav-tab:hover { color: rgba(255,255,255,0.85); }
+  .fdp-subnav-tab.active { color: #fff; font-weight: 700; border-bottom-color: #1EB980; }
 
-  .fdp-nav {
-    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-    background: rgba(6,11,20,0.85); backdrop-filter: blur(20px);
-    border-bottom: 1px solid rgba(255,255,255,0.06); padding: 14px 0;
+  /* Hero — two column like ServiceNow */
+  .fdp-hero {
+    background: linear-gradient(155deg, #091e0e 0%, #0f3222 30%, #145228 55%, #1b6838 75%, #1EB980 100%);
+    padding: 64px 0 72px; position: relative; overflow: hidden;
   }
-  .fdp-nav-inner {
-    max-width: 1200px; margin: 0 auto; padding: 0 40px;
-    display: flex; align-items: center; justify-content: space-between;
+  .fdp-hero-inner {
+    max-width: 1280px; margin: 0 auto; padding: 0 40px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center;
   }
-  .fdp-back {
-    display: flex; align-items: center; gap: 8px;
-    background: none; border: 1px solid rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.6); font-size: 13px; font-weight: 500;
-    padding: 7px 14px; border-radius: 8px; cursor: pointer;
-    transition: all 0.2s; font-family: inherit;
+  @media(max-width:900px){ .fdp-hero-inner { grid-template-columns: 1fr; } }
+  .fdp-hero-label { font-size: 12px; font-weight: 700; letter-spacing: 2px; color: rgba(255,255,255,0.6); margin-bottom: 16px; text-transform: uppercase; }
+  .fdp-hero-h1 { font-size: clamp(36px,5vw,64px); font-weight: 800; letter-spacing: -1.5px; margin: 0 0 20px; line-height: 1.05; color: #fff; }
+  .fdp-hero-desc { font-size: 18px; color: rgba(255,255,255,0.82); line-height: 1.7; margin: 0 0 36px; font-weight: 400; }
+  .fdp-hero-btns { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .fdp-hero-cta { padding: 13px 28px; background: #1EB980; color: #fff; border: none; border-radius: 999px; font-size: 15px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+  .fdp-hero-cta:hover { background: #17a46f; transform: translateY(-1px); }
+  .fdp-hero-ghost { display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.85); background: none; border: none; cursor: pointer; font-family: inherit; transition: all 0.18s; }
+  .fdp-hero-ghost:hover { color: #fff; gap: 10px; }
+  /* Right visual card */
+  .fdp-hero-visual {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 20px; overflow: hidden; padding: 4px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
   }
-  .fdp-back:hover { color: #fff; border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); }
-  .fdp-nav-logo { font-size: 16px; font-weight: 800; color: #fff; }
-  .fdp-btn-primary {
-    padding: 8px 18px; font-size: 13px; font-weight: 700; color: #fff;
-    background: linear-gradient(135deg,#7c3aed,#3b82f6); border: none;
-    border-radius: 8px; cursor: pointer; font-family: inherit;
-    box-shadow: 0 4px 14px rgba(124,58,237,0.3);
+  .fdp-hero-visual-inner {
+    background: #0f1e2e; border-radius: 17px; padding: 20px; min-height: 280px;
+    display: flex; flex-direction: column; gap: 10px;
   }
-  .fdp-btn-primary:hover { box-shadow: 0 6px 20px rgba(124,58,237,0.45); }
+  .fdp-vis-topbar { display: flex; gap: 5px; margin-bottom: 8px; }
+  .fdp-vis-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .fdp-vis-row { background: rgba(255,255,255,0.06); border-radius: 10px; padding: 11px 14px; display: flex; align-items: center; gap: 10px; }
+  .fdp-vis-icon { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
+  .fdp-vis-label { font-size: 12px; font-weight: 600; color: rgba(255,255,255,0.85); }
+  .fdp-vis-sub { font-size: 10px; color: rgba(255,255,255,0.38); margin-top: 1px; }
+  .fdp-vis-badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 20px; }
 
-  .fdp-hero { padding: 110px 0 60px; position: relative; }
-  .fdp-hero-inner { max-width: 1200px; margin: 0 auto; padding: 0 40px; position: relative; z-index: 2; }
-  .fdp-hero-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-size: 11px; font-weight: 700; letter-spacing: 1px;
-    padding: 4px 14px; border-radius: 20px; margin-bottom: 20px;
-  }
-  .fdp-hero-h1 { font-size: clamp(32px,4vw,52px); font-weight: 900; letter-spacing: -1.5px; margin: 0 0 14px; }
-  .fdp-hero-sub { font-size: 18px; font-weight: 600; margin: 0 0 12px; }
-  .fdp-hero-desc { font-size: 15px; color: rgba(255,255,255,0.5); line-height: 1.75; max-width: 680px; margin: 0; }
+  .fdp-body { max-width: 1280px; margin: 0 auto; padding: 48px 40px 80px; position: relative; z-index: 2; }
 
-  .fdp-body { max-width: 1200px; margin: 0 auto; padding: 0 40px 80px; position: relative; z-index: 2; }
-
-  .fdp-module { margin-bottom: 48px; border: 1px solid rgba(255,255,255,0.07); border-radius: 20px; overflow: hidden; }
+  .fdp-module { margin-bottom: 48px; border: 1px solid rgba(255,255,255,0.08); border-radius: 20px; overflow: hidden; background: #1a3654; }
   .fdp-module-header {
     display: flex; align-items: center; gap: 16px;
     padding: 24px 28px; cursor: pointer;
-    background: rgba(255,255,255,0.03); transition: background 0.2s;
+    background: rgba(255,255,255,0.02); transition: background 0.2s;
     border: none; width: 100%; text-align: left; font-family: inherit;
   }
-  .fdp-module-header:hover { background: rgba(255,255,255,0.06); }
+  .fdp-module-header:hover { background: rgba(30,185,128,0.06); }
   .fdp-module-icon { width: 48px; height: 48px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
   .fdp-module-info { flex: 1; }
   .fdp-module-name { font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 3px; }
@@ -332,21 +336,36 @@ const CSS = `
   .fdp-module-content { padding: 28px; display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
   @media(max-width:700px){ .fdp-module-content { grid-template-columns: 1fr; } }
 
-  .fdp-about { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.75; }
+  .fdp-about { font-size: 14px; color: rgba(255,255,255,0.72); line-height: 1.75; }
   .fdp-feat-label { font-size: 11px; font-weight: 700; letter-spacing: 1px; margin: 0 0 14px; }
   .fdp-feat-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 7px; }
-  .fdp-feat-item { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: rgba(255,255,255,0.65); }
+  .fdp-feat-item { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: rgba(255,255,255,0.72); }
   .fdp-check { width: 18px; height: 18px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 10px; flex-shrink: 0; margin-top: 1px; }
 
-  .fdp-cta { padding: 60px 40px; background: rgba(255,255,255,0.02); border-top: 1px solid rgba(255,255,255,0.05); text-align: center; position: relative; z-index: 2; }
+  .fdp-cta { padding: 60px 40px; background: #0f1e2e; border-top: 1px solid rgba(255,255,255,0.05); text-align: center; position: relative; z-index: 2; }
   .fdp-cta h2 { font-size: 28px; font-weight: 800; margin: 0 0 10px; }
   .fdp-cta p { font-size: 15px; color: rgba(255,255,255,0.45); margin: 0 0 28px; }
   .fdp-cta-btns { display: flex; gap: 12px; justify-content: center; }
 
+  .fdp-related-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
+  .fdp-cta-btns-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
   @media(max-width:900px){
-    .fdp-nav-inner { padding: 0 20px; }
-    .fdp-hero-inner { padding: 0 20px; }
-    .fdp-body { padding: 0 20px 60px; }
+    .fdp-hero-inner { padding: 0 20px; grid-template-columns: 1fr; }
+    .fdp-body { padding: 20px 20px 60px; }
+    .fdp-related-grid { grid-template-columns: 1fr; gap: 32px; padding: 0 20px; }
+    .fdp-subnav-inner { padding: 0 16px; }
+    .fdp-hero { padding: 48px 0 56px; }
+  }
+  @media(max-width:600px){
+    .fdp-hero-inner { padding: 0 16px; }
+    .fdp-body { padding: 16px 16px 48px; }
+    .fdp-cta { padding: 40px 16px; }
+    .fdp-cta-btns-row { flex-direction: column; }
+  }
+  @media(max-width:480px){
+    .fdp-module-content { padding: 20px 16px; }
+    .fdp-module-header { padding: 18px 16px; }
   }
 `;
 
@@ -358,10 +377,10 @@ export default function FeatureDetailPage() {
 
   if (!group) {
     return (
-      <div style={{ background: '#060b14', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
+      <div style={{ background: '#0f1e2e', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff', fontFamily: 'Inter, sans-serif' }}>
         <div style={{ fontSize: 48, marginBottom: 16 }}>🔍</div>
         <h2 style={{ fontSize: 22, fontWeight: 800, margin: '0 0 10px' }}>Page not found</h2>
-        <button onClick={() => navigate('/')} style={{ padding: '10px 22px', background: 'linear-gradient(135deg,#7c3aed,#3b82f6)', border: 'none', borderRadius: 8, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← Back to Home</button>
+        <button onClick={() => navigate('/')} style={{ padding: '10px 22px', background: '#1EB980', border: 'none', borderRadius: 999, color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>← Back to Home</button>
       </div>
     );
   }
@@ -369,35 +388,66 @@ export default function FeatureDetailPage() {
   return (
     <div className="fdp">
       <style>{CSS}</style>
-      <div className="stars-bg" />
 
       <SharedHeader />
 
-      {/* HERO */}
-      <section className="fdp-hero">
-        <div style={{ position: 'absolute', width: 600, height: 600, top: -150, left: '50%', transform: 'translateX(-50%)', background: `radial-gradient(ellipse,${group.color}20 0%,transparent 70%)`, borderRadius: '50%', pointerEvents: 'none' }} />
-        <div className="fdp-hero-inner">
-          <div className="fdp-hero-badge" style={{ background: `${group.color}18`, border: `1px solid ${group.color}35`, color: group.color }}>
-            {group.icon} CRM MODULE
-          </div>
-          <h1 className="fdp-hero-h1">{group.title}</h1>
-          <p className="fdp-hero-sub" style={{ background: group.gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-            {group.subtitle}
-          </p>
-          <p className="fdp-hero-desc">{group.desc}</p>
+      {/* SECONDARY TAB NAV — like ServiceNow product page */}
+      <div className="fdp-subnav">
+        <div className="fdp-subnav-inner">
+          {group.modules.map((m, i) => (
+            <button key={i} className={`fdp-subnav-tab${openIdx === i ? ' active' : ''}`}
+              onClick={() => setOpenIdx(i)}>
+              {m.icon} {m.name}
+            </button>
+          ))}
+        </div>
+      </div>
 
-          {/* Module pills */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 28 }}>
-            {group.modules.map((m, i) => (
-              <button key={i} onClick={() => setOpenIdx(i)}
-                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s',
-                  background: openIdx === i ? `${m.color}18` : 'rgba(255,255,255,0.05)',
-                  border: `1px solid ${openIdx === i ? m.color + '50' : 'rgba(255,255,255,0.1)'}`,
-                  color: openIdx === i ? m.color : 'rgba(255,255,255,0.5)',
-                }}>
-                {m.icon} {m.name}
+      {/* HERO — two column like image #33 */}
+      <section className="fdp-hero">
+        <div className="fdp-hero-inner">
+          {/* Left: text */}
+          <div>
+            <div className="fdp-hero-label">INTRODUCING</div>
+            <h1 className="fdp-hero-h1">{group.modules[openIdx]?.name || group.title}</h1>
+            <p className="fdp-hero-desc">{group.modules[openIdx]?.tagline || group.desc}</p>
+            <div className="fdp-hero-btns">
+              <button className="fdp-hero-cta" onClick={() => navigate('/contact')}>Contact Us</button>
+              <button className="fdp-hero-ghost" onClick={() => navigate('/register')}>
+                Start Free Trial <span style={{ fontSize: 18 }}>→</span>
               </button>
-            ))}
+            </div>
+          </div>
+          {/* Right: visual card */}
+          <div className="fdp-hero-visual">
+            <div className="fdp-hero-visual-inner">
+              <div className="fdp-vis-topbar">
+                <div className="fdp-vis-dot" style={{ background: '#ef4444' }} />
+                <div className="fdp-vis-dot" style={{ background: '#f59e0b' }} />
+                <div className="fdp-vis-dot" style={{ background: '#1EB980' }} />
+                <div style={{ flex: 1, height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 4, marginLeft: 8 }} />
+              </div>
+              {group.modules.slice(0, 4).map((m, i) => (
+                <div key={i} className="fdp-vis-row">
+                  <div className="fdp-vis-icon" style={{ background: `${m.color}20` }}>{m.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div className="fdp-vis-label">{m.name}</div>
+                    <div className="fdp-vis-sub">{m.tagline}</div>
+                  </div>
+                  <div className="fdp-vis-badge" style={{ background: `${m.color}20`, color: m.color }}>
+                    {i === 0 ? 'Active' : i === 1 ? 'Running' : i === 2 ? 'New' : 'Live'}
+                  </div>
+                </div>
+              ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginTop: 4 }}>
+                {[{l:'Total',v:'25+'},{l:'Active',v:'18'},{l:'Growth',v:'+34%'}].map((s,i)=>(
+                  <div key={i} style={{ background: 'rgba(255,255,255,0.04)', borderRadius: 10, padding: '10px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1EB980' }}>{s.v}</div>
+                    <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{s.l}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -440,19 +490,37 @@ export default function FeatureDetailPage() {
         })}
       </div>
 
-      {/* CTA */}
-      <div className="fdp-cta">
-        <div style={{ position: 'absolute', width: 500, height: 500, bottom: -150, left: '50%', transform: 'translateX(-50%)', background: `radial-gradient(ellipse,${group.color}15 0%,transparent 70%)`, borderRadius: '50%', pointerEvents: 'none' }} />
-        <div style={{ position: 'relative', zIndex: 2 }}>
-          <h2>Ready to use <span style={{ background: group.gradient, WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>{group.title}</span>?</h2>
-          <p>Start your free trial today. No credit card required.</p>
-          <div className="fdp-cta-btns">
-            <button onClick={() => navigate('/register')} style={{ padding: '12px 28px', fontSize: 15, fontWeight: 700, color: '#fff', background: group.gradient, border: 'none', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit', boxShadow: `0 6px 22px ${group.color}40` }}>
-              Start Free Trial →
-            </button>
-            <button onClick={() => navigate('/')} style={{ padding: '12px 22px', fontSize: 14, fontWeight: 600, color: 'rgba(255,255,255,0.6)', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, cursor: 'pointer', fontFamily: 'inherit' }}>
-              ← View All Features
-            </button>
+      {/* Related links + CTA — like ServiceNow Image #36 */}
+      <div style={{ background: '#162e48', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '60px 0' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 40px' }} className="fdp-related-grid">
+          {/* Related links */}
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' }}>Related links</div>
+            {group.modules.map((m, i) => (
+              <button key={i} onClick={() => navigate(`/feature/${Object.keys(GROUPS).find(k=>GROUPS[k].title===group.title)||'lead-management'}`)}
+                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', width: '100%', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer', fontFamily: 'inherit', color: '#1EB980', fontSize: 14, fontWeight: 500, transition: 'gap 0.15s' }}
+                onMouseEnter={e=>e.currentTarget.style.gap='12px'} onMouseLeave={e=>e.currentTarget.style.gap='8px'}>
+                {m.icon} {m.name} <span style={{ marginLeft: 'auto', fontSize: 16 }}>→</span>
+              </button>
+            ))}
+          </div>
+          {/* CTA */}
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' }}>Get Started</div>
+            <h3 style={{ fontSize: 28, fontWeight: 800, color: '#fff', margin: '0 0 14px', letterSpacing: '-0.5px' }}>
+              Ready to use <span style={{ color: '#1EB980' }}>{group.title}</span>?
+            </h3>
+            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, margin: '0 0 28px' }}>
+              Start your free trial today. No credit card required. Set up in minutes.
+            </p>
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+              <button onClick={() => navigate('/register')} style={{ padding: '12px 28px', fontSize: 15, fontWeight: 600, color: '#fff', background: '#1EB980', border: 'none', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Start Free Trial →
+              </button>
+              <button onClick={() => navigate('/contact')} style={{ padding: '12px 24px', fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.8)', background: 'transparent', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' }}>
+                Contact Us
+              </button>
+            </div>
           </div>
         </div>
       </div>

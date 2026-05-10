@@ -13,6 +13,8 @@ import VerifyEmail from './pages/VerifyEmail';
 import CompleteProfile from './pages/CompleteProfile';
 import OAuthCallback from './pages/OAuthCallback';
 import LandingPage from './pages/LandingPage';
+import AllProductsPage from './pages/AllProductsPage';
+import PlatformPage from './pages/PlatformPage';
 import FeatureDetailPage from './pages/FeatureDetailPage';
 import ContactUs from './pages/ContactUs';
 import SaasContactInquiries from './pages/SaasContactInquiries';
@@ -20,6 +22,10 @@ import AboutUs from './pages/AboutUs';
 import Security from './pages/Security';
 import Integrations from './pages/Integrations';
 import PartnerResources from './pages/PartnerResources';
+import IndustriesPage from './pages/IndustriesPage';
+import HelpCenter from './pages/HelpCenter';
+import DemoPage from './pages/DemoPage';
+import DemoLibraryPage from './pages/DemoLibraryPage';
 
 // Dashboard components
 import Dashboard from './pages/Dashboard';
@@ -599,11 +605,17 @@ function AppRoutes() {
 
       {/* Public Info Pages */}
       <Route path="/about" element={<AboutUs />} />
+      <Route path="/all-features" element={<AllProductsPage />} />
+      <Route path="/platform" element={<PlatformPage />} />
       <Route path="/feature/:slug" element={<FeatureDetailPage />} />
       <Route path="/contact" element={<ContactUs />} />
       <Route path="/security" element={<Security />} />
       <Route path="/integrations" element={<Integrations />} />
       <Route path="/partner-resources" element={<PartnerResources />} />
+      <Route path="/industries" element={<IndustriesPage />} />
+      <Route path="/demo" element={<DemoPage />} />
+      <Route path="/help" element={<HelpCenter />} />
+      <Route path="/demo/library" element={<DemoLibraryPage />} />
 
       {/* Default redirect */}
       <Route path="/" element={

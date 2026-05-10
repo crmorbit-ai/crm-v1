@@ -9,23 +9,23 @@ const SUBJECTS = ['General Inquiry', 'Sales', 'Technical Support', 'Partnership'
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   * { box-sizing: border-box; }
-  body { margin: 0; background: #060b14; }
-  .cu { font-family: 'Inter',-apple-system,sans-serif; background: #060b14; color: #fff; min-height: 100vh; overflow-x: hidden; }
+  html, body { margin: 0; overflow-x: hidden; background: #0f1e2e; }
+  .cu { font-family: 'Inter',-apple-system,sans-serif; background: #0f1e2e; color: #fff; min-height: 100vh; overflow-x: hidden; padding-top: 72px; }
 
 
   /* ── HERO ── */
-  .cu-hero { padding: 130px 0 70px; position: relative; text-align: center; }
+  .cu-hero { padding: 60px 0 70px; position: relative; text-align: center; background: #0f1e2e; }
   .cu-hero-inner { max-width: 760px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 2; }
   .cu-badge {
     display: inline-flex; align-items: center; gap: 8px;
     font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
     padding: 6px 18px; border-radius: 40px; margin-bottom: 24px;
-    background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.3); color: #a78bfa;
+    background: rgba(30,185,128,0.1); border: 1px solid rgba(30,185,128,0.3); color: #1EB980;
   }
-  .cu-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #a78bfa; box-shadow: 0 0 6px #a78bfa; animation: pulse 2s infinite; }
+  .cu-badge-dot { width: 6px; height: 6px; border-radius: 50%; background: #1EB980; box-shadow: 0 0 6px #1EB980; animation: pulse 2s infinite; }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
   .cu-h1 { font-size: clamp(36px,5.5vw,60px); font-weight: 900; letter-spacing: -2px; line-height: 1.08; margin: 0 0 18px; }
-  .cu-h1 .grad { background: linear-gradient(135deg, #a78bfa, #60a5fa, #34d399); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .cu-h1 .grad { color: #1EB980; }
   .cu-sub { font-size: 17px; color: rgba(255,255,255,0.45); line-height: 1.75; margin: 0 0 40px; max-width: 560px; margin-left: auto; margin-right: auto; }
 
   /* Stats row */
@@ -36,7 +36,7 @@ const CSS = `
   .cu-stat-div { width: 1px; background: rgba(255,255,255,0.1); height: 40px; align-self: center; }
 
   /* ── MAIN ── */
-  .cu-main { max-width: 1160px; margin: 0 auto; padding: 60px 24px 80px; display: grid; grid-template-columns: 1fr 1.35fr; gap: 48px; position: relative; z-index: 2; align-items: start; }
+  .cu-main { max-width: 1160px; margin: 0 auto; padding: 60px 24px 80px; display: grid; grid-template-columns: 1fr 1.35fr; gap: 48px; position: relative; z-index: 2; align-items: start; background: #162e48; border-radius: 0; }
   @media(max-width:900px){ .cu-main{grid-template-columns:1fr;gap:32px;} }
 
   /* ── LEFT PANEL ── */
@@ -72,17 +72,17 @@ const CSS = `
 
   /* ── FORM PANEL ── */
   .cu-form-panel {
-    background: rgba(255,255,255,0.03);
+    background: #1a3654;
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 24px; padding: 36px;
     position: relative; overflow: hidden;
   }
   .cu-form-panel::before {
     content: ''; position: absolute; inset: 0;
-    background: radial-gradient(ellipse at top right, rgba(124,58,237,0.08) 0%, transparent 60%);
+    background: radial-gradient(ellipse at top right, rgba(30,185,128,0.06) 0%, transparent 60%);
     pointer-events: none;
   }
-  .cu-form-glow { position: absolute; width: 300px; height: 300px; top: -80px; right: -80px; background: radial-gradient(circle, rgba(124,58,237,0.12) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
+  .cu-form-glow { position: absolute; width: 300px; height: 300px; top: -80px; right: -80px; background: radial-gradient(circle, rgba(30,185,128,0.08) 0%, transparent 70%); border-radius: 50%; pointer-events: none; }
   .cu-form-title { font-size: 22px; font-weight: 800; margin: 0 0 4px; position: relative; z-index: 1; letter-spacing: -0.5px; }
   .cu-form-sub { font-size: 13px; color: rgba(255,255,255,0.4); margin: 0 0 28px; position: relative; z-index: 1; }
 
@@ -95,7 +95,7 @@ const CSS = `
     background: rgba(255,255,255,0.05); color: #fff; outline: none;
     font-family: inherit; box-sizing: border-box; transition: all 0.2s;
   }
-  .cu-inp:focus { border-color: #7c3aed; box-shadow: 0 0 0 3px rgba(124,58,237,0.15); background: rgba(124,58,237,0.06); }
+  .cu-inp:focus { border-color: #1EB980; box-shadow: 0 0 0 3px rgba(30,185,128,0.15); background: rgba(30,185,128,0.06); }
   .cu-inp::placeholder { color: rgba(255,255,255,0.2); }
   .cu-inp.error { border-color: rgba(239,68,68,0.6); }
   .cu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -114,12 +114,12 @@ const CSS = `
   /* Submit */
   .cu-submit {
     width: 100%; padding: 14px; font-size: 15px; font-weight: 700; color: #fff;
-    background: linear-gradient(135deg, #7c3aed, #3b82f6);
-    border: none; border-radius: 12px; cursor: pointer; font-family: inherit;
-    box-shadow: 0 6px 24px rgba(124,58,237,0.35); transition: all 0.2s;
+    background: #1EB980;
+    border: none; border-radius: 999px; cursor: pointer; font-family: inherit;
+    box-shadow: 0 6px 24px rgba(30,185,128,0.35); transition: all 0.2s;
     position: relative; z-index: 1; margin-top: 4px;
   }
-  .cu-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(124,58,237,0.5); }
+  .cu-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(30,185,128,0.5); }
   .cu-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
   .cu-secure { font-size: 12px; color: rgba(255,255,255,0.25); text-align: center; margin-top: 12px; display: flex; align-items: center; justify-content: center; gap: 5px; position: relative; z-index: 1; }
 
@@ -132,6 +132,26 @@ const CSS = `
 
   /* API error */
   .cu-api-err { padding: 12px 14px; background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2); border-radius: 10px; color: #f87171; margin-bottom: 16px; font-size: 13px; display: flex; gap: 8px; position: relative; z-index: 1; }
+
+  /* FAQ grid */
+  .cu-faq-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 0 48px; }
+
+  @media(max-width:768px) {
+    .cu-hero { padding: 40px 0 50px; }
+    .cu-h1 { font-size: clamp(28px,7vw,48px); }
+    .cu-sub { font-size: 15px; }
+    .cu-stats { gap: 24px; }
+    .cu-main { padding: 40px 16px 60px; }
+    .cu-form-panel { padding: 24px 20px; }
+    .cu-faq-grid { grid-template-columns: 1fr; }
+  }
+  @media(max-width:480px) {
+    .cu-hero { padding: 32px 0 40px; }
+    .cu-h1 { font-size: 28px; letter-spacing: -1px; }
+    .cu-main { padding: 32px 12px 48px; }
+    .cu-form-panel { padding: 20px 16px; }
+    .cu-stat-div { display: none; }
+  }
 `;
 
 export default function ContactUs() {
@@ -180,8 +200,8 @@ export default function ContactUs() {
       <style>{CSS}</style>
 
       {/* Glow orbs */}
-      <div style={{ position:'fixed', width:600, height:600, top:-200, left:'50%', transform:'translateX(-50%)', background:'radial-gradient(ellipse,rgba(124,58,237,0.15) 0%,transparent 70%)', borderRadius:'50%', pointerEvents:'none', zIndex:0 }} />
-      <div style={{ position:'fixed', width:400, height:400, bottom:0, right:'-10%', background:'radial-gradient(ellipse,rgba(59,130,246,0.1) 0%,transparent 70%)', borderRadius:'50%', pointerEvents:'none', zIndex:0 }} />
+      <div style={{ position:'fixed', width:600, height:600, top:-200, left:'50%', transform:'translateX(-50%)', background:'radial-gradient(ellipse,rgba(30,185,128,0.08) 0%,transparent 70%)', borderRadius:'50%', pointerEvents:'none', zIndex:0 }} />
+      <div style={{ position:'fixed', width:400, height:400, bottom:0, right:'-10%', background:'radial-gradient(ellipse,rgba(30,185,128,0.06) 0%,transparent 70%)', borderRadius:'50%', pointerEvents:'none', zIndex:0 }} />
 
       <SharedHeader />
 
@@ -213,16 +233,16 @@ export default function ContactUs() {
 
           {/* Email Us */}
           <div className="cu-contact-item">
-            <div className="cu-ci-icon" style={{ background:'rgba(124,58,237,0.15)', border:'1px solid rgba(124,58,237,0.3)' }}>✉️</div>
+            <div className="cu-ci-icon" style={{ background:'rgba(30,185,128,0.15)', border:'1px solid rgba(30,185,128,0.3)' }}>✉️</div>
             <div>
-              <div className="cu-ci-label" style={{ color:'#a78bfa' }}>Email Us</div>
+              <div className="cu-ci-label" style={{ color:'#1EB980' }}>Email Us</div>
               <div style={{ marginTop:4 }}>
                 <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:2 }}>Sales &amp; Partnerships</div>
-                <a href="mailto:sales@texora.ai" style={{ fontSize:14, fontWeight:700, color:'#a78bfa', textDecoration:'none' }}>sales@texora.ai</a>
+                <a href="mailto:sales@texora.ai" style={{ fontSize:14, fontWeight:700, color:'#1EB980', textDecoration:'none' }}>sales@texora.ai</a>
               </div>
               <div style={{ marginTop:8 }}>
                 <div style={{ fontSize:11, color:'rgba(255,255,255,0.4)', marginBottom:2 }}>Support</div>
-                <a href="mailto:support@texora.ai" style={{ fontSize:14, fontWeight:700, color:'#a78bfa', textDecoration:'none' }}>support@texora.ai</a>
+                <a href="mailto:support@texora.ai" style={{ fontSize:14, fontWeight:700, color:'#1EB980', textDecoration:'none' }}>support@texora.ai</a>
               </div>
             </div>
           </div>
@@ -242,9 +262,9 @@ export default function ContactUs() {
 
           {/* Office */}
           <div className="cu-contact-item">
-            <div className="cu-ci-icon" style={{ background:'rgba(59,130,246,0.15)', border:'1px solid rgba(59,130,246,0.3)' }}>📍</div>
+            <div className="cu-ci-icon" style={{ background:'rgba(30,185,128,0.15)', border:'1px solid rgba(30,185,128,0.3)' }}>📍</div>
             <div>
-              <div className="cu-ci-label" style={{ color:'#60a5fa' }}>Office</div>
+              <div className="cu-ci-label" style={{ color:'#1EB980' }}>Office</div>
               <div className="cu-ci-value">7125 Silent Creek Ave SE</div>
               <p className="cu-ci-sub">Snoqualmie, WA 98065</p>
             </div>
@@ -308,7 +328,7 @@ export default function ContactUs() {
                   Send Another
                 </button>
                 <button onClick={() => navigate('/')}
-                  style={{ padding:'10px 22px', fontSize:14, fontWeight:700, color:'#fff', background:'linear-gradient(135deg,#7c3aed,#3b82f6)', border:'none', borderRadius:10, cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(124,58,237,0.3)' }}>
+                  style={{ padding:'10px 22px', fontSize:14, fontWeight:700, color:'#fff', background:'#1EB980', border:'none', borderRadius:999, cursor:'pointer', fontFamily:'inherit', boxShadow:'0 4px 16px rgba(30,185,128,0.3)' }}>
                   Back to Home →
                 </button>
               </div>
@@ -381,7 +401,7 @@ export default function ContactUs() {
       {/* ── FAQ — full width below ── */}
       <div style={{ maxWidth:1160, margin:'0 auto', padding:'0 24px 80px', position:'relative', zIndex:2 }}>
         <div style={{ borderTop:'1px solid rgba(255,255,255,0.07)', paddingTop:48 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:'0 48px' }}>
+          <div className="cu-faq-grid">
             <div>
               <p style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,0.35)', textTransform:'uppercase', letterSpacing:1, margin:'0 0 20px' }}>Common Questions</p>
               {[

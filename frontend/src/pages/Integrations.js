@@ -78,8 +78,25 @@ const Integrations = () => {
     }
   ];
 
+  const css = `
+    * { box-sizing: border-box; }
+    .int-page { overflow-x: hidden; }
+    @media(max-width:768px){
+      .int-page section { padding-top: 60px !important; padding-bottom: 60px !important; padding-left: 16px !important; padding-right: 16px !important; }
+      .int-page h1 { font-size: clamp(28px,8vw,48px) !important; }
+      .int-page h2 { font-size: clamp(24px,6vw,36px) !important; }
+      .int-page p { font-size: 15px !important; }
+    }
+    @media(max-width:480px){
+      .int-page section { padding-top: 40px !important; padding-bottom: 40px !important; padding-left: 12px !important; padding-right: 12px !important; }
+      .int-page h1 { font-size: 26px !important; }
+      .int-page h2 { font-size: 22px !important; }
+    }
+  `;
+
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#0f172a] int-page">
+      <style>{css}</style>
       {/* Navigation */}
       <SharedHeader />
 

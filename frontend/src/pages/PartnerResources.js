@@ -60,8 +60,27 @@ const PartnerResources = () => {
     "Access partner support"
   ];
 
+  const css = `
+    * { box-sizing: border-box; }
+    .pr-page { overflow-x: hidden; }
+    @media(max-width:768px){
+      .pr-page section { padding-top: 60px !important; padding-bottom: 60px !important; padding-left: 16px !important; padding-right: 16px !important; }
+      .pr-page .grid { grid-template-columns: 1fr 1fr !important; gap: 16px !important; }
+      .pr-page h1 { font-size: clamp(32px,8vw,48px) !important; }
+      .pr-page h2 { font-size: clamp(26px,6vw,36px) !important; }
+    }
+    @media(max-width:480px){
+      .pr-page section { padding-top: 48px !important; padding-bottom: 48px !important; padding-left: 12px !important; padding-right: 12px !important; }
+      .pr-page .grid { grid-template-columns: 1fr !important; }
+      .pr-page h1 { font-size: 28px !important; }
+      .pr-page h2 { font-size: 24px !important; }
+      .pr-page p { font-size: 15px !important; }
+    }
+  `;
+
   return (
-    <div className="min-h-screen bg-[#0f172a]">
+    <div className="min-h-screen bg-[#0f172a] pr-page">
+      <style>{css}</style>
       {/* Navigation */}
       <SharedHeader />
 
