@@ -114,20 +114,26 @@ const Register = () => {
     if (ln.length>NAME_MAX) return setError(`Last name must be at most ${NAME_MAX} characters`);
     if (!/[A-Za-z]/.test(ln)) return setError('Last name must contain at least one letter');
     const ev = fd.email.trim().toLowerCase();
-    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(ev)) return setError('Please enter a valid email address');
+    const emailRx = /^[a-zA-Z0-9]([a-zA-Z0-9._%+\-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.\-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$/;
+    if (!emailRx.test(ev) || /\.{2,}/.test(ev)) return setError('Please enter a valid email address');
     if (ev.length>40) return setError('Email is too long (max 40 characters)');
     if (!checks.length) return setError(`Password must be at least ${PASS_MIN} characters`);
     if (!checks.upper)  return setError('Password needs an uppercase letter (A-Z)');
     if (!checks.lower)  return setError('Password needs a lowercase letter (a-z)');
     if (!checks.number) return setError('Password needs a number (0-9)');
     if (!checks.symbol) return setError('Password needs a special character (!@#$…)');
+    if (!fd.confirmPassword) return setError('Please confirm your password');
     if (fd.password!==fd.confirmPassword) return setError('Passwords do not match');
     setLoading(true);
     try {
       const res = await authService.registerStep1({ firstName:fn, lastName:ln, email:fd.email, password:fd.password });
       if (res.success) navigate('/verify-email', { state:{ email:fd.email } });
     } catch(err) {
-      setError(err.response?.data?.message || 'Registration failed');
+      const msg = err?.response?.data?.message
+        || err?.message
+        || err?.response?.data?.error
+        || 'Registration failed. Please try again.';
+      setError(msg);
     } finally { setLoading(false); }
   };
 
@@ -165,14 +171,14 @@ const Register = () => {
           <div className="rg-row" style={{marginBottom:10}}>
             <div>
               <div style={{display:'flex', justifyContent:'space-between', marginBottom:5}}>
-                <label className="rg-lbl" style={{margin:0}}>First name</label>
+                <label className="rg-lbl" style={{margin:0}}>First name <span style={{color:'#ef4444'}}>*</span></label>
                 <span style={{fontSize:10, color:'rgba(255,255,255,0.28)'}}>{fd.firstName.length}/{NAME_MAX}</span>
               </div>
               <input className="rg-inp" type="text" name="firstName" value={fd.firstName} onChange={change} onBlur={blur} required placeholder="John" style={{borderColor:nameBorder('firstName')}}/>
             </div>
             <div>
               <div style={{display:'flex', justifyContent:'space-between', marginBottom:5}}>
-                <label className="rg-lbl" style={{margin:0}}>Last name</label>
+                <label className="rg-lbl" style={{margin:0}}>Last name <span style={{color:'#ef4444'}}>*</span></label>
                 <span style={{fontSize:10, color:'rgba(255,255,255,0.28)'}}>{fd.lastName.length}/{NAME_MAX}</span>
               </div>
               <input className="rg-inp" type="text" name="lastName" value={fd.lastName} onChange={change} onBlur={blur} required placeholder="Doe" style={{borderColor:nameBorder('lastName')}}/>
@@ -180,12 +186,12 @@ const Register = () => {
           </div>
 
           <div style={{marginBottom:10}}>
-            <label className="rg-lbl">Work email</label>
+            <label className="rg-lbl">Work email <span style={{color:'#ef4444'}}>*</span></label>
             <input className="rg-inp" type="email" name="email" value={fd.email} onChange={change} onBlur={blur} required maxLength={40} placeholder="you@company.com"/>
           </div>
 
           <div style={{marginBottom:10}}>
-            <label className="rg-lbl">Password</label>
+            <label className="rg-lbl">Password <span style={{color:'#ef4444'}}>*</span></label>
             <div style={{position:'relative'}}>
               <input className="rg-inp" type={showPw?'text':'password'} name="password" value={fd.password} onChange={change} onBlur={blur} required maxLength={PASS_MAX} placeholder={`Min ${PASS_MIN} chars, A-Z, 0-9, symbol`} style={{paddingRight:44}}/>
               <button type="button" onClick={()=>setShowPw(v=>!v)} tabIndex={-1} style={{position:'absolute',right:13,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.35)',padding:0,display:'flex',alignItems:'center'}}>
@@ -211,7 +217,7 @@ const Register = () => {
           </div>
 
           <div style={{marginBottom:14}}>
-            <label className="rg-lbl">Confirm password</label>
+            <label className="rg-lbl">Confirm password <span style={{color:'#ef4444'}}>*</span></label>
             <div style={{position:'relative'}}>
               <input className="rg-inp" type={showCf?'text':'password'} name="confirmPassword" value={fd.confirmPassword} onChange={change} required maxLength={PASS_MAX} placeholder="Re-enter password"
                 style={{paddingRight:44, borderColor:pwMatch?'rgba(30,185,128,0.6)':pwMismatch?'rgba(239,68,68,0.6)':'rgba(255,255,255,0.12)'}}/>

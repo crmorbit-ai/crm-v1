@@ -66,6 +66,7 @@ export default function ResellerRegister() {
   const navigate=useNavigate();
   const [f,setF]=useState({firstName:'',lastName:'',email:'',phone:'',companyName:'',role:'',requirement:'',password:'',confirmPassword:''});
   const [feats,setFeats]=useState([]);
+  const [featsTouched,setFeatsTouched]=useState(false);
   const [tk,setTk]=useState({});
   const [loading,setLoad]=useState(false);
   const [error,setErr]=useState('');
@@ -83,7 +84,7 @@ export default function ResellerRegister() {
     const{name,value}=e.target;
     if((name==='firstName'||name==='lastName')&&value&&!/^[A-Za-z\s\-']*$/.test(value))return;
     if((name==='firstName'||name==='lastName')&&value.length>NAME_MAX)return;
-    if(name==='phone'&&value&&!/^[0-9+]*$/.test(value))return;
+    if(name==='phone'&&value&&!/^\+?[0-9]*$/.test(value))return;
     if(name==='companyName'&&value&&!/^[A-Za-z0-9\s\-&.,()]*$/.test(value))return;
     setF({...f,[name]:value});setErr('');
   };
@@ -97,17 +98,18 @@ export default function ResellerRegister() {
     if(fn.length<NAME_MIN)return setErr('First name must be at least 2 characters');
     if(!/[A-Za-z]/.test(fn))return setErr('First name must contain at least one letter');
     if(ln.length<NAME_MIN)return setErr('Last name must be at least 2 characters');
-    if(!/[^\s@]+@[^\s@]+\.[^\s@]+/.test(f.email))return setErr('Enter a valid email address');
-    const d=f.phone.replace('+','');
-    if(!f.phone||d.length<7||d.length>15)return setErr('Enter a valid phone number');
+    if(!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(f.email.trim()))return setErr('Enter a valid email address');
+    const d=f.phone.replace(/^\+/,'');
+    if(!f.phone||!/^\+?[0-9]+$/.test(f.phone)||d.length<7||d.length>15)return setErr('Enter a valid phone number (digits only, + allowed at start)');
     if(!f.companyName.trim()||f.companyName.trim().length<2)return setErr('Company name must be at least 2 characters');
     if(!f.role)return setErr('Please select your role');
-    if(!feats.length)return setErr('Select at least one feature');
+    if(!feats.length){setFeatsTouched(true);return setErr('Please select at least one feature you are interested in.');}
     if(!ch.len)return setErr(`Password must be at least ${PASS_MIN} characters`);
     if(!ch.up)return setErr('Password needs an uppercase letter (A-Z)');
     if(!ch.lo)return setErr('Password needs a lowercase letter (a-z)');
     if(!ch.num)return setErr('Password needs a number (0-9)');
     if(!ch.sym)return setErr('Password needs a special character (!@#$…)');
+    if(!f.confirmPassword)return setErr('Please confirm your password');
     if(f.password!==f.confirmPassword)return setErr('Passwords do not match');
     setLoad(true);
     try{
@@ -159,27 +161,27 @@ export default function ResellerRegister() {
         <form onSubmit={submit} noValidate style={{display:'flex',flexDirection:'column',gap:6}}>
           <div className="rr-row">
             <div>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><label className="rr-lbl" style={{margin:0}}>First name</label><span style={{fontSize:9,color:'rgba(255,255,255,0.25)'}}>{f.firstName.length}/{NAME_MAX}</span></div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><label className="rr-lbl" style={{margin:0}}>First name <span style={{color:'#ef4444'}}>*</span></label><span style={{fontSize:9,color:'rgba(255,255,255,0.25)'}}>{f.firstName.length}/{NAME_MAX}</span></div>
               <input className="rr-inp" type="text" name="firstName" value={f.firstName} onChange={upd} onBlur={blur} required placeholder="John" style={{borderColor:nb('firstName')}}/>
             </div>
             <div>
-              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><label className="rr-lbl" style={{margin:0}}>Last name</label><span style={{fontSize:9,color:'rgba(255,255,255,0.25)'}}>{f.lastName.length}/{NAME_MAX}</span></div>
+              <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><label className="rr-lbl" style={{margin:0}}>Last name <span style={{color:'#ef4444'}}>*</span></label><span style={{fontSize:9,color:'rgba(255,255,255,0.25)'}}>{f.lastName.length}/{NAME_MAX}</span></div>
               <input className="rr-inp" type="text" name="lastName" value={f.lastName} onChange={upd} onBlur={blur} required placeholder="Doe" style={{borderColor:nb('lastName')}}/>
             </div>
           </div>
 
           <div>
-            <label className="rr-lbl">Email address</label>
+            <label className="rr-lbl">Email address <span style={{color:'#ef4444'}}>*</span></label>
             <input className="rr-inp" type="email" name="email" value={f.email} onChange={upd} onBlur={blur} required maxLength={100} placeholder="john@company.com"/>
           </div>
 
           <div className="rr-row">
             <div>
-              <label className="rr-lbl">Phone number</label>
+              <label className="rr-lbl">Phone number <span style={{color:'#ef4444'}}>*</span></label>
               <input className="rr-inp" type="tel" name="phone" value={f.phone} onChange={upd} onBlur={blur} required maxLength={16} placeholder="+91 98765 43210"/>
             </div>
             <div>
-              <label className="rr-lbl">Company name</label>
+              <label className="rr-lbl">Company name <span style={{color:'#ef4444'}}>*</span></label>
               <input className="rr-inp" type="text" name="companyName" value={f.companyName} onChange={upd} onBlur={blur} required maxLength={60} placeholder="Acme Pvt Ltd"/>
             </div>
           </div>
@@ -194,14 +196,20 @@ export default function ResellerRegister() {
           </div>
 
           <div>
-            <label className="rr-lbl" style={{marginBottom:5}}>Interested in <span style={{color:'#ef4444'}}>*</span> <span style={{fontWeight:400,color:'rgba(255,255,255,0.25)'}}>— select features</span></label>
-            <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
+            <label className="rr-lbl" style={{marginBottom:5}}>
+              Interested in <span style={{color:'#ef4444'}}>*</span>{' '}
+              <span style={{fontWeight:400,color:'rgba(255,255,255,0.25)'}}>— select at least one</span>
+            </label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:4,padding:featsTouched&&!feats.length?'6px':'0',borderRadius:8,border:featsTouched&&!feats.length?'1px solid rgba(239,68,68,0.5)':'1px solid transparent',transition:'border .2s'}}>
               {FEATURES.map(x=>(
-                <button key={x} type="button" className={`rr-chip${feats.includes(x)?' on':''}`} onClick={()=>tog(x)}>
+                <button key={x} type="button" className={`rr-chip${feats.includes(x)?' on':''}`} onClick={()=>{tog(x);setFeatsTouched(true);}}>
                   {feats.includes(x)?'✓ ':''}{x}
                 </button>
               ))}
             </div>
+            {featsTouched && !feats.length && (
+              <p style={{fontSize:10,color:'#f87171',margin:'4px 0 0'}}>Please select at least one feature.</p>
+            )}
           </div>
 
           <div>
@@ -210,20 +218,23 @@ export default function ResellerRegister() {
           </div>
 
           <div>
-            <label className="rr-lbl">Password</label>
+            <label className="rr-lbl">Password <span style={{color:'#ef4444'}}>*</span></label>
             <div style={{position:'relative'}}>
               <input className="rr-inp" type={sp?'text':'password'} name="password" value={f.password} onChange={upd} onBlur={blur} required maxLength={PASS_MAX} placeholder={`${PASS_MIN}–${PASS_MAX} chars · A-Z · 0-9 · symbol`} style={{paddingRight:36}}/>
               <button type="button" onClick={()=>setSp(v=>!v)} tabIndex={-1} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.32)',padding:0,display:'flex'}}>{sp?<EyeOn/>:<EyeOff/>}</button>
             </div>
             {f.password.length>0&&(
               <div style={{marginTop:8}}>
-                <div style={{display:'flex',gap:3,alignItems:'center',marginBottom:5}}>
-                  {[1,2,3,4,5].map(i=><div key={i} style={{flex:1,height:3,borderRadius:2,background:i<=s?sc_:'rgba(255,255,255,0.1)',transition:'background .2s'}}/>)}
-                  <span style={{fontSize:10,fontWeight:700,color:sc_,marginLeft:5}}>{sl}</span>
+                <div style={{display:'flex',gap:4,alignItems:'center',marginBottom:7}}>
+                  {[1,2,3,4,5].map(i=><div key={i} style={{flex:1,height:3,borderRadius:3,background:i<=s?sc_:'rgba(255,255,255,0.1)',transition:'background .3s'}}/>)}
+                  <span style={{fontSize:11,fontWeight:700,color:sc_,marginLeft:6}}>{sl}</span>
                 </div>
-                <div style={{display:'flex',flexWrap:'wrap',gap:'2px 14px'}}>
-                  {[['len',`≥${PASS_MIN}`],['up','A-Z'],['lo','a-z'],['num','0-9'],['sym','Symbol']].map(([k,lab])=>(
-                    <span key={k} style={{fontSize:11,color:ch[k]?'#1EB980':'rgba(255,255,255,0.25)',display:'flex',alignItems:'center',gap:3}}>{ch[k]?'✓':'○'} {lab}</span>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'3px 10px'}}>
+                  {[['len',`Min ${PASS_MIN} chars`],['up','Uppercase (A-Z)'],['lo','Lowercase (a-z)'],['num','Number (0-9)'],['sym','Symbol (!@#$)']].map(([k,lab])=>(
+                    <div key={k} style={{display:'flex',alignItems:'center',gap:5}}>
+                      <span style={{color:ch[k]?'#1EB980':'rgba(255,255,255,0.25)',fontSize:12}}>{ch[k]?'✓':'○'}</span>
+                      <span style={{fontSize:12,color:ch[k]?'rgba(255,255,255,0.65)':'rgba(255,255,255,0.3)'}}>{lab}</span>
+                    </div>
                   ))}
                 </div>
               </div>
@@ -231,7 +242,7 @@ export default function ResellerRegister() {
           </div>
 
           <div>
-            <label className="rr-lbl">Confirm password</label>
+            <label className="rr-lbl">Confirm password <span style={{color:'#ef4444'}}>*</span></label>
             <div style={{position:'relative'}}>
               <input className="rr-inp" type={sc2?'text':'password'} name="confirmPassword" value={f.confirmPassword} onChange={upd} required maxLength={PASS_MAX} placeholder="Re-enter password"
                 style={{paddingRight:36,borderColor:ok?'rgba(30,185,128,0.5)':bad?'rgba(239,68,68,0.5)':'rgba(255,255,255,0.1)'}}/>

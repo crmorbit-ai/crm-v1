@@ -180,13 +180,13 @@ const Login = () => {
 
         <form onSubmit={handleSubmit}>
           <div style={{marginBottom:11}}>
-            <label className="ln-lbl">Email address</label>
+            <label className="ln-lbl">Email address <span style={{color:'#ef4444'}}>*</span></label>
             <input className="ln-inp" type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="you@company.com"/>
           </div>
 
           <div style={{marginBottom:16}}>
             <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:5}}>
-              <label className="ln-lbl" style={{margin:0}}>Password</label>
+              <label className="ln-lbl" style={{margin:0}}>Password <span style={{color:'#ef4444'}}>*</span></label>
               <Link to="/forgot-password" style={{fontSize:12, color:'#1EB980', textDecoration:'none', fontWeight:500}}>Forgot password?</Link>
             </div>
             <div style={{position:'relative'}}>

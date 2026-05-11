@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
@@ -373,7 +373,17 @@ export default function FeatureDetailPage() {
   const navigate = useNavigate();
   const { slug } = useParams();
   const group = GROUPS[slug];
-  const [openIdx, setOpenIdx] = useState(0);
+  const [openIdx, setOpenIdx] = useState(null);
+  const modulesRef = useRef(null);
+
+  const handleTabClick = (i) => {
+    setOpenIdx(i);
+    setTimeout(() => {
+      if (modulesRef.current) {
+        modulesRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 50);
+  };
 
   if (!group) {
     return (
@@ -396,7 +406,7 @@ export default function FeatureDetailPage() {
         <div className="fdp-subnav-inner">
           {group.modules.map((m, i) => (
             <button key={i} className={`fdp-subnav-tab${openIdx === i ? ' active' : ''}`}
-              onClick={() => setOpenIdx(i)}>
+              onClick={() => handleTabClick(i)}>
               {m.icon} {m.name}
             </button>
           ))}
@@ -453,7 +463,7 @@ export default function FeatureDetailPage() {
       </section>
 
       {/* MODULES */}
-      <div className="fdp-body">
+      <div className="fdp-body" ref={modulesRef} style={{scrollMarginTop: '80px'}}>
         {group.modules.map((m, i) => {
           const isOpen = openIdx === i;
           return (

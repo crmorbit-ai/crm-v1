@@ -164,16 +164,22 @@ export default function ContactUs() {
 
   const validate = () => {
     const e = {};
-    if (!form.name.trim() || form.name.trim().length < 2) e.name = 'Full name required (min 2 chars)';
-    if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(form.email)) e.email = 'Enter a valid email address';
+    const nameVal = form.name.trim();
+    if (!nameVal || nameVal.length < 2) e.name = 'Please enter your full name (min 2 characters)';
+    else if (!/^[A-Za-z\s\-']+$/.test(nameVal) || !/[A-Za-z]{2,}/.test(nameVal)) e.name = 'Please enter a valid name using letters only';
+    const emailRx = /^[a-zA-Z0-9]([a-zA-Z0-9._%+\-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.\-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$/;
+    if (!emailRx.test(form.email.trim()) || /\.{2,}/.test(form.email)) e.email = 'Please enter a valid email address';
+    if (form.phone.trim() && !/^\+?[0-9]{7,15}$/.test(form.phone.trim())) e.phone = 'Please enter a valid phone number (digits only, + at start)';
     if (!form.subject) e.subject = 'Please select a subject';
     if (!form.message.trim() || form.message.trim().length < 10) e.message = 'Message must be at least 10 characters';
     return e;
   };
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-    if (errors[e.target.name]) setErrors({ ...errors, [e.target.name]: '' });
+    const { name, value } = e.target;
+    if (name === 'phone' && value && !/^\+?[0-9]*$/.test(value)) return;
+    setForm({ ...form, [name]: value });
+    if (errors[name]) setErrors({ ...errors, [name]: '' });
     setApiError('');
   };
 
@@ -187,7 +193,7 @@ export default function ContactUs() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form),
       });
       const data = await res.json();
-      if (data.success) setSubmitted(true);
+      if (data.success) { setSubmitted(true); setForm({ name:'', email:'', phone:'', subject:'', message:'' }); setErrors({}); }
       else setApiError(data.message || 'Failed to send. Please try again.');
     } catch { setApiError('Something went wrong. Please try again.'); }
     finally { setLoading(false); }
@@ -358,7 +364,8 @@ export default function ContactUs() {
                 <div className="cu-row">
                   <div className="cu-field">
                     <label className="cu-label">Phone <span style={{ color:'rgba(255,255,255,0.3)', fontWeight:400 }}>(optional)</span></label>
-                    <input className="cu-inp" name="phone" value={form.phone} onChange={handleChange} placeholder="+91 98765 43210" maxLength={16} />
+                    <input className={`cu-inp${errors.phone?' error':''}`} name="phone" value={form.phone} onChange={handleChange} placeholder="+91 98765 43210" maxLength={16} />
+                    {errors.phone && <div className="cu-err">⚠ {errors.phone}</div>}
                   </div>
                   <div className="cu-field">
                     <label className="cu-label">Subject *</label>

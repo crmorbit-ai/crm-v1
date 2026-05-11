@@ -405,7 +405,7 @@ const CSS = `
     padding: 40px 28px; text-align: center; transition: all 0.3s;
   }
   .stat-card:hover { background: #1e3e62; }
-  .stat-num { font-size: clamp(28px, 6vw, 52px); font-weight: 700; letter-spacing: -2px; line-height: 1; margin-bottom: 10px; color: #1EB980; }
+  .stat-num { font-size: clamp(28px, 6vw, 52px); font-weight: 700; letter-spacing: -2px; line-height: 1; margin-bottom: 10px; color: #1EB980; white-space: nowrap; }
   .stat-lbl { font-size: 15px; color: rgba(255,255,255,0.65); font-weight: 500; }
 
   /* Marquee */
@@ -416,7 +416,7 @@ const CSS = `
   .marquee-chip {
     display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
     font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.55);
-    border-right: 1px solid rgba(255,255,255,0.06); white-space: nowrap;
+    border-left: 1px solid rgba(255,255,255,0.08); white-space: nowrap;
     transition: color 0.2s;
   }
   .marquee-chip:hover { color: #fff; }
@@ -732,7 +732,7 @@ const WorkflowMock = () => (
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, overflowX: 'auto' }}>
         {['📄 RFI', '💰 Quotation', '📦 Purchase Order', '🧾 Invoice'].map((step, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-            <div style={{ background: 'rgba(22,163,74,0.2)', border: '1px solid rgba(22,163,74,0.35)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#4ade80', whiteSpace: 'nowrap' }}>{step}</div>
+            <div style={{ background: 'rgba(22,163,74,0.2)', border: '1px solid rgba(22,163,74,0.35)', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 600, color: '#4ade80', whiteSpace: 'nowrap', minWidth: 110, textAlign: 'center' }}>{step}</div>
             {i < 3 && <div style={{ color: 'rgba(255,255,255,0.2)', fontSize: 14 }}>→</div>}
           </div>
         ))}

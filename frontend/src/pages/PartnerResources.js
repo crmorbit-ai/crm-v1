@@ -113,7 +113,8 @@ const PartnerResources = () => {
             {benefits.map((benefit, index) => (
               <div
                 key={index}
-                className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center backdrop-blur-lg hover:bg-white/10 transition transform hover:-translate-y-2"
+                className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-lg hover:bg-white/10 transition transform hover:-translate-y-2"
+                style={{ textAlign: 'center' }}
               >
                 <div className="text-5xl mb-4">{benefit.icon}</div>
                 <h3 className="text-xl font-bold text-white mb-2">{benefit.title}</h3>
