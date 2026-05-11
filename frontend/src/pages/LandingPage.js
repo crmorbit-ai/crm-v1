@@ -1009,7 +1009,6 @@ const LandingPage = () => {
 
             <button className="lp-nav-link" onClick={() => navigate('/platform')}>Platform</button>
             <div className="lp-nav-sep" />
-            <a href="#features" className="lp-nav-link">Pricing</a>
             <button className="lp-nav-link" onClick={() => navigate('/help')}>Support</button>
           </div>
 
