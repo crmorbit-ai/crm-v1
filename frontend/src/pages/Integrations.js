@@ -1,198 +1,173 @@
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
-import React from "react";
-import { useNavigate } from "react-router-dom";
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+*,*::before,*::after{box-sizing:border-box;}
+body{margin:0;background:#0f1e2e;}
+.int-wrap{ font-family:'Inter',-apple-system,sans-serif; background:#0f1e2e; color:#fff; overflow-x:hidden; }
+.int-hero{
+  padding:120px 0 80px; text-align:center; position:relative; overflow:hidden;
+  background:
+    radial-gradient(ellipse at 70% 10%, rgba(30,185,128,0.13) 0%, transparent 50%),
+    radial-gradient(ellipse at 10% 80%, rgba(30,185,128,0.07) 0%, transparent 45%),
+    #0f1e2e;
+}
+.int-hero::before{
+  content:''; position:absolute; inset:0; pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size:32px 32px;
+}
+.int-container{ max-width:1200px; margin:0 auto; padding:0 40px; }
+@media(max-width:768px){ .int-container{ padding:0 20px; } }
+.int-badge{
+  display:inline-flex; align-items:center; gap:6px;
+  padding:5px 14px; background:rgba(30,185,128,0.1); border:1px solid rgba(30,185,128,0.25);
+  border-radius:999px; font-size:11px; font-weight:800; color:#1EB980; letter-spacing:1.5px;
+  text-transform:uppercase; margin-bottom:20px;
+}
+.int-h1{ font-size:clamp(36px,5vw,58px); font-weight:900; color:#fff; margin:0 0 16px; letter-spacing:-1px; line-height:1.15; }
+.int-hero-sub{ font-size:18px; color:rgba(255,255,255,0.55); max-width:560px; margin:0 auto 40px; line-height:1.7; }
+.int-btn-primary{
+  padding:14px 32px; font-size:15px; font-weight:700; font-family:inherit;
+  color:#fff; background:#1EB980; border:none; border-radius:999px; cursor:pointer;
+  transition:background .2s,box-shadow .2s; box-shadow:0 4px 18px rgba(30,185,128,0.35);
+}
+.int-btn-primary:hover{ background:#19a872; box-shadow:0 6px 26px rgba(30,185,128,0.5); }
+.int-section{ padding:80px 0; }
+.int-section-alt{ padding:80px 0; background:#162e48; }
+.int-sec-label{ font-size:11px; font-weight:800; color:#1EB980; letter-spacing:2px; text-transform:uppercase; margin-bottom:12px; }
+.int-sec-title{ font-size:clamp(28px,3.5vw,40px); font-weight:900; color:#fff; margin:0 0 14px; letter-spacing:-0.5px; }
+.int-sec-sub{ font-size:16px; color:rgba(255,255,255,0.5); margin:0 0 48px; line-height:1.7; max-width:560px; }
+.int-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
+.int-grid-4{ display:grid; grid-template-columns:repeat(4,1fr); gap:20px; }
+@media(max-width:900px){ .int-grid{ grid-template-columns:1fr 1fr; } .int-grid-4{ grid-template-columns:1fr 1fr; } }
+@media(max-width:520px){ .int-grid{ grid-template-columns:1fr; } .int-grid-4{ grid-template-columns:1fr; } }
+.int-card{
+  background:#1a3654; border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px; padding:28px 24px; transition:all .2s;
+}
+.int-card:hover{ background:#1e3f64; border-color:rgba(30,185,128,0.25); transform:translateY(-3px); }
+.int-card-icon{ font-size:28px; margin-bottom:14px; }
+.int-card-cat{ font-size:10px; font-weight:700; color:#1EB980; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
+.int-card-name{ font-size:16px; font-weight:700; color:#fff; margin-bottom:8px; }
+.int-card-desc{ font-size:13px; color:rgba(255,255,255,0.5); line-height:1.6; }
+.int-feat-card{
+  background:#1a3654; border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px; padding:28px 24px;
+}
+.int-feat-title{ font-size:16px; font-weight:700; color:#fff; margin-bottom:18px; }
+.int-check{ display:flex; align-items:center; gap:10px; margin-bottom:10px; font-size:14px; color:rgba(255,255,255,0.65); }
+.int-check-dot{ width:6px; height:6px; border-radius:50%; background:#1EB980; flex-shrink:0; }
+.int-cta{ padding:80px 0; text-align:center; background:#0a1622; }
+.int-cta-title{ font-size:clamp(28px,4vw,42px); font-weight:900; color:#fff; margin:0 0 14px; letter-spacing:-0.5px; }
+.int-cta-sub{ font-size:16px; color:rgba(255,255,255,0.5); margin:0 0 36px; }
+.int-btn-outline{
+  padding:13px 28px; font-size:14px; font-weight:600; font-family:inherit;
+  color:#1EB980; background:transparent; border:1.5px solid #1EB980; border-radius:999px;
+  cursor:pointer; transition:all .2s;
+}
+.int-btn-outline:hover{ background:#1EB980; color:#fff; }
+`;
+
+const INTEGRATIONS = [
+  { icon:'🔐', name:'Google OAuth',    cat:'Authentication', desc:'One-click login with Google account. Secure SSO across all users.' },
+  { icon:'📧', name:'SMTP Email',       cat:'Email',           desc:'Send emails directly from CRM with your own SMTP or shared service.' },
+  { icon:'📥', name:'IMAP Sync',        cat:'Email',           desc:'Real-time email sync — receive and track emails within the CRM.' },
+  { icon:'💬', name:'Twilio SMS',       cat:'Communication',   desc:'Send SMS messages to leads and contacts directly from CRM.' },
+  { icon:'✅', name:'ZeroBounce',       cat:'Verification',    desc:'Verify email addresses to maintain clean, high-quality lead data.' },
+  { icon:'📞', name:'Numverify',        cat:'Verification',    desc:'Validate phone numbers for accurate and reliable contact data.' },
+  { icon:'💳', name:'Razorpay',         cat:'Payments',        desc:'Collect subscription payments and manage billing cycles end-to-end.' },
+  { icon:'🤖', name:'Gemini AI',        cat:'AI',              desc:'AI-powered lead scoring, email drafts, and revenue forecasting.' },
+  { icon:'🔔', name:'Webhook Support',  cat:'Automation',      desc:'Trigger external workflows on CRM events via real-time webhooks.' },
+  { icon:'📊', name:'Google Analytics', cat:'Analytics',       desc:'Track user behaviour and campaign performance within the platform.' },
+  { icon:'🔒', name:'JWT Auth',         cat:'Security',        desc:'Secure token-based authentication for every API request.' },
+  { icon:'🌐', name:'REST APIs',        cat:'Developer',       desc:'Full REST API access to build custom integrations and automate workflows.' },
+];
+
+const CATEGORIES = [
+  { title:'Email & Communication', items:['Send emails from CRM','IMAP sync for incoming emails','Email templates & tracking','Bulk email campaigns','Twilio SMS messaging','Custom SMTP support'] },
+  { title:'AI & Automation', items:['Gemini AI lead scoring','AI email draft generation','Revenue forecasting','Webhook-based automation','Trigger on CRM events','Custom workflow rules'] },
+  { title:'Payments & Security', items:['Razorpay subscription billing','Automated invoice generation','JWT secure authentication','Google OAuth SSO','Email address verification','Phone number validation'] },
+];
 
 const Integrations = () => {
   const navigate = useNavigate();
-
-  const integrations = [
-    {
-      name: "Google OAuth",
-      icon: "🔐",
-      category: "Authentication",
-      description: "One-click login with your Google account"
-    },
-    {
-      name: "SMTP Email",
-      icon: "📧",
-      category: "Email",
-      description: "Send emails directly from CRM with your own SMTP or our shared service"
-    },
-    {
-      name: "IMAP Sync",
-      icon: "📥",
-      category: "Email",
-      description: "Real-time email sync - receive and track emails within CRM"
-    },
-    {
-      name: "Twilio SMS",
-      icon: "💬",
-      category: "Communication",
-      description: "Send SMS messages to leads and contacts directly"
-    },
-    {
-      name: "ZeroBounce",
-      icon: "✅",
-      category: "Verification",
-      description: "Verify email addresses to maintain clean lead data"
-    },
-    {
-      name: "Numverify",
-      icon: "📞",
-      category: "Verification",
-      description: "Validate phone numbers for accurate contact data"
-    }
-  ];
-
-  const features = [
-    {
-      title: "Email Integration",
-      items: [
-        "Send emails from CRM",
-        "IMAP sync for incoming emails",
-        "Email templates",
-        "Track emails",
-        "Bulk email campaigns"
-      ]
-    },
-    {
-      title: "Communication",
-      items: [
-        "SMS messaging via Twilio",
-        "Bulk messaging",
-        "Message personalization",
-        "Contact management",
-        "Activity tracking"
-      ]
-    },
-    {
-      title: "Verification",
-      items: [
-        "Email verification",
-        "Phone number validation",
-        "Lead validation",
-        "Bounce prevention",
-        "Data quality"
-      ]
-    }
-  ];
-
-  const css = `
-    * { box-sizing: border-box; }
-    .int-page { overflow-x: hidden; }
-    @media(max-width:768px){
-      .int-page section { padding-top: 60px !important; padding-bottom: 60px !important; padding-left: 16px !important; padding-right: 16px !important; }
-      .int-page h1 { font-size: clamp(28px,8vw,48px) !important; }
-      .int-page h2 { font-size: clamp(24px,6vw,36px) !important; }
-      .int-page p { font-size: 15px !important; }
-    }
-    @media(max-width:480px){
-      .int-page section { padding-top: 40px !important; padding-bottom: 40px !important; padding-left: 12px !important; padding-right: 12px !important; }
-      .int-page h1 { font-size: 26px !important; }
-      .int-page h2 { font-size: 22px !important; }
-    }
-  `;
-
   return (
-    <div className="min-h-screen bg-[#0f172a] int-page">
-      <style>{css}</style>
-      {/* Navigation */}
-      <SharedHeader />
+    <div className="int-wrap">
+      <style>{CSS}</style>
+      <SharedHeader/>
 
-      {/* Hero Section */}
-      <section className="py-20 bg-[#0f172a] text-white relative overflow-hidden">
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-600 rounded-full filter blur-3xl opacity-10"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-600 rounded-full filter blur-3xl opacity-10"></div>
-
-        <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
-          <div className="inline-block px-4 py-2 bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-full text-sm font-semibold mb-6 backdrop-blur-sm">
-            INTEGRATIONS
-          </div>
-          <h1 className="text-5xl md:text-6xl font-extrabold mb-6 text-white">
-            Connected Services
-          </h1>
-          <p className="text-xl md:text-2xl text-gray-400 max-w-3xl mx-auto">
-            Powerful integrations to supercharge your CRM workflow
-          </p>
+      {/* Hero */}
+      <section className="int-hero" style={{paddingTop:100}}>
+        <div className="int-container" style={{position:'relative',zIndex:1}}>
+          <div className="int-badge">⚡ Integrations</div>
+          <h1 className="int-h1">Connect Everything.<br/>Work Smarter.</h1>
+          <p className="int-hero-sub">Unified CRM connects with the tools your team already uses — email, payments, AI, and more. No extra setup needed.</p>
+          <button className="int-btn-primary" onClick={()=>navigate('/register')}>Start Free Trial →</button>
         </div>
       </section>
 
-      {/* Integrations Grid */}
-      <section className="py-20 bg-[#1e293b]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-extrabold text-white mb-4">Available Integrations</h2>
-            <p className="text-xl text-gray-400">Connect with the tools you use</p>
+      {/* Integrations grid */}
+      <section className="int-section">
+        <div className="int-container">
+          <div style={{marginBottom:48}}>
+            <div className="int-sec-label">Available Now</div>
+            <h2 className="int-sec-title">All Integrations</h2>
+            <p className="int-sec-sub">Built-in integrations — no third-party tools or extra subscriptions required.</p>
           </div>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {integrations.map((integration, index) => (
-              <div
-                key={index}
-                className="bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-lg hover:bg-white/10 transition transform hover:-translate-y-2"
-              >
-                <div className="text-4xl mb-3">{integration.icon}</div>
-                <h3 className="text-lg font-bold text-white mb-1">{integration.name}</h3>
-                <span className="text-xs text-purple-400 font-medium">{integration.category}</span>
-                <p className="text-gray-400 text-sm mt-2">{integration.description}</p>
+          <div className="int-grid-4">
+            {INTEGRATIONS.map((ig,i) => (
+              <div key={i} className="int-card">
+                <div className="int-card-icon">{ig.icon}</div>
+                <div className="int-card-cat">{ig.cat}</div>
+                <div className="int-card-name">{ig.name}</div>
+                <div className="int-card-desc">{ig.desc}</div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* Feature Breakdown */}
-      <section className="py-20 bg-[#0f172a]">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-extrabold text-white mb-4">What You Can Do</h2>
+      {/* Feature breakdown */}
+      <section className="int-section-alt">
+        <div className="int-container">
+          <div style={{textAlign:'center',marginBottom:48}}>
+            <div className="int-sec-label">Capabilities</div>
+            <h2 className="int-sec-title">What You Can Do</h2>
           </div>
-          <div className="grid md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <div key={index} className="bg-white/5 border border-white/10 rounded-2xl p-8 backdrop-blur-lg">
-                <h3 className="text-xl font-bold text-white mb-6">{feature.title}</h3>
-                <ul className="space-y-3">
-                  {feature.items.map((item, idx) => (
-                    <li key={idx} className="flex items-center gap-3 text-gray-400">
-                      <span className="text-green-400">✓</span>
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+          <div className="int-grid">
+            {CATEGORIES.map((cat,i) => (
+              <div key={i} className="int-feat-card">
+                <div className="int-feat-title">{cat.title}</div>
+                {cat.items.map((item,j) => (
+                  <div key={j} className="int-check">
+                    <div className="int-check-dot"/>
+                    {item}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-[#1e293b] relative overflow-hidden">
-        <div className="max-w-4xl mx-auto px-6 text-center relative z-10">
-          <h2 className="text-4xl font-extrabold text-white mb-6">
-            Ready to Connect?
-          </h2>
-          <p className="text-xl text-gray-400 mb-8">
-            Start using all integrations with your free trial
-          </p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <button
-              onClick={() => navigate("/register")}
-              className="px-8 py-4 bg-gradient-to-r from-orange-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-lg transition transform hover:scale-105"
-            >
-              Start Free Trial
-            </button>
-            <button
-              onClick={() => navigate("/")}
-              className="px-8 py-4 bg-white/5 border border-white/10 text-gray-300 font-bold rounded-xl hover:bg-white/10 transition"
-            >
-              Back to Home
-            </button>
+      {/* CTA */}
+      <section className="int-cta">
+        <div className="int-container">
+          <div className="int-sec-label" style={{justifyContent:'center',display:'flex',marginBottom:16}}>Get Started</div>
+          <h2 className="int-cta-title">Ready to Connect?</h2>
+          <p className="int-cta-sub">All integrations included in every plan. No extra cost, no extra setup.</p>
+          <div style={{display:'flex',gap:14,justifyContent:'center',flexWrap:'wrap'}}>
+            <button className="int-btn-primary" onClick={()=>navigate('/register')}>Start Free Trial →</button>
+            <button className="int-btn-outline" onClick={()=>navigate('/')}>← Back to Home</button>
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <SharedFooter />
+      <SharedFooter/>
     </div>
   );
 };

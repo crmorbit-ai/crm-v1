@@ -13,7 +13,7 @@ const pwChecks = (pw) => ({
   special:   /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw),
 });
 const strengthScore = (c) => Object.values(c).filter(Boolean).length;
-const strengthLabel = (s) => s <= 2 ? { label:'Weak', color:'#ef4444' } : s <= 3 ? { label:'Fair', color:'#f59e0b' } : s === 4 ? { label:'Good', color:'#3b82f6' } : { label:'Strong', color:'#10b981' };
+const strengthLabel = (s) => s <= 2 ? { label:'Weak', color:'#ef4444' } : s <= 3 ? { label:'Fair', color:'#f59e0b' } : s === 4 ? { label:'Good', color:'#1EB980' } : { label:'Strong', color:'#10b981' };
 
 const EyeIcon = ({ open }) => open
   ? <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
@@ -30,7 +30,7 @@ const StepDot = ({ step, current }) => (
   <div style={{
     width: 28, height: 28, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
     fontSize: 12, fontWeight: 700, flexShrink: 0,
-    background: step < current ? '#10b981' : step === current ? 'linear-gradient(135deg,#7c3aed,#3b82f6)' : 'rgba(255,255,255,0.08)',
+    background: step < current ? '#10b981' : step === current ? 'linear-gradient(135deg,#1EB980,#1EB980)' : 'rgba(255,255,255,0.08)',
     color: step <= current ? '#fff' : 'rgba(255,255,255,0.3)',
     border: step === current ? 'none' : '1px solid rgba(255,255,255,0.1)',
   }}>
@@ -152,12 +152,12 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div style={{ minHeight:'100vh', background:'#0f172a', display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 20px', position:'relative', overflow:'hidden', fontFamily:"'Inter',-apple-system,sans-serif" }}>
+    <div style={{ minHeight:'100vh', background:'#0f1e2e', display:'flex', alignItems:'center', justifyContent:'center', padding:'40px 20px', position:'relative', overflow:'hidden', fontFamily:"'Inter',-apple-system,sans-serif" }}>
       <style>{`@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'); input::placeholder{color:rgba(255,255,255,0.22);}`}</style>
 
       {/* bg glows */}
-      <div style={{ position:'absolute', top:'-20%', left:'-10%', width:500, height:500, background:'radial-gradient(circle,rgba(139,92,246,0.15) 0%,transparent 70%)', borderRadius:'50%', filter:'blur(60px)', pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:'-20%', right:'-10%', width:500, height:500, background:'radial-gradient(circle,rgba(59,130,246,0.15) 0%,transparent 70%)', borderRadius:'50%', filter:'blur(60px)', pointerEvents:'none' }} />
+      <div style={{ position:'absolute', top:'-20%', left:'-10%', width:500, height:500, background:'radial-gradient(circle,rgba(30,185,128,0.07) 0%,transparent 70%)', borderRadius:'50%', filter:'blur(60px)', pointerEvents:'none' }} />
+      <div style={{ position:'absolute', bottom:'-20%', right:'-10%', width:500, height:500, background:'radial-gradient(circle,rgba(30,185,128,0.05) 0%,transparent 70%)', borderRadius:'50%', filter:'blur(60px)', pointerEvents:'none' }} />
 
       <div style={{ width:'100%', maxWidth:420, position:'relative', zIndex:1 }}>
 
@@ -212,14 +212,14 @@ export default function ForgotPassword() {
               <input
                 type="email" value={email} required autoFocus maxLength={100}
                 onChange={e => { setEmail(e.target.value); setError(''); }}
-                onFocus={e => { e.target.style.borderColor='#8b5cf6'; e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,0.1)'; }}
+                onFocus={e => { e.target.style.borderColor='#1EB980'; e.target.style.boxShadow='0 0 0 3px rgba(30,185,128,0.1)'; }}
                 onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.1)'; e.target.style.boxShadow='none'; }}
                 placeholder="Enter your registered email"
                 style={inp}
               />
             </div>
             <button type="submit" disabled={loading}
-              style={{ width:'100%', padding:'12px', fontSize:15, fontWeight:700, color:'#fff', background: loading?'#4b5563':'linear-gradient(135deg,#8b5cf6,#3b82f6)', border:'none', borderRadius:10, cursor: loading?'not-allowed':'pointer', fontFamily:'inherit', boxShadow: loading?'none':'0 4px 15px rgba(139,92,246,0.3)' }}>
+              style={{ width:'100%', padding:'12px', fontSize:15, fontWeight:700, color:'#fff', background: loading?'#4b5563':'linear-gradient(135deg,#1EB980,#1EB980)', border:'none', borderRadius:10, cursor: loading?'not-allowed':'pointer', fontFamily:'inherit', boxShadow: loading?'none':'0 4px 15px rgba(30,185,128,0.3)' }}>
               {loading ? 'Sending OTP…' : 'Send OTP →'}
             </button>
           </form>
@@ -231,7 +231,7 @@ export default function ForgotPassword() {
 
             {/* OTP Expiry Timer — prominent */}
             {otpExpiry > 0 && (
-              <div style={{ marginBottom:16, borderRadius:12, overflow:'hidden', border: otpExpiry <= 60 ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(139,92,246,0.2)', background: otpExpiry <= 60 ? 'rgba(239,68,68,0.08)' : 'rgba(139,92,246,0.08)' }}>
+              <div style={{ marginBottom:16, borderRadius:12, overflow:'hidden', border: otpExpiry <= 60 ? '1px solid rgba(239,68,68,0.3)' : '1px solid rgba(139,92,246,0.2)', background: otpExpiry <= 60 ? 'rgba(239,68,68,0.08)' : 'rgba(30,185,128,0.08)' }}>
                 <div style={{ padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ fontSize:18 }}>{otpExpiry <= 60 ? '⚠️' : '⏱️'}</span>
@@ -239,7 +239,7 @@ export default function ForgotPassword() {
                       <div style={{ fontSize:12, fontWeight:600, color: otpExpiry <= 60 ? '#f87171' : 'rgba(255,255,255,0.5)', marginBottom:2 }}>
                         {otpExpiry <= 60 ? 'OTP expiring soon!' : 'OTP valid for'}
                       </div>
-                      <div style={{ fontSize:22, fontWeight:900, fontVariantNumeric:'tabular-nums', letterSpacing:1, color: otpExpiry <= 60 ? '#ef4444' : '#a78bfa' }}>
+                      <div style={{ fontSize:22, fontWeight:900, fontVariantNumeric:'tabular-nums', letterSpacing:1, color: otpExpiry <= 60 ? '#ef4444' : '#1EB980' }}>
                         {String(Math.floor(otpExpiry / 60)).padStart(2,'0')}:{String(otpExpiry % 60).padStart(2,'0')}
                       </div>
                     </div>
@@ -250,7 +250,7 @@ export default function ForgotPassword() {
                 </div>
                 {/* Progress bar */}
                 <div style={{ height:3, background:'rgba(255,255,255,0.06)' }}>
-                  <div style={{ height:'100%', borderRadius:3, transition:'width 1s linear', background: otpExpiry <= 60 ? '#ef4444' : 'linear-gradient(90deg,#7c3aed,#3b82f6)', width: `${(otpExpiry / 600) * 100}%` }} />
+                  <div style={{ height:'100%', borderRadius:3, transition:'width 1s linear', background: otpExpiry <= 60 ? '#ef4444' : 'linear-gradient(90deg,#1EB980,#1EB980)', width: `${(otpExpiry / 600) * 100}%` }} />
                 </div>
               </div>
             )}
@@ -267,7 +267,7 @@ export default function ForgotPassword() {
               <input
                 type="text" value={otp} required autoFocus maxLength={6}
                 onChange={e => { setOtp(e.target.value.replace(/\D/g, '').slice(0, 6)); setError(''); }}
-                onFocus={e => { e.target.style.borderColor='#8b5cf6'; e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,0.1)'; }}
+                onFocus={e => { e.target.style.borderColor='#1EB980'; e.target.style.boxShadow='0 0 0 3px rgba(30,185,128,0.1)'; }}
                 onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.1)'; e.target.style.boxShadow='none'; }}
                 placeholder="• • • • • •"
                 style={{ ...inp, fontSize:28, letterSpacing:10, textAlign:'center', fontWeight:700 }}
@@ -285,7 +285,7 @@ export default function ForgotPassword() {
               )}
             </div>
             <button type="submit" disabled={loading || otp.length !== 6 || otpExpiry === 0}
-              style={{ width:'100%', padding:'12px', fontSize:15, fontWeight:700, color:'#fff', background: (loading || otp.length !== 6 || otpExpiry === 0)?'#4b5563':'linear-gradient(135deg,#8b5cf6,#3b82f6)', border:'none', borderRadius:10, cursor:(loading || otp.length !== 6 || otpExpiry === 0)?'not-allowed':'pointer', fontFamily:'inherit', boxShadow:(loading || otp.length !== 6 || otpExpiry === 0)?'none':'0 4px 15px rgba(139,92,246,0.3)', marginBottom:12 }}>
+              style={{ width:'100%', padding:'12px', fontSize:15, fontWeight:700, color:'#fff', background: (loading || otp.length !== 6 || otpExpiry === 0)?'#4b5563':'linear-gradient(135deg,#1EB980,#1EB980)', border:'none', borderRadius:10, cursor:(loading || otp.length !== 6 || otpExpiry === 0)?'not-allowed':'pointer', fontFamily:'inherit', boxShadow:(loading || otp.length !== 6 || otpExpiry === 0)?'none':'0 4px 15px rgba(30,185,128,0.3)', marginBottom:12 }}>
               {loading ? 'Verifying…' : otpExpiry === 0 ? 'OTP Expired — Resend to continue' : 'Verify OTP →'}
             </button>
             <button type="button" onClick={() => { setStep(1); setOtp(''); setError(''); }}
@@ -298,7 +298,7 @@ export default function ForgotPassword() {
               <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6 }}>
                 <span style={{ fontSize:13, color:'rgba(255,255,255,0.35)' }}>Didn't receive the code?</span>
                 <button type="button" onClick={handleResendOTP} disabled={loading || countdown > 0}
-                  style={{ background:'none', border:'none', cursor: (loading || countdown > 0) ? 'not-allowed' : 'pointer', color: countdown > 0 ? 'rgba(255,255,255,0.25)' : '#a78bfa', fontWeight:700, fontSize:13, fontFamily:'inherit', padding:0, textDecoration: countdown > 0 ? 'none' : 'underline' }}>
+                  style={{ background:'none', border:'none', cursor: (loading || countdown > 0) ? 'not-allowed' : 'pointer', color: countdown > 0 ? 'rgba(255,255,255,0.25)' : '#1EB980', fontWeight:700, fontSize:13, fontFamily:'inherit', padding:0, textDecoration: countdown > 0 ? 'none' : 'underline' }}>
                   {loading ? 'Sending…' : 'Resend OTP'}
                 </button>
               </div>
@@ -316,7 +316,7 @@ export default function ForgotPassword() {
                 <input
                   type={showPw?'text':'password'} value={password} required maxLength={PASS_MAX} autoFocus
                   onChange={e => { setPassword(e.target.value); setError(''); }}
-                  onFocus={e => { e.target.style.borderColor='#8b5cf6'; e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,0.1)'; }}
+                  onFocus={e => { e.target.style.borderColor='#1EB980'; e.target.style.boxShadow='0 0 0 3px rgba(30,185,128,0.1)'; }}
                   onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.1)'; e.target.style.boxShadow='none'; }}
                   placeholder={`Min ${PASS_MIN} chars · A-Z · 0-9 · symbol`}
                   style={{ ...inp, paddingRight:44 }}
@@ -360,7 +360,7 @@ export default function ForgotPassword() {
                 <input
                   type={showCPw?'text':'password'} value={confirmPassword} required maxLength={PASS_MAX}
                   onChange={e => { setConfirm(e.target.value); setError(''); }}
-                  onFocus={e => { e.target.style.borderColor='#8b5cf6'; e.target.style.boxShadow='0 0 0 3px rgba(139,92,246,0.1)'; }}
+                  onFocus={e => { e.target.style.borderColor='#1EB980'; e.target.style.boxShadow='0 0 0 3px rgba(30,185,128,0.1)'; }}
                   onBlur={e => { e.target.style.borderColor='rgba(255,255,255,0.1)'; e.target.style.boxShadow='none'; }}
                   placeholder="Re-enter new password"
                   style={{ ...inp, paddingRight:44, borderColor: pwMatch?'rgba(16,185,129,0.5)': pwNoMatch?'rgba(239,68,68,0.5)':'rgba(255,255,255,0.1)' }}
@@ -375,7 +375,7 @@ export default function ForgotPassword() {
             </div>
 
             <button type="submit" disabled={loading}
-              style={{ width:'100%', padding:'12px', fontSize:15, fontWeight:700, color:'#fff', background: loading?'#4b5563':'linear-gradient(135deg,#8b5cf6,#3b82f6)', border:'none', borderRadius:10, cursor: loading?'not-allowed':'pointer', fontFamily:'inherit', boxShadow: loading?'none':'0 4px 15px rgba(139,92,246,0.3)' }}>
+              style={{ width:'100%', padding:'12px', fontSize:15, fontWeight:700, color:'#fff', background: loading?'#4b5563':'linear-gradient(135deg,#1EB980,#1EB980)', border:'none', borderRadius:10, cursor: loading?'not-allowed':'pointer', fontFamily:'inherit', boxShadow: loading?'none':'0 4px 15px rgba(30,185,128,0.3)' }}>
               {loading ? 'Resetting Password…' : 'Reset Password →'}
             </button>
           </form>

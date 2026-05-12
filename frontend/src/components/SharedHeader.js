@@ -18,22 +18,28 @@ const CSS = `
   }
   .sh-inner {
     width: 100%; padding: 0 24px 0 20px;
-    display: flex; align-items: center; justify-content: space-between;
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
   }
   .sh-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-shrink: 0; }
-  .sh-links { display: flex; align-items: center; gap: 4px; }
+  /* Center links — same as landing page */
+  .sh-links {
+    display: flex; align-items: center; gap: 1px;
+    flex: 1; justify-content: center;
+  }
   .sh-link {
-    padding: 7px 14px; font-size: 14px; font-weight: 500;
-    color: rgba(255,255,255,0.75); background: none; border: none;
-    cursor: pointer; border-radius: 8px; transition: all 0.18s;
+    padding: 7px 13px; font-size: 14px; font-weight: 500;
+    color: rgba(255,255,255,0.72); background: none; border: none;
+    cursor: pointer; border-radius: 7px; transition: all 0.18s;
     text-decoration: none; font-family: inherit; white-space: nowrap;
   }
   .sh-link:hover { color: #fff; background: rgba(255,255,255,0.07); }
-  .sh-sep { width: 1px; height: 18px; background: rgba(255,255,255,0.12); margin: 0 6px; }
+  .sh-sep { width: 1px; height: 18px; background: rgba(255,255,255,0.12); margin: 0 8px; }
+  .sh-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
   .sh-outline {
-    padding: 8px 18px; font-size: 14px; font-weight: 500;
-    color: rgba(255,255,255,0.85); background: none; border: none;
+    padding: 8px 16px; font-size: 14px; font-weight: 500;
+    color: rgba(255,255,255,0.82); background: none; border: none;
     border-radius: 999px; cursor: pointer; transition: all 0.18s; font-family: inherit;
+    white-space: nowrap;
   }
   .sh-outline:hover { color: #fff; }
   .sh-primary {
@@ -42,19 +48,12 @@ const CSS = `
     cursor: pointer; transition: all 0.25s ease; font-family: inherit;
     white-space: nowrap; box-shadow: 0 2px 12px rgba(30,185,128,0.38);
   }
-  .sh-primary:hover { background: #17a46f; transform: translateY(-1px); }
-  .sh-back {
-    display: flex; align-items: center; gap: 6px;
-    padding: 7px 14px; font-size: 14px; font-weight: 500;
-    color: rgba(255,255,255,0.6); background: none; border: none;
-    cursor: pointer; border-radius: 8px; transition: all 0.18s; font-family: inherit;
-  }
-  .sh-back:hover { color: #fff; background: rgba(255,255,255,0.07); }
+  .sh-primary:hover { background: #17a46f; transform: translateY(-1px); box-shadow: 0 4px 18px rgba(30,185,128,0.52); }
 
   /* Hamburger */
   .sh-burger {
     display: none; flex-direction: column; gap: 5px;
-    background: none; border: none; cursor: pointer; padding: 6px;
+    background: none; border: none; cursor: pointer; padding: 6px; flex-shrink: 0;
   }
   .sh-burger span {
     display: block; width: 22px; height: 2px;
@@ -101,12 +100,10 @@ const CSS = `
     box-shadow: 0 4px 16px rgba(30,185,128,0.4);
   }
 
-  @media(max-width:768px) {
-    .sh-links { display: none; }
-    .sh-inner { padding: 0 16px; }
-    .sh-burger { display: flex; }
-  }
-  @media(min-width:769px) { .sh-drawer { display: none; } }
+  @media(max-width:1024px) { .sh-links { display: none; } }
+  @media(max-width:1024px) { .sh-burger { display: flex; } }
+  @media(min-width:1025px) { .sh-drawer { display: none; } }
+  @media(max-width:1024px) { .sh-inner { padding: 0 16px; } }
 `;
 
 export default function SharedHeader({ backTo, backLabel }) {
@@ -138,21 +135,18 @@ export default function SharedHeader({ backTo, backLabel }) {
             </div>
           </div>
 
-          {/* Desktop nav */}
+          {/* Desktop nav — centered like landing page */}
           <div className="sh-links">
-            {backTo && (
-              <>
-                <button className="sh-back" onClick={() => navigate(backTo)}>← {backLabel || 'Back'}</button>
-                <div className="sh-sep" />
-              </>
-            )}
             <button className="sh-link" onClick={() => go('/')}>Home</button>
             <button className="sh-link" onClick={() => go('/all-features')}>Products</button>
             <button className="sh-link" onClick={() => go('/platform')}>Platform</button>
-            <button className="sh-link" onClick={() => go('/industries')}>Industries</button>
-            <button className="sh-link" onClick={() => go('/about')}>About</button>
+            <button className="sh-link" onClick={() => go('/about')}>About Us</button>
+            <button className="sh-link" onClick={() => go('/contact')}>Contact Us</button>
             <button className="sh-link" onClick={() => go('/help')}>Support</button>
-            <button className="sh-link" onClick={() => go('/contact')}>Contact</button>
+          </div>
+
+          {/* Right actions */}
+          <div className="sh-actions">
             <div className="sh-sep" />
             <button className="sh-outline" onClick={() => go('/login')}>Sign In</button>
             <button className="sh-primary" onClick={() => go('/register')}>Get Started →</button>
@@ -170,11 +164,10 @@ export default function SharedHeader({ backTo, backLabel }) {
         <button className="sh-drawer-link" onClick={() => go('/')}>🏠 Home</button>
         <button className="sh-drawer-link" onClick={() => go('/all-features')}>📦 Products</button>
         <button className="sh-drawer-link" onClick={() => go('/platform')}>🏗️ Platform</button>
-        <button className="sh-drawer-link" onClick={() => go('/industries')}>🏭 Industries</button>
-        <button className="sh-drawer-link" onClick={() => go('/demo')}>🎬 View a Demo</button>
         <button className="sh-drawer-link" onClick={() => go('/about')}>ℹ️ About Us</button>
-        <button className="sh-drawer-link" onClick={() => go('/contact')}>📞 Contact</button>
-        <button className="sh-drawer-link" onClick={() => go('/reseller/register')}>🤝 Become a Reseller</button>
+        <button className="sh-drawer-link" onClick={() => go('/contact')}>📞 Contact Us</button>
+        <button className="sh-drawer-link" onClick={() => go('/demo')}>🎬 View a Demo</button>
+        <button className="sh-drawer-link" onClick={() => go('/partners')}>🤝 Become a Reseller</button>
         <div className="sh-drawer-actions">
           <button className="sh-drawer-signin" onClick={() => go('/login')}>Sign In</button>
           <button className="sh-drawer-cta" onClick={() => go('/register')}>Get Started Free →</button>

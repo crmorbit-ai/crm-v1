@@ -304,6 +304,137 @@ const CSS = `
       radial-gradient(ellipse at 5% 90%, #0a1622 0%, transparent 42%),
       linear-gradient(150deg, #0a1622 0%, #0d1c2e 15%, #10243a 30%, #132d46 45%, #163654 58%, #194060 68%, #1c4e62 76%, #1d5c58 84%, #1e7050 91%, #1EB980 100%);
   }
+
+  /* ── CURSOR GLOW ── */
+  .lp-cursor-glow {
+    position:fixed; pointer-events:none; z-index:9999; border-radius:50%;
+    width:400px; height:400px; margin-left:-200px; margin-top:-200px;
+    background:radial-gradient(circle, rgba(30,185,128,0.10) 0%, rgba(30,185,128,0.04) 35%, transparent 70%);
+    filter:blur(2px); transition:opacity 0.3s;
+  }
+
+  /* ── FLOWING GRADIENT TEXT ── */
+  @keyframes gradientFlow {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  .hero-rotate-word {
+    background: linear-gradient(270deg, #1EB980, #4ade80, #22d3ee, #1EB980, #86efac) !important;
+    background-size: 300% 300% !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    background-clip: text !important;
+    animation: gradientFlow 4s ease infinite !important;
+  }
+
+  /* ── 3D CARD TILT ── */
+  .tilt-card {
+    transform-style: preserve-3d;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    will-change: transform;
+  }
+  .tilt-card:hover {
+    box-shadow: 0 24px 60px rgba(0,0,0,0.4), 0 0 40px rgba(30,185,128,0.12) !important;
+  }
+  .tilt-card-shine {
+    position:absolute; inset:0; border-radius:inherit;
+    background: radial-gradient(circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.06) 0%, transparent 65%);
+    pointer-events:none; z-index:2;
+  }
+
+  /* ── 1. Floating hero orbs ── */
+  @keyframes floatOrb1 {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%      { transform: translate(30px,-40px) scale(1.08); }
+    66%      { transform: translate(-20px,20px) scale(0.95); }
+  }
+  @keyframes floatOrb2 {
+    0%,100% { transform: translate(0,0) scale(1); }
+    40%     { transform: translate(-35px,25px) scale(1.05); }
+    70%     { transform: translate(20px,-30px) scale(0.97); }
+  }
+  @keyframes floatOrb3 {
+    0%,100% { transform: translate(0,0); }
+    50%     { transform: translate(25px,35px); }
+  }
+  .hero-orb1 {
+    position:absolute; width:560px; height:560px; border-radius:50%;
+    background:radial-gradient(ellipse,rgba(30,185,128,0.22) 0%,transparent 65%);
+    top:-15%; right:-8%; pointer-events:none; filter:blur(48px); z-index:1;
+    animation: floatOrb1 12s ease-in-out infinite;
+  }
+  .hero-orb2 {
+    position:absolute; width:420px; height:420px; border-radius:50%;
+    background:radial-gradient(ellipse,rgba(30,185,128,0.14) 0%,transparent 65%);
+    bottom:-10%; left:-5%; pointer-events:none; filter:blur(55px); z-index:1;
+    animation: floatOrb2 16s ease-in-out infinite;
+  }
+  .hero-orb3 {
+    position:absolute; width:300px; height:300px; border-radius:50%;
+    background:radial-gradient(ellipse,rgba(74,222,128,0.12) 0%,transparent 65%);
+    top:20%; left:15%; pointer-events:none; filter:blur(65px); z-index:1;
+    animation: floatOrb3 20s ease-in-out infinite;
+  }
+
+  /* ── 2. Scroll-reveal ── */
+  .reveal {
+    opacity:0; transform:translateY(36px);
+    transition: opacity 0.75s cubic-bezier(0.4,0,0.2,1), transform 0.75s cubic-bezier(0.4,0,0.2,1);
+  }
+  .reveal.visible { opacity:1; transform:translateY(0); }
+  .reveal-d1 { transition-delay:0.1s; }
+  .reveal-d2 { transition-delay:0.2s; }
+  .reveal-d3 { transition-delay:0.3s; }
+  .reveal-d4 { transition-delay:0.4s; }
+
+  /* ── 4. Tab slide ── */
+  .sp-slide-in {
+    animation: slideInTab 0.38s cubic-bezier(0.4,0,0.2,1);
+  }
+  @keyframes slideInTab {
+    from { opacity:0; transform:translateX(28px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+
+  /* ── 5. Dual marquee ── */
+  .marquee-wrap { padding:0; overflow:hidden; border-top:1px solid rgba(255,255,255,0.05); }
+  .marquee-row { padding:12px 0; overflow:hidden; }
+  .marquee-row:first-child { border-bottom:1px solid rgba(255,255,255,0.06); }
+  .marquee-track { display:flex; gap:0; width:max-content; animation:marqueeRun 30s linear infinite; }
+  .marquee-track.reverse { animation:marqueeRunRev 28s linear infinite; }
+  .marquee-track:hover { animation-play-state:paused; }
+  @keyframes marqueeRunRev { from{transform:translateX(-50%)} to{transform:translateX(0)} }
+
+  /* ── 6. Badge pulse ── */
+  @keyframes badgePulse {
+    0%,100% { box-shadow:0 0 0 0 rgba(30,185,128,0.4); }
+    50%     { box-shadow:0 0 0 8px rgba(30,185,128,0); }
+  }
+  .sec-label.pulse-badge {
+    animation: badgePulse 2.5s ease-in-out infinite;
+  }
+
+  /* ── 7. Feature card stagger ── */
+  .stagger-card {
+    opacity:0; transform:translateY(28px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .stagger-card.visible { opacity:1; transform:translateY(0); }
+
+  /* Scroll progress bar */
+  .lp-scroll-bar {
+    position:fixed; top:0; left:0; height:3px; z-index:9999;
+    background:linear-gradient(90deg,#1EB980,#4ade80);
+    transition:width 0.08s linear;
+    box-shadow:0 0 10px rgba(30,185,128,0.7);
+  }
+
+  /* Floating orbs (page-level) */
+  .lp-orb {
+    position:fixed; border-radius:50%; pointer-events:none; z-index:0;
+    filter:blur(80px); transition:all 1s ease;
+  }
   .hero-inner { max-width: 1440px; margin: 0 auto; padding: 0 40px; position: relative; z-index: 2; }
   .hero-social-proof {
     display: inline-flex; align-items: center; gap: 12px;
@@ -324,11 +455,68 @@ const CSS = `
   .hero-h1 {
     font-size: clamp(42px, 6vw, 72px); font-weight: 700; line-height: 1.05;
     letter-spacing: -2px; margin: 0 0 28px; color: #fff;
+    animation: heroFadeUp 0.8s ease both;
   }
   .hero-h1 .grad1 {
-    color: #fff; background: none;
-    -webkit-text-fill-color: #fff;
+    color: #1EB980;
+    background: linear-gradient(135deg,#1EB980,#4ade80);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    animation: heroFadeUp 1s ease 0.2s both;
+    display: inline-block;
   }
+  @keyframes heroFadeUp {
+    from { opacity:0; transform:translateY(24px); }
+    to   { opacity:1; transform:translateY(0); }
+  }
+  .hero-sub { animation: heroFadeUp 0.9s ease 0.35s both; }
+  .hero-ctas { animation: heroFadeUp 0.9s ease 0.5s both; }
+  .hero-social-proof { animation: heroFadeUp 0.7s ease 0.1s both; }
+
+  /* Continuously rotating feature text */
+  .hero-rotate-wrap {
+    display:inline-block; height:1.15em; overflow:hidden; vertical-align:bottom;
+  }
+  .hero-rotate-track {
+    display:flex; flex-direction:column;
+    animation: rotateWords 9s cubic-bezier(0.4,0,0.2,1) infinite;
+  }
+  .hero-rotate-word {
+    height:1.15em; line-height:1.15em; white-space:nowrap;
+    background:linear-gradient(135deg,#1EB980,#4ade80);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  @keyframes rotateWords {
+    0%,16%  { transform:translateY(0); }
+    20%,36% { transform:translateY(-16.66%); }
+    40%,56% { transform:translateY(-33.33%); }
+    60%,76% { transform:translateY(-50%); }
+    80%,96% { transform:translateY(-66.66%); }
+    100%    { transform:translateY(-83.33%); }
+  }
+
+  /* Spotlight tabs — pill style like image 2 */
+  .sp-tabs-wrap {
+    display:flex; justify-content:center; padding:0 40px;
+  }
+  .sp-tabs {
+    display:inline-flex; gap:4px;
+    background:rgba(255,255,255,0.08);
+    border-radius:999px; padding:5px;
+    overflow-x:auto; scrollbar-width:none;
+  }
+  .sp-tabs::-webkit-scrollbar { display:none; }
+  .sp-tab {
+    padding:10px 24px; font-size:14px; font-weight:600; font-family:inherit;
+    color:rgba(255,255,255,0.55); background:none; border:none; cursor:pointer;
+    border-radius:999px; white-space:nowrap; transition:all .25s;
+  }
+  .sp-tab:hover { color:rgba(255,255,255,0.9); background:rgba(255,255,255,0.06); }
+  .sp-tab.active {
+    color:#0f1e2e; background:#e8f5e9;
+    box-shadow:0 2px 12px rgba(0,0,0,0.25);
+  }
+  .sp-content { animation: spFadeIn 0.35s ease; }
+  @keyframes spFadeIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
   .hero-sub {
     font-size: 19px; color: rgba(255,255,255,0.82); line-height: 1.65;
     max-width: 600px; margin: 0 0 44px; font-weight: 400;
@@ -370,12 +558,14 @@ const CSS = `
   .hero-card-sub { font-size: 13px; color: rgba(255,255,255,0.8); margin: 0 0 18px; line-height: 1.5; }
   .hero-card-modules { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .hero-card-module {
-    display: flex; align-items: center; justify-content: center; gap: 6px;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
     background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 9px; padding: 0 10px; font-size: 12px; font-weight: 600; color: #fff;
+    border-radius: 10px; padding: 8px 10px; font-size: 11px; font-weight: 700; color: #fff;
     cursor: pointer; transition: all 0.2s;
-    height: 52px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    height: 56px; width: 100%; box-sizing: border-box;
+    text-align: center; word-break: break-word; line-height: 1.35;
   }
+  .hero-card-module:hover { background: rgba(255,255,255,0.25); }
   .hero-card-module:hover { background: rgba(255,255,255,0.25); }
   .hero-card-link {
     display: flex; align-items: center; justify-content: space-between;
@@ -408,10 +598,7 @@ const CSS = `
   .stat-num { font-size: clamp(28px, 6vw, 52px); font-weight: 700; letter-spacing: -2px; line-height: 1; margin-bottom: 10px; color: #1EB980; white-space: nowrap; }
   .stat-lbl { font-size: 15px; color: rgba(255,255,255,0.65); font-weight: 500; }
 
-  /* Marquee */
-  .marquee-wrap { padding: 20px 0; overflow: hidden; border-top: 1px solid rgba(255,255,255,0.05); }
-  .marquee-track { display: flex; gap: 0; width: max-content; animation: marqueeRun 30s linear infinite; }
-  .marquee-track:hover { animation-play-state: paused; }
+  /* Marquee — defined in animation block above, no duplicates */
   @keyframes marqueeRun { from { transform: translateX(0); } to { transform: translateX(-50%); } }
   .marquee-chip {
     display: inline-flex; align-items: center; gap: 8px; padding: 8px 20px;
@@ -835,7 +1022,7 @@ const MODULES_SALES = [
 const MODULES_OPS = [
   { icon: '📄', label: 'RFI' },
   { icon: '💰', label: 'Quotations' },
-  { icon: '📦', label: 'Purchase Orders' },
+  { icon: '📦', label: 'Purchase Order' },
   { icon: '🧾', label: 'Invoices' },
 ];
 
@@ -885,6 +1072,11 @@ const LandingPage = () => {
   const [openDrop, setOpenDrop] = useState(null);
   const [megaCat, setMegaCat] = useState('featured');
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [spotlightTab, setSpotlightTab] = useState(0);
+  const [scrollProgress, setScrollProgress] = useState(0);
+  const [mouse, setMouse] = useState({ x: -999, y: -999 });
+  const [mouseSmooth, setMouseSmooth] = useState({ x: -999, y: -999 });
+  const mouseRef = useRef({ x: -999, y: -999 });
 
   useEffect(() => {
     document.body.style.overflow = mobileMenu ? 'hidden' : '';
@@ -899,8 +1091,12 @@ const LandingPage = () => {
   const c4 = useCounter(18, 1400, statsInView);
 
   useEffect(() => {
-    const onScroll = () => setIsScrolled(window.scrollY > 40);
-    window.addEventListener('scroll', onScroll);
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 40);
+      const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollProgress(maxScroll > 0 ? Math.min(window.scrollY / maxScroll, 1) : 0);
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
@@ -912,6 +1108,44 @@ const LandingPage = () => {
     return () => document.removeEventListener('mousedown', closeOnOutside);
   }, []);
 
+  // Mouse cursor glow — smooth follow
+  useEffect(() => {
+    const onMove = (e) => {
+      mouseRef.current = { x: e.clientX, y: e.clientY };
+      setMouse({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', onMove, { passive: true });
+    // Smooth lerp loop
+    let raf;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const loop = () => {
+      setMouseSmooth(prev => ({
+        x: lerp(prev.x, mouseRef.current.x, 0.1),
+        y: lerp(prev.y, mouseRef.current.y, 0.1),
+      }));
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => { window.removeEventListener('mousemove', onMove); cancelAnimationFrame(raf); };
+  }, []);
+
+  // Scroll reveal — runs after paint so elements exist in DOM
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(el => {
+          if (el.isIntersecting) {
+            el.target.classList.add('visible');
+            observer.unobserve(el.target);
+          }
+        });
+      }, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+      document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+      return () => observer.disconnect();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 900);
     window.addEventListener('resize', onResize);
@@ -919,7 +1153,29 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div className="lp">
+    <div className="lp" style={{
+      background: `linear-gradient(170deg,
+        hsl(${210 + scrollProgress * 30}, ${40 + scrollProgress * 20}%, ${8 + scrollProgress * 4}%) 0%,
+        hsl(${215 + scrollProgress * 25}, ${45 + scrollProgress * 15}%, ${10 + scrollProgress * 5}%) 50%,
+        hsl(${160 - scrollProgress * 20}, ${50 + scrollProgress * 10}%, ${8 + scrollProgress * 6}%) 100%)`
+    }}>
+      {/* Scroll progress bar */}
+      <div className="lp-scroll-bar" style={{ width: `${scrollProgress * 100}%` }} />
+
+
+      {/* Floating ambient orbs */}
+      <div className="lp-orb" style={{
+        width: 500, height: 500,
+        background: `radial-gradient(circle, rgba(30,185,128,${0.06 + scrollProgress * 0.08}) 0%, transparent 70%)`,
+        top: `${-10 + scrollProgress * 20}%`,
+        right: `${-5 + scrollProgress * 10}%`,
+      }}/>
+      <div className="lp-orb" style={{
+        width: 400, height: 400,
+        background: `radial-gradient(circle, rgba(14,165,233,${0.04 + scrollProgress * 0.06}) 0%, transparent 70%)`,
+        bottom: `${10 - scrollProgress * 15}%`,
+        left: `${-8 + scrollProgress * 5}%`,
+      }}/>
       <style>{CSS}</style>
 
       {/* ── NAV ── */}
@@ -943,71 +1199,11 @@ const LandingPage = () => {
               </button>
             </div>
 
-            {/* Solutions */}
-            <div className="lp-nav-item">
-              <button className={`lp-nav-trigger${openDrop==='solutions'?' active':''}`}
-                onClick={()=>setOpenDrop(openDrop==='solutions'?null:'solutions')}>
-                Solutions <span className="drop">▾</span>
-              </button>
-              {openDrop==='solutions' && (
-                <div className="lp-dropdown">
-                  <div className="lp-dd-header">By Use Case</div>
-                  <button className="lp-dd-item" onClick={()=>{navigate('/feature/lead-management');setOpenDrop(null);}}>
-                    <span className="lp-dd-icon">🎯</span>
-                    <span className="lp-dd-text"><div className="lp-dd-title">Sales CRM</div><div className="lp-dd-sub">Pipeline & deal tracking</div></span>
-                  </button>
-                  <button className="lp-dd-item" onClick={()=>{navigate('/feature/support');setOpenDrop(null);}}>
-                    <span className="lp-dd-icon">🎫</span>
-                    <span className="lp-dd-text"><div className="lp-dd-title">Customer Support</div><div className="lp-dd-sub">Tickets, SLA & helpdesk</div></span>
-                  </button>
-                  <button className="lp-dd-item" onClick={()=>{navigate('/feature/monetization');setOpenDrop(null);}}>
-                    <span className="lp-dd-icon">💰</span>
-                    <span className="lp-dd-text"><div className="lp-dd-title">Monetization</div><div className="lp-dd-sub">Subscriptions & billing</div></span>
-                  </button>
-                  <button className="lp-dd-item" onClick={()=>{navigate('/feature/access-management');setOpenDrop(null);}}>
-                    <span className="lp-dd-icon">🏢</span>
-                    <span className="lp-dd-text"><div className="lp-dd-title">Multi-Tenant SaaS</div><div className="lp-dd-sub">White-label & isolation</div></span>
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Industries — trigger only, mega overlay rendered outside nav */}
-            <div className="lp-nav-item">
-              <button className={`lp-nav-trigger${openDrop==='industries'?' active':''}`}
-                onClick={()=>setOpenDrop(openDrop==='industries'?null:'industries')}>
-                Industries <span className="drop">▾</span>
-              </button>
-            </div>
-
-            <a href="#new" className="lp-nav-link">What's New</a>
-
-            {/* Partners */}
-            <div className="lp-nav-item">
-              <button className={`lp-nav-trigger${openDrop==='partners'?' active':''}`}
-                onClick={()=>setOpenDrop(openDrop==='partners'?null:'partners')}>
-                Partners <span className="drop">▾</span>
-              </button>
-              {openDrop==='partners' && (
-                <div className="lp-dropdown">
-                  <div className="lp-dd-header">Partner Program</div>
-                  <button className="lp-dd-item" onClick={()=>{navigate('/reseller/register');setOpenDrop(null);}}>
-                    <span className="lp-dd-icon">🤝</span>
-                    <span className="lp-dd-text"><div className="lp-dd-title">Become a Reseller</div><div className="lp-dd-sub">Join & earn commissions</div></span>
-                  </button>
-                  <button className="lp-dd-item" onClick={()=>{navigate('/reseller/login');setOpenDrop(null);}}>
-                    <span className="lp-dd-icon">🔑</span>
-                    <span className="lp-dd-text"><div className="lp-dd-title">Partner Portal</div><div className="lp-dd-sub">Login to dashboard</div></span>
-                  </button>
-                  <button className="lp-dd-item" onClick={()=>{navigate('/reseller/register');setOpenDrop(null);}}>
-                    <span className="lp-dd-icon">📊</span>
-                    <span className="lp-dd-text"><div className="lp-dd-title">Commission Rates</div><div className="lp-dd-sub">View earning tiers</div></span>
-                  </button>
-                </div>
-              )}
-            </div>
+            <button className="lp-nav-link" onClick={() => navigate('/partners')}>Partners</button>
 
             <button className="lp-nav-link" onClick={() => navigate('/platform')}>Platform</button>
+            <button className="lp-nav-link" onClick={() => navigate('/about')}>About Us</button>
+            <button className="lp-nav-link" onClick={() => navigate('/contact')}>Contact Us</button>
             <div className="lp-nav-sep" />
             <button className="lp-nav-link" onClick={() => navigate('/help')}>Support</button>
           </div>
@@ -1034,13 +1230,11 @@ const LandingPage = () => {
       <div className={`lp-drawer${mobileMenu ? ' open' : ''}`}>
         <button className="lp-drawer-link" onClick={() => goTo('/all-features')}>📦 Products</button>
         <button className="lp-drawer-link" onClick={() => goTo('/platform')}>🏗️ Platform</button>
-        <button className="lp-drawer-link" onClick={() => goTo('/industries')}>🏭 Industries</button>
         <button className="lp-drawer-link" onClick={() => goTo('/demo')}>🎬 View a Demo</button>
-        <button className="lp-drawer-link" onClick={() => goTo('/#new')}>🚀 What's New</button>
-        <button className="lp-drawer-link" onClick={() => goTo('/#partner')}>🤝 Partners</button>
-        <button className="lp-drawer-link" onClick={() => goTo('/reseller/register')}>💼 Become a Reseller</button>
-        <button className="lp-drawer-link" onClick={() => goTo('/about')}>ℹ️ About</button>
-        <button className="lp-drawer-link" onClick={() => goTo('/contact')}>📞 Contact</button>
+        <button className="lp-drawer-link" onClick={() => goTo('/partners')}>🤝 Partners</button>
+        <button className="lp-drawer-link" onClick={() => goTo('/partners')}>💼 Become a Reseller</button>
+        <button className="lp-drawer-link" onClick={() => goTo('/about')}>ℹ️ About Us</button>
+        <button className="lp-drawer-link" onClick={() => goTo('/contact')}>📞 Contact Us</button>
         <div className="lp-drawer-btns">
           <button className="lp-drawer-signin" onClick={() => goTo('/login')}>Sign In</button>
           <button className="lp-drawer-cta" onClick={() => goTo('/register')}>Get Started Free →</button>
@@ -1057,11 +1251,13 @@ const LandingPage = () => {
             {/* Left sidebar */}
             <div className="lp-mega-left">
               {[
-                { id:'featured', label:'Featured Products' },
-                { id:'sales',    label:'Sales CRM' },
-                { id:'ops',      label:'B2B Operations' },
-                { id:'support',  label:'Support & Feedback' },
-                { id:'saas',     label:'SaaS Platform' },
+                { id:'featured',   label:'CRM Products' },
+                { id:'sales',      label:'Sales CRM' },
+                { id:'ops',        label:'B2B Operations' },
+                { id:'support',    label:'Support & Feedback' },
+                { id:'saas',       label:'SaaS Platform' },
+                { id:'solutions',  label:'Solutions' },
+                { id:'industries', label:'Industries' },
               ].map(c=>(
                 <button key={c.id} className={`lp-mega-cat${megaCat===c.id?' active':''}`}
                   onClick={()=>setMegaCat(c.id)}>
@@ -1071,12 +1267,12 @@ const LandingPage = () => {
               <div className="lp-mega-sep"/>
               <div className="lp-mega-sec-label">Quick Access</div>
               {[
-                { label:'AI Assistant', slug:'automation' },
-                { label:'Data Center',  slug:'lead-management' },
-                { label:'Integrations', slug:'automation' },
+                { label:'AI Assistant', path:'/feature/lead-management' },
+                { label:'Data Center',  path:'/data-center-feature' },
+                { label:'Integrations', path:'/integrations' },
               ].map(l=>(
                 <button key={l.label} className="lp-mega-cat"
-                  onClick={()=>{navigate(`/feature/${l.slug}`);setOpenDrop(null);}}>
+                  onClick={()=>{navigate(l.path);setOpenDrop(null);}}>
                   {l.label} <span className="lp-mega-cat-arr">›</span>
                 </button>
               ))}
@@ -1094,14 +1290,14 @@ const LandingPage = () => {
                 <div className="lp-mega-feat-label">Featured Products</div>
                 <div className="lp-mega-grid">
                   {[
-                    { t:'Lead Management', d:'Capture, qualify & convert leads at scale' },
-                    { t:'B2B Sales Workflow', d:'RFI → Quote → PO → Invoice automated' },
-                    { t:'Email Inbox', d:'IMAP sync with real-time tracking' },
-                    { t:'AI Assistant', d:'Gemini AI for insights & email drafts' },
-                    { t:'Product Catalog', d:'Products, pricing & marketplace' },
-                    { t:'Support Tickets', d:'SLA tracking & multi-tier escalation' },
+                    { t:'Lead Management',   d:'Capture, qualify & convert leads at scale',   path:'/feature/lead-management' },
+                    { t:'B2B Sales Workflow', d:'RFI → Quote → PO → Invoice automated',        path:'/feature/sales-finance' },
+                    { t:'Email Inbox',        d:'IMAP sync with real-time tracking',            path:'/feature/lead-management' },
+                    { t:'AI Assistant',       d:'Gemini AI for insights & email drafts',        path:'/feature/lead-management' },
+                    { t:'Product Catalog',    d:'Products, pricing & marketplace',              path:'/feature/sales-finance' },
+                    { t:'Support Tickets',    d:'SLA tracking & multi-tier escalation',         path:'/feature/support' },
                   ].map((p,i)=>(
-                    <div key={i} className="lp-mega-item" onClick={()=>{navigate('/feature/lead-management');setOpenDrop(null);}}>
+                    <div key={i} className="lp-mega-item" onClick={()=>{navigate(p.path);setOpenDrop(null);}}>
                       <div className="lp-mega-item-title">{p.t}</div>
                       <div className="lp-mega-item-desc">{p.d}</div>
                     </div>
@@ -1114,8 +1310,8 @@ const LandingPage = () => {
                 <button className="lp-mega-see-btn" onClick={()=>{navigate('/feature/lead-management');setOpenDrop(null);}}>Explore Sales CRM</button>
                 <div className="lp-mega-feat-label">Sales Modules</div>
                 <div className="lp-mega-grid">
-                  {[{t:'Leads',d:'Pipeline & bulk import'},{t:'Contacts',d:'360° profiles'},{t:'Accounts',d:'B2B hierarchy'},{t:'Opportunities',d:'Stage tracking & forecast'},{t:'Email Inbox',d:'IMAP sync & tracking'},{t:'Calls',d:'Log & analyze calls'}].map((p,i)=>(
-                    <div key={i} className="lp-mega-item" onClick={()=>{navigate('/feature/lead-management');setOpenDrop(null);}}>
+                  {[{t:'Leads',d:'Pipeline & bulk import',path:'/feature/lead-management'},{t:'Contacts',d:'360° profiles',path:'/feature/lead-management'},{t:'Accounts',d:'B2B hierarchy',path:'/feature/lead-management'},{t:'Opportunities',d:'Stage tracking & forecast',path:'/feature/lead-management'},{t:'Email Inbox',d:'IMAP sync & tracking',path:'/feature/lead-management'},{t:'Calls',d:'Log & analyze calls',path:'/feature/lead-management'}].map((p,i)=>(
+                    <div key={i} className="lp-mega-item" onClick={()=>{navigate(p.path);setOpenDrop(null);}}>
                       <div className="lp-mega-item-title">{p.t}</div>
                       <div className="lp-mega-item-desc">{p.d}</div>
                     </div>
@@ -1150,14 +1346,65 @@ const LandingPage = () => {
                   ))}
                 </div>
               </>}
+              {megaCat === 'solutions' && <>
+                <div className="lp-mega-prod-title">Solutions</div>
+                <div className="lp-mega-prod-desc">Purpose-built CRM solutions for every business challenge — from sales acceleration to full B2B automation.</div>
+                <button className="lp-mega-see-btn" onClick={()=>{navigate('/all-features');setOpenDrop(null);}}>Explore All Solutions</button>
+                <div className="lp-mega-feat-label">By Use Case</div>
+                <div className="lp-mega-grid">
+                  {[
+                    {t:'Sales Acceleration',   d:'Close more deals faster with AI-powered pipeline',       path:'/feature/lead-management'},
+                    {t:'B2B Workflow',          d:'Automate RFI → Quote → PO → Invoice end-to-end',        path:'/feature/sales-finance'},
+                    {t:'Customer Support',     d:'Resolve tickets faster with SLA & escalation',           path:'/feature/support'},
+                    {t:'Team Collaboration',   d:'RBAC, org charts, and permission management',            path:'/feature/access-management'},
+                    {t:'Revenue Management',   d:'Subscriptions, billing, and monetization engine',        path:'/feature/monetization'},
+                    {t:'Partner Program',      d:'Reseller portal with commission tracking',               path:'/partners'},
+                  ].map((p,i)=>(
+                    <div key={i} className="lp-mega-item" onClick={()=>{navigate(p.path);setOpenDrop(null);}}>
+                      <div className="lp-mega-item-title">{p.t}</div>
+                      <div className="lp-mega-item-desc">{p.d}</div>
+                    </div>
+                  ))}
+                </div>
+              </>}
+              {megaCat === 'industries' && <>
+                <div className="lp-mega-prod-title">Industries</div>
+                <div className="lp-mega-prod-desc">Unified CRM adapts to your industry's unique workflows, compliance needs, and customer journey.</div>
+                <button className="lp-mega-see-btn" onClick={()=>{navigate('/industries');setOpenDrop(null);}}>Explore All Industries</button>
+                <div className="lp-mega-feat-label">By Industry</div>
+                <div className="lp-mega-grid">
+                  {[
+                    {t:'IT & Technology',      d:'Lead management for SaaS and IT service companies'},
+                    {t:'Manufacturing',        d:'B2B workflow, RFI, PO & invoice for manufacturers'},
+                    {t:'Financial Services',   d:'Client pipeline, compliance tracking & reporting'},
+                    {t:'Healthcare',           d:'Patient relationship and referral management'},
+                    {t:'Real Estate',          d:'Property pipeline, deals & contact management'},
+                    {t:'Education',            d:'Student enrollment, leads & course management'},
+                    {t:'Consulting',           d:'Project tracking, client accounts & proposals'},
+                    {t:'Retail & E-commerce',  d:'Customer accounts, orders & feedback management'},
+                  ].map((p,i)=>(
+                    <div key={i} className="lp-mega-item" onClick={()=>{navigate('/industries');setOpenDrop(null);}}>
+                      <div className="lp-mega-item-title">{p.t}</div>
+                      <div className="lp-mega-item-desc">{p.d}</div>
+                    </div>
+                  ))}
+                </div>
+              </>}
               {megaCat === 'saas' && <>
                 <div className="lp-mega-prod-title">SaaS Platform</div>
                 <div className="lp-mega-prod-desc">Multi-tenant architecture with full tenant isolation, role-based access, custom fields, and a complete monetization engine.</div>
                 <button className="lp-mega-see-btn" onClick={()=>{navigate('/feature/monetization');setOpenDrop(null);}}>Explore Platform</button>
                 <div className="lp-mega-feat-label">Platform Modules</div>
                 <div className="lp-mega-grid">
-                  {[{t:'Multi-Tenant SaaS',d:'100% data isolation'},{t:'Users & Roles',d:'Granular permissions'},{t:'Monetization',d:'Razorpay billing'},{t:'Reseller Program',d:'Partner commissions'},{t:'Field Customization',d:'No-code custom fields'},{t:'Org Hierarchy',d:'Visual org chart'}].map((p,i)=>(
-                    <div key={i} className="lp-mega-item" onClick={()=>{navigate('/feature/monetization');setOpenDrop(null);}}>
+                  {[
+                    {t:'Multi-Tenant SaaS',    d:'100% data isolation',      path:'/feature/monetization'},
+                    {t:'Users & Roles',         d:'Granular permissions',      path:'/feature/access-management'},
+                    {t:'Monetization',          d:'Razorpay billing',          path:'/feature/monetization'},
+                    {t:'Reseller Program',      d:'Partner commissions',       path:'/feature/monetization'},
+                    {t:'Field Customization',   d:'No-code custom fields',     path:'/feature/access-management'},
+                    {t:'Org Hierarchy',         d:'Visual org chart',          path:'/feature/access-management'},
+                  ].map((p,i)=>(
+                    <div key={i} className="lp-mega-item" onClick={()=>{navigate(p.path);setOpenDrop(null);}}>
                       <div className="lp-mega-item-title">{p.t}</div>
                       <div className="lp-mega-item-desc">{p.d}</div>
                     </div>
@@ -1262,6 +1509,8 @@ const LandingPage = () => {
 
       {/* ── HERO ── */}
       <section className="hero-section" style={{ position: 'relative' }}>
+        {/* Floating orbs — 1 */}
+        <div className="hero-orb1"/><div className="hero-orb2"/><div className="hero-orb3"/>
         <div className="hero-inner">
           <div className="hero-main-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
             {/* Left */}
@@ -1277,7 +1526,13 @@ const LandingPage = () => {
 
               <h1 className="hero-h1">
                 The CRM Platform<br />
-                <span className="grad1">Your Business Deserves</span>
+                <span className="hero-rotate-wrap">
+                  <span className="hero-rotate-track">
+                    {['Your Business Deserves','Built for Sales Teams','For B2B Operations','For Enterprise Teams','For Support & CX','That Grows With You'].map((w,i)=>(
+                      <span key={i} className="hero-rotate-word">{w}</span>
+                    ))}
+                  </span>
+                </span>
               </h1>
 
               <p className="hero-sub">
@@ -1343,28 +1598,6 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* ── TRUSTED BAR ── */}
-      <div className="trusted-bar">
-        <div className="trusted-inner">
-          {[
-            { icon: '⚡', text: 'Powered by Gemini AI' },
-            { icon: '🏢', text: 'Multi-Tenant Architecture' },
-            { icon: '🔒', text: 'Role-Based Access Control' },
-            { icon: '📄', text: 'PDF Generation Built-in' },
-            { icon: '🤝', text: 'Reseller Program' },
-            { icon: '📧', text: 'IMAP Email Sync' },
-          ].map((item, i) => (
-            <React.Fragment key={i}>
-              <div className="trusted-item">
-                <span>{item.icon}</span>
-                <span>{item.text}</span>
-              </div>
-              {i < 5 && <div className="trusted-sep" />}
-            </React.Fragment>
-          ))}
-        </div>
-      </div>
-
       {/* ── STATS ── */}
       <section className="stats-section" ref={statsRef}>
         <div className="stats-inner">
@@ -1375,7 +1608,7 @@ const LandingPage = () => {
               { num: `${c3}.9%`, label: 'Uptime Guaranteed', color: '#34d399' },
               { num: `${c4}+`, label: 'Integrations & APIs', color: '#fbbf24' },
             ].map((s, i) => (
-              <div key={i} className="stat-card">
+              <div key={i} className={`stat-card reveal reveal-d${i+1}`}>
                 <div className="stat-num" style={{ color: s.color }}>{s.num}</div>
                 <div className="stat-lbl">{s.label}</div>
               </div>
@@ -1386,139 +1619,115 @@ const LandingPage = () => {
 
       {/* ── MARQUEE ── */}
       <div className="marquee-wrap">
-        <div className="marquee-track">
-          {[...Array(2)].map((_, r) =>
-            ['📋 Leads', '👥 Contacts', '🏢 Accounts', '💼 Opportunities', '📄 RFI', '💰 Quotations',
-             '📦 Purchase Orders', '🧾 Invoices', '✅ Tasks', '📅 Meetings', '📞 Calls', '✉️ Email Inbox',
-             '📊 Data Center', '🎫 Support Tickets', '💬 Feedback', '🌐 Social Media', '🏛️ Org Hierarchy',
-             '🤝 Resellers', '🔧 Field Builder', '📦 Products', '💰 Monetization', '🤖 AI Assistant',
-             '👨‍💼 Users & Roles', '📑 Doc Templates', '📈 Audit Logs', '🔔 Notifications',
-             '📧 Email Templates', '💳 Subscriptions & Plans', '🏢 Multi-Tenant', '🛒 Product Marketplace'].map((item, i) => (
-              <span key={`${r}-${i}`} className="marquee-chip">{item}</span>
-            ))
-          )}
+        {/* Row 1 — left to right */}
+        <div className="marquee-row">
+          <div className="marquee-track">
+            {[...Array(2)].map((_, r) =>
+              ['📋 Leads', '👥 Contacts', '🏢 Accounts', '💼 Opportunities', '📄 RFI', '💰 Quotations',
+               '📦 Purchase Orders', '🧾 Invoices', '✅ Tasks', '📅 Meetings', '📞 Calls', '✉️ Email Inbox',
+               '📊 Data Center', '🎫 Support Tickets', '💬 Feedback', '🌐 Social Media'].map((item, i) => (
+                <span key={`a${r}-${i}`} className="marquee-chip">{item}</span>
+              ))
+            )}
+          </div>
+        </div>
+        {/* Row 2 — right to left */}
+        <div className="marquee-row">
+          <div className="marquee-track reverse">
+            {[...Array(2)].map((_, r) =>
+              ['🏛️ Org Hierarchy', '🤝 Resellers', '🔧 Field Builder', '📦 Products', '💰 Monetization',
+               '🤖 AI Assistant', '👨‍💼 Users & Roles', '📑 Doc Templates', '📈 Audit Logs', '🔔 Notifications',
+               '📧 Email Templates', '💳 Subscriptions & Plans', '🏢 Multi-Tenant', '🛒 Product Marketplace',
+               '🔒 RBAC Security', '📊 Analytics'].map((item, i) => (
+                <span key={`b${r}-${i}`} className="marquee-chip">{item}</span>
+              ))
+            )}
+          </div>
         </div>
       </div>
 
-      {/* ── SPOTLIGHT 1: Pipeline ── */}
-      <section className="spotlight-section">
+      {/* ── SPOTLIGHT TABS ── */}
+      <section className="spotlight-section" style={{ padding: '80px 0 0' }}>
         <div className="spotlight-inner">
-          <div className="spotlight-grid">
-            <div>
-              <PipelineMock />
-            </div>
-            <div>
-              <div className="sec-label purple">🎯 SALES CRM</div>
-              <h2 className="sec-title">Close Deals <br /><span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>10x Faster</span></h2>
-              <p className="sec-sub">Full-stack sales CRM with lead pipeline, contact management, and opportunity tracking — built for modern B2B teams.</p>
-              <ul className="check-list">
-                {[
-                  ['📋', 'Leads with bulk import, group & product linking'],
-                  ['👥', 'Contacts & Accounts with relationship mapping'],
-                  ['💼', 'Opportunities pipeline with stage tracking & forecasting'],
-                  ['📊', 'Real-time analytics & conversion dashboards'],
-                  ['🔧', 'Custom fields — no code needed'],
-                ].map(([icon, text], i) => (
-                  <li key={i} className="check-item">
-                    <div className="check-icon" style={{ background: 'rgba(22,163,74,0.15)' }}>{icon}</div>
-                    <span>{text}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="hero-cta-main" onClick={() => navigate('/register')}>Get Started Free →</button>
+          <div style={{ textAlign: 'center', marginBottom: 40 }}>
+            <div className="sec-label purple pulse-badge" style={{ margin: '0 auto 12px' }}>🚀 CRM PLATFORM</div>
+            <h2 className="sec-title">Everything Your Business Needs</h2>
+          </div>
+
+          {/* Tab bar — pill style */}
+          <div className="sp-tabs-wrap">
+            <div className="sp-tabs">
+              {[
+                { label: '🎯 Sales CRM', idx: 0 },
+                { label: '⚙️ B2B Workflow', idx: 1 },
+                { label: '👥 Team Management', idx: 2 },
+                { label: '💬 Customer Intelligence', idx: 3 },
+              ].map(t => (
+                <button key={t.idx} className={`sp-tab${spotlightTab === t.idx ? ' active' : ''}`}
+                  onClick={() => setSpotlightTab(t.idx)}>
+                  {t.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>
-      </section>
 
-      {/* ── SPOTLIGHT 2: B2B Workflow (reversed) ── */}
-      <section className="spotlight-section" style={{ background: '#162e48' }}>
-        <div className="spotlight-inner">
-          <div className="spotlight-grid reverse">
-            <div>
-              <WorkflowMock />
-            </div>
-            <div>
-              <div className="sec-label green">⚙️ B2B WORKFLOW</div>
-              <h2 className="sec-title">From RFI to Invoice,<br /><span style={{ background: 'linear-gradient(135deg,#34d399,#4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Fully Automated</span></h2>
-              <p className="sec-sub">Complete document workflow with professional PDF generation, approval flows, and payment tracking — all in one place.</p>
-              <ul className="check-list">
-                {[
-                  ['📄', 'RFI management with vendor responses'],
-                  ['💰', 'Professional quotation with PDF export'],
-                  ['📦', 'Purchase Order processing & approvals'],
-                  ['🧾', 'Invoice creation with payment status tracking'],
-                  ['📑', 'Reusable document templates with dynamic variables'],
-                ].map(([icon, text], i) => (
-                  <li key={i} className="check-item">
-                    <div className="check-icon" style={{ background: 'rgba(16,185,129,0.15)' }}>{icon}</div>
-                    <span>{text}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="hero-cta-main" onClick={() => navigate('/register')}>Start Free Trial →</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SPOTLIGHT 3: Team Management ── */}
-      <section className="spotlight-section">
-        <div className="spotlight-inner">
-          <div className="spotlight-grid">
-            <div>
-              <TeamMock />
-            </div>
-            <div>
-              <div className="sec-label orange">👥 TEAM MANAGEMENT</div>
-              <h2 className="sec-title">Built for <br /><span style={{ background: 'linear-gradient(135deg,#fbbf24,#f472b6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Enterprise Teams</span></h2>
-              <p className="sec-sub">Advanced role-based access control, org hierarchy, team groups, and custom permissions — manage any org structure with ease.</p>
-              <ul className="check-list">
-                {[
-                  ['👨‍💼', 'Role-based access with granular permissions'],
-                  ['🏛️', 'Visual org hierarchy builder with custom nodes'],
-                  ['📝', 'Role template library for quick team setup'],
-                  ['👥', 'Team groups with permission inheritance'],
-                  ['📈', 'Activity logs & audit trail for compliance'],
-                ].map(([icon, text], i) => (
-                  <li key={i} className="check-item">
-                    <div className="check-icon" style={{ background: 'rgba(245,158,11,0.15)' }}>{icon}</div>
-                    <span>{text}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="hero-cta-main" onClick={() => navigate('/register')}>Get Started Free →</button>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── SPOTLIGHT 4: Feedback & Support ── */}
-      <section className="spotlight-section" style={{ background: '#162e48' }}>
-        <div className="spotlight-inner">
-          <div className="spotlight-grid reverse">
-            <div>
-              <FeedbackMock />
-            </div>
-            <div>
-              <div className="sec-label pink">💬 CUSTOMER INTELLIGENCE</div>
-              <h2 className="sec-title">Hear Every<br /><span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Voice, Act Fast</span></h2>
-              <p className="sec-sub">Unified support tickets + feedback management with 3-tier escalation, sentiment analysis, and real-time intelligence dashboards.</p>
-              <ul className="check-list">
-                {[
-                  ['💬', 'Feedback with sentiment auto-detection (AI)'],
-                  ['🎫', 'Support tickets with SLA & priority tracking'],
-                  ['↑', '3-tier escalation: User → Tenant Admin → SAAS'],
-                  ['📊', 'Analytics: bug reports, feature requests, praises'],
-                  ['🔔', 'Real-time notifications & reply workflow'],
-                ].map(([icon, text], i) => (
-                  <li key={i} className="check-item">
-                    <div className="check-icon" style={{ background: 'rgba(236,72,153,0.15)' }}>{icon}</div>
-                    <span>{text}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="hero-cta-main" onClick={() => navigate('/register')}>Start Free Trial →</button>
+        {/* Tab content */}
+        <div key={spotlightTab} className="sp-content sp-slide-in" style={{ background: spotlightTab % 2 === 0 ? '#0f1e2e' : '#162e48' }}>
+          <div className="spotlight-inner" style={{ padding: '60px 40px' }}>
+            <div className="spotlight-grid" style={{ direction: spotlightTab % 2 === 1 ? 'rtl' : 'ltr' }}>
+              <div style={{ direction: 'ltr' }}>
+                {spotlightTab === 0 && <PipelineMock />}
+                {spotlightTab === 1 && <WorkflowMock />}
+                {spotlightTab === 2 && <TeamMock />}
+                {spotlightTab === 3 && <FeedbackMock />}
+              </div>
+              <div style={{ direction: 'ltr' }}>
+                {spotlightTab === 0 && <>
+                  <div className="sec-label purple">🎯 SALES CRM</div>
+                  <h2 className="sec-title">Close Deals <br /><span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>10x Faster</span></h2>
+                  <p className="sec-sub">Full-stack sales CRM with lead pipeline, contact management, and opportunity tracking — built for modern B2B teams.</p>
+                  <ul className="check-list">
+                    {[['📋','Leads with bulk import, group & product linking'],['👥','Contacts & Accounts with relationship mapping'],['💼','Opportunities pipeline with stage tracking & forecasting'],['📊','Real-time analytics & conversion dashboards'],['🔧','Custom fields — no code needed']].map(([icon, text], i) => (
+                      <li key={i} className="check-item"><div className="check-icon" style={{ background: 'rgba(22,163,74,0.15)' }}>{icon}</div><span>{text}</span></li>
+                    ))}
+                  </ul>
+                  <button className="hero-cta-main" onClick={() => navigate('/register')}>Get Started Free →</button>
+                </>}
+                {spotlightTab === 1 && <>
+                  <div className="sec-label green">⚙️ B2B WORKFLOW</div>
+                  <h2 className="sec-title">From RFI to Invoice,<br /><span style={{ background: 'linear-gradient(135deg,#34d399,#4ade80)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Fully Automated</span></h2>
+                  <p className="sec-sub">Complete document workflow with professional PDF generation, approval flows, and payment tracking — all in one place.</p>
+                  <ul className="check-list">
+                    {[['📄','RFI management with vendor responses'],['💰','Professional quotation with PDF export'],['📦','Purchase Order processing & approvals'],['🧾','Invoice creation with payment status tracking'],['📑','Reusable document templates with dynamic variables']].map(([icon, text], i) => (
+                      <li key={i} className="check-item"><div className="check-icon" style={{ background: 'rgba(16,185,129,0.15)' }}>{icon}</div><span>{text}</span></li>
+                    ))}
+                  </ul>
+                  <button className="hero-cta-main" onClick={() => navigate('/register')}>Start Free Trial →</button>
+                </>}
+                {spotlightTab === 2 && <>
+                  <div className="sec-label orange">👥 TEAM MANAGEMENT</div>
+                  <h2 className="sec-title">Built for <br /><span style={{ background: 'linear-gradient(135deg,#fbbf24,#f472b6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Enterprise Teams</span></h2>
+                  <p className="sec-sub">Advanced role-based access control, org hierarchy, team groups, and custom permissions — manage any org structure with ease.</p>
+                  <ul className="check-list">
+                    {[['👨‍💼','Role-based access with granular permissions'],['🏛️','Visual org hierarchy builder with custom nodes'],['📝','Role template library for quick team setup'],['👥','Team groups with permission inheritance'],['📈','Activity logs & audit trail for compliance']].map(([icon, text], i) => (
+                      <li key={i} className="check-item"><div className="check-icon" style={{ background: 'rgba(245,158,11,0.15)' }}>{icon}</div><span>{text}</span></li>
+                    ))}
+                  </ul>
+                  <button className="hero-cta-main" onClick={() => navigate('/register')}>Get Started Free →</button>
+                </>}
+                {spotlightTab === 3 && <>
+                  <div className="sec-label pink">💬 CUSTOMER INTELLIGENCE</div>
+                  <h2 className="sec-title">Hear Every<br /><span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Voice, Act Fast</span></h2>
+                  <p className="sec-sub">Unified support tickets + feedback management with 3-tier escalation, sentiment analysis, and real-time dashboards.</p>
+                  <ul className="check-list">
+                    {[['💬','Feedback with sentiment auto-detection (AI)'],['🎫','Support tickets with SLA & priority tracking'],['↑','3-tier escalation: User → Tenant Admin → SAAS'],['📊','Analytics: bug reports, feature requests, praises'],['🔔','Real-time notifications & reply workflow']].map(([icon, text], i) => (
+                      <li key={i} className="check-item"><div className="check-icon" style={{ background: 'rgba(236,72,153,0.15)' }}>{icon}</div><span>{text}</span></li>
+                    ))}
+                  </ul>
+                  <button className="hero-cta-main" onClick={() => navigate('/register')}>Start Free Trial →</button>
+                </>}
+              </div>
             </div>
           </div>
         </div>
@@ -1526,7 +1735,7 @@ const LandingPage = () => {
 
       {/* ── ALL FEATURES GRID ── */}
       {/* ── PLATFORM CAPABILITIES ── */}
-      <section id="features" style={{ background: '#162e48', padding: '100px 0' }}>
+      <section id="features" className="reveal" style={{ background: '#162e48', padding: '100px 0' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 40px' }}>
 
           {/* Section intro */}
@@ -1571,10 +1780,25 @@ const LandingPage = () => {
                 slug: 'monetization',
               },
             ].map((cap, i) => (
-              <div key={i} style={{ background: '#1a3654', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 36, display: 'flex', flexDirection: 'column', gap: 20, transition: 'all 0.3s', cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
-                onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-4px)'; e.currentTarget.style.borderColor=`${cap.color}40`; }}
-                onMouseLeave={e=>{ e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; }}
+              <div key={i} className={`reveal reveal-d${i+1} tilt-card`}
+                style={{ background: '#1a3654', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 24, padding: 36, display: 'flex', flexDirection: 'column', gap: 20, cursor: 'pointer', boxShadow: '0 4px 20px rgba(0,0,0,0.15)', position:'relative', overflow:'hidden' }}
+                onMouseMove={e => {
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - r.left) / r.width - 0.5) * 16;
+                  const y = ((e.clientY - r.top) / r.height - 0.5) * -16;
+                  const mx = ((e.clientX - r.left) / r.width * 100).toFixed(1);
+                  const my = ((e.clientY - r.top) / r.height * 100).toFixed(1);
+                  e.currentTarget.style.transform = `perspective(800px) rotateX(${y}deg) rotateY(${x}deg) scale(1.03)`;
+                  e.currentTarget.style.borderColor = `${cap.color}50`;
+                  const shine = e.currentTarget.querySelector('.tilt-card-shine');
+                  if (shine) { shine.style.setProperty('--mx', `${mx}%`); shine.style.setProperty('--my', `${my}%`); }
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale(1)';
+                  e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                }}
                 onClick={()=>navigate(`/feature/${cap.slug}`)}>
+                <div className="tilt-card-shine"/>
                 {/* Header */}
                 <div>
                   <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: `${cap.color}15`, border: `1px solid ${cap.color}30`, borderRadius: 20, padding: '4px 12px', fontSize: 10, fontWeight: 700, color: cap.color, letterSpacing: 1, marginBottom: 16 }}>
@@ -1637,78 +1861,8 @@ const LandingPage = () => {
       </section>
 
 
-      {/* ── WHAT'S NEW ── */}
-      <section className="new-section" id="new">
-        <div className="new-inner">
-          <div style={{ textAlign: 'center', marginBottom: 0 }}>
-            <div className="sec-label purple" style={{ margin: '0 auto 16px' }}>🚀 LATEST UPDATES</div>
-            <h2 className="sec-title" style={{ textAlign: 'center' }}>
-              What's <span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>New</span>
-            </h2>
-            <p className="sec-sub" style={{ textAlign: 'center', margin: '16px auto 0' }}>Constantly shipping powerful features. Here's what landed recently.</p>
-          </div>
-          <div className="new-grid">
-            {NEW_FEATURES.map((f, i) => (
-              <div key={i} className="new-card">
-                <div className="new-card-icon" style={{ background: f.bg }}>{f.icon}</div>
-                <div className="new-card-body">
-                  <span className="new-badge" style={{ background: f.badgeBg, color: f.badgeColor }}>{f.badge}</span>
-                  <div className="new-card-title">{f.title}</div>
-                  <div className="new-card-desc">{f.desc}</div>
-                  <ul className="new-card-points">
-                    {f.points.map((p, j) => (
-                      <li key={j} className="new-card-point">
-                        <span style={{ color: f.color, flexShrink: 0 }}>✓</span>
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── UPCOMING FEATURES ── */}
-      <section style={{ padding: '100px 0', background: '#162e48' }}>
-        <div style={{ maxWidth: 1440, margin: '0 auto', padding: '0 40px' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div className="sec-label blue" style={{ margin: '0 auto 16px' }}>🔮 COMING SOON</div>
-            <h2 className="sec-title" style={{ textAlign: 'center' }}>
-              What's <span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Coming Next</span>
-            </h2>
-            <p className="sec-sub" style={{ textAlign: 'center', margin: '16px auto 0' }}>We're building powerful features — stay tuned for what's next.</p>
-          </div>
-          <div className="lp-coming-soon-grid">
-            {[
-              { icon: '🤖', title: 'AI Assistant', color: '#f59e0b', bg: 'rgba(245,158,11,0.12)', border: 'rgba(245,158,11,0.25)', desc: 'Gemini AI powered assistant for email drafting, lead scoring, sales insights, and smart summaries — directly inside your CRM.', tags: ['Gemini AI', 'Auto-draft', 'Insights'] },
-              { icon: '📱', title: 'Mobile App', color: '#22c55e', bg: 'rgba(34,197,94,0.12)', border: 'rgba(34,197,94,0.25)', desc: 'Native iOS & Android app to manage leads, tasks, and pipeline on the go — full offline support with smart sync.', tags: ['iOS', 'Android', 'Offline'] },
-              { icon: '📊', title: 'Advanced Analytics', color: '#4ade80', bg: 'rgba(74,222,128,0.12)', border: 'rgba(74,222,128,0.25)', desc: 'Deep sales analytics with custom dashboards, revenue forecasting, team performance tracking, and exportable reports.', tags: ['Dashboards', 'Forecast', 'Reports'] },
-            ].map((f, i) => (
-              <div key={i} style={{ background: f.bg, border: `1px solid ${f.border}`, borderRadius: 18, padding: 28, position: 'relative', overflow: 'hidden', transition: 'all 0.3s' }}
-                onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; }}
-                onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}>
-                {/* Coming Soon badge */}
-                <div style={{ position: 'absolute', top: 16, right: 16, fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.5)', padding: '3px 10px', borderRadius: 20 }}>
-                  Coming Soon
-                </div>
-                <div style={{ width: 52, height: 52, borderRadius: 14, background: f.bg, border: `1px solid ${f.border}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, marginBottom: 18 }}>{f.icon}</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#fff', marginBottom: 10 }}>{f.title}</div>
-                <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.65, marginBottom: 16 }}>{f.desc}</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {f.tags.map((t, j) => (
-                    <span key={j} style={{ fontSize: 11, fontWeight: 600, padding: '3px 10px', borderRadius: 20, background: f.bg, color: f.color, border: `1px solid ${f.border}` }}>{t}</span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── RESELLER / PARTNER ── */}
-      <section className="partner-section" id="partner">
+      <section className="partner-section reveal" id="partner">
         <div className="partner-inner">
           <div className="partner-grid">
             <div>
@@ -1716,7 +1870,7 @@ const LandingPage = () => {
               <h2 className="sec-title">Grow Together.<br /><span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Earn Together.</span></h2>
               <p className="sec-sub" style={{ marginBottom: 36 }}>Join our reseller network and earn commissions by bringing businesses onto our platform. Full support, dashboard, and resources provided.</p>
               <div style={{ display: 'flex', gap: 14 }}>
-                <button className="hero-cta-main" onClick={() => navigate('/reseller/register')}>Become a Reseller →</button>
+                <button className="hero-cta-main" onClick={() => navigate('/partners')}>Become a Reseller →</button>
                 <button className="hero-cta-ghost" onClick={() => navigate('/login')}>View Dashboard</button>
               </div>
             </div>
@@ -1754,7 +1908,7 @@ const LandingPage = () => {
             <p className="cta-sub">Join hundreds of businesses already using Unified CRM to close more deals, manage better, and grow faster.</p>
             <div className="cta-buttons">
               <button className="cta-btn-main" onClick={() => navigate('/register')}>Start Free Trial →</button>
-              <button className="cta-btn-ghost" onClick={() => navigate('/reseller/register')}>Become a Partner</button>
+              <button className="cta-btn-ghost" onClick={() => navigate('/partners')}>Become a Partner</button>
             </div>
             <div style={{ marginTop: 32, display: 'flex', gap: 32, justifyContent: 'center', flexWrap: 'wrap' }}>
               {['✅ No credit card required', '⚡ Setup in minutes', '🔒 Enterprise-grade security'].map((t, i) => (

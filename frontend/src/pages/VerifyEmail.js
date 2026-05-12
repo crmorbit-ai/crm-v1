@@ -108,7 +108,7 @@ const VerifyEmail = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: '#0f172a',
+      background: '#0f1e2e',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -120,14 +120,14 @@ const VerifyEmail = () => {
       <div style={{
         position: 'absolute', top: '-20%', left: '-10%',
         width: '500px', height: '500px',
-        background: 'radial-gradient(circle, rgba(139, 92, 246, 0.15) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(30,185,128,0.07) 0%, transparent 70%)',
         borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none'
       }} />
       {/* Background glow — blue bottom-right */}
       <div style={{
         position: 'absolute', bottom: '-20%', right: '-10%',
         width: '500px', height: '500px',
-        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, transparent 70%)',
+        background: 'radial-gradient(circle, rgba(30,185,128,0.05) 0%, transparent 70%)',
         borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none'
       }} />
 
@@ -149,8 +149,8 @@ const VerifyEmail = () => {
         <div style={{ textAlign: 'center', marginBottom: '16px' }}>
           <div style={{
             width: '64px', height: '64px', borderRadius: '16px', margin: '0 auto 16px',
-            background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2) 0%, rgba(59, 130, 246, 0.2) 100%)',
-            border: '1px solid rgba(139, 92, 246, 0.3)',
+            background: 'linear-gradient(135deg, rgba(30,185,128,0.1) 0%, rgba(59, 130, 246, 0.2) 100%)',
+            border: '1px solid rgba(30,185,128,0.3)',
             display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px'
           }}>
             ✉️
@@ -161,7 +161,7 @@ const VerifyEmail = () => {
           <p style={{ fontSize: '14px', color: '#9ca3af', marginBottom: '4px' }}>
             We've sent a 6-digit code to
           </p>
-          <p style={{ fontSize: '14px', fontWeight: '600', color: '#a78bfa' }}>
+          <p style={{ fontSize: '14px', fontWeight: '600', color: '#1EB980' }}>
             {email}
           </p>
         </div>
@@ -215,15 +215,15 @@ const VerifyEmail = () => {
                   textAlign: 'center', fontSize: '22px', fontWeight: '700',
                   color: '#ffffff',
                   background: 'rgba(255, 255, 255, 0.05)',
-                  border: digit ? '2px solid #8b5cf6' : '1px solid rgba(255, 255, 255, 0.1)',
+                  border: digit ? '2px solid #1EB980' : '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '10px', outline: 'none',
                   transition: 'all 0.2s ease',
-                  caretColor: '#8b5cf6',
+                  caretColor: '#1EB980',
                   boxSizing: 'border-box'
                 }}
                 onFocus={(e) => {
-                  e.target.style.borderColor = '#8b5cf6';
-                  e.target.style.boxShadow = '0 0 0 3px rgba(139, 92, 246, 0.15)';
+                  e.target.style.borderColor = '#1EB980';
+                  e.target.style.boxShadow = '0 0 0 3px rgba(30,185,128,0.07)';
                   e.target.style.borderWidth = '2px';
                 }}
                 onBlur={(e) => {
@@ -246,20 +246,20 @@ const VerifyEmail = () => {
               fontSize: '15px', fontWeight: '600', color: 'white',
               background: (loading || otp.some(d => !d))
                 ? '#374151'
-                : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)',
+                : 'linear-gradient(135deg, #1EB980 0%, #1EB980 100%)',
               border: 'none', borderRadius: '10px',
               cursor: (loading || otp.some(d => !d)) ? 'not-allowed' : 'pointer',
               transition: 'all 0.2s ease',
-              boxShadow: (loading || otp.some(d => !d)) ? 'none' : '0 4px 15px rgba(139, 92, 246, 0.3)',
+              boxShadow: (loading || otp.some(d => !d)) ? 'none' : '0 4px 15px rgba(30,185,128,0.3)',
               marginBottom: '16px'
             }}
             onMouseEnter={(e) => {
               if (!loading && !otp.some(d => !d))
-                e.target.style.boxShadow = '0 6px 20px rgba(139, 92, 246, 0.4)';
+                e.target.style.boxShadow = '0 6px 20px rgba(30,185,128,0.4)';
             }}
             onMouseLeave={(e) => {
               if (!loading && !otp.some(d => !d))
-                e.target.style.boxShadow = '0 4px 15px rgba(139, 92, 246, 0.3)';
+                e.target.style.boxShadow = '0 4px 15px rgba(30,185,128,0.3)';
             }}
           >
             {loading ? 'Verifying...' : 'Verify Email'}
@@ -281,7 +281,7 @@ const VerifyEmail = () => {
           style={{
             width: '100%', padding: '12px 16px',
             fontSize: '14px', fontWeight: '600',
-            color: (resendCooldown > 0 || resendLoading) ? '#4b5563' : '#a78bfa',
+            color: (resendCooldown > 0 || resendLoading) ? '#4b5563' : '#1EB980',
             background: 'rgba(255, 255, 255, 0.04)',
             border: '1px solid rgba(255, 255, 255, 0.08)',
             borderRadius: '10px',
@@ -292,7 +292,7 @@ const VerifyEmail = () => {
           onMouseEnter={(e) => {
             if (resendCooldown === 0 && !resendLoading) {
               e.target.style.background = 'rgba(139, 92, 246, 0.08)';
-              e.target.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+              e.target.style.borderColor = 'rgba(30,185,128,0.3)';
             }
           }}
           onMouseLeave={(e) => {

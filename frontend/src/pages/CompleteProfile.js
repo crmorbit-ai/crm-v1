@@ -246,7 +246,7 @@ const CompleteProfile = () => {
               <div>
                 <p style={{ margin: '0 0 8px', fontSize: '12px', color: '#94a3b8' }}>PNG, JPG · max 2MB</p>
                 <input type="file" id="logo" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
-                <label htmlFor="logo" style={{ padding: '6px 14px', background: 'rgba(139,92,246,0.2)', color: '#a78bfa', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', border: '1px solid rgba(139,92,246,0.3)' }}>
+                <label htmlFor="logo" style={{ padding: '6px 14px', background: 'rgba(139,92,246,0.2)', color: '#1EB980', borderRadius: '6px', fontSize: '12px', fontWeight: '500', cursor: 'pointer', border: '1px solid rgba(30,185,128,0.3)' }}>
                   {logoPreview ? 'Change Logo' : 'Upload Logo'}
                 </label>
               </div>
@@ -302,7 +302,7 @@ const CompleteProfile = () => {
 
   if (showSuccess) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+      <div style={{ minHeight: '100vh', background: '#0f1e2e', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
         {/* Glows */}
         <div style={{ position: 'fixed', top: '-20%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(16,185,129,0.2) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
         <div style={{ position: 'fixed', bottom: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(139,92,246,0.2) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
@@ -325,10 +325,10 @@ const CompleteProfile = () => {
 
           {/* Animated progress bar */}
           <div style={{ width: '220px', height: '3px', background: 'rgba(255,255,255,0.08)', borderRadius: '2px', margin: '0 auto 28px', overflow: 'hidden' }}>
-            <div style={{ height: '100%', background: 'linear-gradient(90deg, #10b981, #8b5cf6)', borderRadius: '2px', animation: 'progressFill 3.5s linear forwards' }} />
+            <div style={{ height: '100%', background: 'linear-gradient(90deg, #10b981, #1EB980)', borderRadius: '2px', animation: 'progressFill 3.5s linear forwards' }} />
           </div>
 
-          <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 28px', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(139,92,246,0.35)' }}>
+          <button onClick={() => navigate('/dashboard')} style={{ padding: '10px 28px', background: 'linear-gradient(135deg, #1EB980, #1EB980)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(30,185,128,0.35)' }}>
             Go to Dashboard →
           </button>
         </div>
@@ -344,10 +344,10 @@ const CompleteProfile = () => {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0f172a', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', background: '#0f1e2e', display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
       {/* Background glows — same as Login */}
-      <div style={{ position: 'fixed', top: '-20%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
-      <div style={{ position: 'fixed', bottom: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', top: '-20%', left: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(30,185,128,0.07) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
+      <div style={{ position: 'fixed', bottom: '-20%', right: '-10%', width: '500px', height: '500px', background: 'radial-gradient(circle, rgba(30,185,128,0.05) 0%, transparent 70%)', borderRadius: '50%', filter: 'blur(60px)', pointerEvents: 'none' }} />
 
       {/* Top Bar — Logo left */}
       <div style={{ padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', position: 'relative', zIndex: 10, flexShrink: 0 }}>
@@ -364,7 +364,7 @@ const CompleteProfile = () => {
           <div style={{ textAlign: 'center', marginBottom: '22px' }}>
             <h1 style={{ margin: '0 0 10px', fontSize: '34px', fontWeight: '800', color: '#f1f5f9', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
               Welcome to{' '}
-              <span style={{ background: 'linear-gradient(135deg, #a78bfa, #60a5fa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              <span style={{ background: 'linear-gradient(135deg, #1EB980, #60a5fa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                 Unified CRM
               </span>
             </h1>
@@ -380,10 +380,10 @@ const CompleteProfile = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '7px', opacity: currentStep < i + 1 ? 0.35 : 1, transition: 'opacity 0.25s' }}>
                   <div style={{
                     width: '28px', height: '28px', borderRadius: '50%',
-                    background: currentStep > i + 1 ? '#10b981' : currentStep === i + 1 ? 'linear-gradient(135deg, #8b5cf6, #3b82f6)' : 'rgba(255,255,255,0.08)',
+                    background: currentStep > i + 1 ? '#10b981' : currentStep === i + 1 ? 'linear-gradient(135deg, #1EB980, #1EB980)' : 'rgba(255,255,255,0.08)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '12px', fontWeight: '700', color: '#fff',
-                    boxShadow: currentStep === i + 1 ? '0 0 0 4px rgba(139,92,246,0.3)' : 'none',
+                    boxShadow: currentStep === i + 1 ? '0 0 0 4px rgba(30,185,128,0.3)' : 'none',
                     transition: 'all 0.3s', flexShrink: 0
                   }}>
                     {currentStep > i + 1 ? '✓' : i + 1}
@@ -404,7 +404,7 @@ const CompleteProfile = () => {
 
             {/* Card Header */}
             <div style={{ padding: '14px 22px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #8b5cf6, #3b82f6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: '8px', background: 'linear-gradient(135deg, #1EB980, #1EB980)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px', flexShrink: 0 }}>
                 {stepData[currentStep - 1].icon}
               </div>
               <div style={{ flex: 1 }}>
@@ -457,11 +457,11 @@ const CompleteProfile = () => {
                   </button>
                 )}
                 {currentStep < 4 ? (
-                  <button type="button" onClick={handleNext} style={{ padding: '8px 20px', background: 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(139,92,246,0.3)' }}>
+                  <button type="button" onClick={handleNext} style={{ padding: '8px 20px', background: 'linear-gradient(135deg, #1EB980 0%, #1EB980 100%)', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 4px 14px rgba(30,185,128,0.3)' }}>
                     Continue →
                   </button>
                 ) : (
-                  <button type="button" onClick={handleSubmit} disabled={loading} style={{ padding: '8px 20px', background: loading ? '#374151' : 'linear-gradient(135deg, #8b5cf6 0%, #3b82f6 100%)', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 14px rgba(139,92,246,0.3)' }}>
+                  <button type="button" onClick={handleSubmit} disabled={loading} style={{ padding: '8px 20px', background: loading ? '#374151' : 'linear-gradient(135deg, #1EB980 0%, #1EB980 100%)', color: '#fff', border: 'none', borderRadius: '7px', fontSize: '12px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer', boxShadow: loading ? 'none' : '0 4px 14px rgba(30,185,128,0.3)' }}>
                     {loading ? 'Setting up...' : 'Complete Setup ✓'}
                   </button>
                 )}

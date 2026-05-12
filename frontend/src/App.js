@@ -26,6 +26,8 @@ import IndustriesPage from './pages/IndustriesPage';
 import HelpCenter from './pages/HelpCenter';
 import DemoPage from './pages/DemoPage';
 import DemoLibraryPage from './pages/DemoLibraryPage';
+import DataCenterPage from './pages/DataCenterPage';
+import PartnersPage from './pages/PartnersPage';
 
 // Dashboard components
 import Dashboard from './pages/Dashboard';
@@ -616,6 +618,8 @@ function AppRoutes() {
       <Route path="/demo" element={<DemoPage />} />
       <Route path="/help" element={<HelpCenter />} />
       <Route path="/demo/library" element={<DemoLibraryPage />} />
+      <Route path="/data-center-feature" element={<DataCenterPage />} />
+      <Route path="/partners" element={<PartnersPage />} />
 
       {/* Default redirect */}
       <Route path="/" element={
