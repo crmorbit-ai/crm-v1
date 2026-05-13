@@ -297,13 +297,55 @@ const CSS = `
 
   /* Hero */
   .hero-section {
-    position: relative; padding: 152px 0 100px; min-height: 100vh;
-    display: flex; align-items: center;
+    position: relative; padding: 140px 0 80px; min-height: 100vh;
+    display: flex; align-items: flex-start;
     background:
-      radial-gradient(ellipse at 82% 8%, #1EB980 0%, rgba(30,185,128,0.55) 28%, transparent 55%),
-      radial-gradient(ellipse at 5% 90%, #0a1622 0%, transparent 42%),
-      linear-gradient(150deg, #0a1622 0%, #0d1c2e 15%, #10243a 30%, #132d46 45%, #163654 58%, #194060 68%, #1c4e62 76%, #1d5c58 84%, #1e7050 91%, #1EB980 100%);
+      radial-gradient(ellipse at 80% 20%, rgba(30,185,128,0.35) 0%, transparent 50%),
+      radial-gradient(ellipse at 10% 80%, rgba(30,185,128,0.15) 0%, transparent 45%),
+      linear-gradient(135deg, #0a1628 0%, #0d1f38 35%, #0f2444 60%, #0d2a1e 80%, #0a1e18 100%);
   }
+
+  /* ── GLOWING RING ── */
+  .glow-ring-wrap {
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    pointer-events:none; overflow:hidden;
+  }
+  .glow-ring {
+    position:absolute; border-radius:50%; border:2px solid rgba(30,185,128,0.25);
+    animation: ringPulse 4s ease-in-out infinite;
+  }
+  @keyframes ringPulse {
+    0%,100% { transform:scale(1); opacity:0.2; }
+    50%      { transform:scale(1.06); opacity:0.55; }
+  }
+
+  /* ── PARALLAX SECTION ── */
+  .parallax-section {
+    position:relative; overflow:hidden; min-height:480px;
+    display:flex; align-items:center; justify-content:center;
+    background-attachment:fixed;
+    background-size:cover; background-position:center;
+  }
+  .parallax-overlay {
+    position:absolute; inset:0; background:rgba(10,22,34,0.72); z-index:1;
+  }
+
+  /* ── STATS CARDS bottom border ── */
+  .stat-card { border-bottom: 3px solid #1EB980 !important; }
+
+  /* ── PARTICLE SECTION ── */
+  .particle-section {
+    position:relative; overflow:hidden; padding:100px 0;
+    background: linear-gradient(160deg, #071018 0%, #0a1628 50%, #0c1e38 100%);
+  }
+  .particle-section-content { position:relative; z-index:1; }
+
+  /* ── AURORA SECTION ── */
+  .aurora-section {
+    position:relative; overflow:hidden; padding:100px 0;
+    background:linear-gradient(160deg, #070e1a 0%, #0a1826 50%, #0d1f38 100%);
+  }
+  .aurora-section-content { position:relative; z-index:1; }
 
   /* ── CURSOR GLOW ── */
   .lp-cursor-glow {
@@ -375,6 +417,20 @@ const CSS = `
     background:radial-gradient(ellipse,rgba(74,222,128,0.12) 0%,transparent 65%);
     top:20%; left:15%; pointer-events:none; filter:blur(65px); z-index:1;
     animation: floatOrb3 20s ease-in-out infinite;
+  }
+
+  /* ── 3D Perspective Grid ── */
+  .hero-grid-3d {
+    position:absolute; bottom:0; left:-15%; right:-15%; height:45%;
+    background-image:
+      linear-gradient(rgba(30,185,128,0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30,185,128,0.18) 1px, transparent 1px);
+    background-size: 56px 56px;
+    transform: perspective(600px) rotateX(62deg);
+    transform-origin: bottom center;
+    pointer-events:none; z-index:1;
+    mask-image: linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.25) 0%, transparent 100%);
   }
 
   /* ── 2. Scroll-reveal ── */
@@ -453,8 +509,8 @@ const CSS = `
   .hero-proof-text { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.95); }
   .hero-proof-text span { color: #fff; font-weight: 700; }
   .hero-h1 {
-    font-size: clamp(42px, 6vw, 72px); font-weight: 700; line-height: 1.05;
-    letter-spacing: -2px; margin: 0 0 28px; color: #fff;
+    font-size: clamp(42px, 5vw, 68px); font-weight: 700; line-height: 1.08;
+    letter-spacing: -2px; margin: 0 0 22px; color: #fff;
     animation: heroFadeUp 0.8s ease both;
   }
   .hero-h1 .grad1 {
@@ -482,7 +538,7 @@ const CSS = `
   }
   .hero-rotate-word {
     height:1.15em; line-height:1.15em; white-space:nowrap;
-    background:linear-gradient(135deg,#1EB980,#4ade80);
+    background:linear-gradient(135deg,#1EB980,#34d399);
     -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
   }
   @keyframes rotateWords {
@@ -518,61 +574,109 @@ const CSS = `
   .sp-content { animation: spFadeIn 0.35s ease; }
   @keyframes spFadeIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
   .hero-sub {
-    font-size: 19px; color: rgba(255,255,255,0.82); line-height: 1.65;
-    max-width: 600px; margin: 0 0 44px; font-weight: 400;
+    font-size: 17px; color: rgba(255,255,255,0.68); line-height: 1.7;
+    max-width: 540px; margin: 0 0 36px; font-weight: 400;
   }
   .hero-sub span { color: #fff; font-weight: 600; }
   .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 48px; }
   .hero-cta-main {
-    padding: 14px 28px; font-size: 16px; font-weight: 600; color: #fff;
+    padding: 13px 26px; font-size: 15px; font-weight: 600; color: #fff;
     background: #1EB980;
-    border: none; border-radius: 999px; cursor: pointer; transition: all 0.25s ease;
+    border: none; border-radius: 8px; cursor: pointer; transition: all 0.22s ease;
     display: flex; align-items: center; gap: 8px;
-    box-shadow: 0 4px 20px rgba(30,185,128,0.4);
+    box-shadow: 0 2px 12px rgba(30,185,128,0.35);
+    font-family: inherit;
   }
-  .hero-cta-main:hover { background: #17a46f; transform: translateY(-1px); box-shadow: 0 8px 28px rgba(30,185,128,0.5); }
+  .hero-cta-main:hover { background: #17a46f; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(30,185,128,0.45); }
   .hero-cta-ghost {
-    padding: 14px 28px; font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.9);
-    background: transparent; border: 1px solid rgba(255,255,255,0.35);
-    border-radius: 999px; cursor: pointer; transition: all 0.25s ease;
+    padding: 13px 26px; font-size: 15px; font-weight: 500; color: rgba(255,255,255,0.82);
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px; cursor: pointer; transition: all 0.22s ease; font-family: inherit;
   }
-  .hero-cta-ghost:hover { background: rgba(255,255,255,0.1); color: #fff; border-color: rgba(255,255,255,0.6); }
+  .hero-cta-ghost:hover { background: rgba(255,255,255,0.1); color: #fff; }
   .hero-badges { display: flex; gap: 24px; flex-wrap: wrap; }
   .hero-badge { display: flex; align-items: center; gap: 6px; font-size: 13px; color: rgba(255,255,255,0.85); font-weight: 500; }
   .hero-badge-dot { width: 7px; height: 7px; border-radius: 50%; background: #fff; }
 
   /* Hero split cards */
-  .hero-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .hero-card {
-    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 18px; padding: 24px; transition: all 0.3s;
+  /* Hero video */
+  .hero-video-outer {
+    position: relative;
+  }
+  .hero-video-glow {
+    position: absolute; inset: -60px; z-index: -1; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 60%, rgba(30,185,128,0.28) 0%, transparent 65%);
+    filter: blur(30px); border-radius: 50%;
+  }
+  .hero-video-wrap {
+    position: relative; border-radius: 18px; overflow: hidden;
+    border: 1.5px solid rgba(30,185,128,0.3);
+    box-shadow:
+      0 0 0 4px rgba(30,185,128,0.08),
+      0 0 0 8px rgba(30,185,128,0.04),
+      0 20px 60px rgba(0,0,0,0.6),
+      0 40px 100px rgba(0,0,0,0.4),
+      0 0 80px rgba(30,185,128,0.2);
+  }
+  .hero-video-bar {
+    background: #162e48; padding: 10px 14px;
+    display: flex; align-items: center; gap: 6px;
+    border-bottom: 1px solid rgba(255,255,255,0.07);
+  }
+  .hero-video-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .hero-video-url {
+    flex: 1; height: 22px; background: rgba(255,255,255,0.07);
+    border-radius: 4px; margin-left: 8px; display: flex; align-items: center;
+    padding: 0 10px;
+    font-size: 11px; color: rgba(255,255,255,0.3); font-family: monospace;
+  }
+  .hero-video {
+    width: 100%; display: block; aspect-ratio: 4/3; object-fit: cover;
+  }
+  .hero-video-shine {
+    position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05) 0%, transparent 45%);
+  }
+  /* Image Slider */
+  .hero-slider {
+    position: relative; width: 100%; aspect-ratio: 16/10; overflow: hidden;
+  }
+  .hero-slide {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; transition: opacity 0.8s ease; opacity: 0;
+  }
+  .hero-slide.active { opacity: 1; }
+  .hero-slider-dots {
+    position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 8px; z-index: 10;
+  }
+  .hero-slider-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: rgba(255,255,255,0.35); border: none; cursor: pointer;
+    transition: all 0.3s; padding: 0;
+  }
+  .hero-slider-dot.active {
+    background: #1EB980; width: 22px; border-radius: 4px;
+  }
+  /* Floating metric badges on video */
+  .hero-float-badge {
+    position: absolute; z-index: 10;
+    background: rgba(15,30,46,0.92); border: 1px solid rgba(30,185,128,0.35);
+    border-radius: 12px; padding: 10px 14px;
     backdrop-filter: blur(12px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    display: flex; align-items: center; gap: 8px;
+    animation: floatBadge 4s ease-in-out infinite;
+    white-space: nowrap;
   }
-  .hero-card:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.3); transform: translateY(-3px); }
-  .hero-card-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    border-radius: 20px; padding: 4px 12px; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.5px; text-transform: uppercase; margin-bottom: 14px;
+  .hero-float-badge:nth-child(2) { animation-delay: 1.5s; }
+  @keyframes floatBadge {
+    0%,100% { transform: translateY(0px); }
+    50% { transform: translateY(-6px); }
   }
-  .hero-card-title { font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 8px; }
-  .hero-card-sub { font-size: 13px; color: rgba(255,255,255,0.8); margin: 0 0 18px; line-height: 1.5; }
-  .hero-card-modules { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .hero-card-module {
-    display: flex; align-items: center; justify-content: center; gap: 5px;
-    background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 10px; padding: 8px 10px; font-size: 11px; font-weight: 700; color: #fff;
-    cursor: pointer; transition: all 0.2s;
-    height: 56px; width: 100%; box-sizing: border-box;
-    text-align: center; word-break: break-word; line-height: 1.35;
-  }
-  .hero-card-module:hover { background: rgba(255,255,255,0.25); }
-  .hero-card-module:hover { background: rgba(255,255,255,0.25); }
-  .hero-card-link {
-    display: flex; align-items: center; justify-content: space-between;
-    margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.2);
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    background: none; border: none; width: 100%; color: rgba(255,255,255,0.9);
-  }
+  .hero-float-dot { width: 8px; height: 8px; border-radius: 50%; background: #1EB980; flex-shrink: 0; }
+  .hero-float-label { font-size: 12px; font-weight: 700; color: #fff; }
+  .hero-float-sub { font-size: 10px; color: rgba(255,255,255,0.45); margin-top: 1px; }
 
   /* Trusted bar */
   .trusted-bar {
@@ -720,15 +824,37 @@ const CSS = `
   .partner-feat-desc { font-size: 14px; color: rgba(255,255,255,0.55); margin: 0; line-height: 1.6; }
 
   /* CTA */
-  .cta-section { padding: 120px 0; position: relative; overflow: hidden; background: #0f1e2e; }
-  .cta-inner { max-width: 800px; margin: 0 auto; padding: 0 28px; text-align: center; position: relative; z-index: 2; }
+  .cta-section { padding: 120px 0; position: relative; overflow: hidden; background: #0a1622; }
+  .cta-section::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+    background-image: radial-gradient(circle, rgba(30,185,128,0.065) 1px, transparent 1px);
+    background-size: 42px 42px;
+  }
+  .cta-parallax-bg {
+    position: absolute; inset: -40% -20%;
+    background:
+      radial-gradient(ellipse at 25% 55%, rgba(30,185,128,0.14) 0%, transparent 44%),
+      radial-gradient(ellipse at 78% 28%, rgba(14,165,233,0.07) 0%, transparent 44%),
+      radial-gradient(ellipse at 50% 85%, rgba(30,185,128,0.09) 0%, transparent 40%);
+    pointer-events: none; z-index: 0; will-change: transform;
+  }
+  .cta-inner { max-width: 800px; margin: 0 auto; padding: 0 28px; text-align: center; position: relative; z-index: 3; }
+  @keyframes ctaCardFloat {
+    0%, 100% { transform: translateY(0px) scale(1); box-shadow: 0 8px 40px rgba(0,0,0,0.3), 0 0 60px rgba(30,185,128,0.06); }
+    50% { transform: translateY(-10px) scale(1.003); box-shadow: 0 20px 60px rgba(0,0,0,0.4), 0 0 100px rgba(30,185,128,0.12); }
+  }
+  @keyframes ctaGlowPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
   .cta-card {
     background: linear-gradient(145deg, #1a3654 0%, #162e48 50%, #1a4060 100%);
-    border: 1px solid rgba(30,185,128,0.25); border-radius: 32px; padding: 80px 60px;
+    border: 1px solid rgba(30,185,128,0.28); border-radius: 32px; padding: 80px 60px;
     position: relative; overflow: hidden;
-    box-shadow: 0 8px 40px rgba(0,0,0,0.3);
+    animation: ctaCardFloat 7s ease-in-out infinite;
+    z-index: 2;
   }
-  .cta-glow { position: absolute; inset: -50%; background: radial-gradient(ellipse at 50% 0%, rgba(30,185,128,0.2) 0%, transparent 55%); pointer-events: none; }
+  .cta-glow { position: absolute; inset: -50%; background: radial-gradient(ellipse at 50% 0%, rgba(30,185,128,0.22) 0%, transparent 55%); pointer-events: none; animation: ctaGlowPulse 4s ease-in-out infinite; }
   .cta-title { font-size: clamp(32px, 5vw, 54px); font-weight: 900; line-height: 1.1; letter-spacing: -1.5px; margin: 0 0 20px; }
   .cta-sub { font-size: 17px; color: rgba(255,255,255,0.5); line-height: 1.7; margin: 0 0 40px; }
   .cta-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
@@ -868,6 +994,254 @@ const CSS = `
 `;
 
 /* ─── Spotlight Mock: CRM Pipeline ─── */
+/* ── Canvas Particle Background ── */
+/* ── Floating Network Nodes (We automate — different from hero) ── */
+/* ── Circuit Board Data Flow (We automate) ── */
+const ParticleCanvas = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let W, H;
+    const resize = () => { W = canvas.parentElement.offsetWidth; H = canvas.parentElement.offsetHeight || 500; canvas.width = W; canvas.height = H; };
+    resize();
+    const GRID = 55;
+    const COLORS = ['30,185,128','6,182,212','52,211,153','16,185,129','74,222,128'];
+    const signals = Array.from({ length: 55 }, () => {
+      const horiz = Math.random() > 0.5;
+      const col = Math.floor(Math.random() * (W / GRID + 2));
+      const row = Math.floor(Math.random() * (H / GRID + 2));
+      return {
+        x: col * GRID, y: row * GRID,
+        dx: horiz ? (Math.random() > 0.5 ? 1 : -1) : 0,
+        dy: horiz ? 0 : (Math.random() > 0.5 ? 1 : -1),
+        speed: Math.random() * 2.5 + 1.2,
+        len: Math.random() * 50 + 20,
+        op: Math.random() * 0.8 + 0.3,
+        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      };
+    });
+    let raf;
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      // Grid lines
+      ctx.strokeStyle = 'rgba(30,185,128,0.05)'; ctx.lineWidth = 1;
+      for (let c = 0; c * GRID < W + GRID; c++) { ctx.beginPath(); ctx.moveTo(c*GRID,0); ctx.lineTo(c*GRID,H); ctx.stroke(); }
+      for (let r = 0; r * GRID < H + GRID; r++) { ctx.beginPath(); ctx.moveTo(0,r*GRID); ctx.lineTo(W,r*GRID); ctx.stroke(); }
+      // Junction dots
+      for (let c = 0; c * GRID < W + GRID; c++) for (let r = 0; r * GRID < H + GRID; r++) {
+        ctx.beginPath(); ctx.arc(c*GRID, r*GRID, 1.8, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(30,185,128,0.22)'; ctx.fill();
+      }
+      // Signals
+      signals.forEach(s => {
+        const tx = s.x - s.dx * s.len, ty = s.y - s.dy * s.len;
+        const g = ctx.createLinearGradient(tx, ty, s.x, s.y);
+        g.addColorStop(0, `rgba(${s.color},0)`);
+        g.addColorStop(1, `rgba(${s.color},${s.op * 0.6})`);
+        ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(s.x,s.y);
+        ctx.strokeStyle = g; ctx.lineWidth = 2; ctx.stroke();
+        ctx.shadowBlur = 14; ctx.shadowColor = `rgba(${s.color},${s.op})`;
+        ctx.beginPath(); ctx.arc(s.x, s.y, 3.5, 0, Math.PI*2);
+        ctx.fillStyle = `rgba(220,255,240,${s.op})`; ctx.fill(); ctx.shadowBlur = 0;
+        s.x += s.dx * s.speed; s.y += s.dy * s.speed;
+        if (s.x > W+s.len) s.x = -s.len; if (s.x < -s.len) s.x = W+s.len;
+        if (s.y > H+s.len) s.y = -s.len; if (s.y < -s.len) s.y = H+s.len;
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} />;
+};
+
+/* ── Dramatic Multi-Color Aurora Beams (We connect) ── */
+const AuroraCanvas = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let W, H;
+    const resize = () => { W = canvas.parentElement.offsetWidth; H = canvas.parentElement.offsetHeight || 500; canvas.width = W; canvas.height = H; };
+    resize();
+    const COLORS = [
+      [30,185,128],[6,182,212],[52,211,153],[74,222,128],
+      [16,185,129],[20,184,166],[56,189,248],[99,102,241],
+      [168,85,247],[236,72,153],[34,211,238],[16,185,129],
+    ];
+    const beams = Array.from({ length: 24 }, (_, i) => ({
+      angle: (Math.PI / 23) * i - Math.PI * 0.05 + (Math.random()-0.5)*0.25,
+      len: Math.random() * H * 1.3 + H * 0.7,
+      width: Math.random() * 5 + 1.5,
+      op: Math.random() * 0.7 + 0.2,
+      speed: (Math.random()-0.5)*0.004,
+      color: COLORS[i % COLORS.length],
+      phase: Math.random()*Math.PI*2,
+    }));
+    let t = 0, raf;
+    const draw = () => {
+      ctx.fillStyle = 'rgba(5,10,20,0.18)';
+      ctx.fillRect(0, 0, W, H);
+      t += 0.01;
+      const cx = W*0.5, cy = H*1.08;
+      beams.forEach(b => {
+        b.angle += b.speed;
+        const pulse = 0.5 + 0.5*Math.sin(t + b.phase);
+        const ex = cx + Math.cos(b.angle - Math.PI/2)*b.len;
+        const ey = cy + Math.sin(b.angle - Math.PI/2)*b.len;
+        const [r,g,bl] = b.color;
+        const grad = ctx.createLinearGradient(cx,cy,ex,ey);
+        grad.addColorStop(0, `rgba(${r},${g},${bl},0)`);
+        grad.addColorStop(0.25, `rgba(${r},${g},${bl},${b.op*pulse*0.5})`);
+        grad.addColorStop(0.65, `rgba(${r},${g},${bl},${b.op*pulse})`);
+        grad.addColorStop(1, `rgba(${r},${g},${bl},0)`);
+        ctx.shadowBlur = 28; ctx.shadowColor = `rgba(${r},${g},${bl},${b.op*pulse*0.8})`;
+        ctx.beginPath(); ctx.moveTo(cx,cy); ctx.lineTo(ex,ey);
+        ctx.strokeStyle = grad; ctx.lineWidth = b.width*(1+pulse*0.8); ctx.stroke();
+        ctx.shadowBlur = 0;
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} />;
+};
+
+/* ── CTA Nebula Background ── */
+const CtaCanvas = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let W = canvas.parentElement.offsetWidth;
+    let H = canvas.parentElement.offsetHeight || 500;
+    canvas.width = W; canvas.height = H;
+    const stars = Array.from({ length: 220 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 1.4 + 0.2,
+      op: Math.random() * 0.55 + 0.1,
+      speed: Math.random() * 0.12 + 0.02,
+      pulse: Math.random() * Math.PI * 2,
+    }));
+    const orbs = Array.from({ length: 6 }, () => ({
+      x: Math.random() * W, y: Math.random() * H,
+      r: Math.random() * 140 + 70,
+      vx: (Math.random() - 0.5) * 0.25, vy: (Math.random() - 0.5) * 0.25,
+      op: Math.random() * 0.09 + 0.03,
+      hue: Math.random() > 0.6 ? '14,165,233' : '30,185,128',
+    }));
+    let t = 0, raf;
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      t += 0.008;
+      orbs.forEach(o => {
+        const g = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
+        g.addColorStop(0, `rgba(${o.hue},${o.op})`);
+        g.addColorStop(1, `rgba(${o.hue},0)`);
+        ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
+        ctx.fillStyle = g; ctx.fill();
+        o.x += o.vx; o.y += o.vy;
+        if (o.x < -o.r || o.x > W + o.r) o.vx *= -1;
+        if (o.y < -o.r || o.y > H + o.r) o.vy *= -1;
+      });
+      stars.forEach(s => {
+        const pulse = 0.5 + 0.5 * Math.sin(t * 1.8 + s.pulse);
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r * (0.7 + 0.3 * pulse), 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(30,185,128,${s.op * pulse})`;
+        ctx.fill();
+        s.y -= s.speed;
+        if (s.y < -5) { s.y = H + 5; s.x = Math.random() * W; }
+      });
+      raf = requestAnimationFrame(draw);
+    };
+    draw();
+    const resize = () => {
+      W = canvas.parentElement.offsetWidth;
+      H = canvas.parentElement.offsetHeight || 500;
+      canvas.width = W; canvas.height = H;
+    };
+    window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} />;
+};
+
+/* ── Hero Heavy Particle Stream + Scramble Text ── */
+const HeroCanvas = () => {
+  const ref = useRef(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let W, H;
+    const resize = () => { W = canvas.parentElement.offsetWidth; H = canvas.parentElement.offsetHeight || window.innerHeight; canvas.width = W; canvas.height = H; };
+    resize();
+    const COLS = ['30,185,128','52,211,153','6,182,212','74,222,128','34,211,238'];
+    const pts = Array.from({ length: 180 }, () => ({
+      x: Math.random()*W*1.4 - W*0.2, y: Math.random()*H*1.4 - H*0.2,
+      r: Math.random()*2.5+0.5, speed: Math.random()*1.8+0.7,
+      op: Math.random()*0.6+0.2, tail: Math.random()*42+16,
+      bright: Math.random()>0.4,
+      color: COLS[Math.floor(Math.random()*COLS.length)],
+    }));
+    let raf;
+    const draw = () => {
+      ctx.fillStyle = 'rgba(8,16,30,0.18)'; ctx.fillRect(0,0,W,H);
+      pts.forEach(p => {
+        const tx = p.x - p.tail*0.58, ty = p.y + p.tail*0.58;
+        const g = ctx.createLinearGradient(tx,ty,p.x,p.y);
+        g.addColorStop(0,`rgba(${p.color},0)`);
+        g.addColorStop(1,`rgba(${p.color},${p.op*0.45})`);
+        ctx.beginPath(); ctx.moveTo(tx,ty); ctx.lineTo(p.x,p.y);
+        ctx.strokeStyle=g; ctx.lineWidth=p.r*1.2; ctx.stroke();
+        ctx.shadowBlur=14; ctx.shadowColor=`rgba(${p.color},${p.op*0.9})`;
+        ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+        ctx.fillStyle=p.bright?`rgba(210,255,235,${p.op})`:`rgba(${p.color},${p.op})`;
+        ctx.fill(); ctx.shadowBlur=0;
+        p.x+=p.speed*0.62; p.y-=p.speed;
+        if(p.x>W+50||p.y<-50){p.x=Math.random()*W*0.38-50;p.y=H+Math.random()*80;}
+      });
+      raf=requestAnimationFrame(draw);
+    };
+    draw();
+    window.addEventListener('resize', resize);
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', resize); };
+  }, []);
+  return <canvas ref={ref} style={{ position:'absolute', inset:0, width:'100%', height:'100%', pointerEvents:'none', zIndex:0 }} />;
+};
+
+/* ── Scramble Text Effect ── */
+const ScrambleText = ({ words }) => {
+  const [display, setDisplay] = React.useState(words[0]);
+  const idxRef = React.useRef(0);
+  const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
+  React.useEffect(() => {
+    const cycle = () => {
+      const next = (idxRef.current + 1) % words.length;
+      const target = words[next];
+      let iter = 0;
+      const iv = setInterval(() => {
+        setDisplay(target.split('').map((ch, i) =>
+          i < iter ? ch : CHARS[Math.floor(Math.random()*CHARS.length)]
+        ).join(''));
+        iter += 0.4;
+        if (iter >= target.length) { clearInterval(iv); setDisplay(target); idxRef.current = next; }
+      }, 28);
+    };
+    const t = setInterval(cycle, 2800);
+    return () => clearInterval(t);
+  }, []);
+  return <span>{display}</span>;
+};
+
 const PipelineMock = () => (
   <div className="mock-wrap">
     <div className="mock-inner">
@@ -1074,6 +1448,14 @@ const LandingPage = () => {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [spotlightTab, setSpotlightTab] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
+  const [ctaParallax, setCtaParallax] = useState(0);
+  const ctaRef = useRef(null);
+  const SLIDES = ['/slide1.png','/slide2.png','/slide3.png','/slide4.png','/slide5.png'];
+  const [activeSlide, setActiveSlide] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setActiveSlide(p => (p + 1) % SLIDES.length), 3500);
+    return () => clearInterval(t);
+  }, []);
   const [mouse, setMouse] = useState({ x: -999, y: -999 });
   const [mouseSmooth, setMouseSmooth] = useState({ x: -999, y: -999 });
   const mouseRef = useRef({ x: -999, y: -999 });
@@ -1095,6 +1477,11 @@ const LandingPage = () => {
       setIsScrolled(window.scrollY > 40);
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       setScrollProgress(maxScroll > 0 ? Math.min(window.scrollY / maxScroll, 1) : 0);
+      if (ctaRef.current) {
+        const rect = ctaRef.current.getBoundingClientRect();
+        const center = rect.top + rect.height / 2 - window.innerHeight / 2;
+        setCtaParallax(Math.max(-1, Math.min(1, center / (window.innerHeight * 0.7))));
+      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -1509,20 +1896,12 @@ const LandingPage = () => {
 
       {/* ── HERO ── */}
       <section className="hero-section" style={{ position: 'relative' }}>
-        {/* Floating orbs — 1 */}
         <div className="hero-orb1"/><div className="hero-orb2"/><div className="hero-orb3"/>
+        <div className="hero-grid-3d" />
         <div className="hero-inner">
-          <div className="hero-main-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? 32 : 64, alignItems: 'center' }}>
+          <div className="hero-main-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.3fr', gap: isMobile ? 32 : 48, alignItems: 'center' }}>
             {/* Left */}
             <div>
-              <div className="hero-social-proof">
-                <div className="hero-avatars">
-                  {['S','R','A','K','P'].map((l, i) => (
-                    <div key={i} className="hero-avatar" style={{ background: ['#15803d','#16a34a','#22c55e','#f59e0b','#10b981'][i] }}>{l}</div>
-                  ))}
-                </div>
-                <span className="hero-proof-text"><span>500+</span> businesses growing with us</span>
-              </div>
 
               <h1 className="hero-h1">
                 The CRM Platform<br />
@@ -1557,41 +1936,44 @@ const LandingPage = () => {
             </div>
 
             {/* Right – Split cards */}
-            <div className="hero-cards">
-              {/* Sales & CRM card */}
-              <div className="hero-card">
-                <div className="hero-card-badge" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff' }}>
-                  🎯 FOR SALES TEAMS
+            <div className="hero-video-outer">
+              <div className="hero-video-glow" />
+
+              {/* Decorative corner accent top-right */}
+              <div style={{ position:'absolute', top:-12, right:-12, width:80, height:80, borderTop:'2px solid rgba(30,185,128,0.5)', borderRight:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 12px 0 0', zIndex:10, pointerEvents:'none' }} />
+              {/* Decorative corner accent bottom-left */}
+              <div style={{ position:'absolute', bottom:-12, left:-12, width:80, height:80, borderBottom:'2px solid rgba(30,185,128,0.5)', borderLeft:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 0 0 12px', zIndex:10, pointerEvents:'none' }} />
+
+              {/* Floating stat card — top right */}
+              <div className="hero-float-badge" style={{ top:'-18px', right:'-16px' }}>
+                <div className="hero-float-dot" style={{ background:'#1EB980' }} />
+                <div>
+                  <div className="hero-float-label">99.9% Uptime</div>
+                  <div className="hero-float-sub">Enterprise reliability</div>
                 </div>
-                <div className="hero-card-title">Drive More Revenue</div>
-                <div className="hero-card-sub">Pipeline, leads, contacts, and B2B deals — all tracked in one place.</div>
-                <div className="hero-card-modules">
-                  {MODULES_SALES.map((m, i) => (
-                    <div key={i} className="hero-card-module">{m.icon} {m.label}</div>
-                  ))}
-                </div>
-                <button className="hero-card-link" onClick={() => navigate('/register')} style={{ color: '#fff' }}>
-                  <span>Explore Sales CRM</span>
-                  <span style={{ fontSize: 18 }}>→</span>
-                </button>
               </div>
 
-              {/* Operations card */}
-              <div className="hero-card">
-                <div className="hero-card-badge" style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', color: '#fff' }}>
-                  ⚙️ FOR OPERATIONS
+              {/* Floating stat card — bottom left */}
+              <div className="hero-float-badge" style={{ bottom:'-18px', left:'-16px', animationDelay:'2s' }}>
+                <div className="hero-float-dot" style={{ background:'#fbbf24' }} />
+                <div>
+                  <div className="hero-float-label">25+ Modules</div>
+                  <div className="hero-float-sub">All-in-one platform</div>
                 </div>
-                <div className="hero-card-title">Automate B2B Workflow</div>
-                <div className="hero-card-sub">From inquiry to invoice — complete document workflow with PDF export.</div>
-                <div className="hero-card-modules">
-                  {MODULES_OPS.map((m, i) => (
-                    <div key={i} className="hero-card-module">{m.icon} {m.label}</div>
+              </div>
+
+              <div className="hero-video-wrap" style={{ borderRadius: 18 }}>
+                <div className="hero-slider">
+                  {SLIDES.map((src, i) => (
+                    <img key={i} src={src} alt={`slide-${i+1}`} className={`hero-slide${activeSlide === i ? ' active' : ''}`} />
                   ))}
+                  <div className="hero-slider-dots">
+                    {SLIDES.map((_, i) => (
+                      <button key={i} className={`hero-slider-dot${activeSlide === i ? ' active' : ''}`} onClick={() => setActiveSlide(i)} />
+                    ))}
+                  </div>
                 </div>
-                <button className="hero-card-link" onClick={() => navigate('/register')} style={{ color: '#fff' }}>
-                  <span>Explore B2B Workflow</span>
-                  <span style={{ fontSize: 18 }}>→</span>
-                </button>
+                <div className="hero-video-shine" />
               </div>
             </div>
           </div>
@@ -1645,6 +2027,25 @@ const LandingPage = () => {
           </div>
         </div>
       </div>
+
+
+      {/* ── WE AUTOMATE SECTION — Canvas Particles ── */}
+      <section className="particle-section">
+        <div className="particle-section-content" style={{ maxWidth:1280, margin:'0 auto', padding:'0 40px', textAlign:'center' }}>
+          <div style={{ fontSize:11, fontWeight:800, color:'#1EB980', letterSpacing:3, textTransform:'uppercase', marginBottom:16 }}>CRM Platform</div>
+          <h2 style={{ fontSize:'clamp(52px,7vw,96px)', fontWeight:900, color:'#fff', margin:'0 0 20px', letterSpacing:'-2px', lineHeight:1.05 }}>
+            We automate.
+          </h2>
+          <p style={{ fontSize:18, color:'rgba(255,255,255,0.6)', maxWidth:600, margin:'0 auto 40px', lineHeight:1.7 }}>
+            From first lead to final invoice — every step of your B2B workflow runs on autopilot with Unified CRM.
+          </p>
+          <div style={{ display:'flex', gap:12, justifyContent:'center', flexWrap:'wrap' }}>
+            {['Lead Management','Pipeline Tracking','B2B Workflow','AI Assistant','Support Tickets','Revenue Analytics'].map((f,i)=>(
+              <span key={i} style={{ padding:'7px 16px', background:'rgba(30,185,128,0.1)', border:'1px solid rgba(30,185,128,0.25)', borderRadius:999, fontSize:13, fontWeight:600, color:'rgba(255,255,255,0.75)' }}>{f}</span>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* ── SPOTLIGHT TABS ── */}
       <section className="spotlight-section" style={{ padding: '80px 0 0' }}>
@@ -1861,6 +2262,50 @@ const LandingPage = () => {
       </section>
 
 
+
+      {/* ── WE CONNECT — Aurora Lines ── */}
+      <section className="aurora-section">
+        <div className="aurora-section-content" style={{ maxWidth:1280, margin:'0 auto', padding:'0 40px' }}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:60, alignItems:'center' }}>
+            <div>
+              <div style={{ fontSize:11, fontWeight:800, color:'#1EB980', letterSpacing:3, textTransform:'uppercase', marginBottom:16 }}>Enterprise Ready</div>
+              <h2 style={{ fontSize:'clamp(44px,6vw,80px)', fontWeight:900, color:'#fff', margin:'0 0 20px', letterSpacing:'-1.5px', lineHeight:1.08 }}>
+                We connect.
+              </h2>
+              <p style={{ fontSize:17, color:'rgba(255,255,255,0.55)', lineHeight:1.75, margin:'0 0 36px' }}>
+                Sales, support, finance, and operations — all talking to each other. No silos, no missed handoffs, no lost data.
+              </p>
+              <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+                {[
+                  ['🔗', 'Leads connect to Accounts, Deals, and Invoices'],
+                  ['📧', 'Emails auto-link to the right contact and deal'],
+                  ['🤖', 'AI surfaces insights across all your data'],
+                  ['📊', 'One dashboard — every metric in one place'],
+                ].map(([icon, text], i) => (
+                  <div key={i} style={{ display:'flex', alignItems:'center', gap:12, fontSize:15, color:'rgba(255,255,255,0.7)' }}>
+                    <span style={{ fontSize:20, flexShrink:0 }}>{icon}</span>{text}
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div style={{ position:'relative' }}>
+              {/* Decorative corner accents */}
+              <div style={{ position:'absolute', top:-14, right:-14, width:60, height:60, borderTop:'2px solid rgba(30,185,128,0.5)', borderRight:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 12px 0 0', zIndex:10, pointerEvents:'none' }} />
+              <div style={{ position:'absolute', bottom:-14, left:-14, width:60, height:60, borderBottom:'2px solid rgba(30,185,128,0.5)', borderLeft:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 0 0 12px', zIndex:10, pointerEvents:'none' }} />
+              <video
+                src="/crmvideo.mp4"
+                autoPlay loop muted playsInline
+                style={{
+                  width:'100%', display:'block', borderRadius:14,
+                  border:'1.5px solid rgba(30,185,128,0.3)',
+                  boxShadow:'0 0 0 4px rgba(30,185,128,0.07), 0 24px 60px rgba(0,0,0,0.6), 0 0 60px rgba(30,185,128,0.15)',
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── RESELLER / PARTNER ── */}
       <section className="partner-section reveal" id="partner">
         <div className="partner-inner">
@@ -1889,30 +2334,6 @@ const LandingPage = () => {
                     <div className="partner-feat-desc">{f.desc}</div>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA ── */}
-      <section className="cta-section">
-        <div className="cta-inner">
-          <div className="cta-card">
-            <div className="cta-glow" />
-            <div className="sec-label purple" style={{ margin: '0 auto 20px' }}>🚀 GET STARTED TODAY</div>
-            <h2 className="cta-title">
-              Ready to Transform<br />
-              <span style={{ background: 'linear-gradient(135deg,#4ade80,#22c55e,#34d399)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>Your Business?</span>
-            </h2>
-            <p className="cta-sub">Join hundreds of businesses already using Unified CRM to close more deals, manage better, and grow faster.</p>
-            <div className="cta-buttons">
-              <button className="cta-btn-main" onClick={() => navigate('/register')}>Start Free Trial →</button>
-              <button className="cta-btn-ghost" onClick={() => navigate('/partners')}>Become a Partner</button>
-            </div>
-            <div style={{ marginTop: 32, display: 'flex', gap: 32, justifyContent: 'center', flexWrap: 'wrap' }}>
-              {['✅ No credit card required', '⚡ Setup in minutes', '🔒 Enterprise-grade security'].map((t, i) => (
-                <span key={i} style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', fontWeight: 500 }}>{t}</span>
               ))}
             </div>
           </div>

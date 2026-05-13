@@ -10,7 +10,7 @@ const CompleteProfile = () => {
   const [formData, setFormData] = useState({
     organizationName: '', slug: '', businessType: 'B2B', industry: '',
     numberOfEmployees: '', street: '', city: '', state: '', country: 'India', zipCode: '',
-    logo: null, primaryColor: '#2a5298', timezone: 'Asia/Kolkata', dateFormat: 'DD/MM/YYYY', currency: 'INR'
+    logo: null, primaryColor: '#2a5298', timezone: '', dateFormat: '', currency: ''
   });
 
   const [logoPreview, setLogoPreview] = useState(null);
@@ -46,29 +46,70 @@ const CompleteProfile = () => {
   const countries = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Singapore', 'UAE', 'Saudi Arabia', 'Japan', 'Other'];
 
   const majorCities = {
-    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad'],
-    'Karnataka': ['Bangalore', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Tiruchirappalli'],
-    'Delhi': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi'],
-    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Gandhinagar'],
-    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar'],
-    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Siliguri'],
-    'Uttar Pradesh': ['Lucknow', 'Noida', 'Ghaziabad', 'Kanpur', 'Agra', 'Varanasi'],
-    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Ajmer'],
-    'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur'],
-    'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar'],
-    'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala'],
-    'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur'],
+    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad', 'Solapur', 'Kolhapur', 'Navi Mumbai', 'Amravati'],
+    'Karnataka': ['Bangalore', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum', 'Davangere', 'Bellary', 'Bijapur', 'Tumkur', 'Shimoga'],
+    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Tiruchirappalli', 'Tirunelveli', 'Vellore', 'Erode', 'Thoothukudi', 'Hosur'],
+    'Delhi': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi', 'Dwarka', 'Rohini', 'Janakpuri', 'Laxmi Nagar'],
+    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Gandhinagar', 'Bhavnagar', 'Jamnagar', 'Junagadh', 'Anand', 'Bharuch'],
+    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar', 'Khammam', 'Ramagundam', 'Mahbubnagar', 'Secunderabad'],
+    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Siliguri', 'Asansol', 'Bardhaman', 'Malda', 'Haldia', 'Kharagpur'],
+    'Uttar Pradesh': ['Lucknow', 'Noida', 'Ghaziabad', 'Kanpur', 'Agra', 'Varanasi', 'Meerut', 'Allahabad', 'Bareilly', 'Aligarh', 'Mathura'],
+    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Ajmer', 'Bikaner', 'Alwar', 'Bharatpur', 'Sikar', 'Pali'],
+    'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur', 'Kollam', 'Palakkad', 'Alappuzha', 'Kannur', 'Kottayam'],
+    'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Pathankot', 'Hoshiarpur'],
+    'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala', 'Rohtak', 'Hisar', 'Karnal', 'Sonipat', 'Panchkula', 'Yamunanagar'],
+    'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur', 'Ujjain', 'Sagar', 'Dewas', 'Satna', 'Ratlam', 'Rewa'],
+    'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Tirupati', 'Rajahmundry', 'Kakinada', 'Kadapa', 'Anantapur'],
+    'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Purnia', 'Bihar Sharif', 'Arrah', 'Begusarai', 'Katihar'],
+    'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Brahmapur', 'Sambalpur', 'Puri', 'Balasore', 'Bhadrak', 'Baripada'],
+    'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Deoghar', 'Phusro', 'Hazaribagh', 'Giridih', 'Ramgarh'],
+    'Chhattisgarh': ['Raipur', 'Bhilai', 'Korba', 'Bilaspur', 'Durg', 'Rajnandgaon', 'Jagdalpur', 'Ambikapur', 'Raigarh'],
+    'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia', 'Tezpur', 'Bongaigaon', 'Dhubri'],
+    'Uttarakhand': ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Kashipur', 'Rishikesh', 'Nainital', 'Mussoorie'],
+    'Himachal Pradesh': ['Shimla', 'Dharamshala', 'Solan', 'Mandi', 'Palampur', 'Baddi', 'Nahan', 'Kullu', 'Manali'],
+    'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda', 'Bicholim', 'Curchorem', 'Valpoi'],
+    'Jammu & Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Sopore', 'Baramulla', 'Kathua', 'Udhampur', 'Punch'],
+    'Ladakh': ['Leh', 'Kargil', 'Diskit', 'Padum'],
+    'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tezpur', 'Bomdila', 'Ziro', 'Along'],
+    'Manipur': ['Imphal', 'Thoubal', 'Bishnupur', 'Churachandpur', 'Kakching'],
+    'Meghalaya': ['Shillong', 'Tura', 'Jowai', 'Nongstoin', 'Williamnagar'],
+    'Mizoram': ['Aizawl', 'Lunglei', 'Champhai', 'Serchhip', 'Kolasib'],
+    'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung', 'Tuensang', 'Wokha'],
+    'Sikkim': ['Gangtok', 'Namchi', 'Gyalshing', 'Mangan', 'Ravangla'],
+    'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar', 'Kailasahar', 'Belonia'],
   };
 
-  const getCitiesForState = () => majorCities[formData.state] || [];
+  const citiesByCountry = {
+    'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Seattle', 'Boston', 'Denver', 'Atlanta'],
+    'United Kingdom': ['London', 'Birmingham', 'Manchester', 'Glasgow', 'Liverpool', 'Leeds', 'Sheffield', 'Edinburgh', 'Bristol', 'Cardiff', 'Leicester', 'Coventry', 'Bradford', 'Nottingham'],
+    'Canada': ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Kitchener', 'London', 'Victoria', 'Halifax'],
+    'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Hobart', 'Darwin', 'Newcastle', 'Wollongong'],
+    'Germany': ['Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen', 'Bremen', 'Dresden', 'Hanover'],
+    'France': ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Montpellier', 'Strasbourg', 'Bordeaux', 'Lille', 'Rennes', 'Reims'],
+    'Singapore': ['Singapore City', 'Jurong', 'Tampines', 'Woodlands', 'Ang Mo Kio', 'Toa Payoh', 'Bedok', 'Yishun'],
+    'UAE': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Al Ain', 'Umm Al Quwain'],
+    'Saudi Arabia': ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar', 'Dhahran', 'Tabuk', 'Abha', 'Najran'],
+    'Japan': ['Tokyo', 'Osaka', 'Yokohama', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kyoto', 'Kawasaki', 'Saitama'],
+  };
+
+  const getCitiesForState = () => {
+    if (formData.country === 'India') return majorCities[formData.state] || [];
+    return citiesByCountry[formData.country] || [];
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     if (name === 'organizationName') {
       setFormData({ ...formData, organizationName: value, slug: value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') });
+    } else if (name === 'country') {
+      setFormData({ ...formData, country: value, state: '', city: '' });
     } else if (name === 'state') {
+      if (value && !/^[a-zA-Z\s\-'&]*$/.test(value)) return;
       setFormData({ ...formData, state: value, city: '' });
+    } else if (name === 'zipCode') {
+      if (/^[a-zA-Z0-9\s\-]*$/.test(value)) setFormData({ ...formData, zipCode: value });
+    } else if (name === 'city') {
+      if (/^[a-zA-Z\s\-']*$/.test(value)) setFormData({ ...formData, city: value });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -79,17 +120,54 @@ const CompleteProfile = () => {
     if (file) {
       if (!file.type.startsWith('image/')) { setError('Please select an image file'); return; }
       if (file.size > 2 * 1024 * 1024) { setError('Logo must be less than 2MB'); return; }
-      setFormData({ ...formData, logo: file });
+      if (file.size < 10 * 1024) { setError('Image is too small. Please upload a higher resolution logo (min 10KB)'); return; }
       const reader = new FileReader();
-      reader.onloadend = () => setLogoPreview(reader.result);
+      reader.onloadend = () => {
+        const img = new Image();
+        img.onload = () => {
+          if (img.width < 200 || img.height < 200) {
+            setError('Image resolution is too low. Please upload at least 200×200 pixels');
+            return;
+          }
+          setFormData(prev => ({ ...prev, logo: file }));
+          setLogoPreview(reader.result);
+          setError('');
+        };
+        img.src = reader.result;
+      };
       reader.readAsDataURL(file);
-      setError('');
     }
   };
 
   const validateStep = (step) => {
     setError('');
-    if (step === 1 && !formData.organizationName.trim()) { setError('Organization name is required'); return false; }
+    if (step === 1) {
+      const name = formData.organizationName.trim();
+      if (!name) { setError('Organization name is required'); return false; }
+      if (name.length > 80) { setError('Organization name is too long (max 80 characters)'); return false; }
+      if (!/[a-zA-Z0-9]{2,}/.test(name)) { setError('Please enter a valid organization name (must contain at least 2 letters or numbers)'); return false; }
+      if (!/[a-zA-Z]/.test(name)) { setError('Organization name must contain at least one letter'); return false; }
+      if (!formData.industry) { setError('Please select an Industry'); return false; }
+      if (!formData.numberOfEmployees) { setError('Please select your Team Size'); return false; }
+    }
+    if (step === 2) {
+      const street = formData.street.trim();
+      if (street && street.length > 150) { setError('Address is too long (max 150 characters)'); return false; }
+      if (street && !/[a-zA-Z0-9]/.test(street)) { setError('Please enter a valid street address'); return false; }
+      if (!formData.state) { setError('Please select a State'); return false; }
+      const city = formData.city.trim();
+      if (!city) { setError('City is required'); return false; }
+      if (city.length > 50) { setError('City name is too long (max 50 characters)'); return false; }
+      if (!/^[a-zA-Z\s\-']+$/.test(city)) { setError('Please enter a valid city name (letters only)'); return false; }
+      if (formData.state && formData.state.length > 50) { setError('State name is too long (max 50 characters)'); return false; }
+      const zip = formData.zipCode.trim();
+      if (zip && !/^[a-zA-Z0-9\s\-]{3,10}$/.test(zip)) { setError('Please enter a valid ZIP code'); return false; }
+    }
+    if (step === 4) {
+      if (!formData.timezone) { setError('Please select your Timezone'); return false; }
+      if (!formData.dateFormat) { setError('Please select a Date Format'); return false; }
+      if (!formData.currency) { setError('Please select a Currency'); return false; }
+    }
     return true;
   };
 
@@ -154,11 +232,12 @@ const CompleteProfile = () => {
 `}</style>
             <div>
               <label style={labelStyle}>Organization Name *</label>
-              <input type="text" name="organizationName" value={formData.organizationName} onChange={handleChange} placeholder="Your company name" style={inputStyle} />
+              <input type="text" name="organizationName" value={formData.organizationName} onChange={handleChange} placeholder="Your company name" style={inputStyle} maxLength={80} />
+              <div style={{ fontSize: '11px', color: formData.organizationName.length > 70 ? '#f87171' : '#475569', textAlign: 'right', marginTop: 3 }}>{formData.organizationName.length}/80</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={labelStyle}>Industry</label>
+                <label style={labelStyle}>Industry *</label>
                 <select name="industry" value={formData.industry} onChange={handleChange} style={selectStyle}>
                   <option value="" style={{ background: '#1e293b' }}>Select Industry</option>
                   {industries.map(ind => <option key={ind} value={ind} style={{ background: '#1e293b' }}>{ind}</option>)}
@@ -174,7 +253,7 @@ const CompleteProfile = () => {
               </div>
             </div>
             <div style={{ maxWidth: '180px' }}>
-              <label style={labelStyle}>Team Size</label>
+              <label style={labelStyle}>Team Size *</label>
               <select name="numberOfEmployees" value={formData.numberOfEmployees} onChange={handleChange} style={selectStyle}>
                 <option value="" style={{ background: '#1e293b' }}>Select</option>
                 {['1-10', '11-50', '51-200', '201-500', '500+'].map(s => <option key={s} value={s} style={{ background: '#1e293b' }}>{s}</option>)}
@@ -188,7 +267,7 @@ const CompleteProfile = () => {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
             <div>
               <label style={labelStyle}>Street Address</label>
-              <input type="text" name="street" value={formData.street} onChange={handleChange} placeholder="Enter business address" style={inputStyle} />
+              <input type="text" name="street" value={formData.street} onChange={handleChange} placeholder="Enter business address" style={inputStyle} maxLength={150} />
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
@@ -205,21 +284,24 @@ const CompleteProfile = () => {
                     {indianStates.map(s => <option key={s} value={s} style={{ background: '#1e293b' }}>{s}</option>)}
                   </select>
                 ) : (
-                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" style={inputStyle} />
+                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" style={inputStyle} maxLength={50} />
                 )}
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={labelStyle}>City</label>
-                {formData.country === 'India' && getCitiesForState().length > 0 ? (
+                {getCitiesForState().length > 0 ? (
                   <select name="city" value={formData.city} onChange={handleChange} style={selectStyle}>
                     <option value="" style={{ background: '#1e293b' }}>Select City</option>
                     {getCitiesForState().map(c => <option key={c} value={c} style={{ background: '#1e293b' }}>{c}</option>)}
-                    <option value="other" style={{ background: '#1e293b' }}>Other</option>
+                    <option value="other" style={{ background: '#1e293b' }}>Other (type below)</option>
                   </select>
                 ) : (
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="City" style={inputStyle} />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Enter city name" style={inputStyle} maxLength={50} />
+                )}
+                {formData.city === 'other' && (
+                  <input type="text" name="city" onChange={e => { if (/^[a-zA-Z\s\-']*$/.test(e.target.value)) setFormData(prev => ({ ...prev, city: e.target.value })); }} placeholder="Type your city name" style={{ ...inputStyle, marginTop: 8 }} maxLength={50} />
                 )}
               </div>
               <div>
@@ -268,6 +350,7 @@ const CompleteProfile = () => {
             <div>
               <label style={labelStyle}>Timezone</label>
               <select name="timezone" value={formData.timezone} onChange={handleChange} style={selectStyle}>
+                <option value="" style={{ background: '#1e293b' }}>Select Timezone *</option>
                 <option value="Asia/Kolkata" style={{ background: '#1e293b' }}>IST (India)</option>
                 <option value="America/New_York" style={{ background: '#1e293b' }}>EST (US)</option>
                 <option value="America/Los_Angeles" style={{ background: '#1e293b' }}>PST (US)</option>
@@ -278,6 +361,7 @@ const CompleteProfile = () => {
             <div>
               <label style={labelStyle}>Date Format</label>
               <select name="dateFormat" value={formData.dateFormat} onChange={handleChange} style={selectStyle}>
+                <option value="" style={{ background: '#1e293b' }}>Select Format *</option>
                 <option value="DD/MM/YYYY" style={{ background: '#1e293b' }}>DD/MM/YYYY</option>
                 <option value="MM/DD/YYYY" style={{ background: '#1e293b' }}>MM/DD/YYYY</option>
                 <option value="YYYY-MM-DD" style={{ background: '#1e293b' }}>YYYY-MM-DD</option>
@@ -286,6 +370,7 @@ const CompleteProfile = () => {
             <div>
               <label style={labelStyle}>Currency</label>
               <select name="currency" value={formData.currency} onChange={handleChange} style={selectStyle}>
+                <option value="" style={{ background: '#1e293b' }}>Select Currency *</option>
                 <option value="INR" style={{ background: '#1e293b' }}>₹ INR</option>
                 <option value="USD" style={{ background: '#1e293b' }}>$ USD</option>
                 <option value="EUR" style={{ background: '#1e293b' }}>€ EUR</option>

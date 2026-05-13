@@ -13,6 +13,7 @@ const imapIdleService = require('./services/imapIdleService');
 const emailSyncJob = require('./jobs/emailSyncJob');
 const { startDeletionCleanupJob } = require('./jobs/deletionCleanup');
 const { startScheduledPostsJob } = require('./jobs/scheduledPostsJob');
+const emailWorker = require('./jobs/emailWorker');
 
 // Initialize Express
 const app = express();
@@ -210,6 +211,8 @@ const startServer = async () => {
       emailSyncJob.start();
       startDeletionCleanupJob();
       startScheduledPostsJob();
+      emailWorker.poll();
+      console.log('✅ SQS Email Worker started');
 
       try {
         await imapIdleService.startAllIdleConnections();

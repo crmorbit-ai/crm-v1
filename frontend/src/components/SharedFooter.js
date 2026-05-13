@@ -11,12 +11,12 @@ const CSS = `
   }
 
   /* Main footer grid */
-  .sf-main { max-width: 1280px; margin: 0 auto; padding: 52px 40px 40px; }
+  .sf-main { max-width: 1280px; margin: 0 auto; padding: 32px 40px 24px; }
   .sf-grid {
     display: grid;
     grid-template-columns: 1.6fr 1fr 1fr 1fr 1fr;
-    gap: 40px;
-    padding-bottom: 40px;
+    gap: 28px;
+    padding-bottom: 24px;
     border-bottom: 1px solid #e5e7eb;
   }
 
@@ -34,12 +34,12 @@ const CSS = `
 
   /* Link columns */
   .sf-col-head {
-    font-size: 14px; font-weight: 700; color: #111111;
-    margin: 0 0 16px; letter-spacing: 0;
+    font-size: 12px; font-weight: 700; color: #111111;
+    margin: 0 0 10px; letter-spacing: 0;
   }
   .sf-link {
-    display: block; font-size: 14px; color: #5f6b7a;
-    margin-bottom: 10px; cursor: pointer; text-decoration: none;
+    display: block; font-size: 13px; color: #5f6b7a;
+    margin-bottom: 7px; cursor: pointer; text-decoration: none;
     background: none; border: none; padding: 0; font-family: inherit;
     transition: color 0.18s; text-align: left; width: 100%;
   }
@@ -68,7 +68,7 @@ const CSS = `
   /* Bottom identity bar */
   .sf-identity {
     background: #fff; border-top: 1px solid #e5e7eb;
-    padding: 20px 40px;
+    padding: 12px 40px;
     max-width: 100%;
   }
   .sf-identity-inner {
@@ -95,7 +95,7 @@ const CSS = `
   /* Legal row */
   .sf-legal {
     background: #f5f7f8; border-top: 1px solid #e5e7eb;
-    padding: 14px 40px;
+    padding: 10px 40px;
   }
   .sf-legal-inner {
     max-width: 1280px; margin: 0 auto;
@@ -156,14 +156,13 @@ export default function SharedFooter() {
 
             {/* Brand */}
             <div>
-              <div style={{ marginBottom: 12 }}>
+              <div style={{ marginBottom: 20 }}>
                 <img src="/logo.png" alt="Unified CRM" style={{ height: 20, display: 'block' }} />
               </div>
-              <p className="sf-desc">
-                The complete CRM platform for modern B2B teams — leads, deals, support, billing, and everything in between.
-              </p>
-              <a href="mailto:support@texora.ai" className="sf-contact-row">✉ support@texora.ai</a>
-              <a href="https://texora.ai" target="_blank" rel="noopener noreferrer" className="sf-contact-row">🌐 texora.ai</a>
+              <div style={{ marginTop: 8 }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: '#111111', marginBottom: 12 }}>Request info or schedule a demo</div>
+                <button className="sf-cta-btn" onClick={() => navigate('/contact')}>Contact Us</button>
+              </div>
             </div>
 
             {/* Company */}
@@ -208,20 +207,11 @@ export default function SharedFooter() {
           </div>
         </div>
 
-        {/* Contact CTA strip — exactly like ServiceNow image #16 */}
-        <div className="sf-cta-strip">
-          <div className="sf-cta-title">Request info or schedule a demo</div>
-          <button className="sf-cta-btn" onClick={() => navigate('/contact')}>
-            Contact Us
-          </button>
-        </div>
-
-        {/* Identity bar — logo + tagline + social icons */}
+        {/* Identity bar */}
         <div className="sf-identity">
           <div className="sf-identity-inner">
             <div className="sf-identity-left">
-              <img src="/logo.png" alt="Unified CRM" style={{ height: 18, display: 'block' }} />
-              <span className="sf-tagline">The CRM that works with your business™</span>
+              <span className="sf-tagline" style={{ borderLeft: 'none', paddingLeft: 0 }}>The CRM that works with your business™</span>
             </div>
             <div className="sf-socials">
               <a href="https://x.com/texoraai" target="_blank" rel="noopener noreferrer" className="sf-social-btn" style={{ background: '#000' }}>
@@ -240,7 +230,7 @@ export default function SharedFooter() {
           </div>
         </div>
 
-        {/* Legal row — exactly like ServiceNow bottom */}
+        {/* Legal row */}
         <div className="sf-legal">
           <div className="sf-legal-inner">
             <span className="sf-copy">© {new Date().getFullYear()} Unified CRM by Texora AI. All rights reserved.</span>

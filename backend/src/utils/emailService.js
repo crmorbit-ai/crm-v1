@@ -1,32 +1,51 @@
-const nodemailer = require('nodemailer');
+const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
 
-// Create reusable transporter
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD
-    }
+// AWS SES Client
+const sesClient = new SESClient({
+  region: process.env.AWS_REGION || 'us-east-1',
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+const FROM_ADDRESS = `"${process.env.SES_FROM_NAME || 'Unified CRM'}" <${process.env.SES_FROM_EMAIL || 'no-reply@texora.ai'}>`;
+
+// Send email via SES
+const sendViaSES = async (to, subject, html) => {
+  const command = new SendEmailCommand({
+    Source: FROM_ADDRESS,
+    Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
+    Message: {
+      Subject: { Data: subject, Charset: 'UTF-8' },
+      Body: {
+        Html: { Data: html, Charset: 'UTF-8' },
+        Text: { Data: html.replace(/<[^>]*>/g, ''), Charset: 'UTF-8' },
+      },
+    },
   });
+  const result = await sesClient.send(command);
+  console.log('✅ SES email sent:', result.MessageId, '→', to);
+  return result.MessageId;
 };
+
+// Compatibility wrapper — replaces nodemailer transporter.sendMail
+const sendMail = async (opts) => {
+  const toArr = Array.isArray(opts.to) ? opts.to : opts.to.split(/,\s*/);
+  const messageId = await sendViaSES(toArr, opts.subject, opts.html);
+  return { messageId };
+};
+
+// No-op stubs to replace nodemailer calls
+const createTransporter = () => ({ verify: async () => {}, sendMail });
+
 
 /**
  * Send OTP for password reset
  */
 const sendPasswordResetOTP = async (email, otp, userName) => {
   try {
-    const transporter = createTransporter();
-    await transporter.verify();
-    console.log('✅ SMTP connection verified');
-
-    const mailOptions = {
-      from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
-      to: email,
-      subject: 'Password Reset OTP - Unified CRM',
-      html: `
+    const html = `
         <!DOCTYPE html>
         <html>
         <head>
@@ -62,37 +81,9 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
           </div>
         </body>
         </html>
-      `
-    };
-
-    const info = await transporter.sendMail(mailOptions);
-    console.log('✅ OTP email sent:', info.messageId);
-
-    // Track sent email
-    try {
-      const User = require('../models/User');
-      const emailTrackingService = require('../services/emailTrackingService');
-      const user = await User.findOne({ email });
-
-      if (user) {
-        await emailTrackingService.trackSentEmail({
-          messageId: info.messageId,
-          from: mailOptions.from,
-          to: email,
-          subject: mailOptions.subject,
-          html: mailOptions.html,
-          emailType: 'otp',
-          userId: user._id,
-          tenantId: user.tenant,
-          smtpMode: 'free'
-        });
-      }
-    } catch (trackError) {
-      console.error('Email tracking failed:', trackError);
-      // Don't fail the email send if tracking fails
-    }
-
-    return { success: true, messageId: info.messageId };
+    `;
+    const messageId = await sendViaSES(email, 'Password Reset OTP - Unified CRM', html);
+    return { success: true, messageId };
   } catch (error) {
     console.error('❌ OTP email error:', error.message);
     throw new Error('Failed to send OTP email: ' + error.message);
@@ -105,8 +96,6 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
 const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName, organizerEmail = '') => {
   try {
     const transporter = createTransporter();
-    await transporter.verify();
-    console.log('✅ SMTP connection verified for meeting invitation');
 
     // Format date and time
     const meetingDate = new Date(meeting.from);
@@ -257,7 +246,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName, org
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Meeting invitation sent successfully!');
     console.log('📧 Message ID:', info.messageId);
     console.log('📬 Sent to:', attendeeEmails.join(', '));
@@ -276,7 +265,6 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName, org
 const sendMeetingReminder = async (meeting, attendeeEmails) => {
   try {
     const transporter = createTransporter();
-    await transporter.verify();
 
     const meetingDate = new Date(meeting.from);
     const timeOptions = { hour: '2-digit', minute: '2-digit', hour12: true };
@@ -332,7 +320,7 @@ const sendMeetingReminder = async (meeting, attendeeEmails) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Meeting reminder sent:', info.messageId);
     return { success: true, messageId: info.messageId };
 
@@ -348,7 +336,6 @@ const sendMeetingReminder = async (meeting, attendeeEmails) => {
 const sendMeetingCancellation = async (meeting, attendeeEmails, reason = '') => {
   try {
     const transporter = createTransporter();
-    await transporter.verify();
 
     const meetingDate = new Date(meeting.from);
     const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
@@ -402,7 +389,7 @@ const sendMeetingCancellation = async (meeting, attendeeEmails, reason = '') => 
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Cancellation email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
 
@@ -418,8 +405,6 @@ const sendMeetingCancellation = async (meeting, attendeeEmails, reason = '') => 
 const sendUserInvitationEmail = async ({ email, firstName, lastName, organizationName, invitedBy, roles, temporaryPassword }) => {
   try {
     const transporter = createTransporter();
-    await transporter.verify();
-    console.log('✅ SMTP connection verified for user invitation');
 
     const loginUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
 
@@ -521,7 +506,7 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ User invitation email sent successfully!');
     console.log('📧 Message ID:', info.messageId);
     console.log('📬 Sent to:', email);
@@ -540,8 +525,6 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
 const sendSignupVerificationOTP = async (email, otp, userName) => {
   try {
     const transporter = createTransporter();
-    await transporter.verify();
-    console.log('✅ SMTP connection verified for signup verification');
 
     const mailOptions = {
       from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
@@ -609,7 +592,7 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Signup verification OTP email sent:', info.messageId);
 
     // Track sent email
@@ -649,8 +632,6 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
 const sendWelcomeEmail = async (email, userName, organizationName) => {
   try {
     const transporter = createTransporter();
-    await transporter.verify();
-    console.log('✅ SMTP connection verified for welcome email');
 
     const mailOptions = {
       from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
@@ -766,7 +747,7 @@ const sendWelcomeEmail = async (email, userName, organizationName) => {
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Welcome email sent:', info.messageId);
 
     // Track sent email
@@ -806,8 +787,6 @@ const sendWelcomeEmail = async (email, userName, organizationName) => {
 const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, leadDetails, assignedByName) => {
   try {
     const transporter = createTransporter();
-    await transporter.verify();
-    console.log('✅ SMTP connection verified for lead assignment email');
 
     const mailOptions = {
       from: `"Unified CRM" <${process.env.EMAIL_FROM || process.env.SMTP_USER}>`,
@@ -926,7 +905,7 @@ const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, lead
       `
     };
 
-    const info = await transporter.sendMail(mailOptions);
+    const info = await sendMail(mailOptions);
     console.log('✅ Lead assignment email sent:', info.messageId);
 
     // Track sent email
@@ -996,7 +975,7 @@ const sendDeletionRequestNotification = async (saasAdminEmail, tenant, reason) =
       </div>
     </div>`;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"CRM System" <${process.env.SMTP_USER}>`,
     to: saasAdminEmail,
     subject: `⚠️ Deletion Request: ${tenant.organizationName}`,
@@ -1036,7 +1015,7 @@ const sendDeletionRequestConfirmation = async (tenantEmail, orgName, firstName) 
       </div>
     </div>`;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"CRM Support" <${process.env.SMTP_USER}>`,
     to: tenantEmail,
     subject: `Deletion Request Received — ${orgName}`,
@@ -1075,7 +1054,7 @@ const sendDeletionApprovedEmail = async (tenantEmail, orgName, permanentDeleteAt
       </div>
     </div>`;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"CRM Support" <${process.env.SMTP_USER}>`,
     to: tenantEmail,
     subject: `Account Deletion Approved — ${orgName}`,
@@ -1111,7 +1090,7 @@ const sendDeletionRejectedEmail = async (tenantEmail, orgName, rejectionReason, 
       </div>
     </div>`;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"CRM Support" <${process.env.SMTP_USER}>`,
     to: tenantEmail,
     subject: `Deletion Request Rejected — ${orgName}`,
@@ -1149,7 +1128,7 @@ const sendAccountRecoveredEmail = async (tenantEmail, orgName, firstName) => {
       </div>
     </div>`;
 
-  await transporter.sendMail({
+  await sendMail({
     from: `"CRM Support" <${process.env.SMTP_USER}>`,
     to: tenantEmail,
     subject: `Account Recovered — ${orgName}`,
@@ -1206,7 +1185,7 @@ const sendContactInquiryReply = async ({ toName, toEmail, subject, originalMessa
       </html>
     `
   };
-  const info = await transporter.sendMail(mailOptions);
+  const info = await sendMail(mailOptions);
   return { success: true, messageId: info.messageId };
 };
 

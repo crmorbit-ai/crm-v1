@@ -101,23 +101,24 @@ body{margin:0;background:#0f1e2e;}
 
 /* Form card */
 .pp-form-card{
-  width:100%; max-width:500px; margin:0 auto;
-  background:rgba(8,18,32,0.75); border:1px solid rgba(255,255,255,0.1);
-  border-radius:20px; padding:36px 40px;
+  width:100%; max-width:440px; margin:0 auto;
+  background:linear-gradient(145deg,#0d1f38 0%,#0f2444 60%,#0d1a2e 100%);
+  border:1px solid rgba(30,185,128,0.2);
+  border-radius:14px; padding:20px 24px;
   backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
-  box-shadow:0 24px 60px rgba(0,0,0,0.5);
+  box-shadow:0 0 0 1px rgba(30,185,128,0.08), 0 16px 40px rgba(0,0,0,0.5);
 }
-@media(max-width:520px){.pp-form-card{padding:28px 20px;} .pp-rrow{grid-template-columns:1fr!important;}}
+@media(max-width:520px){.pp-form-card{padding:16px 14px;} .pp-rrow{grid-template-columns:1fr!important;}}
 .pp-inp{
-  width:100%; padding:9px 12px; font-size:12px; font-family:inherit; color:#1f2937;
-  background:#f9fafb; border:1.5px solid #e5e7eb;
-  border-radius:8px; outline:none; transition:border-color .2s,box-shadow .2s;
+  width:100%; padding:7px 10px; font-size:12px; font-family:inherit; color:#f1f5f9;
+  background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+  border-radius:7px; outline:none; transition:border-color .2s,box-shadow .2s;
 }
-.pp-inp::placeholder{color:#9ca3af;}
-.pp-inp:focus{border-color:#1EB980; box-shadow:0 0 0 3px rgba(30,185,128,0.12); background:#fff;}
-.pp-inp:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #f9fafb inset!important;-webkit-text-fill-color:#1f2937!important;}
-select.pp-inp option{background:#fff; color:#1f2937;}
-.pp-lbl{display:block; font-size:11px; font-weight:600; color:#374151; margin-bottom:4px;}
+.pp-inp::placeholder{color:rgba(255,255,255,0.25);}
+.pp-inp:focus{border-color:rgba(30,185,128,0.6); box-shadow:0 0 0 2px rgba(30,185,128,0.1); background:rgba(255,255,255,0.08);}
+.pp-inp:-webkit-autofill{-webkit-box-shadow:0 0 0 30px #0d1f38 inset!important;-webkit-text-fill-color:#f1f5f9!important;}
+select.pp-inp option{background:#0d1f38; color:#f1f5f9;}
+.pp-lbl{display:block; font-size:10px; font-weight:600; color:rgba(255,255,255,0.5); margin-bottom:3px;}
 @media(max-width:860px){
   #pp-form-section > div > div > div:first-child + div { grid-template-columns:1fr!important; }
 }
@@ -129,18 +130,18 @@ select.pp-inp option{background:#fff; color:#1f2937;}
 }
 .pp-submit:hover{background:#19a872; box-shadow:0 6px 26px rgba(30,185,128,0.55); transform:translateY(-1px);}
 .pp-submit:disabled{background:rgba(30,185,128,0.3); box-shadow:none; cursor:not-allowed; transform:none;}
-.pp-rrow{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.pp-rrow{display:grid; grid-template-columns:1fr 1fr; gap:7px;}
 .pp-chip{
   padding:3px 9px; font-size:10px; font-weight:600; border-radius:20px; cursor:pointer;
   font-family:inherit; transition:all .15s; border:1px solid #e5e7eb;
-  background:#f9fafb; color:#6b7280;
+  background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.45); border-color:rgba(255,255,255,0.1);
 }
 .pp-chip:hover{border-color:#1EB980; color:#1EB980;}
-.pp-chip.on{background:rgba(30,185,128,0.1); border-color:rgba(30,185,128,0.5); color:#059669;}
+.pp-chip.on{background:rgba(30,185,128,0.15); border-color:rgba(30,185,128,0.5); color:#1EB980;}
 .pp-err{padding:'10px 14px'; background:rgba(239,68,68,0.1); border:1px solid rgba(239,68,68,0.22); border-radius:9px; color:#fca5a5; font-size:12px; display:flex; gap:8px; align-items:center; margin-bottom:16px;}
-.pp-sep{height:1px; background:#e5e7eb; margin:16px 0;}
-.pp-form-dark-txt{color:#374151 !important;}
-.pp-form-muted{color:#6b7280 !important;}
+.pp-sep{height:1px; background:rgba(255,255,255,0.08); margin:16px 0;}
+.pp-form-dark-txt{color:#f1f5f9 !important;}
+.pp-form-muted{color:rgba(255,255,255,0.45) !important;}
 `;
 
 const EyeOn  = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
@@ -231,8 +232,6 @@ function RegisterForm() {
     const d = f.phone.replace(/^\+/,'');
     if (!f.phone||!/^\+?[0-9]+$/.test(f.phone)||d.length<7||d.length>15) return setErr('Enter a valid phone number');
     if (!f.companyName.trim()||f.companyName.trim().length<2) return setErr('Company name must be at least 2 characters');
-    if (!f.role) return setErr('Please select your role');
-    if (!feats.length) { setFeatsTouched(true); return setErr('Please select at least one feature you are interested in.'); }
     if (!ch.len) return setErr(`Password must be at least ${PASS_MIN} characters`);
     if (!ch.up)  return setErr('Password needs an uppercase letter (A-Z)');
     if (!ch.lo)  return setErr('Password needs a lowercase letter (a-z)');
@@ -260,7 +259,7 @@ function RegisterForm() {
   );
 
   return (
-    <form onSubmit={submit} noValidate style={{display:'flex',flexDirection:'column',gap:10}}>
+    <form onSubmit={submit} noValidate style={{display:'flex',flexDirection:'column',gap:7}}>
       {error && <div style={{padding:'9px 12px',background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.22)',borderRadius:9,color:'#fca5a5',fontSize:12,display:'flex',gap:8,alignItems:'center'}}><span>⚠️</span>{error}</div>}
 
       <div className="pp-rrow">
@@ -281,21 +280,6 @@ function RegisterForm() {
         <div><label className="pp-lbl">Company <span style={{color:'#ef4444'}}>*</span></label><input className="pp-inp" type="text" name="companyName" value={f.companyName} onChange={upd} onBlur={blur} required maxLength={60} placeholder="Acme Pvt Ltd"/></div>
       </div>
 
-      <div>
-        <label className="pp-lbl">Your role <span style={{color:'#ef4444'}}>*</span></label>
-        <select name="role" value={f.role} onChange={upd} onBlur={blur} required className="pp-inp"
-          style={{appearance:'none',WebkitAppearance:'none',cursor:'pointer',color:f.role?'#1f2937':'#9ca3af',backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='rgba(0,0,0,0.4)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E")`,backgroundRepeat:'no-repeat',backgroundPosition:'right 12px center',paddingRight:32}}>
-          <option value="" disabled>Select your role…</option>
-          {ROLES.map(r=><option key={r} value={r}>{r}</option>)}
-        </select>
-      </div>
-
-      <div>
-        <label className="pp-lbl" style={{marginBottom:6}}>Interested in <span style={{color:'#ef4444'}}>*</span> <span style={{fontWeight:400,color:'#9ca3af'}}>— select features</span></label>
-        <div style={{display:'flex',flexWrap:'wrap',gap:5,padding:featsTouched&&!feats.length?'6px':'0',border:featsTouched&&!feats.length?'1px solid rgba(239,68,68,0.5)':'1px solid transparent',borderRadius:8,transition:'border .2s'}}>
-          {FEATURES.map(x=><button key={x} type="button" className={`pp-chip${feats.includes(x)?' on':''}`} onClick={()=>tog(x)}>{feats.includes(x)?'✓ ':''}{x}</button>)}
-        </div>
-      </div>
 
       <div>
         <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><label className="pp-lbl" style={{margin:0}}>Requirement <span style={{fontWeight:400,color:'#9ca3af'}}>(optional)</span></label><span style={{fontSize:9,color:'#9ca3af'}}>{f.requirement.length}/200</span></div>
@@ -309,16 +293,16 @@ function RegisterForm() {
           <button type="button" onClick={()=>setSp(v=>!v)} tabIndex={-1} style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'rgba(255,255,255,0.32)',padding:0,display:'flex'}}>{sp?<EyeOn/>:<EyeOff/>}</button>
         </div>
         {f.password.length>0&&(
-          <div style={{marginTop:8}}>
-            <div style={{display:'flex',gap:4,alignItems:'center',marginBottom:8}}>
-              {[1,2,3,4,5].map(i=><div key={i} style={{flex:1,height:3,borderRadius:3,background:i<=s?sc_:'#e5e7eb',transition:'background .3s'}}/>)}
-              <span style={{fontSize:11,fontWeight:700,color:sc_,marginLeft:6}}>{sl}</span>
+          <div style={{marginTop:5}}>
+            <div style={{display:'flex',gap:3,alignItems:'center',marginBottom:5}}>
+              {[1,2,3,4,5].map(i=><div key={i} style={{flex:1,height:2,borderRadius:2,background:i<=s?sc_:'rgba(255,255,255,0.1)',transition:'background .3s'}}/>)}
+              <span style={{fontSize:10,fontWeight:700,color:sc_,marginLeft:5}}>{sl}</span>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'4px 10px'}}>
-              {[['len',`Min ${PASS_MIN} chars`],['up','Uppercase (A-Z)'],['lo','Lowercase (a-z)'],['num','Number (0-9)'],['sym','Symbol (!@#$)']].map(([k,lab])=>(
-                <div key={k} style={{display:'flex',alignItems:'center',gap:5}}>
-                  <span style={{fontSize:13,color:ch[k]?'#059669':'#9ca3af',flexShrink:0}}>{ch[k]?'✓':'○'}</span>
-                  <span style={{fontSize:12,color:ch[k]?'#374151':'#9ca3af'}}>{lab}</span>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'2px 8px'}}>
+              {[['len',`Min ${PASS_MIN} chars`],['up','A-Z'],['lo','a-z'],['num','0-9'],['sym','!@#$']].map(([k,lab])=>(
+                <div key={k} style={{display:'flex',alignItems:'center',gap:4}}>
+                  <span style={{fontSize:11,color:ch[k]?'#1EB980':'rgba(255,255,255,0.25)',flexShrink:0}}>{ch[k]?'✓':'○'}</span>
+                  <span style={{fontSize:10,color:ch[k]?'rgba(255,255,255,0.8)':'rgba(255,255,255,0.3)'}}>{lab}</span>
                 </div>
               ))}
             </div>
@@ -471,14 +455,14 @@ export default function PartnersPage() {
             </div>
 
             {/* RIGHT — Form */}
-            <div style={{background:'#ffffff',border:'1px solid rgba(0,0,0,0.08)',borderRadius:18,padding:'28px 28px',boxShadow:'0 16px 48px rgba(0,0,0,0.25)'}}>
+            <div style={{background:'linear-gradient(145deg,#0d1f38,#0f2444)',border:'1px solid rgba(30,185,128,0.2)',borderRadius:14,padding:'20px 22px',boxShadow:'0 0 0 1px rgba(30,185,128,0.08),0 20px 50px rgba(0,0,0,0.5)'}}>
               {/* Pill tabs inside card */}
-              <div style={{display:'flex',gap:4,background:'#f3f4f6',borderRadius:999,padding:4,marginBottom:22}}>
+              <div style={{display:'flex',gap:4,background:'rgba(255,255,255,0.06)',borderRadius:999,padding:4,marginBottom:22}}>
                 {[['🤝 Apply Now','apply'],['🔑 Sign In','login']].map(([label,key])=>(
                   <button key={key} onClick={()=>setActiveForm(key)}
                     style={{flex:1,padding:'8px 0',fontSize:12,fontWeight:700,fontFamily:'inherit',border:'none',cursor:'pointer',borderRadius:999,transition:'all .2s',
                       background:activeForm===key?'#1EB980':'transparent',
-                      color:activeForm===key?'#fff':'#6b7280'}}>
+                      color:activeForm===key?'#fff':'rgba(255,255,255,0.45)'}}>
                     {label}
                   </button>
                 ))}
