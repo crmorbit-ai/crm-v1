@@ -167,6 +167,8 @@ const invoiceSchema = new mongoose.Schema({
   sentAt: Date,
   sentTo: [String],
   payments: [paymentSchema],
+  razorpayPaymentLinkId: String,
+  razorpayPaymentLinkUrl: String,
   totalPaid: {
     type: Number,
     default: 0

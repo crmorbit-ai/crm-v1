@@ -18,5 +18,6 @@ router.get('/:id/download-pdf', requirePermission('invoice_management', 'read'),
 router.post('/:id/send', requirePermission('invoice_management', 'update'), invoiceController.sendInvoice);
 router.post('/:id/payments', requirePermission('invoice_management', 'update'), invoiceController.addPayment);
 router.patch('/:id/status', requirePermission('invoice_management', 'update'), invoiceController.updateInvoiceStatus);
+router.post('/:id/payment-link', requirePermission('invoice_management', 'update'), invoiceController.generatePaymentLink);
 
 module.exports = router;

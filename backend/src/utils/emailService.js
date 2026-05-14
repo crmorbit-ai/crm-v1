@@ -1189,6 +1189,55 @@ const sendContactInquiryReply = async ({ toName, toEmail, subject, originalMessa
   return { success: true, messageId: info.messageId };
 };
 
+const sendPaymentSuccessEmail = async ({ email, userName, orgName, planName, amount, billingCycle, invoiceNumber, startDate, endDate }) => {
+  try {
+    const fmt = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const html = `<!DOCTYPE html><html><head><style>
+      body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;margin:0;padding:0;background:#f5f7fa;}
+      .wrap{max-width:600px;margin:32px auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.08);}
+      .hdr{background:linear-gradient(135deg,#1EB980,#17a46f);padding:36px 32px;text-align:center;}
+      .hdr h1{margin:0;color:#fff;font-size:24px;font-weight:700;}
+      .hdr p{margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;}
+      .body{padding:32px;}
+      .badge{display:inline-block;background:#d1fae5;color:#065f46;padding:6px 16px;border-radius:20px;font-size:13px;font-weight:700;margin-bottom:20px;}
+      .card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:20px;margin:20px 0;}
+      .row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:14px;}
+      .row:last-child{border-bottom:none;}
+      .lbl{color:#64748b;font-weight:500;}
+      .val{color:#1e293b;font-weight:600;}
+      .total{display:flex;justify-content:space-between;padding:16px 20px;background:#1EB980;border-radius:8px;margin-top:12px;}
+      .total span{color:#fff;font-weight:700;font-size:16px;}
+      .footer{text-align:center;padding:24px;background:#f8fafc;border-top:1px solid #e2e8f0;font-size:12px;color:#94a3b8;}
+    </style></head><body>
+    <div class="wrap">
+      <div class="hdr">
+        <h1>✅ Payment Successful!</h1>
+        <p>Your subscription has been activated</p>
+      </div>
+      <div class="body">
+        <div class="badge">🎉 ${planName} Plan Activated</div>
+        <p style="color:#374151;font-size:15px;">Hi <strong>${userName}</strong>, thank you for subscribing to <strong>Unified CRM</strong>. Your payment was successful.</p>
+        <div class="card">
+          <div class="row"><span class="lbl">Invoice Number</span><span class="val">${invoiceNumber}</span></div>
+          <div class="row"><span class="lbl">Organization</span><span class="val">${orgName}</span></div>
+          <div class="row"><span class="lbl">Plan</span><span class="val">${planName}</span></div>
+          <div class="row"><span class="lbl">Billing Cycle</span><span class="val">${billingCycle === 'yearly' ? 'Annual' : 'Monthly'}</span></div>
+          <div class="row"><span class="lbl">Valid From</span><span class="val">${fmt(startDate)}</span></div>
+          <div class="row"><span class="lbl">Valid Until</span><span class="val">${fmt(endDate)}</span></div>
+        </div>
+        <div class="total"><span>Amount Paid</span><span>₹${amount?.toLocaleString('en-IN')}</span></div>
+        <p style="color:#64748b;font-size:13px;margin-top:20px;">You can download your invoice from the Subscription & Billing section in your CRM dashboard.</p>
+      </div>
+      <div class="footer">Unified CRM &copy; ${new Date().getFullYear()} &nbsp;|&nbsp; support@texora.ai</div>
+    </div>
+    </body></html>`;
+    await sendViaSES(email, `Payment Confirmed — ${planName} Plan Activated`, html);
+    return { success: true };
+  } catch (err) {
+    console.error('sendPaymentSuccessEmail error:', err.message);
+  }
+};
+
 module.exports = {
   sendPasswordResetOTP,
   sendSignupVerificationOTP,
@@ -1203,5 +1252,6 @@ module.exports = {
   sendDeletionApprovedEmail,
   sendDeletionRejectedEmail,
   sendAccountRecoveredEmail,
-  sendContactInquiryReply
+  sendContactInquiryReply,
+  sendPaymentSuccessEmail
 };

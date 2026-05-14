@@ -53,6 +53,12 @@ jobs:
           TWILIO_WHATSAPP_NUMBER=${{ secrets.TWILIO_WHATSAPP_NUMBER }}
           RAZORPAY_KEY_ID=${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_KEY_SECRET=${{ secrets.RAZORPAY_KEY_SECRET }}
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION=${{ secrets.AWS_REGION }}
+          SES_FROM_EMAIL=${{ secrets.SES_FROM_EMAIL }}
+          SES_FROM_NAME=${{ secrets.SES_FROM_NAME }}
+          SQS_QUEUE_URL=${{ secrets.SQS_QUEUE_URL }}
           GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
           ZEROBOUNCE_API_KEY=${{ secrets.ZEROBOUNCE_API_KEY }}
           NUMVERIFY_API_KEY=${{ secrets.NUMVERIFY_API_KEY }}

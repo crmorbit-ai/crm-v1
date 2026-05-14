@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { API_URL, getAuthHeaders } from '../config/api.config';
+import { generateInvoicePaymentLink } from '../utils/razorpay';
 import '../styles/crm.css';
 
 const InvoiceDetail = () => {
@@ -11,6 +12,8 @@ const InvoiceDetail = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState(false);
+  const [paymentLink, setPaymentLink] = useState('');
+  const [linkLoading, setLinkLoading] = useState(false);
 
   useEffect(() => {
     fetchInvoice();
@@ -294,21 +297,40 @@ const InvoiceDetail = () => {
       <div className="crm-card">
         <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '700' }}>Actions</h3>
         <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button
-            className="btn-primary"
-            onClick={handleDownloadPDF}
-            disabled={actionLoading}
-          >
+          <button className="btn-primary" onClick={handleDownloadPDF} disabled={actionLoading}>
             📥 Download PDF
           </button>
           {invoice.status !== 'sent' && (
-            <button
-              className="btn-primary"
-              onClick={handleSendEmail}
-              disabled={actionLoading}
-            >
+            <button className="btn-primary" onClick={handleSendEmail} disabled={actionLoading}>
               📧 Send Email
             </button>
+          )}
+          {invoice.status !== 'paid' && (
+            <button
+              className="btn-primary"
+              style={{ background: '#1EB980', borderColor: '#1EB980' }}
+              disabled={linkLoading}
+              onClick={async () => {
+                try {
+                  setLinkLoading(true);
+                  const res = await generateInvoicePaymentLink(invoice._id);
+                  setPaymentLink(res.data.paymentLinkUrl);
+                  window.open(res.data.paymentLinkUrl, '_blank');
+                } catch (e) {
+                  alert(e?.message || 'Failed to generate payment link');
+                } finally { setLinkLoading(false); }
+              }}
+            >
+              {linkLoading ? '⏳ Generating...' : '💳 Generate Payment Link'}
+            </button>
+          )}
+          {(paymentLink || invoice.razorpayPaymentLinkUrl) && (
+            <div style={{ width: '100%', marginTop: 8, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #1EB980', borderRadius: 8, fontSize: 13 }}>
+              <span style={{ fontWeight: 600, color: '#065f46' }}>Payment Link: </span>
+              <a href={paymentLink || invoice.razorpayPaymentLinkUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#1EB980', wordBreak: 'break-all' }}>
+                {paymentLink || invoice.razorpayPaymentLinkUrl}
+              </a>
+            </div>
           )}
         </div>
       </div>

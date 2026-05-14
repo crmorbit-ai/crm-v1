@@ -435,3 +435,45 @@ exports.getInvoiceStats = async (req, res) => {
     });
   }
 };
+
+// ─── RAZORPAY PAYMENT LINK FOR INVOICE ───────────────────────────────────────
+const { createInvoicePaymentLink } = require('../services/razorpayService');
+
+exports.generatePaymentLink = async (req, res) => {
+  try {
+    const invoice = await Invoice.findOne({ _id: req.params.id, tenant: req.user.tenant })
+      .populate('contact', 'firstName lastName email phone')
+      .populate('account', 'name email phone');
+
+    if (!invoice) return res.status(404).json({ success: false, message: 'Invoice not found' });
+    if (invoice.status === 'paid') return res.status(400).json({ success: false, message: 'Invoice already paid' });
+
+    const remaining = (invoice.totalAmount || 0) - (invoice.paidAmount || 0);
+    if (remaining <= 0) return res.status(400).json({ success: false, message: 'No outstanding amount' });
+
+    const customer = invoice.contact || invoice.account || {};
+    const customerName = customer.firstName ? `${customer.firstName} ${customer.lastName || ''}`.trim() : (customer.name || '');
+    const customerEmail = customer.email || '';
+    const customerPhone = customer.phone || '';
+
+    const link = await createInvoicePaymentLink({
+      amount: remaining,
+      description: `Invoice ${invoice.invoiceNumber} - ${req.user.tenant?.organizationName || 'CRM'}`,
+      customerName,
+      customerEmail,
+      customerPhone,
+      invoiceId: invoice._id.toString(),
+      callbackUrl: `${process.env.FRONTEND_URL}/invoices/${invoice._id}`,
+    });
+
+    // Save payment link on invoice
+    invoice.razorpayPaymentLinkId = link.id;
+    invoice.razorpayPaymentLinkUrl = link.short_url;
+    await invoice.save();
+
+    return res.json({ success: true, message: 'Payment link generated', data: { paymentLinkUrl: link.short_url, paymentLinkId: link.id, amount: remaining } });
+  } catch (error) {
+    console.error('generatePaymentLink error:', error);
+    return res.status(500).json({ success: false, message: 'Failed to generate payment link', error: error.message });
+  }
+};

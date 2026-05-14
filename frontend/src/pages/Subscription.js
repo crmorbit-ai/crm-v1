@@ -2,9 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { subscriptionService } from '../services/subscriptionService';
+import { openSubscriptionCheckout } from '../utils/razorpay';
+import { useAuth } from '../context/AuthContext';
 
 const Subscription = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [currentSubscription, setCurrentSubscription] = useState(null);
   const [plans, setPlans] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,9 +20,11 @@ const Subscription = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [cancelOther, setCancelOther] = useState('');
   const [cancelling, setCancelling] = useState(false);
-  const [upgradeTarget, setUpgradeTarget] = useState(null); // plan to upgrade to
+  const [upgradeTarget, setUpgradeTarget] = useState(null);
   const [upgradeReason, setUpgradeReason] = useState('');
   const [upgradeOther, setUpgradeOther] = useState('');
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [receiptLoading, setReceiptLoading] = useState(null);
 
   // Clean Professional Styles
   const glassStyles = {
@@ -167,10 +172,12 @@ const Subscription = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [subscriptionData, plansData] = await Promise.all([
+      const [subscriptionData, plansData, historyData] = await Promise.all([
         subscriptionService.getCurrentSubscription(),
-        subscriptionService.getAllPlans()
+        subscriptionService.getAllPlans(),
+        subscriptionService.getPaymentHistory().catch(() => ({ data: [] })),
       ]);
+      setPaymentHistory(historyData?.data || []);
 
       console.log('📊 Subscription Page - Full Data:', subscriptionData.data);
       console.log('📊 Usage Object:', subscriptionData.data?.usage);
@@ -198,23 +205,43 @@ const Subscription = () => {
 
   const confirmUpgrade = async () => {
     if (!upgradeTarget) return;
-    const reason = upgradeOther.trim() ? `${upgradeReason} — ${upgradeOther.trim()}` : upgradeReason;
-    if (!reason.trim()) { alert('Please select a reason'); return; }
-    try {
-      setUpgrading(true);
-      const response = await subscriptionService.upgradePlan(upgradeTarget._id, billingCycle, reason);
-      if (response.success) {
-        setUpgradeTarget(null);
-        setUpgradeReason('');
-        setUpgradeOther('');
-        alert('✅ ' + response.message);
-        loadData();
-      }
-    } catch (error) {
-      alert('❌ ' + (error.message || 'Failed to upgrade plan'));
-    } finally {
-      setUpgrading(false);
+    const planAmount = billingCycle === 'yearly' ? upgradeTarget.price?.yearly : upgradeTarget.price?.monthly;
+
+    // Free plan — no payment needed
+    if (!planAmount || planAmount === 0) {
+      try {
+        setUpgrading(true);
+        const response = await subscriptionService.upgradePlan(upgradeTarget._id, billingCycle, 'Free plan');
+        if (response.success) {
+          setUpgradeTarget(null);
+          alert('✅ ' + response.message);
+          loadData();
+        }
+      } catch (error) {
+        alert('❌ ' + (error.message || 'Failed to upgrade plan'));
+      } finally { setUpgrading(false); }
+      return;
     }
+
+    // Paid plan — Razorpay checkout
+    setUpgrading(true);
+    setUpgradeTarget(null);
+    openSubscriptionCheckout({
+      planId: upgradeTarget._id,
+      billingCycle,
+      userEmail: user?.email || '',
+      userName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim(),
+      userPhone: user?.phone || '',
+      onSuccess: () => {
+        setUpgrading(false);
+        alert('✅ Payment successful! Plan upgraded.');
+        loadData();
+      },
+      onFailure: (msg) => {
+        setUpgrading(false);
+        if (msg !== 'Payment cancelled') alert('❌ ' + msg);
+      },
+    });
   };
 
   const handleCancel = async () => {
@@ -889,149 +916,6 @@ const Subscription = () => {
           </div>
         </div>
 
-        {/* Payment History */}
-        {currentSubscription?.payments && currentSubscription.payments.length > 0 && (
-          <div style={{
-            background: '#ffffff',
-            borderRadius: '12px',
-            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-            border: '1px solid #e5e7eb',
-            overflow: 'hidden'
-          }}>
-            <div style={{
-              borderBottom: '2px solid #f3f4f6',
-              padding: '20px 28px'
-            }}>
-              <h2 style={{
-                fontSize: '20px',
-                fontWeight: '700',
-                color: '#1f2937',
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px'
-              }}>
-                <span style={{ fontSize: '22px' }}>📄</span>
-                Payment History
-              </h2>
-            </div>
-
-            <div style={{ overflowX: 'auto', padding: '28px' }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                background: 'transparent'
-              }}>
-                <thead>
-                  <tr style={{
-                    borderBottom: '2px solid #e5e7eb',
-                    background: '#f9fafb'
-                  }}>
-                    <th style={{
-                      padding: '16px 12px',
-                      textAlign: 'left',
-                      color: '#6b7280',
-                      fontWeight: '700',
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px'
-                    }}>Invoice</th>
-                    <th style={{
-                      padding: '16px 12px',
-                      textAlign: 'left',
-                      color: '#6b7280',
-                      fontWeight: '700',
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px'
-                    }}>Date</th>
-                    <th style={{
-                      padding: '16px 12px',
-                      textAlign: 'left',
-                      color: '#6b7280',
-                      fontWeight: '700',
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px'
-                    }}>Plan</th>
-                    <th style={{
-                      padding: '16px 12px',
-                      textAlign: 'left',
-                      color: '#6b7280',
-                      fontWeight: '700',
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px'
-                    }}>Amount</th>
-                    <th style={{
-                      padding: '16px 12px',
-                      textAlign: 'left',
-                      color: '#6b7280',
-                      fontWeight: '700',
-                      fontSize: '10px',
-                      textTransform: 'uppercase',
-                      letterSpacing: '1px'
-                    }}>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {currentSubscription.payments.map((payment, index) => (
-                    <tr key={payment._id} style={{
-                      borderBottom: '1px solid #f3f4f6',
-                      transition: 'all 0.3s ease',
-                      background: index % 2 === 0 ? 'rgba(255, 255, 255, 0.5)' : 'transparent'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#f3f4f6'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'rgba(255, 255, 255, 0.5)' : 'transparent'}>
-                      <td style={{
-                        padding: '16px 12px',
-                        color: '#4b5563',
-                        fontSize: '15px',
-                        fontWeight: '500'
-                      }}>{payment.invoiceNumber || '-'}</td>
-                      <td style={{
-                        padding: '16px 12px',
-                        color: '#4b5563',
-                        fontSize: '15px',
-                        fontWeight: '500'
-                      }}>
-                        {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString('en-IN') : '-'}
-                      </td>
-                      <td style={{
-                        padding: '16px 12px',
-                        color: '#4b5563',
-                        fontSize: '15px',
-                        fontWeight: '500'
-                      }}>{payment.planName}</td>
-                      <td style={{
-                        padding: '16px 12px',
-                        color: '#1a1a1a',
-                        fontWeight: '800',
-                        fontSize: '16px'
-                      }}>
-                        ₹{payment.amount.toLocaleString()}
-                      </td>
-                      <td style={{ padding: '16px 12px' }}>
-                        <span style={{
-                          padding: '6px 12px',
-                          background: payment.status === 'completed' ? '#d1fae5' : '#fee2e2',
-                          border: payment.status === 'completed' ? '1px solid #10b981' : '1px solid #ef4444',
-                          color: payment.status === 'completed' ? '#065f46' : '#991b1b',
-                          borderRadius: '6px',
-                          fontSize: '12px',
-                          fontWeight: '600',
-                          textTransform: 'capitalize'
-                        }}>
-                          {payment.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {/* Responsive Grid for smaller screens */}
        <style>{`
@@ -1162,6 +1046,67 @@ const Subscription = () => {
               >
                 {cancelling ? 'Cancelling...' : 'Yes, Cancel Plan'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── PAYMENT HISTORY ── */}
+      {paymentHistory.length > 0 && (
+        <div style={{ maxWidth: 1100, margin: '32px auto', padding: '0 24px' }}>
+          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)' }}>
+            <div style={{ padding: '20px 28px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: '#1e293b' }}>🧾 Payment History</h3>
+              <span style={{ fontSize: 12, color: '#64748b' }}>{paymentHistory.length} record{paymentHistory.length !== 1 ? 's' : ''}</span>
+            </div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc' }}>
+                    {['Invoice No', 'Plan', 'Amount', 'Billing', 'Period', 'Date', 'Status', ''].map(h => (
+                      <th key={h} style={{ padding: '12px 16px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, whiteSpace: 'nowrap' }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {paymentHistory.map((p, i) => (
+                    <tr key={p._id} style={{ borderTop: '1px solid #f1f5f9', background: i % 2 === 0 ? '#fff' : '#fafbfc' }}>
+                      <td style={{ padding: '13px 16px', fontSize: 13, fontWeight: 600, color: '#1e293b' }}>{p.invoiceNumber || '—'}</td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, color: '#374151' }}>{p.planName}</td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, fontWeight: 700, color: '#1EB980' }}>₹{(p.amount || 0).toLocaleString('en-IN')}</td>
+                      <td style={{ padding: '13px 16px', fontSize: 12, color: '#64748b', textTransform: 'capitalize' }}>{p.billingCycle}</td>
+                      <td style={{ padding: '13px 16px', fontSize: 12, color: '#64748b' }}>
+                        {p.billingPeriodStart ? new Date(p.billingPeriodStart).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                        {' – '}
+                        {p.billingPeriodEnd ? new Date(p.billingPeriodEnd).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 12, color: '#64748b' }}>
+                        {new Date(p.paidAt || p.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                      </td>
+                      <td style={{ padding: '13px 16px' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: p.status === 'completed' ? '#d1fae5' : '#fee2e2', color: p.status === 'completed' ? '#065f46' : '#991b1b' }}>
+                          {p.status === 'completed' ? '✓ Paid' : p.status}
+                        </span>
+                      </td>
+                      <td style={{ padding: '13px 16px' }}>
+                        <button
+                          onClick={async () => {
+                            try {
+                              setReceiptLoading(p._id);
+                              await subscriptionService.downloadReceipt(p._id);
+                            } catch { alert('Failed to download receipt'); }
+                            finally { setReceiptLoading(null); }
+                          }}
+                          disabled={receiptLoading === p._id}
+                          style={{ padding: '5px 12px', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 7, fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        >
+                          {receiptLoading === p._id ? '⏳' : '📥 Receipt'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

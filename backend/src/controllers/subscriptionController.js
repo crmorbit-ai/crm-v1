@@ -3,6 +3,9 @@ const Tenant           = require('../models/Tenant');
 const Payment          = require('../models/Payment');
 const PlanHistory      = require('../models/PlanHistory');
 const { successResponse, errorResponse } = require('../utils/response');
+const { createSubscriptionOrder, verifyPaymentSignature, fetchPayment } = require('../services/razorpayService');
+const { sendPaymentSuccessEmail } = require('../utils/emailService');
+const User = require('../models/User');
 
 const PLAN_ORDER = { Free:0, Basic:1, Professional:2, Enterprise:3 };
 
@@ -420,10 +423,223 @@ const updatePlan = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Create Razorpay order for plan upgrade
+ * @route   POST /api/subscriptions/create-order
+ */
+const createPaymentOrder = async (req, res) => {
+  try {
+    const { planId, billingCycle } = req.body;
+    if (!planId || !billingCycle) return errorResponse(res, 400, 'planId and billingCycle required');
+
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan || !plan.isActive) return errorResponse(res, 404, 'Plan not found');
+
+    const amount = billingCycle === 'yearly' ? plan.price.yearly : plan.price.monthly;
+    if (!amount || amount <= 0) return errorResponse(res, 400, 'Invalid plan amount');
+
+    const tenantId = req.user.tenant._id || req.user.tenant;
+    const order = await createSubscriptionOrder({
+      amount,
+      receipt: `sub_${Date.now().toString(36)}`.slice(0, 40),
+      notes: { planId: planId.toString(), billingCycle, tenantId: tenantId.toString() },
+    });
+
+    return successResponse(res, 200, 'Order created', {
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID,
+      planName: plan.name,
+    });
+  } catch (error) {
+    console.error('createPaymentOrder error:', error);
+    return errorResponse(res, 500, 'Failed to create payment order');
+  }
+};
+
+/**
+ * @desc    Verify Razorpay payment & activate subscription
+ * @route   POST /api/subscriptions/verify-payment
+ */
+const verifySubscriptionPayment = async (req, res) => {
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, planId, billingCycle } = req.body;
+
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature)
+      return errorResponse(res, 400, 'Missing payment fields');
+
+    // Verify signature
+    const valid = verifyPaymentSignature({ orderId: razorpay_order_id, paymentId: razorpay_payment_id, signature: razorpay_signature });
+    if (!valid) return errorResponse(res, 400, 'Invalid payment signature');
+
+    const plan = await SubscriptionPlan.findById(planId);
+    if (!plan) return errorResponse(res, 404, 'Plan not found');
+
+    const tenantId = req.user.tenant._id || req.user.tenant;
+    const tenant = await Tenant.findById(tenantId).populate('subscription.plan');
+    if (!tenant) return errorResponse(res, 404, 'Tenant not found');
+
+    const amount = billingCycle === 'yearly' ? plan.price.yearly : plan.price.monthly;
+    const startDate = new Date();
+    const endDate = new Date();
+    billingCycle === 'yearly' ? endDate.setFullYear(endDate.getFullYear() + 1) : endDate.setMonth(endDate.getMonth() + 1);
+
+    // Save plan history
+    const fromPlan = tenant.subscription?.planName || 'Free';
+    await PlanHistory.create({
+      tenant: tenantId, fromPlan, toPlan: plan.name,
+      changeType: PLAN_ORDER[plan.name] > PLAN_ORDER[fromPlan] ? 'upgrade' : 'downgrade',
+      billingCycle, amount, reason: 'Razorpay payment', changedBy: 'tenant', changedAt: new Date(),
+    });
+
+    // Update subscription
+    tenant.subscription.plan = plan._id;
+    tenant.subscription.planName = plan.name;
+    tenant.subscription.status = 'active';
+    tenant.subscription.isTrialActive = false;
+    tenant.subscription.billingCycle = billingCycle;
+    tenant.subscription.amount = amount;
+    tenant.subscription.startDate = startDate;
+    tenant.subscription.endDate = endDate;
+    tenant.subscription.renewalDate = endDate;
+    tenant.subscription.lastPaymentDate = new Date();
+    tenant.subscription.lastPaymentAmount = amount;
+    tenant.subscription.totalPaid = (tenant.subscription.totalPaid || 0) + amount;
+    await tenant.save();
+
+    // Create payment record
+    await Payment.create({
+      tenant: tenantId, plan: plan._id, planName: plan.name,
+      amount, currency: 'INR', billingCycle,
+      billingPeriodStart: startDate, billingPeriodEnd: endDate,
+      status: 'completed', paymentMethod: 'razorpay',
+      gatewayTransactionId: razorpay_payment_id,
+      gatewayOrderId: razorpay_order_id,
+      paymentType: 'upgrade', paidAt: new Date(),
+    });
+
+    // Send payment success email (non-blocking)
+    try {
+      const user = await User.findById(req.user._id).select('email firstName lastName');
+      sendPaymentSuccessEmail({
+        email: user.email,
+        userName: `${user.firstName} ${user.lastName}`,
+        orgName: tenant.organizationName,
+        planName: plan.name,
+        amount,
+        billingCycle,
+        invoiceNumber: payment.invoiceNumber,
+        startDate,
+        endDate,
+      }).catch(() => {});
+    } catch (_) {}
+
+    return successResponse(res, 200, `Successfully upgraded to ${plan.name}!`, { subscription: tenant.subscription });
+  } catch (error) {
+    console.error('verifySubscriptionPayment error:', error);
+    return errorResponse(res, 500, 'Payment verification failed');
+  }
+};
+
+/**
+ * @desc    Get tenant payment history
+ * @route   GET /api/subscriptions/payment-history
+ */
+const getPaymentHistory = async (req, res) => {
+  try {
+    const tenantId = req.user.tenant._id || req.user.tenant;
+    const payments = await Payment.find({ tenant: tenantId })
+      .sort({ createdAt: -1 })
+      .populate('plan', 'name')
+      .limit(50);
+    return successResponse(res, 200, 'Payment history', payments);
+  } catch (error) {
+    return errorResponse(res, 500, 'Failed to fetch payment history');
+  }
+};
+
+/**
+ * @desc    Download receipt PDF for a payment
+ * @route   GET /api/subscriptions/receipt/:paymentId
+ */
+const downloadReceipt = async (req, res) => {
+  try {
+    const tenantId = req.user.tenant._id || req.user.tenant;
+    const payment = await Payment.findOne({ _id: req.params.paymentId, tenant: tenantId }).populate('plan', 'name');
+    if (!payment) return errorResponse(res, 404, 'Payment not found');
+
+    const tenant = await Tenant.findById(tenantId);
+    const fmt = (d) => new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const PDFDocument = require('pdfkit');
+    const doc = new PDFDocument({ margin: 50, size: 'A4' });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename=receipt-${payment.invoiceNumber}.pdf`);
+    doc.pipe(res);
+
+    // Header
+    doc.rect(0, 0, doc.page.width, 120).fill('#1EB980');
+    doc.fillColor('#fff').fontSize(26).font('Helvetica-Bold').text('Unified CRM', 50, 35);
+    doc.fontSize(12).font('Helvetica').text('Payment Receipt', 50, 68);
+    doc.fontSize(10).text('support@texora.ai  |  texora.ai', 50, 88);
+
+    // Invoice info
+    doc.fillColor('#1e293b').fontSize(20).font('Helvetica-Bold').text('RECEIPT', 50, 145);
+    doc.fontSize(10).font('Helvetica').fillColor('#64748b');
+    doc.text(`Invoice No: ${payment.invoiceNumber}`, 50, 175);
+    doc.text(`Date: ${fmt(payment.paidAt || payment.createdAt)}`, 50, 192);
+    doc.text(`Status: PAID`, 50, 209);
+
+    // Org info
+    doc.fontSize(10).fillColor('#64748b').text('Bill To:', 350, 175);
+    doc.fillColor('#1e293b').font('Helvetica-Bold').text(tenant?.organizationName || '', 350, 192);
+    doc.font('Helvetica').fillColor('#64748b').text(req.user.email || '', 350, 209);
+
+    // Table
+    const tableY = 260;
+    doc.rect(50, tableY, doc.page.width - 100, 35).fill('#f1f5f9');
+    doc.fillColor('#374151').font('Helvetica-Bold').fontSize(10);
+    doc.text('Description', 65, tableY + 12);
+    doc.text('Billing Cycle', 270, tableY + 12);
+    doc.text('Period', 380, tableY + 12);
+    doc.text('Amount', 490, tableY + 12);
+
+    const rowY = tableY + 45;
+    doc.font('Helvetica').fillColor('#1e293b').fontSize(10);
+    doc.text(`${payment.planName} Plan`, 65, rowY);
+    doc.text(payment.billingCycle === 'yearly' ? 'Annual' : 'Monthly', 270, rowY);
+    doc.text(`${fmt(payment.billingPeriodStart)} – ${fmt(payment.billingPeriodEnd)}`, 350, rowY, { width: 130 });
+    doc.text(`INR ${(payment.amount || 0).toLocaleString('en-IN')}`, 490, rowY);
+
+    doc.moveTo(50, rowY + 30).lineTo(doc.page.width - 50, rowY + 30).stroke('#e2e8f0');
+
+    // Total
+    const totalY = rowY + 50;
+    doc.rect(350, totalY, doc.page.width - 400, 40).fill('#1EB980');
+    doc.fillColor('#fff').font('Helvetica-Bold').fontSize(12);
+    doc.text('Total Paid', 365, totalY + 13);
+    doc.text(`INR ${(payment.amount || 0).toLocaleString('en-IN')}`, 460, totalY + 13);
+
+    // Footer
+    doc.fillColor('#94a3b8').font('Helvetica').fontSize(9)
+      .text('Thank you for your business. This is a computer-generated receipt.', 50, doc.page.height - 60, { align: 'center' });
+
+    doc.end();
+  } catch (error) {
+    console.error('downloadReceipt error:', error);
+    return errorResponse(res, 500, 'Failed to generate receipt');
+  }
+};
+
 module.exports = {
   getAllPlans,
   getCurrentSubscription,
   upgradePlan,
+  createPaymentOrder,
+  verifySubscriptionPayment,
+  getPaymentHistory,
+  downloadReceipt,
   cancelSubscription,
   getAllSubscriptions,
   updateTenantSubscription,

@@ -114,6 +114,30 @@ export const updatePlan = async (planId, updates) => {
   }
 };
 
+// Get payment history
+export const getPaymentHistory = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/payment-history`, getAuthHeader());
+    return response.data;
+  } catch (error) {
+    throw error.response?.data || error.message;
+  }
+};
+
+// Download receipt PDF
+export const downloadReceipt = async (paymentId) => {
+  const token = localStorage.getItem('token');
+  const response = await fetch(`${API_URL}/receipt/${paymentId}`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok) throw new Error('Failed to download receipt');
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `receipt-${paymentId}.pdf`; a.click();
+  URL.revokeObjectURL(url);
+};
+
 export const subscriptionService = {
   getAllPlans,
   getCurrentSubscription,
@@ -122,5 +146,7 @@ export const subscriptionService = {
   cancelSubscription,
   getAllSubscriptions,
   updateTenantSubscription,
-  updatePlan
+  updatePlan,
+  getPaymentHistory,
+  downloadReceipt,
 };

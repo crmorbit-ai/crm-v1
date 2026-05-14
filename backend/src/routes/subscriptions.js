@@ -4,6 +4,10 @@ const {
   getAllPlans,
   getCurrentSubscription,
   upgradePlan,
+  createPaymentOrder,
+  verifySubscriptionPayment,
+  getPaymentHistory,
+  downloadReceipt,
   cancelSubscription,
   getAllSubscriptions,
   updateTenantSubscription,
@@ -29,7 +33,11 @@ router.get('/plans', getAllPlans);
 // Tenant routes (protected with permission check)
 router.get('/current', protect, requirePermission('subscription_management', 'read'), getCurrentSubscription);
 router.post('/upgrade', protect, requirePermission('subscription_management', 'manage'), upgradePlan);
+router.post('/create-order', protect, requirePermission('subscription_management', 'manage'), createPaymentOrder);
+router.post('/verify-payment', protect, requirePermission('subscription_management', 'manage'), verifySubscriptionPayment);
 router.post('/cancel', protect, requirePermission('subscription_management', 'manage'), cancelSubscription);
+router.get('/payment-history', protect, requirePermission('subscription_management', 'read'), getPaymentHistory);
+router.get('/receipt/:paymentId', protect, requirePermission('subscription_management', 'read'), downloadReceipt);
 
 // SAAS Admin routes
 router.get('/all', protect, requireSaasAccess, getAllSubscriptions);
