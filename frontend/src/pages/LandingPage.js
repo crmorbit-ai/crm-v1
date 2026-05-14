@@ -297,12 +297,10 @@ const CSS = `
 
   /* Hero */
   .hero-section {
-    position: relative; padding: 140px 0 80px; min-height: 100vh;
-    display: flex; align-items: flex-start;
+    position: relative; padding: 140px 0 100px; min-height: 100vh;
     background:
-      radial-gradient(ellipse at 80% 20%, rgba(30,185,128,0.35) 0%, transparent 50%),
-      radial-gradient(ellipse at 10% 80%, rgba(30,185,128,0.15) 0%, transparent 45%),
-      linear-gradient(135deg, #0a1628 0%, #0d1f38 35%, #0f2444 60%, #0d2a1e 80%, #0a1e18 100%);
+      linear-gradient(to right, rgba(5,10,20,0.92) 0%, rgba(5,10,20,0.88) 45%, rgba(5,10,20,0.35) 100%),
+      url('/crmimagee copy.png') center center / cover no-repeat;
   }
 
   /* ── GLOWING RING ── */
@@ -511,6 +509,7 @@ const CSS = `
   .hero-h1 {
     font-size: clamp(42px, 5vw, 68px); font-weight: 700; line-height: 1.08;
     letter-spacing: -2px; margin: 0 0 22px; color: #fff;
+    text-shadow: 0 2px 24px rgba(0,0,0,0.7);
     animation: heroFadeUp 0.8s ease both;
   }
   .hero-h1 .grad1 {
@@ -530,7 +529,9 @@ const CSS = `
 
   /* Continuously rotating feature text */
   .hero-rotate-wrap {
-    display:inline-block; height:1.15em; overflow:hidden; vertical-align:bottom;
+    display:inline-block; height:1.15em; vertical-align:bottom;
+    overflow-y:hidden; overflow-x:visible;
+    max-width:100vw;
   }
   .hero-rotate-track {
     display:flex; flex-direction:column;
@@ -574,8 +575,9 @@ const CSS = `
   .sp-content { animation: spFadeIn 0.35s ease; }
   @keyframes spFadeIn { from{opacity:0;transform:translateY(12px);} to{opacity:1;transform:translateY(0);} }
   .hero-sub {
-    font-size: 17px; color: rgba(255,255,255,0.68); line-height: 1.7;
+    font-size: 17px; color: rgba(255,255,255,0.85); line-height: 1.7;
     max-width: 540px; margin: 0 0 36px; font-weight: 400;
+    text-shadow: 0 1px 12px rgba(0,0,0,0.6);
   }
   .hero-sub span { color: #fff; font-weight: 600; }
   .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 48px; }
@@ -1448,16 +1450,6 @@ const LandingPage = () => {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [spotlightTab, setSpotlightTab] = useState(0);
   const [scrollProgress, setScrollProgress] = useState(0);
-  const [ctaParallax, setCtaParallax] = useState(0);
-  const ctaRef = useRef(null);
-  const SLIDES = ['/slide1.png','/slide2.png','/slide3.png','/slide4.png','/slide5.png'];
-  const [activeSlide, setActiveSlide] = useState(0);
-  useEffect(() => {
-    const t = setInterval(() => setActiveSlide(p => (p + 1) % SLIDES.length), 3500);
-    return () => clearInterval(t);
-  }, []);
-  const [mouse, setMouse] = useState({ x: -999, y: -999 });
-  const [mouseSmooth, setMouseSmooth] = useState({ x: -999, y: -999 });
   const mouseRef = useRef({ x: -999, y: -999 });
 
   useEffect(() => {
@@ -1477,11 +1469,6 @@ const LandingPage = () => {
       setIsScrolled(window.scrollY > 40);
       const maxScroll = document.documentElement.scrollHeight - window.innerHeight;
       setScrollProgress(maxScroll > 0 ? Math.min(window.scrollY / maxScroll, 1) : 0);
-      if (ctaRef.current) {
-        const rect = ctaRef.current.getBoundingClientRect();
-        const center = rect.top + rect.height / 2 - window.innerHeight / 2;
-        setCtaParallax(Math.max(-1, Math.min(1, center / (window.innerHeight * 0.7))));
-      }
     };
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
@@ -1495,25 +1482,11 @@ const LandingPage = () => {
     return () => document.removeEventListener('mousedown', closeOnOutside);
   }, []);
 
-  // Mouse cursor glow — smooth follow
+  // Mouse tracker — for tilt cards
   useEffect(() => {
-    const onMove = (e) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
-      setMouse({ x: e.clientX, y: e.clientY });
-    };
+    const onMove = (e) => { mouseRef.current = { x: e.clientX, y: e.clientY }; };
     window.addEventListener('mousemove', onMove, { passive: true });
-    // Smooth lerp loop
-    let raf;
-    const lerp = (a, b, t) => a + (b - a) * t;
-    const loop = () => {
-      setMouseSmooth(prev => ({
-        x: lerp(prev.x, mouseRef.current.x, 0.1),
-        y: lerp(prev.y, mouseRef.current.y, 0.1),
-      }));
-      raf = requestAnimationFrame(loop);
-    };
-    raf = requestAnimationFrame(loop);
-    return () => { window.removeEventListener('mousemove', onMove); cancelAnimationFrame(raf); };
+    return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
   // Scroll reveal — runs after paint so elements exist in DOM
@@ -1901,86 +1874,40 @@ const LandingPage = () => {
 
       {/* ── HERO ── */}
       <section className="hero-section" style={{ position: 'relative' }}>
-        <div className="hero-orb1"/><div className="hero-orb2"/><div className="hero-orb3"/>
-        <div className="hero-grid-3d" />
-        <div className="hero-inner">
-          <div className="hero-main-grid" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.3fr', gap: isMobile ? 32 : 48, alignItems: 'center' }}>
-            {/* Left */}
-            <div>
+        <div className="hero-inner" style={{ display:'block', margin:0 }}>
+          <div style={{ maxWidth:620 }}>
 
-              <h1 className="hero-h1">
-                The CRM Platform<br />
-                <span className="hero-rotate-wrap">
-                  <span className="hero-rotate-track">
-                    {['Your Business Deserves','Built for Sales Teams','For B2B Operations','For Enterprise Teams','For Support & CX','That Grows With You'].map((w,i)=>(
-                      <span key={i} className="hero-rotate-word">{w}</span>
-                    ))}
-                  </span>
-                </span>
-              </h1>
-
-              <p className="hero-sub">
-                All-in-one CRM with <span>25+ modules</span>, complete B2B workflow, AI assistant, and multi-tenant architecture — built for teams that mean business.
-              </p>
-
-              <div className="hero-ctas">
-                <button className="hero-cta-main" onClick={() => navigate('/register')}>
-                  Start Free Trial →
-                </button>
-                <button className="hero-cta-ghost" onClick={() => navigate('/login')}>
-                  Sign In
-                </button>
-              </div>
-
-              <div className="hero-badges">
-                <div className="hero-badge"><div className="hero-badge-dot"/> Multi-Tenant SaaS</div>
-                <div className="hero-badge"><div className="hero-badge-dot"/> AI Powered</div>
-                <div className="hero-badge"><div className="hero-badge-dot"/> 25+ Modules</div>
-                <div className="hero-badge"><div className="hero-badge-dot"/> No-Code Fields</div>
-              </div>
-            </div>
-
-            {/* Right – Split cards */}
-            <div className="hero-video-outer">
-              <div className="hero-video-glow" />
-
-              {/* Decorative corner accent top-right */}
-              <div style={{ position:'absolute', top:-12, right:-12, width:80, height:80, borderTop:'2px solid rgba(30,185,128,0.5)', borderRight:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 12px 0 0', zIndex:10, pointerEvents:'none' }} />
-              {/* Decorative corner accent bottom-left */}
-              <div style={{ position:'absolute', bottom:-12, left:-12, width:80, height:80, borderBottom:'2px solid rgba(30,185,128,0.5)', borderLeft:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 0 0 12px', zIndex:10, pointerEvents:'none' }} />
-
-              {/* Floating stat card — top right */}
-              <div className="hero-float-badge" style={{ top:'-18px', right:'-16px' }}>
-                <div className="hero-float-dot" style={{ background:'#1EB980' }} />
-                <div>
-                  <div className="hero-float-label">99.9% Uptime</div>
-                  <div className="hero-float-sub">Enterprise reliability</div>
-                </div>
-              </div>
-
-              {/* Floating stat card — bottom left */}
-              <div className="hero-float-badge" style={{ bottom:'-18px', left:'-16px', animationDelay:'2s' }}>
-                <div className="hero-float-dot" style={{ background:'#fbbf24' }} />
-                <div>
-                  <div className="hero-float-label">25+ Modules</div>
-                  <div className="hero-float-sub">All-in-one platform</div>
-                </div>
-              </div>
-
-              <div className="hero-video-wrap" style={{ borderRadius: 18 }}>
-                <div className="hero-slider">
-                  {SLIDES.map((src, i) => (
-                    <img key={i} src={src} alt={`slide-${i+1}`} className={`hero-slide${activeSlide === i ? ' active' : ''}`} />
+            <h1 className="hero-h1" style={{ textAlign:'left', overflow:'visible' }}>
+              The CRM Platform<br />
+              <span className="hero-rotate-wrap">
+                <span className="hero-rotate-track">
+                  {['Your Business Deserves','Built for Sales Teams','For B2B Operations','For Enterprise Teams','For Support & CX','That Grows With You'].map((w,i)=>(
+                    <span key={i} className="hero-rotate-word">{w}</span>
                   ))}
-                  <div className="hero-slider-dots">
-                    {SLIDES.map((_, i) => (
-                      <button key={i} className={`hero-slider-dot${activeSlide === i ? ' active' : ''}`} onClick={() => setActiveSlide(i)} />
-                    ))}
-                  </div>
-                </div>
-                <div className="hero-video-shine" />
-              </div>
+                </span>
+              </span>
+            </h1>
+
+            <p className="hero-sub" style={{ textAlign:'left', maxWidth:560, margin:'0 0 36px' }}>
+              All-in-one CRM with <span>25+ modules</span>, complete B2B workflow, AI assistant, and multi-tenant architecture — built for teams that mean business.
+            </p>
+
+            <div className="hero-ctas" style={{ justifyContent:'flex-start' }}>
+              <button className="hero-cta-main" onClick={() => navigate('/register')}>
+                Start Free Trial →
+              </button>
+              <button className="hero-cta-ghost" onClick={() => navigate('/login')}>
+                Sign In
+              </button>
             </div>
+
+            <div className="hero-badges" style={{ justifyContent:'flex-start' }}>
+              <div className="hero-badge"><div className="hero-badge-dot"/> Multi-Tenant SaaS</div>
+              <div className="hero-badge"><div className="hero-badge-dot"/> AI Powered</div>
+              <div className="hero-badge"><div className="hero-badge-dot"/> 25+ Modules</div>
+              <div className="hero-badge"><div className="hero-badge-dot"/> No-Code Fields</div>
+            </div>
+
           </div>
         </div>
       </section>
