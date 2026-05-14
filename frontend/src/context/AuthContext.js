@@ -137,7 +137,13 @@ export const AuthProvider = ({ children }) => {
 
   const completeProfile = async (profileData) => {
     const response = await authService.completeProfile(profileData);
-    setUser(response.data); // Update user with tenant info
+    setUser(response.data);
+    // Refresh from server to ensure tenant.logo and all fields are populated
+    try {
+      const fresh = await authService.getMe();
+      setUser(fresh.data);
+      cacheUser(fresh.data);
+    } catch (_) {}
     return response.data;
   };
 

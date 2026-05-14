@@ -46,7 +46,7 @@ const profileResponsiveCSS = `
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user: authUser, updateUser } = useAuth();
+  const { user: authUser, updateUser, setUser: setAuthUser } = useAuth();
   const logoInputRef = useRef(null);
 
   // State
@@ -317,6 +317,9 @@ const Profile = () => {
 
       setEditedOrg(prev => ({ ...prev, logo: savedLogoPath, _logoPreview: null }));
       setTenant(prev => ({ ...prev, logo: savedLogoPath }));
+      if (savedLogoPath && authUser) {
+        setAuthUser(prev => ({ ...prev, tenant: { ...prev.tenant, logo: savedLogoPath } }));
+      }
       alert('Logo updated successfully!');
     } catch (err) {
       console.error('Logo upload error:', err);
