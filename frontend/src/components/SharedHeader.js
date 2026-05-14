@@ -139,16 +139,22 @@ export default function SharedHeader({ backTo, backLabel }) {
           <div className="sh-links">
             <button className="sh-link" onClick={() => go('/')}>Home</button>
             <button className="sh-link" onClick={() => go('/all-features')}>Products</button>
+            <button className="sh-link" onClick={() => go('/partners')}>Partners</button>
             <button className="sh-link" onClick={() => go('/platform')}>Platform</button>
             <button className="sh-link" onClick={() => go('/about')}>About Us</button>
             <button className="sh-link" onClick={() => go('/contact')}>Contact Us</button>
+            <div className="sh-sep" />
             <button className="sh-link" onClick={() => go('/help')}>Support</button>
           </div>
 
           {/* Right actions */}
           <div className="sh-actions">
-            <div className="sh-sep" />
             <button className="sh-outline" onClick={() => go('/login')}>Sign In</button>
+            <button onClick={() => go('/demo')} style={{padding:'8px 16px',fontSize:14,fontWeight:600,color:'#1EB980',background:'transparent',border:'1.5px solid #1EB980',borderRadius:999,cursor:'pointer',whiteSpace:'nowrap',transition:'all 0.18s',fontFamily:'inherit'}}
+              onMouseEnter={e=>{e.currentTarget.style.background='#1EB980';e.currentTarget.style.color='#fff';}}
+              onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#1EB980';}}>
+              Watch Demo
+            </button>
             <button className="sh-primary" onClick={() => go('/register')}>Get Started →</button>
           </div>
 
@@ -163,11 +169,12 @@ export default function SharedHeader({ backTo, backLabel }) {
       <div className={`sh-drawer${menuOpen ? ' open' : ''}`}>
         <button className="sh-drawer-link" onClick={() => go('/')}>🏠 Home</button>
         <button className="sh-drawer-link" onClick={() => go('/all-features')}>📦 Products</button>
+        <button className="sh-drawer-link" onClick={() => go('/partners')}>🤝 Partners</button>
         <button className="sh-drawer-link" onClick={() => go('/platform')}>🏗️ Platform</button>
         <button className="sh-drawer-link" onClick={() => go('/about')}>ℹ️ About Us</button>
         <button className="sh-drawer-link" onClick={() => go('/contact')}>📞 Contact Us</button>
-        <button className="sh-drawer-link" onClick={() => go('/demo')}>🎬 View a Demo</button>
-        <button className="sh-drawer-link" onClick={() => go('/partners')}>🤝 Become a Reseller</button>
+        <button className="sh-drawer-link" onClick={() => go('/demo')}>▶ Watch Demo</button>
+        <button className="sh-drawer-link" onClick={() => go('/help')}>🛠️ Support</button>
         <div className="sh-drawer-actions">
           <button className="sh-drawer-signin" onClick={() => go('/login')}>Sign In</button>
           <button className="sh-drawer-cta" onClick={() => go('/register')}>Get Started Free →</button>

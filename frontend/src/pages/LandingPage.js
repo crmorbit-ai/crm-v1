@@ -1603,6 +1603,11 @@ const LandingPage = () => {
               </svg>
             </button>
             <button className="lp-btn-outline" onClick={() => navigate('/login')}>Sign In</button>
+            <button onClick={() => navigate('/demo')} style={{padding:'8px 16px',fontSize:14,fontWeight:600,color:'#1EB980',background:'transparent',border:'1.5px solid #1EB980',borderRadius:999,cursor:'pointer',whiteSpace:'nowrap',transition:'all 0.18s'}}
+              onMouseEnter={e=>{e.currentTarget.style.background='#1EB980';e.currentTarget.style.color='#fff';}}
+              onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#1EB980';}}>
+              Watch Demo
+            </button>
             <button className="lp-btn-primary" onClick={() => navigate('/register')}>Get Started →</button>
           </div>
 
@@ -1617,7 +1622,7 @@ const LandingPage = () => {
       <div className={`lp-drawer${mobileMenu ? ' open' : ''}`}>
         <button className="lp-drawer-link" onClick={() => goTo('/all-features')}>📦 Products</button>
         <button className="lp-drawer-link" onClick={() => goTo('/platform')}>🏗️ Platform</button>
-        <button className="lp-drawer-link" onClick={() => goTo('/demo')}>🎬 View a Demo</button>
+        <button className="lp-drawer-link" onClick={() => goTo('/demo')}>▶ Watch Demo</button>
         <button className="lp-drawer-link" onClick={() => goTo('/partners')}>🤝 Partners</button>
         <button className="lp-drawer-link" onClick={() => goTo('/partners')}>💼 Become a Reseller</button>
         <button className="lp-drawer-link" onClick={() => goTo('/about')}>ℹ️ About Us</button>
@@ -1679,7 +1684,7 @@ const LandingPage = () => {
                   {[
                     { t:'Lead Management',   d:'Capture, qualify & convert leads at scale',   path:'/feature/lead-management' },
                     { t:'B2B Sales Workflow', d:'RFI → Quote → PO → Invoice automated',        path:'/feature/sales-finance' },
-                    { t:'Email Inbox',        d:'IMAP sync with real-time tracking',            path:'/feature/lead-management' },
+                    { t:'Email Inbox',        d:'IMAP sync with real-time tracking',            path:'/feature/email-inbox' },
                     { t:'AI Assistant',       d:'Gemini AI for insights & email drafts',        path:'/feature/lead-management' },
                     { t:'Product Catalog',    d:'Products, pricing & marketplace',              path:'/feature/sales-finance' },
                     { t:'Support Tickets',    d:'SLA tracking & multi-tier escalation',         path:'/feature/support' },
@@ -1697,7 +1702,7 @@ const LandingPage = () => {
                 <button className="lp-mega-see-btn" onClick={()=>{navigate('/feature/lead-management');setOpenDrop(null);}}>Explore Sales CRM</button>
                 <div className="lp-mega-feat-label">Sales Modules</div>
                 <div className="lp-mega-grid">
-                  {[{t:'Leads',d:'Pipeline & bulk import',path:'/feature/lead-management'},{t:'Contacts',d:'360° profiles',path:'/feature/lead-management'},{t:'Accounts',d:'B2B hierarchy',path:'/feature/lead-management'},{t:'Opportunities',d:'Stage tracking & forecast',path:'/feature/lead-management'},{t:'Email Inbox',d:'IMAP sync & tracking',path:'/feature/lead-management'},{t:'Calls',d:'Log & analyze calls',path:'/feature/lead-management'}].map((p,i)=>(
+                  {[{t:'Leads',d:'Pipeline & bulk import',path:'/feature/lead-management'},{t:'Contacts',d:'360° profiles',path:'/feature/lead-management'},{t:'Accounts',d:'B2B hierarchy',path:'/feature/lead-management'},{t:'Opportunities',d:'Stage tracking & forecast',path:'/feature/lead-management'},{t:'Email Inbox',d:'IMAP sync & tracking',path:'/feature/email-inbox'},{t:'Meetings',d:'Schedule, invite & track',path:'/feature/meeting-management'}].map((p,i)=>(
                     <div key={i} className="lp-mega-item" onClick={()=>{navigate(p.path);setOpenDrop(null);}}>
                       <div className="lp-mega-item-title">{p.t}</div>
                       <div className="lp-mega-item-desc">{p.d}</div>
@@ -1711,8 +1716,8 @@ const LandingPage = () => {
                 <button className="lp-mega-see-btn" onClick={()=>{navigate('/feature/sales-finance');setOpenDrop(null);}}>Explore Operations</button>
                 <div className="lp-mega-feat-label">Operations Modules</div>
                 <div className="lp-mega-grid">
-                  {[{t:'RFI',d:'Request management'},{t:'Quotations',d:'PDF with line items'},{t:'Purchase Orders',d:'PO with approvals'},{t:'Invoices',d:'Payment tracking'},{t:'Product Catalog',d:'Pricing & categories'},{t:'Document Templates',d:'Dynamic variables'}].map((p,i)=>(
-                    <div key={i} className="lp-mega-item" onClick={()=>{navigate('/feature/sales-finance');setOpenDrop(null);}}>
+                  {[{t:'RFI',d:'Request management',path:'/feature/sales-finance'},{t:'Quotations',d:'PDF with line items',path:'/feature/sales-finance'},{t:'Purchase Orders',d:'PO with approvals',path:'/feature/sales-finance'},{t:'Invoices',d:'Payment tracking',path:'/feature/sales-finance'},{t:'Product Catalog',d:'Pricing & categories',path:'/feature/sales-finance'},{t:'Document Templates',d:'Dynamic variables & PDF export',path:'/feature/document-templates'}].map((p,i)=>(
+                    <div key={i} className="lp-mega-item" onClick={()=>{navigate(p.path||'/feature/sales-finance');setOpenDrop(null);}}>
                       <div className="lp-mega-item-title">{p.t}</div>
                       <div className="lp-mega-item-desc">{p.d}</div>
                     </div>
@@ -1779,17 +1784,17 @@ const LandingPage = () => {
               </>}
               {megaCat === 'saas' && <>
                 <div className="lp-mega-prod-title">SaaS Platform</div>
-                <div className="lp-mega-prod-desc">Multi-tenant architecture with full tenant isolation, role-based access, custom fields, and a complete monetization engine.</div>
+                <div className="lp-mega-prod-desc">Full multi-tenant infrastructure — manage tenants, define subscription plans with feature toggles, track MRR/ARR, analyze churn, and run a reseller program with per-partner commissions.</div>
                 <button className="lp-mega-see-btn" onClick={()=>{navigate('/feature/monetization');setOpenDrop(null);}}>Explore Platform</button>
                 <div className="lp-mega-feat-label">Platform Modules</div>
                 <div className="lp-mega-grid">
                   {[
-                    {t:'Multi-Tenant SaaS',    d:'100% data isolation',      path:'/feature/monetization'},
-                    {t:'Users & Roles',         d:'Granular permissions',      path:'/feature/access-management'},
-                    {t:'Monetization',          d:'Razorpay billing',          path:'/feature/monetization'},
-                    {t:'Reseller Program',      d:'Partner commissions',       path:'/feature/monetization'},
-                    {t:'Field Customization',   d:'No-code custom fields',     path:'/feature/access-management'},
-                    {t:'Org Hierarchy',         d:'Visual org chart',          path:'/feature/access-management'},
+                    {t:'Tenant Management',     d:'PIN-gated multi-tenant admin',     path:'/feature/monetization'},
+                    {t:'SaaS Admin Panel',       d:'OTP-verified admin onboarding',    path:'/feature/monetization'},
+                    {t:'Subscription Plans',     d:'Feature toggles & usage limits',   path:'/feature/monetization'},
+                    {t:'Revenue & Churn',        d:'MRR, ARR, health segments',        path:'/feature/monetization'},
+                    {t:'Reseller Program',       d:'Partner commissions per reseller', path:'/feature/monetization'},
+                    {t:'Users & Roles',          d:'Granular role permissions',        path:'/feature/access-management'},
                   ].map((p,i)=>(
                     <div key={i} className="lp-mega-item" onClick={()=>{navigate(p.path);setOpenDrop(null);}}>
                       <div className="lp-mega-item-title">{p.t}</div>
@@ -2006,7 +2011,7 @@ const LandingPage = () => {
           <div className="marquee-track">
             {[...Array(2)].map((_, r) =>
               ['📋 Leads', '👥 Contacts', '🏢 Accounts', '💼 Opportunities', '📄 RFI', '💰 Quotations',
-               '📦 Purchase Orders', '🧾 Invoices', '✅ Tasks', '📅 Meetings', '📞 Calls', '✉️ Email Inbox',
+               '📦 Purchase Orders', '🧾 Invoices', '✅ Tasks', '📅 Meetings', '✉️ Email Inbox',
                '📊 Data Center', '🎫 Support Tickets', '💬 Feedback', '🌐 Social Media'].map((item, i) => (
                 <span key={`a${r}-${i}`} className="marquee-chip">{item}</span>
               ))

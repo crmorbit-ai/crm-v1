@@ -68,7 +68,7 @@ export default function ForgotPassword() {
     return () => clearInterval(timerRef.current);
   }, [countdown]);
 
-  // OTP expiry countdown (10 min = 600s)
+  // OTP expiry countdown (3 min = 180s)
   useEffect(() => {
     if (otpExpiry <= 0) { clearInterval(expiryRef.current); return; }
     expiryRef.current = setInterval(() => setOtpExpiry(c => c - 1), 1000);
@@ -77,7 +77,7 @@ export default function ForgotPassword() {
 
   const startCountdown = () => {
     setCountdown(60);
-    setOtpExpiry(600); // 10 minutes
+    setOtpExpiry(180); // 3 minutes
   };
 
   // Resend OTP (no form event)
@@ -88,7 +88,7 @@ export default function ForgotPassword() {
       const res  = await fetch(`${API_URL}/auth/forgot-password`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ email }) });
       const data = await res.json();
       if (data.success) {
-        setSuccess('New OTP sent! Enter it within 10 minutes.');
+        setSuccess('New OTP sent! Enter it within 3 minutes.');
         setTimeout(() => setSuccess(''), 4000);
         setOtp('');
         startCountdown(); // resets both resend cooldown + expiry timer
@@ -250,7 +250,7 @@ export default function ForgotPassword() {
                 </div>
                 {/* Progress bar */}
                 <div style={{ height:3, background:'rgba(255,255,255,0.06)' }}>
-                  <div style={{ height:'100%', borderRadius:3, transition:'width 1s linear', background: otpExpiry <= 60 ? '#ef4444' : 'linear-gradient(90deg,#1EB980,#1EB980)', width: `${(otpExpiry / 600) * 100}%` }} />
+                  <div style={{ height:'100%', borderRadius:3, transition:'width 1s linear', background: otpExpiry <= 60 ? '#ef4444' : 'linear-gradient(90deg,#1EB980,#1EB980)', width: `${(otpExpiry / 180) * 100}%` }} />
                 </div>
               </div>
             )}

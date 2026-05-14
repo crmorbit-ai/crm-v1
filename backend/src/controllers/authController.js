@@ -472,7 +472,7 @@ const forgotPassword = async (req, res) => {
     const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
 
     user.resetPasswordOTP = otpHash;
-    user.resetPasswordOTPExpire = Date.now() + 10 * 60 * 1000;
+    user.resetPasswordOTPExpire = Date.now() + 3 * 60 * 1000;
     user.resetPasswordOTPVerified = false;
     await user.save();
 
@@ -714,8 +714,8 @@ const registerStep1 = async (req, res) => {
     // Hash OTP with SHA256
     const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
 
-    // Set OTP expiration (10 minutes)
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
+    // Set OTP expiration (3 minutes)
+    const otpExpire = new Date(Date.now() + 3 * 60 * 1000);
 
     // Create user with pending verification
     const user = await User.create({
@@ -855,7 +855,7 @@ const resendVerificationOTP = async (req, res) => {
     // Generate new OTP
     const otp = generateOTP();
     const hashedOTP = crypto.createHash('sha256').update(otp).digest('hex');
-    const otpExpire = new Date(Date.now() + 10 * 60 * 1000);
+    const otpExpire = new Date(Date.now() + 3 * 60 * 1000);
 
     // Update user with new OTP
     user.emailVerificationOTP = hashedOTP;

@@ -299,9 +299,9 @@ const PRODUCTS = {
   platform: [
     { Mock: CardMockSaaS,     title: 'Access Management',    desc: 'Granular RBAC with custom roles, group permissions, field-level visibility, and audit trail.',     slug: 'access-management',color: '#1EB980' },
     { Mock: CardMockLeads,    title: 'Field Customization',  desc: 'No-code custom field builder for any entity — 8+ field types with drag-and-drop reordering.',     slug: 'access-management',color: '#38bdf8' },
-    { Mock: CardMockWorkflow, title: 'Email Inbox',           desc: 'Built-in email with IMAP sync, real-time open/click tracking, and automatic CRM entity linking.', slug: 'task-management', color: '#f59e0b' },
-    { Mock: CardMockData,     title: 'Social Media',          desc: 'Schedule and publish posts across platforms with content calendar and engagement analytics.',      slug: 'automation',      color: '#a78bfa' },
-    { Mock: CardMockAI,       title: 'Document Templates',    desc: 'Dynamic templates with variable substitution, rich text editor, and one-click PDF generation.',   slug: 'automation',      color: '#ec4899' },
+    { Mock: CardMockWorkflow, title: 'Email Inbox',           desc: 'Built-in email with IMAP sync, real-time open/click tracking, and automatic CRM entity linking.', slug: 'email-inbox',        color: '#f59e0b' },
+    { Mock: CardMockData,     title: 'Social Media',          desc: 'Schedule and publish posts across platforms with content calendar and engagement analytics.',      slug: 'automation',         color: '#a78bfa' },
+    { Mock: CardMockAI,       title: 'Document Templates',    desc: 'Dynamic templates with variable substitution, rich text editor, and one-click PDF generation.',   slug: 'document-templates', color: '#ec4899' },
     { Mock: CardMockSupport,  title: 'Notifications',         desc: 'Real-time in-app alerts for tasks, deals, tickets, and team activity with preference controls.',  slug: 'access-management',color: '#14b8a6' },
   ],
 };
@@ -326,6 +326,50 @@ const AZ_PRODUCTS = {
   T: ['Task Management', 'Team Management'],
   U: ['Users & Roles'],
   W: ['Workflow Automation'],
+};
+
+const AZ_SLUG_MAP = {
+  'Activity & Audit Logs':       'access-management',
+  'Accounts Management':         'lead-management',
+  'AI Assistant':                'lead-management',
+  'Bulk Import Tools':           'lead-management',
+  'B2B Sales Workflow':          'sales-finance',
+  'Billing & Invoicing':         'account-management',
+  'Calls Management':            'meeting-management',
+  'Contacts & Accounts':         'lead-management',
+  'Custom Field Builder':        'access-management',
+  'Data Center':                 'lead-management',
+  'Document Templates':          'document-templates',
+  'Deal Pipeline':               'lead-management',
+  'Email Inbox':                 'email-inbox',
+  'Email Templates':             'document-templates',
+  'Feedback Management':         'support',
+  'Field Customization':         'access-management',
+  'Group Permissions':           'access-management',
+  'Integrations & APIs':         'automation',
+  'Invoice Management':          'sales-finance',
+  'Lead Management':             'lead-management',
+  'Lead Scoring':                'lead-management',
+  'Meetings & Scheduling':       'meeting-management',
+  'Monetization Engine':         'monetization',
+  'Multi-Tenant SaaS':           'monetization',
+  'Notifications & Alerts':      'access-management',
+  'Opportunities Pipeline':      'lead-management',
+  'Org Hierarchy Builder':       'access-management',
+  'Product Catalog':             'product',
+  'Purchase Orders':             'sales-finance',
+  'Quotation Builder':           'sales-finance',
+  'Reseller Program':            'monetization',
+  'RFI Management':              'sales-finance',
+  'Role-Based Access Control':   'access-management',
+  'Sales Pipeline':              'lead-management',
+  'Social Media Hub':            'automation',
+  'Support Tickets':             'support',
+  'Subscriptions & Plans':       'account-management',
+  'Task Management':             'task-management',
+  'Team Management':             'access-management',
+  'Users & Roles':               'access-management',
+  'Workflow Automation':         'automation',
 };
 
 
@@ -450,7 +494,7 @@ export default function AllProductsPage() {
               <div className="ap-az-group-letter">{letter}</div>
               <div className="ap-az-list">
                 {items.map((item, i) => (
-                  <button key={i} className="ap-az-item" onClick={() => navigate('/feature/lead-management')}>{item}</button>
+                  <button key={i} className="ap-az-item" onClick={() => navigate(`/feature/${AZ_SLUG_MAP[item] || 'lead-management'}`)}>{item}</button>
                 ))}
               </div>
             </div>
