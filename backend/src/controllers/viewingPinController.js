@@ -2,20 +2,7 @@ const User = require('../models/User');
 const AccessAudit = require('../models/AccessAudit');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
-
-// Email transporter
-const getTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD
-    }
-  });
-};
+const { sendMail } = require('../utils/emailService');
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -321,8 +308,8 @@ const forgotViewingPin = async (req, res) => {
     });
 
     // Send OTP via email
-    const transporter = getTransporter();
-    await transporter.sendMail({
+    
+    await sendMail({
       from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
       to: user.email,
       subject: 'Reset Your Viewing PIN - OTP',

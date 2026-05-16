@@ -1,20 +1,7 @@
 const User = require('../models/User');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { sendMail } = require('../utils/emailService');
 const { successResponse, errorResponse } = require('../utils/response');
-
-// Email transporter
-const getTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASSWORD
-    }
-  });
-};
 
 // Generate 6-digit OTP
 const generateOTP = () => {
@@ -113,9 +100,8 @@ const initiateSaasAdmin = async (req, res) => {
     });
 
     // Send OTP email
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+    
+    await sendMail({
       to: email,
       subject: 'OTP for SAAS Admin Registration',
       html: `
@@ -196,9 +182,8 @@ const verifySaasAdmin = async (req, res) => {
 
     // Send welcome email
     try {
-      const transporter = getTransporter();
-      await transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      
+      await sendMail({
         to: pendingData.email,
         subject: 'Welcome - SAAS Admin Access Granted',
         html: `
@@ -264,9 +249,8 @@ const resendOtp = async (req, res) => {
     pendingAdmins.set(pendingKey, pendingData);
 
     // Send OTP email
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+    
+    await sendMail({
       to: email,
       subject: 'OTP for SAAS Admin Registration (Resent)',
       html: `
@@ -393,9 +377,8 @@ const resetPassword = async (req, res) => {
 
     // Send notification email
     try {
-      const transporter = getTransporter();
-      await transporter.sendMail({
-        from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+      
+      await sendMail({
         to: admin.email,
         subject: 'Password Reset - SAAS Admin',
         html: `
@@ -535,9 +518,8 @@ const forgotViewingCredentials = async (req, res) => {
     await user.save();
 
     // Send OTP email
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+    
+    await sendMail({
       to: user.email,
       subject: 'Reset Viewing Credentials - OTP',
       html: `
@@ -730,9 +712,8 @@ const forgotViewingPin = async (req, res) => {
     await user.save();
 
     // Send OTP email
-    const transporter = getTransporter();
-    await transporter.sendMail({
-      from: `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM}>`,
+    
+    await sendMail({
       to: user.email,
       subject: 'Reset Viewing PIN - OTP',
       html: `

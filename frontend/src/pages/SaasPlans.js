@@ -76,6 +76,7 @@ const SaasPlans = () => {
           d[p._id] = {
             features: { ...p.features },
             limits: { ...p.limits },
+            price: { monthly: p.price?.monthly ?? 0, yearly: p.price?.yearly ?? 0 },
           };
         });
         setDrafts(d);
@@ -107,17 +108,27 @@ const SaasPlans = () => {
     }));
   };
 
+  const setPrice = (planId, key, val) => {
+    setDrafts(prev => ({
+      ...prev,
+      [planId]: {
+        ...prev[planId],
+        price: { ...prev[planId].price, [key]: Number(val) },
+      },
+    }));
+  };
+
   const savePlan = async (planId) => {
     try {
       setSaving(planId);
       await updatePlan(planId, {
         features: drafts[planId].features,
-        limits: drafts[planId].limits,
+        limits:   drafts[planId].limits,
+        price:    drafts[planId].price,
       });
-      // Update local plans state
       setPlans(prev => prev.map(p =>
         p._id === planId
-          ? { ...p, features: drafts[planId].features, limits: drafts[planId].limits }
+          ? { ...p, features: drafts[planId].features, limits: drafts[planId].limits, price: drafts[planId].price }
           : p
       ));
       showToast('Plan saved successfully');
@@ -295,8 +306,32 @@ const SaasPlans = () => {
             </div>
           </div>
 
-          {/* RIGHT: Limits */}
+          {/* RIGHT: Limits + Price */}
           <div style={{ width: 280, flexShrink: 0, background: '#fff', borderRadius: 18, border: '1.5px solid #e8edf5', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.05)' }}>
+
+            {/* Price Section */}
+            <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', background: '#f0fdf4' }}>
+              <div style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.7px', marginBottom: 10 }}>💰 Pricing (₹)</div>
+              {[['monthly', 'Monthly Price'], ['yearly', 'Yearly Price']].map(([key, label]) => (
+                <div key={key} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', marginBottom: 5 }}>{label}</div>
+                  <input
+                    type="number"
+                    value={draft.price?.[key] ?? 0}
+                    onChange={e => setPrice(currentPlan._id, key, e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 12px', borderRadius: 10,
+                      border: '1.5px solid #bbf7d0', fontSize: 13, fontWeight: 700,
+                      color: '#0f172a', outline: 'none', boxSizing: 'border-box',
+                      background: '#fff',
+                    }}
+                    onFocus={e => e.target.style.borderColor = '#16a34a'}
+                    onBlur={e => e.target.style.borderColor = '#bbf7d0'}
+                  />
+                </div>
+              ))}
+            </div>
+
             <div style={{ padding: '14px 18px', borderBottom: '1px solid #f1f5f9', background: '#fafafa' }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Plan Limits</div>
               <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>-1 = Unlimited</div>

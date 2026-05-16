@@ -8,6 +8,8 @@ const {
   verifySubscriptionPayment,
   getPaymentHistory,
   downloadReceipt,
+  refundPayment,
+  getAllPayments,
   cancelSubscription,
   getAllSubscriptions,
   updateTenantSubscription,
@@ -38,9 +40,11 @@ router.post('/verify-payment', protect, requirePermission('subscription_manageme
 router.post('/cancel', protect, requirePermission('subscription_management', 'manage'), cancelSubscription);
 router.get('/payment-history', protect, requirePermission('subscription_management', 'read'), getPaymentHistory);
 router.get('/receipt/:paymentId', protect, requirePermission('subscription_management', 'read'), downloadReceipt);
+router.post('/refund', protect, requireSaasAccess, refundPayment);
 
 // SAAS Admin routes
 router.get('/all', protect, requireSaasAccess, getAllSubscriptions);
+router.get('/all-payments', protect, requireSaasAccess, getAllPayments);
 router.put('/plans/:planId', protect, requireSaasAccess, updatePlan);
 router.put('/:tenantId', protect, requireSaasAccess, updateTenantSubscription);
 

@@ -200,11 +200,14 @@ const fixDefaultRoles = async () => {
   }
 };
 
+const { autoSetup } = require('./utils/autoSetup');
+
 const startServer = async () => {
   try {
     await connectDB();
     await connectDataCenterDB();
     await fixDefaultRoles();
+    await autoSetup();
 
     server.listen(PORT, async () => {
       console.log(`✅ Server running on http://localhost:${PORT}`);

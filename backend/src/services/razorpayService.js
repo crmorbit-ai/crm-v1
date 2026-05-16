@@ -55,4 +55,13 @@ const fetchPayment = async (paymentId) => {
   return await rzp.payments.fetch(paymentId);
 };
 
-module.exports = { createSubscriptionOrder, createInvoicePaymentLink, verifyPaymentSignature, fetchPayment };
+// Create refund for a payment
+const createRefund = async (paymentId, amount, notes = {}) => {
+  const rzp = getRazorpayInstance();
+  return await rzp.payments.refund(paymentId, {
+    amount: Math.round(amount * 100), // paise mein
+    notes,
+  });
+};
+
+module.exports = { createSubscriptionOrder, createInvoicePaymentLink, verifyPaymentSignature, fetchPayment, createRefund };

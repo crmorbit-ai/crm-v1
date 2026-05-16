@@ -65,6 +65,7 @@ import SocialMedia from './pages/SocialMedia';
 // SAAS Owner pages
 import Tenants from './pages/Tenants';
 import SaasAdmins from './pages/SaasAdmins';
+import SaasRefunds from './pages/SaasRefunds';
 import SaasNotifications from './pages/SaasNotifications';
 
 import Billings from './pages/Billings';
@@ -578,6 +579,12 @@ function AppRoutes() {
       <Route path="/saas/billings" element={
         <ProtectedRoute requireSaas>
           <Billings />
+        </ProtectedRoute>
+      } />
+
+      <Route path="/saas/refunds" element={
+        <ProtectedRoute requireSaas>
+          <SaasRefunds />
         </ProtectedRoute>
       } />
 

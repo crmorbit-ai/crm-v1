@@ -3,7 +3,7 @@ const Tenant           = require('../models/Tenant');
 const Payment          = require('../models/Payment');
 const PlanHistory      = require('../models/PlanHistory');
 const { successResponse, errorResponse } = require('../utils/response');
-const { createSubscriptionOrder, verifyPaymentSignature, fetchPayment } = require('../services/razorpayService');
+const { createSubscriptionOrder, verifyPaymentSignature, fetchPayment, createRefund } = require('../services/razorpayService');
 const { sendPaymentSuccessEmail } = require('../utils/emailService');
 const User = require('../models/User');
 
@@ -509,7 +509,7 @@ const verifySubscriptionPayment = async (req, res) => {
     await tenant.save();
 
     // Create payment record
-    await Payment.create({
+    const payment = await Payment.create({
       tenant: tenantId, plan: plan._id, planName: plan.name,
       amount, currency: 'INR', billingCycle,
       billingPeriodStart: startDate, billingPeriodEnd: endDate,
@@ -632,6 +632,85 @@ const downloadReceipt = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get ALL payments across all tenants (SAAS Admin only)
+ * @route   GET /api/subscriptions/all-payments
+ */
+const getAllPayments = async (req, res) => {
+  try {
+    const { status, search, page = 1, limit = 50 } = req.query;
+    const query = {};
+    if (status && status !== 'all') query.status = status;
+
+    const payments = await Payment.find(query)
+      .populate('tenant', 'organizationName contactEmail')
+      .populate('plan', 'name')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(Number(limit));
+
+    const total = await Payment.countDocuments(query);
+
+    // Filter by search (org name or email)
+    const filtered = search
+      ? payments.filter(p =>
+          p.tenant?.organizationName?.toLowerCase().includes(search.toLowerCase()) ||
+          p.tenant?.contactEmail?.toLowerCase().includes(search.toLowerCase())
+        )
+      : payments;
+
+    return successResponse(res, 200, 'All payments fetched', { payments: filtered, total });
+  } catch (error) {
+    console.error('getAllPayments error:', error);
+    return errorResponse(res, 500, 'Failed to fetch payments');
+  }
+};
+
+/**
+ * @desc    Refund a payment
+ * @route   POST /api/subscriptions/refund
+ */
+const refundPayment = async (req, res) => {
+  try {
+    // Only SAAS_OWNER or SAAS_ADMIN can process refunds
+    if (!['SAAS_OWNER', 'SAAS_ADMIN'].includes(req.user.userType)) {
+      return errorResponse(res, 403, 'Only SAAS Admins can process refunds');
+    }
+
+    const { paymentId, amount, reason } = req.body;
+    if (!paymentId || !amount) return errorResponse(res, 400, 'paymentId and amount required');
+    if (amount <= 0) return errorResponse(res, 400, 'Amount must be greater than 0');
+
+    // Find payment — any tenant (admin can refund any tenant's payment)
+    const payment = await Payment.findById(paymentId);
+    if (!payment) return errorResponse(res, 404, 'Payment not found');
+    if (payment.status === 'refunded') return errorResponse(res, 400, 'Payment already refunded');
+    if (!payment.gatewayTransactionId) return errorResponse(res, 400, 'No Razorpay transaction ID found');
+    if (amount > payment.amount) return errorResponse(res, 400, `Refund amount cannot exceed paid amount ₹${payment.amount}`);
+
+    // Process refund via Razorpay
+    const refund = await createRefund(
+      payment.gatewayTransactionId,
+      amount,
+      { reason: reason || 'Requested by admin', paymentId }
+    );
+
+    // Update payment record
+    payment.status = 'refunded';
+    payment.amountRefunded = amount;
+    await payment.save();
+
+    console.log(`✅ Refund processed by ${req.user.email} — ₹${amount} for payment ${paymentId}`);
+
+    return successResponse(res, 200, `Refund of ₹${amount} processed successfully`, { refund, payment });
+  } catch (error) {
+    // Razorpay SDK errors have a different structure
+    const rzpMsg = error?.error?.description || error?.response?.data?.message || error?.message;
+    console.error('refundPayment error:', JSON.stringify(error?.error || error?.message || error));
+    return errorResponse(res, 500, rzpMsg || 'Failed to process refund');
+  }
+};
+
 module.exports = {
   getAllPlans,
   getCurrentSubscription,
@@ -640,6 +719,8 @@ module.exports = {
   verifySubscriptionPayment,
   getPaymentHistory,
   downloadReceipt,
+  refundPayment,
+  getAllPayments,
   cancelSubscription,
   getAllSubscriptions,
   updateTenantSubscription,
