@@ -244,20 +244,30 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
-    // BUG-100 & 101: Name — only letters, spaces, hyphens allowed (no numbers or special chars)
+    // BUG-100,101,110,111: Name — only letters, spaces, single hyphens allowed
     const strictNameRegex = /^[a-zA-Z\s\-]{2,50}$/;
+    const hasConsecHyphens = (v) => /--/.test(v) || /^\-/.test(v) || /\-$/.test(v);
     if (!editedUser.firstName?.trim() || !strictNameRegex.test(editedUser.firstName.trim())) {
       alert('First name can only contain alphabetical characters (no numbers or symbols).'); return;
+    }
+    if (hasConsecHyphens(editedUser.firstName.trim())) {
+      alert('First name cannot have consecutive or trailing hyphens.'); return;
     }
     if (!editedUser.lastName?.trim() || !strictNameRegex.test(editedUser.lastName.trim())) {
       alert('Last name can only contain alphabetical characters (no numbers or symbols).'); return;
     }
-    // BUG-82 & 102: Phone — digits/+/- only, no all-zeros
+    if (hasConsecHyphens(editedUser.lastName.trim())) {
+      alert('Last name cannot have consecutive or trailing hyphens.'); return;
+    }
+    // BUG-82,102,109: Phone — digits/+/- only, no all-zeros, no trailing hyphens
     if (editedUser.phone) {
       const phoneClean = editedUser.phone.replace(/[\s\-()]/g, '');
       const phoneRegex = /^\+?[0-9]{7,15}$/;
       if (!phoneRegex.test(phoneClean)) {
         alert('Please enter a valid phone number (7–15 digits, only numbers and + allowed).'); return;
+      }
+      if (/--/.test(editedUser.phone) || /\-$/.test(editedUser.phone.trim())) {
+        alert('Phone number cannot have consecutive or trailing hyphens.'); return;
       }
       // BUG-102: reject all-zero numbers like +000000000000
       if (/^[+\s]*0+$/.test(phoneClean)) {
@@ -362,19 +372,43 @@ const Profile = () => {
     if (invalidCharsRegex.test(editedOrg.organizationName.trim())) {
       alert('Invalid input detected. Organization name must contain letters or numbers.'); return;
     }
+    if (/--/.test(editedOrg.organizationName) || /\-$/.test(editedOrg.organizationName.trim())) {
+      alert('Organization name cannot have consecutive or trailing hyphens.'); return;
+    }
     if (editedOrg.legalName && invalidCharsRegex.test(editedOrg.legalName.trim())) {
       alert('Invalid input detected. Legal name must contain letters or numbers.'); return;
     }
-    if (editedOrg.industry && invalidCharsRegex.test(editedOrg.industry.trim())) {
-      alert('Invalid input detected. Industry must contain letters or numbers.'); return;
+    if (editedOrg.legalName && (/--/.test(editedOrg.legalName) || /\-$/.test(editedOrg.legalName.trim()))) {
+      alert('Legal name cannot have consecutive or trailing hyphens.'); return;
     }
-    if (editedOrg.taxId && invalidCharsRegex.test(editedOrg.taxId.trim())) {
-      alert('Invalid input detected. Tax ID must contain letters or numbers.'); return;
+    // BUG-114: Industry — letters/spaces/single internal hyphen only, no numbers, no consecutive hyphens
+    if (editedOrg.industry && editedOrg.industry.trim()) {
+      const ind = editedOrg.industry.trim();
+      if (invalidCharsRegex.test(ind) || /[0-9]/.test(ind) || /--/.test(ind) || /^\-/.test(ind) || /\-$/.test(ind)) {
+        alert('Please enter a valid industry name (letters only, no numbers or consecutive hyphens).'); return;
+      }
     }
-    if (editedOrg.registrationNumber && invalidCharsRegex.test(editedOrg.registrationNumber.trim())) {
-      alert('Invalid input detected. Registration number must contain letters or numbers.'); return;
+    // BUG-115: Tax ID / GST — no consecutive, leading, or trailing hyphens
+    if (editedOrg.taxId && editedOrg.taxId.trim()) {
+      const tid = editedOrg.taxId.trim();
+      if (invalidCharsRegex.test(tid)) {
+        alert('Invalid input detected. Tax ID must contain letters or numbers.'); return;
+      }
+      if (/--/.test(tid) || /^\-/.test(tid) || /\-$/.test(tid)) {
+        alert('Tax ID cannot have consecutive, leading, or trailing hyphens.'); return;
+      }
     }
-    // BUG-103 & 105: Contact Email — required + valid format + maxLength
+    // BUG-115: Registration Number — no consecutive, leading, or trailing hyphens
+    if (editedOrg.registrationNumber && editedOrg.registrationNumber.trim()) {
+      const rn = editedOrg.registrationNumber.trim();
+      if (invalidCharsRegex.test(rn)) {
+        alert('Invalid input detected. Registration number must contain letters or numbers.'); return;
+      }
+      if (/--/.test(rn) || /^\-/.test(rn) || /\-$/.test(rn)) {
+        alert('Registration number cannot have consecutive, leading, or trailing hyphens.'); return;
+      }
+    }
+    // BUG-103, 105 & BUG-118: Contact Email — required + valid format + no consecutive hyphens + maxLength
     const contactEmailVal = editedOrg.contactEmail?.trim();
     if (!contactEmailVal) {
       alert('Contact email is required.'); return;
@@ -383,8 +417,8 @@ const Profile = () => {
       alert('Contact email is too long (max 255 characters).'); return;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(contactEmailVal)) {
-      alert('Please enter a valid contact email address (e.g., name@company.com).'); return;
+    if (!emailRegex.test(contactEmailVal) || /--/.test(contactEmailVal)) {
+      alert('Please enter a valid email address (e.g., name@example.com).'); return;
     }
     // BUG-107: Number of Employees — required
     if (!editedOrg.numberOfEmployees || editedOrg.numberOfEmployees === '') {
@@ -418,17 +452,25 @@ const Profile = () => {
         alert(`Please enter a valid ${label.toLowerCase()} (cannot be all zeros).`); return;
       }
     }
-    // BUG-96: Key Contact Name — only letters, spaces, hyphens
+    // BUG-96 & BUG-117: Key Contact Name — required + letters/spaces/hyphens only
     const kcName = editedOrg.keyContact?.name?.trim();
-    if (kcName && kcName.length > 0 && !/^[a-zA-Z\s\-]{2,80}$/.test(kcName)) {
+    if (!kcName || kcName.length === 0) {
+      alert('Key Contact Person: Contact Name is required.'); return;
+    }
+    if (!/^[a-zA-Z\s\-]{2,80}$/.test(kcName)) {
       alert('Key Contact Name can only contain letters (no numbers or symbols).'); return;
     }
-    // BUG-97: Key Contact Email — valid format (only validate if user actually typed something)
+    // BUG-117: Key Contact Designation — required
+    const kcDesignation = editedOrg.keyContact?.designation?.trim();
+    if (!kcDesignation || kcDesignation.length === 0) {
+      alert('Key Contact Person: Designation is required.'); return;
+    }
+    // BUG-97 & BUG-116: Key Contact Email — valid format + no consecutive hyphens
     const kcEmail = editedOrg.keyContact?.email?.trim();
     if (kcEmail && kcEmail.length > 0) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(kcEmail)) {
-        alert('Key Contact: Please enter a valid email address (e.g., name@example.com).'); return;
+      if (!emailRegex.test(kcEmail) || /--/.test(kcEmail)) {
+        alert('Please enter a valid email address for the Key Contact Person.'); return;
       }
     }
     // BUG-98: Key Contact Phone — digits only
@@ -438,7 +480,7 @@ const Profile = () => {
         alert('Please enter a valid phone number (digits, +, - only).'); return;
       }
     }
-    // BUG-99: Address fields — no pure special chars
+    // BUG-99 & BUG-119: Address fields — no pure special chars, no consecutive/trailing hyphens
     const addrFields = [
       [editedOrg.headquarters?.street, 'Street Address'],
       [editedOrg.headquarters?.city,   'City'],
@@ -446,14 +488,23 @@ const Profile = () => {
       [editedOrg.headquarters?.country,'Country'],
     ];
     for (const [val, label] of addrFields) {
-      if (val && val.trim() && invalidCharsRegex.test(val.trim())) {
+      if (!val?.trim()) continue;
+      const v = val.trim();
+      if (invalidCharsRegex.test(v)) {
         alert(`Invalid input in ${label}. Must contain letters or numbers.`); return;
+      }
+      if (/--/.test(v) || /^\-/.test(v) || /\-$/.test(v)) {
+        alert(`Please enter a valid, cleanly structured address (${label} cannot have consecutive or trailing hyphens).`); return;
       }
     }
     if (editedOrg.headquarters?.zipCode && editedOrg.headquarters.zipCode.trim()) {
+      const zip = editedOrg.headquarters.zipCode.trim();
       const zipRegex = /^[a-zA-Z0-9\s\-]{3,10}$/;
-      if (!zipRegex.test(editedOrg.headquarters.zipCode.trim())) {
+      if (!zipRegex.test(zip)) {
         alert('Please enter a valid Zip Code (letters, numbers, max 10 chars).'); return;
+      }
+      if (/--/.test(zip) || /^\-/.test(zip) || /\-$/.test(zip)) {
+        alert('Zip Code cannot have consecutive or trailing hyphens.'); return;
       }
     }
     // BUG-86 & 106: URL validation — must start with https://, max 255 chars, no junk
@@ -471,6 +522,10 @@ const Profile = () => {
         if (v.length > 255) { alert(`${label} is too long (max 255 characters).`); return; }
         if (!urlRegexStrict.test(v)) {
           alert(`${label} must be a valid URL starting with https:// (e.g., https://example.com)`); return;
+        }
+        // Reject URLs where any path segment has 25+ consecutive chars without a hyphen (keyboard mashing)
+        if (/\/[^\/\-]{25,}/.test(v)) {
+          alert(`${label} has an invalid path. Please enter a clean, valid URL (e.g., https://example.com).`); return;
         }
       }
     }
@@ -907,11 +962,11 @@ const Profile = () => {
               <h3 style={styles.cardTitle}>Key Contact Person</h3>
               <div className="profile-grid-2">
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Name</label>
+                  <label style={styles.label}>Name <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="text" name="keyContact_name" value={isEditingOrg ? (editedOrg.keyContact?.name || '') : (tenant.keyContact?.name || '')} onChange={e => { const v = e.target.value; setEditedOrg(prev => ({ ...prev, keyContact: { ...(prev.keyContact || {}), name: v } })); }} disabled={!isEditingOrg} placeholder="Contact person name" maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Designation</label>
+                  <label style={styles.label}>Designation <span style={{ color: '#ef4444' }}>*</span></label>
                   <input type="text" name="keyContact.designation" value={isEditingOrg ? (editedOrg.keyContact?.designation || '') : (tenant.keyContact?.designation || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., CEO, Manager" autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
@@ -919,7 +974,7 @@ const Profile = () => {
                   <input type="text" name="keyContact.email" value={isEditingOrg ? (editedOrg.keyContact?.email || '') : (tenant.keyContact?.email || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone</label>
+                  <label style={styles.label}>Phone <span style={{ color: '#9ca3af', fontWeight: 400, textTransform: 'none' }}>(Optional)</span></label>
                   <input type="text" name="keyContact.phone" value={isEditingOrg ? (editedOrg.keyContact?.phone || '') : (tenant.keyContact?.phone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
               </div>
