@@ -189,7 +189,7 @@ const Login = () => {
               <Link to="/forgot-password" style={{fontSize:12, color:'#1EB980', textDecoration:'none', fontWeight:500}}>Forgot password?</Link>
             </div>
             <div style={{position:'relative'}}>
-              <input className="ln-inp" type={showPw?'text':'password'} name="password" value={formData.password} onChange={handleChange} required maxLength={10} placeholder="Enter your password" style={{paddingRight:46}}/>
+              <input className="ln-inp" type={showPw?'text':'password'} name="password" value={formData.password} onChange={handleChange} required maxLength={16} placeholder="Enter your password" style={{paddingRight:46}}/>
               <button type="button" onClick={() => setShowPw(v=>!v)} tabIndex={-1}
                 style={{position:'absolute', right:14, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'rgba(255,255,255,0.38)', padding:0, display:'flex', alignItems:'center'}}>
                 {showPw ? <EyeOn/> : <EyeOff/>}

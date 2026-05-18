@@ -88,10 +88,12 @@ const ResetPassword = () => {
               type="password"
               name="password"
               className="form-input"
-              placeholder="Enter new password"
+              placeholder="6–16 characters"
               value={formData.password}
               onChange={handleChange}
               required
+              minLength={6}
+              maxLength={16}
             />
           </div>
 
@@ -101,10 +103,11 @@ const ResetPassword = () => {
               type="password"
               name="confirmPassword"
               className="form-input"
-              placeholder="Confirm new password"
+              placeholder="Re-enter password"
               value={formData.confirmPassword}
               onChange={handleChange}
               required
+              maxLength={16}
             />
           </div>
 

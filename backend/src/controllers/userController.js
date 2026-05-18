@@ -626,8 +626,11 @@ const resetUserPassword = async (req, res) => {
   try {
     const { newPassword } = req.body;
 
-    if (!newPassword || newPassword.length < 4) {
-      return errorResponse(res, 400, 'Password must be at least 4 characters');
+    if (!newPassword || newPassword.length < 6) {
+      return errorResponse(res, 400, 'Password must be at least 6 characters');
+    }
+    if (newPassword.length > 16) {
+      return errorResponse(res, 400, 'Password must not exceed 16 characters');
     }
 
     const user = await User.findById(req.params.id);

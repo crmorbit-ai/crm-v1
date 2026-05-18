@@ -199,7 +199,7 @@ const TeamManagement = () => {
   const openResetModal = u => { setResetModal({open:true,userId:u._id,userName:`${u.firstName} ${u.lastName}`}); setResetForm({newPassword:'',confirmPassword:''}); setShowRPwd(false); };
   const handleReset = async e => {
     e.preventDefault();
-    if(resetForm.newPassword.length<4){ showMsg('Min 4 characters',true); return; }
+    if(resetForm.newPassword.length<6){ showMsg('Min 6 characters',true); return; }
     if(resetForm.newPassword!==resetForm.confirmPassword){ showMsg('Passwords do not match',true); return; }
     try{ setSubmitting(true); await userService.resetUserPassword(resetModal.userId,resetForm.newPassword); showMsg(`Password reset for ${resetModal.userName}`); setResetModal({open:false,userId:null,userName:''}); }
     catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message||'Failed',true); }
@@ -549,7 +549,7 @@ const TeamManagement = () => {
                     <div>
                       <Label>Password {editingItem?<span style={{textTransform:'none',fontWeight:400,color:'#94a3b8'}}>— leave blank</span>:'*'}</Label>
                       <div style={{position:'relative'}}>
-                        <Inp type={showPwd?'text':'password'} style={{paddingRight:56}} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} placeholder="Min. 4 chars" />
+                        <Inp type={showPwd?'text':'password'} style={{paddingRight:56}} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} placeholder="6-16 characters" minLength={6} maxLength={16} />
                         <div style={{position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',display:'flex',gap:4,alignItems:'center'}}>
                           <CopyBtnInline fkey="password" val={userForm.password} copied={copied} onCopy={copyVal} />
                           <button type="button" onClick={()=>setShowPwd(p=>!p)} style={{background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
@@ -1129,13 +1129,13 @@ const TeamManagement = () => {
                 <div style={{marginBottom:14}}>
                   <Label>New Password</Label>
                   <div style={{position:'relative'}}>
-                    <Inp type={showRPwd?'text':'password'} style={{paddingRight:34}} value={resetForm.newPassword} onChange={e=>setResetForm({...resetForm,newPassword:e.target.value})} placeholder="Minimum 4 characters" required />
+                    <Inp type={showRPwd?'text':'password'} style={{paddingRight:34}} value={resetForm.newPassword} onChange={e=>setResetForm({...resetForm,newPassword:e.target.value})} placeholder="6-16 characters" minLength={6} maxLength={16} required />
                     <button type="button" onClick={()=>setShowRPwd(v=>!v)} style={{position:'absolute',right:9,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showRPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
                   </div>
                 </div>
                 <div style={{marginBottom:20}}>
                   <Label>Confirm Password</Label>
-                  <Inp type={showRPwd?'text':'password'} style={resetForm.confirmPassword&&resetForm.newPassword!==resetForm.confirmPassword?{borderColor:'#ef4444'}:{}} value={resetForm.confirmPassword} onChange={e=>setResetForm({...resetForm,confirmPassword:e.target.value})} placeholder="Re-enter password" required />
+                  <Inp type={showRPwd?'text':'password'} style={resetForm.confirmPassword&&resetForm.newPassword!==resetForm.confirmPassword?{borderColor:'#ef4444'}:{}} value={resetForm.confirmPassword} onChange={e=>setResetForm({...resetForm,confirmPassword:e.target.value})} placeholder="Re-enter password" maxLength={16} required />
                   {resetForm.confirmPassword&&resetForm.newPassword!==resetForm.confirmPassword&&<span style={{fontSize:10,color:'#ef4444',marginTop:3,display:'block'}}>Passwords do not match</span>}
                 </div>
                 <div style={{display:'flex',gap:10}}>

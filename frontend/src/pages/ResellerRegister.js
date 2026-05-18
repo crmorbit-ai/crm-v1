@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_URL } from '../config/api.config';
 
-const NAME_MAX=30,NAME_MIN=2,PASS_MIN=8,PASS_MAX=12;
+const NAME_MAX=30,NAME_MIN=2,PASS_MIN=6,PASS_MAX=16;
 const FEATURES=['Lead Management','Contacts & Accounts','Opportunities','B2B Sales Workflow','Email Inbox','Support Tickets','Product Catalog','Tasks & Meetings','Feedback Management','Reports & Analytics'];
 const ROLES=['IT Consultant','Business Agency','Freelancer','Distributor / Reseller','System Integrator','Other'];
 const pwCheck=(p)=>({len:p.length>=PASS_MIN,up:/[A-Z]/.test(p),lo:/[a-z]/.test(p),num:/[0-9]/.test(p),sym:/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p)});

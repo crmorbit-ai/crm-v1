@@ -44,13 +44,16 @@ const fmtDate = d => d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit
 /* ─── SVG icons ─────────────────────────────────────────────────────────────── */
 const IconPlus = () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
 const IconSearch = () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#9ca3af" strokeWidth="1.4"/><path d="M10 10l2.5 2.5" stroke="#9ca3af" strokeWidth="1.4" strokeLinecap="round"/></svg>;
-const IconKey = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" strokeWidth="1.8"/><path d="M15 15l6 6M17 17l-3-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
+const IconKey = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>;
 const IconBan = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M6.34 6.34l11.32 11.32" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>;
 const IconCheck = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const IconTrash = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
 const IconShield = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.35C17.25 23.15 21 18.25 21 13V7l-9-5z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>;
 const IconClose = () => <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/></svg>;
 const IconRefresh = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M23 4v6h-6M1 20v-6h6M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const IconEdit = () => <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>;
+const IconEye    = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>;
+const IconEyeOff = () => <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>;
 
 /* ─── component ─────────────────────────────────────────────────────────────── */
 export default function SaasAdmins() {
@@ -62,8 +65,11 @@ export default function SaasAdmins() {
   const [error, setError]           = useState('');
   const [filter, setFilter]         = useState('all');
   const [search, setSearch]         = useState('');
-  const [panel, setPanel]           = useState(null); // null | 'add' | 'reset'
+  const [panel, setPanel]           = useState(null); // null | 'add' | 'edit' | 'reset'
   const [target, setTarget]         = useState(null);
+  const [editForm, setEditForm]     = useState({ firstName:'', lastName:'', saasRole:'Admin', isActive:true });
+  const [showPwd, setShowPwd]         = useState(false);
+  const [showResetPwd, setShowResetPwd] = useState(false);
   const [form, setForm]             = useState({ firstName:'', lastName:'', email:'', password:'', saasRole:'Admin' });
   const [copied, setCopied]         = useState('');
   const [newPwd, setNewPwd]         = useState('');
@@ -98,7 +104,12 @@ export default function SaasAdmins() {
 
   const openAdd = () => { setForm({ firstName:'', lastName:'', email:'', password:'', saasRole:'Admin' }); setPanel('add'); };
   const openReset = a => { setTarget(a); setNewPwd(''); setPanel('reset'); };
-  const closePanel = () => { setPanel(null); setTarget(null); };
+  const openEdit  = a => { setTarget(a); setEditForm({ firstName: a.firstName, lastName: a.lastName, saasRole: a.saasRole || 'Admin', isActive: a.isActive }); setPanel('edit'); };
+  const saveEdit  = async () => {
+    try { setBusy(true); await axios.put(`${API_URL}/saas-admins/${target._id}`, editForm, { headers: auth() }); closePanel(); reload(); }
+    catch (e) { alert(e.response?.data?.message || 'Failed to update'); } finally { setBusy(false); }
+  };
+  const closePanel = () => { setPanel(null); setTarget(null); setShowPwd(false); setShowResetPwd(false); };
 
   const createAdmin = async e => {
     e.preventDefault();
@@ -183,8 +194,7 @@ export default function SaasAdmins() {
         @keyframes fadeIn { from { opacity:0; transform:translateY(6px) } to { opacity:1; transform:translateY(0) } }
         @keyframes slideIn { from { opacity:0; transform:translateX(20px) } to { opacity:1; transform:translateX(0) } }
         .tr:hover { background: #f9fafb !important; }
-        .tr:hover .row-actions { opacity:1 !important; }
-        .row-actions { opacity:0; transition:opacity 0.15s; }
+        .row-actions { opacity:1; }
         .tab { padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600; cursor:pointer; border:none; background:transparent; color:#6b7280; transition:all 0.12s; }
         .tab:hover { background:#f3f4f6; color:#374151; }
         .tab.on { background:#111827; color:#fff; }
@@ -339,13 +349,14 @@ export default function SaasAdmins() {
                   {!isMobile && <div style={{ fontSize:12, color:'#6b7280' }}>{fmtDate(a.createdAt)}</div>}
 
                   {/* Actions */}
-                  <div className="row-actions" style={{ display:'flex', gap:4, justifyContent:'flex-end', opacity: isMobile ? 1 : undefined }}>
+                  <div className="row-actions" style={{ display:'flex', gap:4, justifyContent:'flex-end' }}>
                     {a.isPrimary ? (
                       <span style={{ display:'inline-flex', alignItems:'center', gap:4, fontSize:11, color:'#9ca3af', fontWeight:500 }}>
                         <IconShield/> Protected
                       </span>
                     ) : (
                       <>
+                        <button className="icoBtn" onClick={() => openEdit(a)} title="Edit member"><IconEdit/></button>
                         <button className="icoBtn warn" onClick={() => openReset(a)} title="Reset password"><IconKey/></button>
                         <button className={`icoBtn ${a.isActive ? 'danger' : 'success'}`} onClick={() => toggleActive(a)} title={a.isActive ? 'Deactivate' : 'Activate'}>
                           {a.isActive ? <IconBan/> : <IconCheck/>}
@@ -370,7 +381,7 @@ export default function SaasAdmins() {
             <div style={{ padding:'14px 18px', borderBottom:'1px solid #e5e7eb', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div>
                 <div style={{ fontSize:14, fontWeight:700, color:'#111827' }}>
-                  {panel === 'add' ? 'Add Team Member' : 'Reset Password'}
+                  {panel === 'add' ? 'Add Team Member' : panel === 'edit' ? 'Edit Member' : 'Reset Password'}
                 </div>
                 <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>
                   {panel === 'add' ? 'Fill in the details to create an account' : `${target?.firstName} ${target?.lastName}`}
@@ -407,7 +418,13 @@ export default function SaasAdmins() {
                   <div style={{ marginBottom:12 }}>
                     <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Password</label>
                     <div style={{ display:'flex', gap:6 }}>
-                      <input className="finput" style={{ ...inp, flex:1 }} type="text" value={form.password} onChange={e => setForm({ ...form, password:e.target.value })} required minLength={6} placeholder="Minimum 6 characters"/>
+                      <div style={{ position:'relative', flex:1 }}>
+                        <input className="finput" style={{ ...inp, width:'100%', boxSizing:'border-box', paddingRight:34 }} type={showPwd ? 'text' : 'password'} value={form.password} onChange={e => setForm({ ...form, password:e.target.value })} required minLength={6} maxLength={16} placeholder="6–16 characters"/>
+                        <button type="button" onClick={() => setShowPwd(p => !p)}
+                          style={{ position:'absolute', right:8, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#9ca3af', padding:0, display:'flex', alignItems:'center' }}>
+                          {showPwd ? <IconEyeOff/> : <IconEye/>}
+                        </button>
+                      </div>
                       <button type="button" onClick={() => { navigator.clipboard.writeText(form.password); setCopied('password'); setTimeout(() => setCopied(''), 1500); }}
                         style={{ flexShrink:0, padding:'0 10px', border:'1px solid #e5e7eb', borderRadius:6, background: copied==='password' ? '#d1fae5' : '#f9fafb', color: copied==='password' ? '#059669' : '#6b7280', fontSize:11, fontWeight:600, cursor:'pointer', transition:'all 0.2s', whiteSpace:'nowrap' }}>
                         {copied === 'password' ? '✓ Copied' : 'Copy'}
@@ -432,6 +449,46 @@ export default function SaasAdmins() {
                 </form>
               )}
 
+              {/* ─ Edit Member ─ */}
+              {panel === 'edit' && target && (
+                <div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+                    <div>
+                      <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>First name</label>
+                      <input className="finput" style={inp} value={editForm.firstName} onChange={e => setEditForm({ ...editForm, firstName:e.target.value })} placeholder="First name"/>
+                    </div>
+                    <div>
+                      <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Last name</label>
+                      <input className="finput" style={inp} value={editForm.lastName} onChange={e => setEditForm({ ...editForm, lastName:e.target.value })} placeholder="Last name"/>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Email</label>
+                    <input className="finput" style={{ ...inp, background:'#f9fafb', color:'#9ca3af' }} value={target.email} disabled/>
+                  </div>
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Role</label>
+                    <select className="finput" style={{ ...inp, cursor:'pointer', appearance:'auto' }} value={editForm.saasRole} onChange={e => setEditForm({ ...editForm, saasRole:e.target.value })}>
+                      <option value="Admin">Admin — Full platform access</option>
+                      <option value="Manager">Manager — Assigned tenants only</option>
+                    </select>
+                  </div>
+                  <div style={{ marginBottom:18 }}>
+                    <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Status</label>
+                    <select className="finput" style={{ ...inp, cursor:'pointer', appearance:'auto' }} value={editForm.isActive ? 'active' : 'inactive'} onChange={e => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                    <button type="button" onClick={closePanel} className="pbtn ghost" style={{ justifyContent:'center', padding:'9px' }}>Cancel</button>
+                    <button type="button" onClick={saveEdit} disabled={busy} className="pbtn primary" style={{ justifyContent:'center', padding:'9px' }}>
+                      {busy ? 'Saving…' : 'Save changes'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* ─ Reset Password ─ */}
               {panel === 'reset' && target && (
                 <div>
@@ -451,7 +508,13 @@ export default function SaasAdmins() {
 
                   <div style={{ marginBottom:18 }}>
                     <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:6 }}>New password</label>
-                    <input className="finput" style={inp} type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="Minimum 6 characters" minLength={6}/>
+                    <div style={{ position:'relative' }}>
+                      <input className="finput" style={{ ...inp, paddingRight:34 }} type={showResetPwd ? 'text' : 'password'} value={newPwd} onChange={e => setNewPwd(e.target.value)} placeholder="6–16 characters" minLength={6} maxLength={16}/>
+                      <button type="button" onClick={() => setShowResetPwd(p => !p)}
+                        style={{ position:'absolute', right:9, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#9ca3af', padding:0, display:'flex', alignItems:'center' }}>
+                        {showResetPwd ? <IconEyeOff/> : <IconEye/>}
+                      </button>
+                    </div>
                     {newPwd.length > 0 && (
                       <div style={{ marginTop:7 }}>
                         <div style={{ height:2, background:'#e5e7eb', borderRadius:1, overflow:'hidden' }}>

@@ -124,6 +124,7 @@ const ChangePassword = () => {
                 value={formData.currentPassword}
                 onChange={handleChange}
                 required
+                maxLength={16}
               />
             </div>
 
@@ -133,10 +134,12 @@ const ChangePassword = () => {
                 type="password"
                 name="newPassword"
                 className="crm-form-input"
-                placeholder="Enter new password (min 6 characters)"
+                placeholder="6–16 characters"
                 value={formData.newPassword}
                 onChange={handleChange}
                 required
+                minLength={6}
+                maxLength={16}
               />
             </div>
 
@@ -150,6 +153,7 @@ const ChangePassword = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 required
+                maxLength={16}
               />
             </div>
 

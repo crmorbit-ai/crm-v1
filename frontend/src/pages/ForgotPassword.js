@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { API_URL } from '../config/api.config';
 
-const PASS_MIN = 8;
-const PASS_MAX = 10;
+const PASS_MIN = 6;
+const PASS_MAX = 16;
 
 const pwChecks = (pw) => ({
   length:    pw.length >= PASS_MIN,

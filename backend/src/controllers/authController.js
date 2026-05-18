@@ -551,6 +551,9 @@ const resetPassword = async (req, res) => {
     if (newPassword.length < 6) {
       return errorResponse(res, 400, 'Password must be at least 6 characters');
     }
+    if (newPassword.length > 16) {
+      return errorResponse(res, 400, 'Password must not exceed 16 characters');
+    }
 
     const user = await User.findOne({
       email,
@@ -606,6 +609,9 @@ const changePassword = async (req, res) => {
 
     if (newPassword.length < 6) {
       return errorResponse(res, 400, 'New password must be at least 6 characters');
+    }
+    if (newPassword.length > 16) {
+      return errorResponse(res, 400, 'New password must not exceed 16 characters');
     }
 
     const user = await User.findById(req.user._id);
@@ -674,24 +680,12 @@ const registerStep1 = async (req, res) => {
       return errorResponse(res, 400, 'First and last name must be at least 2 characters');
     }
 
-    // Password validation (BUG-39 & BUG-41)
-    if (password.length < 8) {
-      return errorResponse(res, 400, 'Password must be at least 8 characters');
+    // Password validation
+    if (password.length < 6) {
+      return errorResponse(res, 400, 'Password must be at least 6 characters');
     }
-    if (password.length > 10) {
-      return errorResponse(res, 400, 'Password must not exceed 10 characters');
-    }
-    if (!/[A-Z]/.test(password)) {
-      return errorResponse(res, 400, 'Password must contain at least one uppercase letter');
-    }
-    if (!/[a-z]/.test(password)) {
-      return errorResponse(res, 400, 'Password must contain at least one lowercase letter');
-    }
-    if (!/[0-9]/.test(password)) {
-      return errorResponse(res, 400, 'Password must contain at least one number');
-    }
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      return errorResponse(res, 400, 'Password must contain at least one special character');
+    if (password.length > 16) {
+      return errorResponse(res, 400, 'Password must not exceed 16 characters');
     }
 
     // Check if user already exists

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import { API_URL } from '../config/api.config';
 
-const NAME_MAX=30, NAME_MIN=2, PASS_MIN=8, PASS_MAX=10;
+const NAME_MAX=30, NAME_MIN=2, PASS_MIN=6, PASS_MAX=16;
 const pwChecks = (pw) => ({ length:pw.length>=PASS_MIN, upper:/[A-Z]/.test(pw), lower:/[a-z]/.test(pw), number:/[0-9]/.test(pw), symbol:/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw) });
 const scoreOf  = (c) => Object.values(c).filter(Boolean).length;
 const strengthOf = (s) => s<=2?['Weak','#ef4444']:s<=3?['Fair','#f59e0b']:s===4?['Good','#60a5fa']:['Strong','#1EB980'];

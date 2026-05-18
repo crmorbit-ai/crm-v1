@@ -1139,7 +1139,7 @@ const Profile = () => {
               <form onSubmit={handlePasswordChange}>
                 {[
                   { label: 'Current Password *', key: 'current', field: 'currentPassword' },
-                  { label: 'New Password * (min 6 chars)', key: 'new', field: 'newPassword', min: 6 },
+                  { label: 'New Password * (6–16 chars)', key: 'new', field: 'newPassword', min: 6 },
                   { label: 'Confirm New Password *', key: 'confirm', field: 'confirmPassword' },
                 ].map(({ label, key, field, min }) => (
                   <div className="form-group" key={key}>
@@ -1149,7 +1149,7 @@ const Profile = () => {
                         type={showPwFields[key] ? 'text' : 'password'}
                         value={passwordData[field]}
                         onChange={(e) => setPasswordData({ ...passwordData, [field]: e.target.value })}
-                        required minLength={min}
+                        required minLength={min} maxLength={16}
                         className="form-control"
                         style={{ paddingRight: '36px' }}
                       />
