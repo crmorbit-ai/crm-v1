@@ -3,18 +3,15 @@ const crypto = require('crypto');
 const { sendMail } = require('../utils/emailService');
 const { successResponse, errorResponse } = require('../utils/response');
 
-// Generate 6-digit OTP
-const generateOTP = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
-
-// Hash OTP with SHA256
+// Hash value with SHA256 (used for viewing credentials/PIN)
 const hashOTP = (otp) => {
   return crypto.createHash('sha256').update(otp).digest('hex');
 };
 
-// Temporary storage for pending admin registrations (in production, use Redis)
-const pendingAdmins = new Map();
+// Generate 6-digit OTP (used for viewing credentials/PIN reset)
+const generateOTP = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 /**
  * @desc    Get all SAAS Admins
@@ -59,15 +56,14 @@ const getAllSaasAdmins = async (req, res) => {
 };
 
 /**
- * @desc    Step 1: Initiate SAAS Admin creation (Send OTP)
- * @route   POST /api/saas-admins/initiate
+ * @desc    Create SAAS Admin directly (no OTP)
+ * @route   POST /api/saas-admins/create
  * @access  SAAS_OWNER only
  */
-const initiateSaasAdmin = async (req, res) => {
+const createSaasAdmin = async (req, res) => {
   try {
     const { email, firstName, lastName, password, saasRole } = req.body;
 
-    // Validation
     if (!email || !firstName || !lastName || !password) {
       return errorResponse(res, 400, 'Email, first name, last name and password are required');
     }
@@ -76,124 +72,39 @@ const initiateSaasAdmin = async (req, res) => {
       return errorResponse(res, 400, 'Password must be at least 6 characters');
     }
 
-    // Check if user already exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
     if (existingUser) {
       return errorResponse(res, 400, 'User with this email already exists');
     }
 
-    // Generate OTP
-    const otp = generateOTP();
-    const hashedOTP = hashOTP(otp);
-
-    // Store pending admin data (expires in 10 minutes)
-    const pendingKey = email.toLowerCase();
-    pendingAdmins.set(pendingKey, {
+    const newAdmin = await User.create({
       email: email.toLowerCase(),
       firstName,
       lastName,
       password,
-      saasRole: saasRole || 'Admin',
-      addedBy: req.user._id,
-      otp: hashedOTP,
-      expiresAt: Date.now() + 10 * 60 * 1000 // 10 minutes
-    });
-
-    // Send OTP email
-    
-    await sendMail({
-      to: email,
-      subject: 'OTP for SAAS Admin Registration',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>SAAS Admin Registration</h2>
-          <p>Hello ${firstName},</p>
-          <p>You are being added as a SAAS Admin by ${req.user.firstName} ${req.user.lastName}.</p>
-          <p>Please share this OTP with the Primary Admin to complete your registration:</p>
-          <div style="background: #f5f5f5; padding: 30px; border-radius: 8px; margin: 20px 0; text-align: center;">
-            <h1 style="font-size: 40px; letter-spacing: 10px; color: #6366f1; margin: 0;">${otp}</h1>
-          </div>
-          <p>This OTP is valid for <strong>10 minutes</strong>.</p>
-          <p>If you did not request this, please ignore this email.</p>
-        </div>
-      `
-    });
-
-    successResponse(res, 200, 'OTP sent to email', {
-      email: email.toLowerCase(),
-      message: `OTP sent to ${email}. Valid for 10 minutes.`
-    });
-  } catch (error) {
-    console.error('Initiate SAAS Admin Error:', error);
-    errorResponse(res, 500, error.message);
-  }
-};
-
-/**
- * @desc    Step 2: Verify OTP and create SAAS Admin
- * @route   POST /api/saas-admins/verify
- * @access  SAAS_OWNER only
- */
-const verifySaasAdmin = async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-
-    if (!email || !otp) {
-      return errorResponse(res, 400, 'Email and OTP are required');
-    }
-
-    const pendingKey = email.toLowerCase();
-    const pendingData = pendingAdmins.get(pendingKey);
-
-    if (!pendingData) {
-      return errorResponse(res, 400, 'No pending registration found. Please initiate again.');
-    }
-
-    // Check expiry
-    if (Date.now() > pendingData.expiresAt) {
-      pendingAdmins.delete(pendingKey);
-      return errorResponse(res, 400, 'OTP has expired. Please initiate again.');
-    }
-
-    // Verify OTP
-    const hashedOTP = hashOTP(otp);
-    if (pendingData.otp !== hashedOTP) {
-      return errorResponse(res, 400, 'Invalid OTP');
-    }
-
-    // Create the admin
-    const newAdmin = await User.create({
-      email: pendingData.email,
-      firstName: pendingData.firstName,
-      lastName: pendingData.lastName,
-      password: pendingData.password,
       userType: 'SAAS_ADMIN',
-      saasRole: pendingData.saasRole,
+      saasRole: saasRole || 'Admin',
       isActive: true,
       emailVerified: true,
       isProfileComplete: true,
       authProvider: 'local',
-      addedBy: pendingData.addedBy,
+      addedBy: req.user._id,
       tenant: null
     });
 
-    // Clear pending data
-    pendingAdmins.delete(pendingKey);
-
-    // Send welcome email
+    // Send welcome email (non-blocking)
     try {
-      
       await sendMail({
-        to: pendingData.email,
+        to: email.toLowerCase(),
         subject: 'Welcome - SAAS Admin Access Granted',
         html: `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
             <h2>Welcome to CRM SAAS Admin Panel!</h2>
-            <p>Hello ${pendingData.firstName},</p>
+            <p>Hello ${firstName},</p>
             <p>Your SAAS Admin account has been created successfully.</p>
             <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <p><strong>Email:</strong> ${pendingData.email}</p>
-              <p><strong>Role:</strong> ${pendingData.saasRole}</p>
+              <p><strong>Email:</strong> ${email.toLowerCase()}</p>
+              <p><strong>Role:</strong> ${saasRole || 'Admin'}</p>
             </div>
             <p>Please login at: <a href="${process.env.FRONTEND_URL}/login">${process.env.FRONTEND_URL}/login</a></p>
           </div>
@@ -214,63 +125,7 @@ const verifySaasAdmin = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Verify SAAS Admin Error:', error);
-    errorResponse(res, 500, error.message);
-  }
-};
-
-/**
- * @desc    Resend OTP for pending registration
- * @route   POST /api/saas-admins/resend-otp
- * @access  SAAS_OWNER only
- */
-const resendOtp = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    if (!email) {
-      return errorResponse(res, 400, 'Email is required');
-    }
-
-    const pendingKey = email.toLowerCase();
-    const pendingData = pendingAdmins.get(pendingKey);
-
-    if (!pendingData) {
-      return errorResponse(res, 400, 'No pending registration found. Please initiate again.');
-    }
-
-    // Generate new OTP
-    const otp = generateOTP();
-    const hashedOTP = hashOTP(otp);
-
-    // Update pending data
-    pendingData.otp = hashedOTP;
-    pendingData.expiresAt = Date.now() + 10 * 60 * 1000;
-    pendingAdmins.set(pendingKey, pendingData);
-
-    // Send OTP email
-    
-    await sendMail({
-      to: email,
-      subject: 'OTP for SAAS Admin Registration (Resent)',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2>SAAS Admin Registration - New OTP</h2>
-          <p>Hello ${pendingData.firstName},</p>
-          <p>Here is your new OTP:</p>
-          <div style="background: #f5f5f5; padding: 30px; border-radius: 8px; margin: 20px 0; text-align: center;">
-            <h1 style="font-size: 40px; letter-spacing: 10px; color: #6366f1; margin: 0;">${otp}</h1>
-          </div>
-          <p>This OTP is valid for <strong>10 minutes</strong>.</p>
-        </div>
-      `
-    });
-
-    successResponse(res, 200, 'OTP resent successfully', {
-      email: email.toLowerCase()
-    });
-  } catch (error) {
-    console.error('Resend OTP Error:', error);
+    console.error('Create SAAS Admin Error:', error);
     errorResponse(res, 500, error.message);
   }
 };
@@ -804,9 +659,7 @@ const getManagers = async (req, res) => {
 module.exports = {
   getAllSaasAdmins,
   getManagers,
-  initiateSaasAdmin,
-  verifySaasAdmin,
-  resendOtp,
+  createSaasAdmin,
   updateSaasAdmin,
   removeSaasAdmin,
   resetPassword,

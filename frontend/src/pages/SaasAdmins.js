@@ -64,9 +64,8 @@ export default function SaasAdmins() {
   const [search, setSearch]         = useState('');
   const [panel, setPanel]           = useState(null); // null | 'add' | 'reset'
   const [target, setTarget]         = useState(null);
-  const [addStep, setAddStep]       = useState(1);
   const [form, setForm]             = useState({ firstName:'', lastName:'', email:'', password:'', saasRole:'Admin' });
-  const [otp, setOtp]               = useState('');
+  const [copied, setCopied]         = useState('');
   const [newPwd, setNewPwd]         = useState('');
   const [busy, setBusy]             = useState(false);
 
@@ -97,25 +96,14 @@ export default function SaasAdmins() {
     catch (e) { setError('Refresh failed'); } finally { setLoading(false); }
   };
 
-  const openAdd = () => { setForm({ firstName:'', lastName:'', email:'', password:'', saasRole:'Admin' }); setOtp(''); setAddStep(1); setPanel('add'); };
+  const openAdd = () => { setForm({ firstName:'', lastName:'', email:'', password:'', saasRole:'Admin' }); setPanel('add'); };
   const openReset = a => { setTarget(a); setNewPwd(''); setPanel('reset'); };
   const closePanel = () => { setPanel(null); setTarget(null); };
 
-  const sendOtp = async e => {
+  const createAdmin = async e => {
     e.preventDefault();
-    try { setBusy(true); await axios.post(`${API_URL}/saas-admins/initiate`, form, { headers: auth() }); setAddStep(2); }
-    catch (e) { alert(e.response?.data?.message || 'Failed to send OTP'); } finally { setBusy(false); }
-  };
-
-  const verifyCreate = async () => {
-    if (otp.length !== 6) return;
-    try { setBusy(true); await axios.post(`${API_URL}/saas-admins/verify`, { email: form.email, otp }, { headers: auth() }); closePanel(); reload(); }
-    catch (e) { alert(e.response?.data?.message || 'Invalid OTP'); } finally { setBusy(false); }
-  };
-
-  const resendOtp = async () => {
-    try { setBusy(true); await axios.post(`${API_URL}/saas-admins/resend-otp`, { email: form.email }, { headers: auth() }); }
-    catch (e) { alert('Resend failed'); } finally { setBusy(false); }
+    try { setBusy(true); await axios.post(`${API_URL}/saas-admins/create`, form, { headers: auth() }); closePanel(); reload(); }
+    catch (e) { alert(e.response?.data?.message || 'Failed to create admin'); } finally { setBusy(false); }
   };
 
   const resetPwd = async () => {
@@ -382,12 +370,10 @@ export default function SaasAdmins() {
             <div style={{ padding:'14px 18px', borderBottom:'1px solid #e5e7eb', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
               <div>
                 <div style={{ fontSize:14, fontWeight:700, color:'#111827' }}>
-                  {panel === 'add' ? (addStep === 1 ? 'Add Team Member' : 'Verify OTP') : 'Reset Password'}
+                  {panel === 'add' ? 'Add Team Member' : 'Reset Password'}
                 </div>
                 <div style={{ fontSize:11, color:'#9ca3af', marginTop:2 }}>
-                  {panel === 'add'
-                    ? (addStep === 1 ? 'Two-step verification required' : `Code sent to ${form.email}`)
-                    : `${target?.firstName} ${target?.lastName}`}
+                  {panel === 'add' ? 'Fill in the details to create an account' : `${target?.firstName} ${target?.lastName}`}
                 </div>
               </div>
               <button onClick={closePanel} className="icoBtn" style={{ flexShrink:0 }}><IconClose/></button>
@@ -395,9 +381,9 @@ export default function SaasAdmins() {
 
             <div style={{ padding:18 }}>
 
-              {/* ─ Step 1: Form ─ */}
-              {panel === 'add' && addStep === 1 && (
-                <form onSubmit={sendOtp}>
+              {/* ─ Add Member Form ─ */}
+              {panel === 'add' && (
+                <form onSubmit={createAdmin}>
                   <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
                     <div>
                       <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>First name</label>
@@ -410,11 +396,23 @@ export default function SaasAdmins() {
                   </div>
                   <div style={{ marginBottom:12 }}>
                     <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Email address</label>
-                    <input className="finput" style={inp} type="email" value={form.email} onChange={e => setForm({ ...form, email:e.target.value })} required placeholder="john@company.com"/>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <input className="finput" style={{ ...inp, flex:1 }} type="email" value={form.email} onChange={e => setForm({ ...form, email:e.target.value })} required placeholder="john@company.com"/>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(form.email); setCopied('email'); setTimeout(() => setCopied(''), 1500); }}
+                        style={{ flexShrink:0, padding:'0 10px', border:'1px solid #e5e7eb', borderRadius:6, background: copied==='email' ? '#d1fae5' : '#f9fafb', color: copied==='email' ? '#059669' : '#6b7280', fontSize:11, fontWeight:600, cursor:'pointer', transition:'all 0.2s', whiteSpace:'nowrap' }}>
+                        {copied === 'email' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
                   <div style={{ marginBottom:12 }}>
                     <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Password</label>
-                    <input className="finput" style={inp} type="text" value={form.password} onChange={e => setForm({ ...form, password:e.target.value })} required minLength={6} placeholder="Minimum 6 characters"/>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <input className="finput" style={{ ...inp, flex:1 }} type="text" value={form.password} onChange={e => setForm({ ...form, password:e.target.value })} required minLength={6} placeholder="Minimum 6 characters"/>
+                      <button type="button" onClick={() => { navigator.clipboard.writeText(form.password); setCopied('password'); setTimeout(() => setCopied(''), 1500); }}
+                        style={{ flexShrink:0, padding:'0 10px', border:'1px solid #e5e7eb', borderRadius:6, background: copied==='password' ? '#d1fae5' : '#f9fafb', color: copied==='password' ? '#059669' : '#6b7280', fontSize:11, fontWeight:600, cursor:'pointer', transition:'all 0.2s', whiteSpace:'nowrap' }}>
+                        {copied === 'password' ? '✓ Copied' : 'Copy'}
+                      </button>
+                    </div>
                   </div>
                   <div style={{ marginBottom:18 }}>
                     <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:5 }}>Role</label>
@@ -429,44 +427,9 @@ export default function SaasAdmins() {
                     </div>
                   </div>
                   <button type="submit" disabled={busy} className="pbtn primary" style={{ width:'100%', justifyContent:'center', padding:'9px' }}>
-                    {busy ? 'Sending…' : 'Send verification code →'}
+                    {busy ? 'Creating…' : 'Create member'}
                   </button>
                 </form>
-              )}
-
-              {/* ─ Step 2: OTP ─ */}
-              {panel === 'add' && addStep === 2 && (
-                <div>
-                  <div style={{ background:'#f0f9ff', border:'1px solid #bae6fd', borderRadius:7, padding:'10px 13px', marginBottom:18, fontSize:12, color:'#0369a1', lineHeight:1.5 }}>
-                    A 6-digit code was sent to <strong>{form.email}</strong>. Enter it below to create the account.
-                  </div>
-
-                  <div style={{ marginBottom:18 }}>
-                    <label style={{ fontSize:11, fontWeight:600, color:'#374151', display:'block', marginBottom:8 }}>Verification code</label>
-                    <input className="finput"
-                      style={{ ...inp, fontSize:28, textAlign:'center', letterSpacing:14, fontWeight:800, color:'#4f46e5', background:'#fafafa', border:'1.5px solid #c7d2fe', padding:'14px', borderRadius:8 }}
-                      type="text" value={otp} onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                      placeholder="· · · · · ·" maxLength={6} autoFocus/>
-
-                    {/* Progress */}
-                    <div style={{ display:'flex', gap:4, marginTop:8 }}>
-                      {[0,1,2,3,4,5].map(i => (
-                        <div key={i} style={{ flex:1, height:2, borderRadius:1, background: i < otp.length ? '#6366f1' : '#e5e7eb', transition:'background 0.15s' }}/>
-                      ))}
-                    </div>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginTop:8 }}>
-                      <span style={{ fontSize:11, color:'#9ca3af' }}>{otp.length}/6 digits entered</span>
-                      <button onClick={resendOtp} disabled={busy} style={{ background:'none', border:'none', color:'#6366f1', fontSize:11, fontWeight:600, cursor:'pointer', padding:0 }}>Resend code</button>
-                    </div>
-                  </div>
-
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
-                    <button onClick={() => setAddStep(1)} className="pbtn ghost" style={{ justifyContent:'center', padding:'9px' }}>← Back</button>
-                    <button onClick={verifyCreate} disabled={busy || otp.length !== 6} className="pbtn primary" style={{ justifyContent:'center', padding:'9px' }}>
-                      {busy ? 'Creating…' : 'Create member'}
-                    </button>
-                  </div>
-                </div>
               )}
 
               {/* ─ Reset Password ─ */}

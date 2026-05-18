@@ -4,9 +4,7 @@ const { protect, requireSaasAccess } = require('../middleware/auth');
 const {
   getAllSaasAdmins,
   getManagers,
-  initiateSaasAdmin,
-  verifySaasAdmin,
-  resendOtp,
+  createSaasAdmin,
   updateSaasAdmin,
   removeSaasAdmin,
   resetPassword,
@@ -63,9 +61,7 @@ router.post('/viewing-pin/reset', resetViewingPin);
 
 // Routes only for Primary Owner
 router.get('/', requirePrimaryOwner, getAllSaasAdmins);
-router.post('/initiate', requirePrimaryOwner, initiateSaasAdmin);
-router.post('/verify', requirePrimaryOwner, verifySaasAdmin);
-router.post('/resend-otp', requirePrimaryOwner, resendOtp);
+router.post('/create', requirePrimaryOwner, createSaasAdmin);
 router.put('/:id', requirePrimaryOwner, updateSaasAdmin);
 router.delete('/:id', requirePrimaryOwner, removeSaasAdmin);
 router.post('/:id/reset-password', requirePrimaryOwner, resetPassword);
