@@ -55,6 +55,13 @@ const Profile = () => {
   const [user, setUser] = useState(null);
   const [tenant, setTenant] = useState(null);
   const [activeTab, setActiveTab] = useState('personal');
+  const [toast, setToast] = useState({ msg: '', type: 'success' });
+  const toastRef = useRef(null);
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    clearTimeout(toastRef.current);
+    toastRef.current = setTimeout(() => setToast({ msg: '', type: 'success' }), 3000);
+  };
 
   // Edit mode - Personal Info
   const [isEditing, setIsEditing] = useState(false);
@@ -168,7 +175,7 @@ const Profile = () => {
     try {
       setPinLoading(true); setPinError('');
       await axios.post(`${API_URL}/viewing-pin/change`, { currentPin: currentPinValue, newPin: newPinValue }, { headers: getAuthHeader() });
-      alert('PIN changed successfully!');
+      showToast('PIN changed successfully!');
       closePinModals(); setIsPinSet(true);
     } catch (err) { setPinError(err.response?.data?.message || 'Failed to change PIN'); }
     finally { setPinLoading(false); }
@@ -178,7 +185,7 @@ const Profile = () => {
     try {
       setPinLoading(true); setPinError('');
       await axios.post(`${API_URL}/viewing-pin/forgot`, {}, { headers: getAuthHeader() });
-      setForgotPinStep(2); alert('OTP sent to your email!');
+      setForgotPinStep(2); showToast('OTP sent to your email!');
     } catch (err) { setPinError(err.response?.data?.message || 'Failed to send OTP'); }
     finally { setPinLoading(false); }
   };
@@ -192,7 +199,7 @@ const Profile = () => {
     try {
       setPinLoading(true); setPinError('');
       await axios.post(`${API_URL}/viewing-pin/reset`, { otp: forgotPinOtp, newPin: resetPinValue }, { headers: getAuthHeader() });
-      alert('PIN reset successfully!');
+      showToast('PIN reset successfully!');
       closePinModals(); setIsPinSet(true);
     } catch (err) { setPinError(err.response?.data?.message || 'Failed to reset PIN'); }
     finally { setPinLoading(false); }
@@ -218,18 +225,7 @@ const Profile = () => {
         profilePicture: response.data.user.profilePicture || ''
       });
       if (response.data.tenant) {
-        const t = response.data.tenant;
-        setEditedOrg({
-          organizationName: t.organizationName || '', contactEmail: t.contactEmail || '',
-          contactPhone: t.contactPhone || '', alternatePhone: t.alternatePhone || '',
-          industry: t.industry || '', businessType: t.businessType || '',
-          legalName: t.legalName || '', logo: t.logo || '', website: t.website || '',
-          numberOfEmployees: t.numberOfEmployees || '', foundedYear: t.foundedYear || '',
-          taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
-          socialMedia: { linkedin: t.socialMedia?.linkedin || '', twitter: t.socialMedia?.twitter || '', facebook: t.socialMedia?.facebook || '', instagram: t.socialMedia?.instagram || '' },
-          headquarters: { street: t.headquarters?.street || '', city: t.headquarters?.city || '', state: t.headquarters?.state || '', country: t.headquarters?.country || '', zipCode: t.headquarters?.zipCode || '' },
-          keyContact: { name: t.keyContact?.name || '', designation: t.keyContact?.designation || '', email: t.keyContact?.email || '', phone: t.keyContact?.phone || '' }
-        });
+        setEditedOrg(buildEditedOrg(response.data.tenant));
       }
     } catch (error) { console.error('Load profile error:', error); alert('Error loading profile'); }
     finally { setLoading(false); }
@@ -248,20 +244,24 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
-    // BUG-83: Name validation — must have at least 2 letters, no pure symbols
-    const nameRegex = /[a-zA-Z]{2,}/;
-    if (!editedUser.firstName?.trim() || !nameRegex.test(editedUser.firstName)) {
-      alert('Please enter a valid first name using at least 2 letters.'); return;
+    // BUG-100 & 101: Name — only letters, spaces, hyphens allowed (no numbers or special chars)
+    const strictNameRegex = /^[a-zA-Z\s\-]{2,50}$/;
+    if (!editedUser.firstName?.trim() || !strictNameRegex.test(editedUser.firstName.trim())) {
+      alert('First name can only contain alphabetical characters (no numbers or symbols).'); return;
     }
-    if (!editedUser.lastName?.trim() || !nameRegex.test(editedUser.lastName)) {
-      alert('Please enter a valid last name using at least 2 letters.'); return;
+    if (!editedUser.lastName?.trim() || !strictNameRegex.test(editedUser.lastName.trim())) {
+      alert('Last name can only contain alphabetical characters (no numbers or symbols).'); return;
     }
-    // BUG-82: Phone validation — only digits, +, -, spaces allowed, 7-15 chars
+    // BUG-82 & 102: Phone — digits/+/- only, no all-zeros
     if (editedUser.phone) {
-      const phoneClean = editedUser.phone.replace(/[\s\-]/g, '');
+      const phoneClean = editedUser.phone.replace(/[\s\-()]/g, '');
       const phoneRegex = /^\+?[0-9]{7,15}$/;
       if (!phoneRegex.test(phoneClean)) {
         alert('Please enter a valid phone number (7–15 digits, only numbers and + allowed).'); return;
+      }
+      // BUG-102: reject all-zero numbers like +000000000000
+      if (/^[+\s]*0+$/.test(phoneClean)) {
+        alert('Please enter a valid working phone number.'); return;
       }
     }
     try {
@@ -269,7 +269,7 @@ const Profile = () => {
       const response = await profileService.updateProfile(editedUser);
       setUser(response.data); setIsEditing(false);
       if (updateUser) updateUser(response.data);
-      alert('Profile updated successfully!');
+      showToast('Profile updated successfully!');
     } catch (error) { console.error('Update profile error:', error); alert(error.response?.data?.message || 'Error updating profile'); }
     finally { setSaving(false); }
   };
@@ -281,29 +281,32 @@ const Profile = () => {
     try {
       setChangingPassword(true);
       await profileService.updatePassword(passwordData.currentPassword, passwordData.newPassword);
-      alert('Password updated successfully!');
+      showToast('Password updated successfully!');
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error) { console.error('Password change error:', error); alert(error.response?.data?.message || 'Error changing password'); }
     finally { setChangingPassword(false); }
   };
 
+  const buildEditedOrg = (t) => ({
+    organizationName: t.organizationName || '', contactEmail: t.contactEmail || '',
+    contactPhone: t.contactPhone || '', alternatePhone: t.alternatePhone || '',
+    industry: t.industry || '', businessType: t.businessType || '',
+    legalName: t.legalName || '', logo: t.logo || '', website: t.website || '',
+    numberOfEmployees: t.numberOfEmployees || '', foundedYear: t.foundedYear || '',
+    taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
+    socialMedia: { linkedin: t.socialMedia?.linkedin || '', twitter: t.socialMedia?.twitter || '', facebook: t.socialMedia?.facebook || '', instagram: t.socialMedia?.instagram || '' },
+    headquarters: { street: t.headquarters?.street || '', city: t.headquarters?.city || '', state: t.headquarters?.state || '', country: t.headquarters?.country || '', zipCode: t.headquarters?.zipCode || '' },
+    keyContact: { name: t.keyContact?.name || '', designation: t.keyContact?.designation || '', email: t.keyContact?.email || '', phone: t.keyContact?.phone || '' }
+  });
+
   const handleOrgEditToggle = () => {
-    if (isEditingOrg && tenant) {
-      const t = tenant;
-      setEditedOrg({
-        organizationName: t.organizationName || '', contactEmail: t.contactEmail || '',
-        contactPhone: t.contactPhone || '', alternatePhone: t.alternatePhone || '',
-        industry: t.industry || '', businessType: t.businessType || '',
-        legalName: t.legalName || '', logo: t.logo || '', website: t.website || '',
-        numberOfEmployees: t.numberOfEmployees || '', foundedYear: t.foundedYear || '',
-        taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
-        socialMedia: { linkedin: t.socialMedia?.linkedin || '', twitter: t.socialMedia?.twitter || '', facebook: t.socialMedia?.facebook || '', instagram: t.socialMedia?.instagram || '' },
-        headquarters: { street: t.headquarters?.street || '', city: t.headquarters?.city || '', state: t.headquarters?.state || '', country: t.headquarters?.country || '', zipCode: t.headquarters?.zipCode || '' },
-        keyContact: { name: t.keyContact?.name || '', designation: t.keyContact?.designation || '', email: t.keyContact?.email || '', phone: t.keyContact?.phone || '' }
-      });
+    if (!isEditingOrg && tenant) {
+      // Entering edit mode — load fresh values from tenant
+      setEditedOrg(buildEditedOrg(tenant));
     }
-    setIsEditingOrg(!isEditingOrg);
+    // Exiting edit mode (Cancel) — no reset needed, just close
+    setIsEditingOrg(prev => !prev);
   };
 
   const handleOrgInputChange = (e) => {
@@ -340,7 +343,7 @@ const Profile = () => {
       if (savedLogoPath && authUser) {
         setAuthUser(prev => ({ ...prev, tenant: { ...prev.tenant, logo: savedLogoPath } }));
       }
-      alert('Logo updated successfully!');
+      showToast('Logo updated successfully!');
     } catch (err) {
       console.error('Logo upload error:', err);
       alert(err.response?.data?.message || 'Error uploading logo');
@@ -371,15 +374,61 @@ const Profile = () => {
     if (editedOrg.registrationNumber && invalidCharsRegex.test(editedOrg.registrationNumber.trim())) {
       alert('Invalid input detected. Registration number must contain letters or numbers.'); return;
     }
-    // BUG-96: Key Contact Name — letters only
-    if (editedOrg.keyContact?.name && invalidCharsRegex.test(editedOrg.keyContact.name.trim())) {
-      alert('Please enter a valid contact name using only letters.'); return;
+    // BUG-103 & 105: Contact Email — required + valid format + maxLength
+    const contactEmailVal = editedOrg.contactEmail?.trim();
+    if (!contactEmailVal) {
+      alert('Contact email is required.'); return;
     }
-    // BUG-97: Key Contact Email — valid format
-    if (editedOrg.keyContact?.email && editedOrg.keyContact.email.trim()) {
+    if (contactEmailVal.length > 255) {
+      alert('Contact email is too long (max 255 characters).'); return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(contactEmailVal)) {
+      alert('Please enter a valid contact email address (e.g., name@company.com).'); return;
+    }
+    // BUG-107: Number of Employees — required
+    if (!editedOrg.numberOfEmployees || editedOrg.numberOfEmployees === '') {
+      alert('Please select Number of Employees.'); return;
+    }
+    // BUG-108: Founded Year — required + valid year
+    if (activeTab === 'organization') {
+      const yr = editedOrg.foundedYear;
+      if (!yr || yr === '') {
+        alert('Founded Year is required.'); return;
+      }
+      const yrNum = parseInt(yr);
+      if (isNaN(yrNum) || yrNum < 1800 || yrNum > new Date().getFullYear()) {
+        alert(`Please enter a valid founded year (1800 – ${new Date().getFullYear()}).`); return;
+      }
+    }
+    // BUG-104: Contact Phone + Alternate Phone + Key Contact Phone — no letters, no all-zeros
+    const phoneRegex2 = /^\+?[0-9\s\-()]{7,15}$/;
+    const isAllZeros = (v) => v && /^[\+\s\-()0]+$/.test(v) && !/[1-9]/.test(v);
+    const phoneFields = [
+      [editedOrg.contactPhone,          'Contact phone'],
+      [editedOrg.alternatePhone,        'Alternate phone'],
+      [editedOrg.keyContact?.phone,     'Key contact phone'],
+    ];
+    for (const [val, label] of phoneFields) {
+      if (!val?.trim()) continue;
+      if (!phoneRegex2.test(val.trim())) {
+        alert(`${label} can only contain digits (no letters).`); return;
+      }
+      if (isAllZeros(val.trim())) {
+        alert(`Please enter a valid ${label.toLowerCase()} (cannot be all zeros).`); return;
+      }
+    }
+    // BUG-96: Key Contact Name — only letters, spaces, hyphens
+    const kcName = editedOrg.keyContact?.name?.trim();
+    if (kcName && kcName.length > 0 && !/^[a-zA-Z\s\-]{2,80}$/.test(kcName)) {
+      alert('Key Contact Name can only contain letters (no numbers or symbols).'); return;
+    }
+    // BUG-97: Key Contact Email — valid format (only validate if user actually typed something)
+    const kcEmail = editedOrg.keyContact?.email?.trim();
+    if (kcEmail && kcEmail.length > 0) {
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(editedOrg.keyContact.email.trim())) {
-        alert('Please enter a valid email address (e.g., name@example.com).'); return;
+      if (!emailRegex.test(kcEmail)) {
+        alert('Key Contact: Please enter a valid email address (e.g., name@example.com).'); return;
       }
     }
     // BUG-98: Key Contact Phone — digits only
@@ -407,25 +456,34 @@ const Profile = () => {
         alert('Please enter a valid Zip Code (letters, numbers, max 10 chars).'); return;
       }
     }
-    // BUG-86: URL validation
-    const urlRegex = /^(https?:\/\/)[\w\-]+(\.[\w\-]+)+([\w\-._~:/?#[\]@!$&'()*+,;=%]+)?$/;
+    // BUG-86 & 106: URL validation — must start with https://, max 255 chars, no junk
+    const urlRegexStrict = /^https?:\/\/([\w\-]+\.)+[\w\-]+(\/[\w\-./?%&=+#]*)?$/;
     const urlFields = [
-      [editedOrg.website, 'Website URL'],
-      [editedOrg.socialMedia?.linkedin, 'LinkedIn URL'],
-      [editedOrg.socialMedia?.twitter, 'Twitter URL'],
-      [editedOrg.socialMedia?.facebook, 'Facebook URL'],
+      [editedOrg.website,                'Website URL'],
+      [editedOrg.socialMedia?.linkedin,  'LinkedIn URL'],
+      [editedOrg.socialMedia?.twitter,   'Twitter URL'],
+      [editedOrg.socialMedia?.facebook,  'Facebook URL'],
       [editedOrg.socialMedia?.instagram, 'Instagram URL'],
     ];
     for (const [val, label] of urlFields) {
-      if (val && val.trim() && !urlRegex.test(val.trim())) {
-        alert(`Please enter a valid ${label} (must start with https://)`); return;
+      if (val && val.trim().length > 0) {
+        const v = val.trim();
+        if (v.length > 255) { alert(`${label} is too long (max 255 characters).`); return; }
+        if (!urlRegexStrict.test(v)) {
+          alert(`${label} must be a valid URL starting with https:// (e.g., https://example.com)`); return;
+        }
       }
     }
     try {
       setSavingOrg(true);
-      const response = await profileService.updateOrganization(editedOrg);
-      setTenant(response.data); setIsEditingOrg(false);
-      alert('Organization updated successfully!');
+      await profileService.updateOrganization(editedOrg);
+      setIsEditingOrg(false);
+      const tabMessages = {
+        organization: 'Organization details updated',
+        contact:      'Contact information updated',
+        digital:      'Digital presence updated',
+      };
+      showToast(tabMessages[activeTab] || 'Organization updated successfully!');
       await loadProfile();
     } catch (error) { console.error('Update organization error:', error); alert(error.response?.data?.message || 'Error updating organization'); }
     finally { setSavingOrg(false); }
@@ -507,6 +565,11 @@ const Profile = () => {
   return (
     <DashboardLayout>
       <style>{profileResponsiveCSS}</style>
+      {toast.msg && (
+        <div style={{ position:'fixed', top:20, right:24, zIndex:9999, padding:'12px 20px', borderRadius:10, fontWeight:700, fontSize:13, boxShadow:'0 4px 20px rgba(0,0,0,0.15)', background: toast.type==='success' ? '#10b981' : '#ef4444', color:'#fff', transition:'all 0.3s' }}>
+          {toast.type === 'success' ? '✅' : '❌'} {toast.msg}
+        </div>
+      )}
       <div className="profile-container">
         {/* Compact Header with Logo */}
         <div className="profile-header">
@@ -548,8 +611,8 @@ const Profile = () => {
             </div>
           </div>
           <div className="profile-btn-group" style={{ flexShrink: 0 }}>
-            <button onClick={() => setShowPasswordModal(true)} style={styles.btnSecondary}>Change Password</button>
-            <button onClick={() => { setPinError(''); setShowChangePinModal(true); }} style={styles.btnPin}>
+            <button type="button" onClick={() => setShowPasswordModal(true)} style={styles.btnSecondary}>Change Password</button>
+            <button type="button" onClick={() => { setPinError(''); setShowChangePinModal(true); }} style={styles.btnPin}>
               {isPinSet ? 'Change PIN' : 'Set PIN'}
             </button>
           </div>
@@ -557,11 +620,11 @@ const Profile = () => {
 
         {/* Tabs */}
         <div className="profile-tabs">
-          <button className={`profile-tab ${activeTab === 'personal' ? 'active' : ''}`} onClick={() => setActiveTab('personal')}>Personal Info</button>
-          <button className={`profile-tab ${activeTab === 'organization' ? 'active' : ''}`} onClick={() => setActiveTab('organization')}>Organization</button>
-          <button className={`profile-tab ${activeTab === 'contact' ? 'active' : ''}`} onClick={() => setActiveTab('contact')}>Contacts & Address</button>
-          <button className={`profile-tab ${activeTab === 'digital' ? 'active' : ''}`} onClick={() => setActiveTab('digital')}>Digital Presence</button>
-          <button className={`profile-tab ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>Notifications</button>
+          <button type="button" className={`profile-tab ${activeTab === 'personal' ? 'active' : ''}`} onClick={() => setActiveTab('personal')}>Personal Info</button>
+          <button type="button" className={`profile-tab ${activeTab === 'organization' ? 'active' : ''}`} onClick={() => setActiveTab('organization')}>Organization</button>
+          <button type="button" className={`profile-tab ${activeTab === 'contact' ? 'active' : ''}`} onClick={() => setActiveTab('contact')}>Contacts & Address</button>
+          <button type="button" className={`profile-tab ${activeTab === 'digital' ? 'active' : ''}`} onClick={() => setActiveTab('digital')}>Digital Presence</button>
+          <button type="button" className={`profile-tab ${activeTab === 'notifications' ? 'active' : ''}`} onClick={() => setActiveTab('notifications')}>Notifications</button>
         </div>
 
         {/* Personal Info Tab */}
@@ -571,11 +634,11 @@ const Profile = () => {
               <h3 style={{ ...styles.cardTitle, marginBottom: 0 }}>Personal Information</h3>
               <div className="profile-btn-group">
                 {!isEditing ? (
-                  <button onClick={handleEditToggle} style={styles.btnPrimary}>Edit</button>
+                  <button type="button" onClick={handleEditToggle} style={styles.btnPrimary}>Edit</button>
                 ) : (
                   <>
-                    <button onClick={handleEditToggle} style={styles.btnSecondary}>Cancel</button>
-                    <button onClick={handleSave} disabled={saving} style={styles.btnPrimary}>{saving ? 'Saving...' : 'Save'}</button>
+                    <button type="button" onClick={handleEditToggle} style={styles.btnSecondary}>Cancel</button>
+                    <button type="button" onClick={handleSave} disabled={saving} style={styles.btnPrimary}>{saving ? 'Saving...' : 'Save'}</button>
                   </>
                 )}
               </div>
@@ -625,11 +688,11 @@ const Profile = () => {
               {(user.userType === 'TENANT_ADMIN' || user.userType === 'SAAS_OWNER') && (
                 <div className="profile-btn-group">
                   {!isEditingOrg ? (
-                    <button onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
+                    <button type="button" onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
                   ) : (
                     <>
-                      <button onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
-                      <button onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
+                      <button type="button" onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
+                      <button type="button" onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
                     </>
                   )}
                 </div>
@@ -638,15 +701,15 @@ const Profile = () => {
             <div className="profile-grid-2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>Organization Name *</label>
-                <input type="text" name="organizationName" value={isEditingOrg ? editedOrg.organizationName : tenant.organizationName} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="organizationName" value={isEditingOrg ? editedOrg.organizationName : tenant.organizationName} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Legal Name</label>
-                <input type="text" name="legalName" value={isEditingOrg ? editedOrg.legalName : (tenant.legalName || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Official legal entity name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="legalName" value={isEditingOrg ? editedOrg.legalName : (tenant.legalName || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Official legal entity name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Industry</label>
-                <input type="text" name="industry" value={isEditingOrg ? editedOrg.industry : (tenant.industry || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., Technology" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="industry" value={isEditingOrg ? editedOrg.industry : (tenant.industry || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., Technology" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Business Type</label>
@@ -671,15 +734,15 @@ const Profile = () => {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Founded Year</label>
-                <input type="number" name="foundedYear" value={isEditingOrg ? editedOrg.foundedYear : (tenant.foundedYear || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., 2020" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="number" name="foundedYear" value={isEditingOrg ? editedOrg.foundedYear : (tenant.foundedYear || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., 2020" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Tax ID / GST</label>
-                <input type="text" name="taxId" value={isEditingOrg ? editedOrg.taxId : (tenant.taxId || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="GST/Tax number" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="taxId" value={isEditingOrg ? editedOrg.taxId : (tenant.taxId || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="GST/Tax number" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Registration Number</label>
-                <input type="text" name="registrationNumber" value={isEditingOrg ? editedOrg.registrationNumber : (tenant.registrationNumber || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Company registration" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="registrationNumber" value={isEditingOrg ? editedOrg.registrationNumber : (tenant.registrationNumber || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Company registration" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
             </div>
           </div>
@@ -738,13 +801,13 @@ const Profile = () => {
                     <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: '700', color: '#374151' }}>Request Submitted</h3>
                     <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>Your deletion request has been sent to the SAAS Admin. You will receive a confirmation email shortly.</p>
                   </div>
-                  <button onClick={closeDeletionModal} style={{ width: '100%', padding: '12px', background: '#374151', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
+                  <button type="button" onClick={closeDeletionModal} style={{ width: '100%', padding: '12px', background: '#374151', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}>Close</button>
                 </>
               ) : (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '700', color: '#dc2626' }}>⚠️ Request Organization Deletion</h3>
-                    <button onClick={closeDeletionModal} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}>×</button>
+                    <button type="button" onClick={closeDeletionModal} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#6b7280', lineHeight: 1 }}>×</button>
                   </div>
 
                   {deletionStep === 1 && (
@@ -769,8 +832,8 @@ const Profile = () => {
                         />
                       </div>
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={closeDeletionModal} style={{ flex: 1, padding: '11px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>Cancel</button>
-                        <button onClick={() => setDeletionStep(2)} style={{ flex: 1, padding: '11px', background: '#dc2626', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#fff' }}>Continue</button>
+                        <button type="button" onClick={closeDeletionModal} style={{ flex: 1, padding: '11px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>Cancel</button>
+                        <button type="button" onClick={() => setDeletionStep(2)} style={{ flex: 1, padding: '11px', background: '#dc2626', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#fff' }}>Continue</button>
                       </div>
                     </>
                   )}
@@ -791,7 +854,7 @@ const Profile = () => {
                         {deletionError && <p style={{ color: '#dc2626', fontSize: '12px', margin: '6px 0 0' }}>{deletionError}</p>}
                       </div>
                       <div style={{ display: 'flex', gap: '10px' }}>
-                        <button onClick={() => { setDeletionStep(1); setDeletionError(''); }} style={{ flex: 1, padding: '11px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>Back</button>
+                        <button type="button" onClick={() => { setDeletionStep(1); setDeletionError(''); }} style={{ flex: 1, padding: '11px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>Back</button>
                         <button
                           onClick={handleRequestDeletion}
                           disabled={deletionLoading || !deletionConfirmName}
@@ -815,27 +878,27 @@ const Profile = () => {
               <div className="profile-card-header">
                 <h3 style={{ ...styles.cardTitle, marginBottom: 0 }}>Contact Information</h3>
                 {(user.userType === 'TENANT_ADMIN' || user.userType === 'SAAS_OWNER') && !isEditingOrg && (
-                  <button onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
+                  <button type="button" onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
                 )}
                 {isEditingOrg && (
                   <div className="profile-btn-group">
-                    <button onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
-                    <button onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
+                    <button type="button" onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
+                    <button type="button" onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
                   </div>
                 )}
               </div>
               <div className="profile-grid-2">
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Contact Email *</label>
-                  <input type="email" name="contactEmail" value={isEditingOrg ? editedOrg.contactEmail : tenant.contactEmail} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="contactEmail" value={isEditingOrg ? editedOrg.contactEmail : tenant.contactEmail} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Contact Phone</label>
-                  <input type="text" name="contactPhone" value={isEditingOrg ? editedOrg.contactPhone : (tenant.contactPhone || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="contactPhone" value={isEditingOrg ? editedOrg.contactPhone : (tenant.contactPhone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Alternate Phone</label>
-                  <input type="text" name="alternatePhone" value={isEditingOrg ? editedOrg.alternatePhone : (tenant.alternatePhone || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="alternatePhone" value={isEditingOrg ? editedOrg.alternatePhone : (tenant.alternatePhone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
               </div>
             </div>
@@ -845,19 +908,19 @@ const Profile = () => {
               <div className="profile-grid-2">
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Name</label>
-                  <input type="text" name="keyContact.name" value={isEditingOrg ? (editedOrg.keyContact?.name || '') : (tenant.keyContact?.name || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Contact person name" maxLength={80} autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact_name" value={isEditingOrg ? (editedOrg.keyContact?.name || '') : (tenant.keyContact?.name || '')} onChange={e => { const v = e.target.value; setEditedOrg(prev => ({ ...prev, keyContact: { ...(prev.keyContact || {}), name: v } })); }} disabled={!isEditingOrg} placeholder="Contact person name" maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Designation</label>
-                  <input type="text" name="keyContact.designation" value={isEditingOrg ? (editedOrg.keyContact?.designation || '') : (tenant.keyContact?.designation || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., CEO, Manager" autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact.designation" value={isEditingOrg ? (editedOrg.keyContact?.designation || '') : (tenant.keyContact?.designation || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., CEO, Manager" autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Email</label>
-                  <input type="text" name="keyContact.email" value={isEditingOrg ? (editedOrg.keyContact?.email || '') : (tenant.keyContact?.email || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact.email" value={isEditingOrg ? (editedOrg.keyContact?.email || '') : (tenant.keyContact?.email || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Phone</label>
-                  <input type="text" name="keyContact.phone" value={isEditingOrg ? (editedOrg.keyContact?.phone || '') : (tenant.keyContact?.phone || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact.phone" value={isEditingOrg ? (editedOrg.keyContact?.phone || '') : (tenant.keyContact?.phone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
               </div>
             </div>
@@ -867,23 +930,23 @@ const Profile = () => {
               <div className="profile-grid-2">
                 <div className="span-2-col" style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
                   <label style={styles.label}>Street Address</label>
-                  <input type="text" name="headquarters.street" value={isEditingOrg ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Street address" maxLength={255} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.street" value={isEditingOrg ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Street address" maxLength={255} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>City</label>
-                  <input type="text" name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>State</label>
-                  <input type="text" name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Country</label>
-                  <input type="text" name="headquarters.country" value={isEditingOrg ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.country" value={isEditingOrg ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>ZIP / Postal Code</label>
-                  <input type="text" name="headquarters.zipCode" value={isEditingOrg ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={10} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.zipCode" value={isEditingOrg ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={10} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
               </div>
             </div>
@@ -896,35 +959,35 @@ const Profile = () => {
             <div className="profile-card-header">
               <h3 style={{ ...styles.cardTitle, marginBottom: 0 }}>Digital Presence</h3>
               {(user.userType === 'TENANT_ADMIN' || user.userType === 'SAAS_OWNER') && !isEditingOrg && (
-                <button onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
+                <button type="button" onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
               )}
               {isEditingOrg && (
                 <div className="profile-btn-group">
-                  <button onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
-                  <button onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
+                  <button type="button" onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
+                  <button type="button" onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
                 </div>
               )}
             </div>
             <div className="profile-grid-2">
               <div className="span-2-col" style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
                 <label style={styles.label}>Website URL</label>
-                <input type="text" name="website" value={isEditingOrg ? editedOrg.website : (tenant.website || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://www.yourcompany.com" autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="website" value={isEditingOrg ? editedOrg.website : (tenant.website || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://www.yourcompany.com" maxLength={255} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>LinkedIn</label>
-                <input type="text" name="socialMedia.linkedin" value={isEditingOrg ? (editedOrg.socialMedia?.linkedin || '') : (tenant.socialMedia?.linkedin || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://linkedin.com/company/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.linkedin" value={isEditingOrg ? (editedOrg.socialMedia?.linkedin || '') : (tenant.socialMedia?.linkedin || '')} onChange={handleOrgInputChange} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} disabled={!isEditingOrg} placeholder="https://linkedin.com/company/..." maxLength={255} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Twitter / X</label>
-                <input type="text" name="socialMedia.twitter" value={isEditingOrg ? (editedOrg.socialMedia?.twitter || '') : (tenant.socialMedia?.twitter || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://twitter.com/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.twitter" value={isEditingOrg ? (editedOrg.socialMedia?.twitter || '') : (tenant.socialMedia?.twitter || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://twitter.com/..." maxLength={255} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Facebook</label>
-                <input type="text" name="socialMedia.facebook" value={isEditingOrg ? (editedOrg.socialMedia?.facebook || '') : (tenant.socialMedia?.facebook || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://facebook.com/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.facebook" value={isEditingOrg ? (editedOrg.socialMedia?.facebook || '') : (tenant.socialMedia?.facebook || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://facebook.com/..." maxLength={255} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Instagram</label>
-                <input type="text" name="socialMedia.instagram" value={isEditingOrg ? (editedOrg.socialMedia?.instagram || '') : (tenant.socialMedia?.instagram || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://instagram.com/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.instagram" value={isEditingOrg ? (editedOrg.socialMedia?.instagram || '') : (tenant.socialMedia?.instagram || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://instagram.com/..." maxLength={255} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
             </div>
           </div>
@@ -1017,7 +1080,7 @@ const Profile = () => {
         {showPasswordModal && (
           <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '360px' }}>
-              <div className="modal-header"><h2>Change Password</h2><button onClick={() => setShowPasswordModal(false)} className="close-btn">&times;</button></div>
+              <div className="modal-header"><h2>Change Password</h2><button type="button" onClick={() => setShowPasswordModal(false)} className="close-btn">&times;</button></div>
               <form onSubmit={handlePasswordChange}>
                 {[
                   { label: 'Current Password *', key: 'current', field: 'currentPassword' },
@@ -1057,7 +1120,7 @@ const Profile = () => {
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '280px', padding: '20px', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>{isPinSet ? 'Change PIN' : 'Set PIN'}</h3>
-                <button onClick={closePinModals} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9ca3af' }}>&times;</button>
+                <button type="button" onClick={closePinModals} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9ca3af' }}>&times;</button>
               </div>
               <p style={{ color: '#64748b', fontSize: '12px', marginBottom: '16px', marginTop: '0' }}>{isPinSet ? 'Enter current & new 4 digit PIN' : 'Create a 4 digit PIN'}</p>
               {pinError && <div style={{ background: '#fef2f2', color: '#dc2626', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', marginBottom: '12px', textAlign: 'center' }}>{pinError}</div>}
@@ -1098,7 +1161,7 @@ const Profile = () => {
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '280px', padding: '20px', borderRadius: '12px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '600' }}>Reset PIN</h3>
-                <button onClick={closePinModals} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9ca3af' }}>&times;</button>
+                <button type="button" onClick={closePinModals} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9ca3af' }}>&times;</button>
               </div>
               {pinError && <div style={{ background: '#fef2f2', color: '#dc2626', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', marginBottom: '12px', textAlign: 'center' }}>{pinError}</div>}
               {forgotPinStep === 1 ? (
@@ -1113,7 +1176,7 @@ const Profile = () => {
                 <>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Enter OTP</label>
-                    <input type="text" value={forgotPinOtp} onChange={e => setForgotPinOtp(e.target.value)} maxLength={6} placeholder="6-digit OTP" style={{ width: '100%', padding: '8px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', textAlign: 'center', letterSpacing: '6px', boxSizing: 'border-box' }} autoComplete="off" />
+                    <input type="text" value={forgotPinOtp} onChange={e => setForgotPinOtp(e.target.value)} maxLength={6} placeholder="6-digit OTP" style={{ width: '100%', padding: '8px', border: '2px solid #e2e8f0', borderRadius: '6px', fontSize: '14px', textAlign: 'center', letterSpacing: '6px', boxSizing: 'border-box' }} autoComplete="new-password" />
                   </div>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>New PIN</label>

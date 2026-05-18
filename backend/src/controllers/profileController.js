@@ -282,29 +282,31 @@ const updateOrganization = async (req, res) => {
     // Update nested objects
     if (socialMedia) {
       tenant.socialMedia = {
-        linkedin: socialMedia.linkedin || tenant.socialMedia?.linkedin || '',
-        twitter: socialMedia.twitter || tenant.socialMedia?.twitter || '',
-        facebook: socialMedia.facebook || tenant.socialMedia?.facebook || '',
-        instagram: socialMedia.instagram || tenant.socialMedia?.instagram || ''
+        linkedin:  socialMedia.linkedin  !== undefined ? socialMedia.linkedin  : (tenant.socialMedia?.linkedin  || ''),
+        twitter:   socialMedia.twitter   !== undefined ? socialMedia.twitter   : (tenant.socialMedia?.twitter   || ''),
+        facebook:  socialMedia.facebook  !== undefined ? socialMedia.facebook  : (tenant.socialMedia?.facebook  || ''),
+        instagram: socialMedia.instagram !== undefined ? socialMedia.instagram : (tenant.socialMedia?.instagram || ''),
       };
     }
 
     if (headquarters) {
+      const hq = (k) => headquarters[k] !== undefined ? headquarters[k] : (tenant.headquarters?.[k] || '');
       tenant.headquarters = {
-        street: headquarters.street || tenant.headquarters?.street || '',
-        city: headquarters.city || tenant.headquarters?.city || '',
-        state: headquarters.state || tenant.headquarters?.state || '',
-        country: headquarters.country || tenant.headquarters?.country || '',
-        zipCode: headquarters.zipCode || tenant.headquarters?.zipCode || ''
+        street:  hq('street'),
+        city:    hq('city'),
+        state:   hq('state'),
+        country: hq('country'),
+        zipCode: hq('zipCode'),
       };
     }
 
     if (keyContact) {
+      const kc = (k) => keyContact[k] !== undefined ? keyContact[k] : (tenant.keyContact?.[k] || '');
       tenant.keyContact = {
-        name: keyContact.name || tenant.keyContact?.name || '',
-        designation: keyContact.designation || tenant.keyContact?.designation || '',
-        email: keyContact.email || tenant.keyContact?.email || '',
-        phone: keyContact.phone || tenant.keyContact?.phone || ''
+        name:        kc('name'),
+        designation: kc('designation'),
+        email:       kc('email'),
+        phone:       kc('phone'),
       };
     }
 

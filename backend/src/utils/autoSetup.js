@@ -11,6 +11,7 @@ const autoSetup = async () => {
     ensureSuperAdminRole(),
     ensureDataCenterProducts(),
   ]);
+  await cleanInvalidProfileData();
   console.log('✅ Auto-setup complete\n');
 };
 
@@ -170,6 +171,57 @@ const ensureDataCenterProducts = async () => {
     console.log('  ✅ Data Center products created (Email, WhatsApp, SMS, Call)');
   } catch (err) {
     console.error('  ❌ ensureDataCenterProducts:', err.message);
+  }
+};
+
+// ─── Clean invalid profile data (one-time fix) ───────────────────────────────
+const cleanInvalidProfileData = async () => {
+  try {
+    const Tenant = require('../models/Tenant');
+
+    // Valid URL: must start with http:// or https://
+    const isInvalidUrl = (val) => val && typeof val === 'string' && val.trim().length > 0
+      && !val.trim().startsWith('http://') && !val.trim().startsWith('https://');
+
+    // Valid name: only letters, spaces, hyphens
+    const isInvalidName = (val) => val && typeof val === 'string' && val.trim().length > 0
+      && !/^[a-zA-Z\s\-]+$/.test(val.trim());
+
+    const tenants = await Tenant.find({});
+    let fixed = 0;
+
+    for (const t of tenants) {
+      let changed = false;
+
+      // Fix invalid social media URLs
+      const sm = t.socialMedia || {};
+      ['linkedin', 'twitter', 'facebook', 'instagram'].forEach(k => {
+        if (isInvalidUrl(sm[k])) { sm[k] = ''; changed = true; }
+      });
+      if (changed) t.socialMedia = sm;
+
+      // Fix invalid website URL
+      if (isInvalidUrl(t.website)) { t.website = ''; changed = true; }
+
+      // Fix invalid keyContact name
+      const kc = t.keyContact || {};
+      if (isInvalidName(kc.name)) { kc.name = ''; t.keyContact = kc; changed = true; }
+
+      // Fix invalid phone numbers (letters OR all-zeros)
+      const isInvalidPhone = (v) => v && (/[a-zA-Z]/.test(v) || (!/[1-9]/.test(v) && v.trim().length > 0));
+      ['contactPhone', 'alternatePhone'].forEach(k => {
+        if (isInvalidPhone(t[k])) { t[k] = ''; changed = true; }
+      });
+      if (isInvalidPhone(t.keyContact?.phone)) {
+        kc.phone = ''; t.keyContact = kc; changed = true;
+      }
+
+      if (changed) { await t.save(); fixed++; }
+    }
+
+    if (fixed > 0) console.log(`  ✅ Cleaned invalid profile data in ${fixed} tenant(s)`);
+  } catch (err) {
+    console.error('  ❌ cleanInvalidProfileData:', err.message);
   }
 };
 
