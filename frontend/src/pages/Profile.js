@@ -11,8 +11,8 @@ import '../styles/crm.css';
 // Responsive CSS for Profile page
 const profileResponsiveCSS = `
   .profile-container { padding: 0; }
-  .profile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
-  .profile-header-left { display: flex; align-items: center; gap: 16px; }
+  .profile-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; overflow: hidden; }
+  .profile-header-left { display: flex; align-items: center; gap: 16px; min-width: 0; flex: 1; overflow: hidden; }
   .profile-tabs { display: flex; gap: 4px; margin-bottom: 16px; background: #f3f4f6; padding: 4px; border-radius: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .profile-tabs::-webkit-scrollbar { display: none; }
   .profile-tab { padding: 8px 16px; border: none; background: transparent; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; color: #6b7280; transition: all 0.2s; white-space: nowrap; flex-shrink: 0; }
@@ -103,6 +103,7 @@ const Profile = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [changingPassword, setChangingPassword] = useState(false);
+  const [showPwFields, setShowPwFields] = useState({ current: false, new: false, confirm: false });
 
   // PIN management
   const [isPinSet, setIsPinSet] = useState(false);
@@ -247,6 +248,22 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
+    // BUG-83: Name validation — must have at least 2 letters, no pure symbols
+    const nameRegex = /[a-zA-Z]{2,}/;
+    if (!editedUser.firstName?.trim() || !nameRegex.test(editedUser.firstName)) {
+      alert('Please enter a valid first name using at least 2 letters.'); return;
+    }
+    if (!editedUser.lastName?.trim() || !nameRegex.test(editedUser.lastName)) {
+      alert('Please enter a valid last name using at least 2 letters.'); return;
+    }
+    // BUG-82: Phone validation — only digits, +, -, spaces allowed, 7-15 chars
+    if (editedUser.phone) {
+      const phoneClean = editedUser.phone.replace(/[\s\-]/g, '');
+      const phoneRegex = /^\+?[0-9]{7,15}$/;
+      if (!phoneRegex.test(phoneClean)) {
+        alert('Please enter a valid phone number (7–15 digits, only numbers and + allowed).'); return;
+      }
+    }
     try {
       setSaving(true);
       const response = await profileService.updateProfile(editedUser);
@@ -293,7 +310,10 @@ const Profile = () => {
     const { name, value } = e.target;
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
-      setEditedOrg(prev => ({ ...prev, [parent]: { ...prev[parent], [child]: value } }));
+      setEditedOrg(prev => ({
+        ...prev,
+        [parent]: { ...(prev[parent] || {}), [child]: value }
+      }));
     } else {
       setEditedOrg(prev => ({ ...prev, [name]: value }));
     }
@@ -331,6 +351,76 @@ const Profile = () => {
   };
 
   const handleOrgSave = async () => {
+    // BUG-84: Org field validation — no pure symbols/slashes
+    const invalidCharsRegex = /^[^a-zA-Z0-9]+$/; // all special chars, no letters/numbers
+    if (!editedOrg.organizationName?.trim()) {
+      alert('Organization name is required.'); return;
+    }
+    if (invalidCharsRegex.test(editedOrg.organizationName.trim())) {
+      alert('Invalid input detected. Organization name must contain letters or numbers.'); return;
+    }
+    if (editedOrg.legalName && invalidCharsRegex.test(editedOrg.legalName.trim())) {
+      alert('Invalid input detected. Legal name must contain letters or numbers.'); return;
+    }
+    if (editedOrg.industry && invalidCharsRegex.test(editedOrg.industry.trim())) {
+      alert('Invalid input detected. Industry must contain letters or numbers.'); return;
+    }
+    if (editedOrg.taxId && invalidCharsRegex.test(editedOrg.taxId.trim())) {
+      alert('Invalid input detected. Tax ID must contain letters or numbers.'); return;
+    }
+    if (editedOrg.registrationNumber && invalidCharsRegex.test(editedOrg.registrationNumber.trim())) {
+      alert('Invalid input detected. Registration number must contain letters or numbers.'); return;
+    }
+    // BUG-96: Key Contact Name — letters only
+    if (editedOrg.keyContact?.name && invalidCharsRegex.test(editedOrg.keyContact.name.trim())) {
+      alert('Please enter a valid contact name using only letters.'); return;
+    }
+    // BUG-97: Key Contact Email — valid format
+    if (editedOrg.keyContact?.email && editedOrg.keyContact.email.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(editedOrg.keyContact.email.trim())) {
+        alert('Please enter a valid email address (e.g., name@example.com).'); return;
+      }
+    }
+    // BUG-98: Key Contact Phone — digits only
+    if (editedOrg.keyContact?.phone && editedOrg.keyContact.phone.trim()) {
+      const phoneRegex = /^\+?[0-9\s\-()]{7,15}$/;
+      if (!phoneRegex.test(editedOrg.keyContact.phone.trim())) {
+        alert('Please enter a valid phone number (digits, +, - only).'); return;
+      }
+    }
+    // BUG-99: Address fields — no pure special chars
+    const addrFields = [
+      [editedOrg.headquarters?.street, 'Street Address'],
+      [editedOrg.headquarters?.city,   'City'],
+      [editedOrg.headquarters?.state,  'State'],
+      [editedOrg.headquarters?.country,'Country'],
+    ];
+    for (const [val, label] of addrFields) {
+      if (val && val.trim() && invalidCharsRegex.test(val.trim())) {
+        alert(`Invalid input in ${label}. Must contain letters or numbers.`); return;
+      }
+    }
+    if (editedOrg.headquarters?.zipCode && editedOrg.headquarters.zipCode.trim()) {
+      const zipRegex = /^[a-zA-Z0-9\s\-]{3,10}$/;
+      if (!zipRegex.test(editedOrg.headquarters.zipCode.trim())) {
+        alert('Please enter a valid Zip Code (letters, numbers, max 10 chars).'); return;
+      }
+    }
+    // BUG-86: URL validation
+    const urlRegex = /^(https?:\/\/)[\w\-]+(\.[\w\-]+)+([\w\-._~:/?#[\]@!$&'()*+,;=%]+)?$/;
+    const urlFields = [
+      [editedOrg.website, 'Website URL'],
+      [editedOrg.socialMedia?.linkedin, 'LinkedIn URL'],
+      [editedOrg.socialMedia?.twitter, 'Twitter URL'],
+      [editedOrg.socialMedia?.facebook, 'Facebook URL'],
+      [editedOrg.socialMedia?.instagram, 'Instagram URL'],
+    ];
+    for (const [val, label] of urlFields) {
+      if (val && val.trim() && !urlRegex.test(val.trim())) {
+        alert(`Please enter a valid ${label} (must start with https://)`); return;
+      }
+    }
     try {
       setSavingOrg(true);
       const response = await profileService.updateOrganization(editedOrg);
@@ -390,7 +480,7 @@ const Profile = () => {
     logoInitials: { color: '#fff', fontSize: '24px', fontWeight: '700' },
     logoOverlay: { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' },
     headerInfo: {},
-    orgName: { fontSize: '22px', fontWeight: '700', color: '#1f2937', margin: 0 },
+    orgName: { fontSize: '22px', fontWeight: '700', color: '#1f2937', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '300px' },
     orgId: { fontSize: '13px', color: '#6b7280', marginTop: '2px', fontFamily: 'monospace', background: '#f3f4f6', padding: '2px 8px', borderRadius: '4px', display: 'inline-block' },
     tabs: { display: 'flex', gap: '4px', marginBottom: '16px', background: '#f3f4f6', padding: '4px', borderRadius: '8px' },
     tab: { padding: '8px 16px', border: 'none', background: 'transparent', borderRadius: '6px', cursor: 'pointer', fontSize: '13px', fontWeight: '500', color: '#6b7280', transition: 'all 0.2s' },
@@ -457,7 +547,7 @@ const Profile = () => {
               {tenant?.organizationId && <span style={styles.orgId}>{tenant.organizationId}</span>}
             </div>
           </div>
-          <div className="profile-btn-group">
+          <div className="profile-btn-group" style={{ flexShrink: 0 }}>
             <button onClick={() => setShowPasswordModal(true)} style={styles.btnSecondary}>Change Password</button>
             <button onClick={() => { setPinError(''); setShowChangePinModal(true); }} style={styles.btnPin}>
               {isPinSet ? 'Change PIN' : 'Set PIN'}
@@ -493,11 +583,11 @@ const Profile = () => {
             <div className="profile-grid-2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>First Name</label>
-                <input type="text" name="firstName" value={isEditing ? editedUser.firstName : user.firstName} onChange={handleInputChange} disabled={!isEditing} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
+                <input type="text" name="firstName" value={isEditing ? editedUser.firstName : user.firstName} onChange={handleInputChange} disabled={!isEditing} maxLength={50} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Last Name</label>
-                <input type="text" name="lastName" value={isEditing ? editedUser.lastName : user.lastName} onChange={handleInputChange} disabled={!isEditing} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
+                <input type="text" name="lastName" value={isEditing ? editedUser.lastName : user.lastName} onChange={handleInputChange} disabled={!isEditing} maxLength={50} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Email</label>
@@ -505,7 +595,7 @@ const Profile = () => {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Phone</label>
-                <input type="text" name="phone" value={isEditing ? editedUser.phone : (user.phone || '')} onChange={handleInputChange} disabled={!isEditing} placeholder="Enter phone" style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
+                <input type="text" name="phone" value={isEditing ? editedUser.phone : (user.phone || '')} onChange={handleInputChange} disabled={!isEditing} placeholder="Enter phone" maxLength={15} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
             </div>
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f3f4f6' }}>
@@ -548,11 +638,11 @@ const Profile = () => {
             <div className="profile-grid-2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>Organization Name *</label>
-                <input type="text" name="organizationName" value={isEditingOrg ? editedOrg.organizationName : tenant.organizationName} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="organizationName" value={isEditingOrg ? editedOrg.organizationName : tenant.organizationName} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Legal Name</label>
-                <input type="text" name="legalName" value={isEditingOrg ? editedOrg.legalName : (tenant.legalName || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Official legal entity name" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="legalName" value={isEditingOrg ? editedOrg.legalName : (tenant.legalName || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Official legal entity name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Industry</label>
@@ -755,19 +845,19 @@ const Profile = () => {
               <div className="profile-grid-2">
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Name</label>
-                  <input type="text" name="keyContact.name" value={isEditingOrg ? editedOrg.keyContact.name : (tenant.keyContact?.name || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Contact person name" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact.name" value={isEditingOrg ? (editedOrg.keyContact?.name || '') : (tenant.keyContact?.name || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Contact person name" maxLength={80} autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Designation</label>
-                  <input type="text" name="keyContact.designation" value={isEditingOrg ? editedOrg.keyContact.designation : (tenant.keyContact?.designation || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., CEO, Manager" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact.designation" value={isEditingOrg ? (editedOrg.keyContact?.designation || '') : (tenant.keyContact?.designation || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., CEO, Manager" autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Email</label>
-                  <input type="email" name="keyContact.email" value={isEditingOrg ? editedOrg.keyContact.email : (tenant.keyContact?.email || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact.email" value={isEditingOrg ? (editedOrg.keyContact?.email || '') : (tenant.keyContact?.email || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Phone</label>
-                  <input type="text" name="keyContact.phone" value={isEditingOrg ? editedOrg.keyContact.phone : (tenant.keyContact?.phone || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="keyContact.phone" value={isEditingOrg ? (editedOrg.keyContact?.phone || '') : (tenant.keyContact?.phone || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
               </div>
             </div>
@@ -777,23 +867,23 @@ const Profile = () => {
               <div className="profile-grid-2">
                 <div className="span-2-col" style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
                   <label style={styles.label}>Street Address</label>
-                  <input type="text" name="headquarters.street" value={isEditingOrg ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Street address" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.street" value={isEditingOrg ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Street address" maxLength={255} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>City</label>
-                  <input type="text" name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>State</label>
-                  <input type="text" name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>Country</label>
-                  <input type="text" name="headquarters.country" value={isEditingOrg ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.country" value={isEditingOrg ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
                 <div style={styles.formGroup}>
                   <label style={styles.label}>ZIP / Postal Code</label>
-                  <input type="text" name="headquarters.zipCode" value={isEditingOrg ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                  <input type="text" name="headquarters.zipCode" value={isEditingOrg ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={10} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                 </div>
               </div>
             </div>
@@ -818,23 +908,23 @@ const Profile = () => {
             <div className="profile-grid-2">
               <div className="span-2-col" style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
                 <label style={styles.label}>Website URL</label>
-                <input type="url" name="website" value={isEditingOrg ? editedOrg.website : (tenant.website || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://www.yourcompany.com" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="website" value={isEditingOrg ? editedOrg.website : (tenant.website || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://www.yourcompany.com" autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>LinkedIn</label>
-                <input type="url" name="socialMedia.linkedin" value={isEditingOrg ? editedOrg.socialMedia.linkedin : (tenant.socialMedia?.linkedin || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://linkedin.com/company/..." style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.linkedin" value={isEditingOrg ? (editedOrg.socialMedia?.linkedin || '') : (tenant.socialMedia?.linkedin || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://linkedin.com/company/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Twitter / X</label>
-                <input type="url" name="socialMedia.twitter" value={isEditingOrg ? editedOrg.socialMedia.twitter : (tenant.socialMedia?.twitter || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://twitter.com/..." style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.twitter" value={isEditingOrg ? (editedOrg.socialMedia?.twitter || '') : (tenant.socialMedia?.twitter || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://twitter.com/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Facebook</label>
-                <input type="url" name="socialMedia.facebook" value={isEditingOrg ? editedOrg.socialMedia.facebook : (tenant.socialMedia?.facebook || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://facebook.com/..." style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.facebook" value={isEditingOrg ? (editedOrg.socialMedia?.facebook || '') : (tenant.socialMedia?.facebook || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://facebook.com/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Instagram</label>
-                <input type="url" name="socialMedia.instagram" value={isEditingOrg ? editedOrg.socialMedia.instagram : (tenant.socialMedia?.instagram || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://instagram.com/..." style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+                <input type="text" name="socialMedia.instagram" value={isEditingOrg ? (editedOrg.socialMedia?.instagram || '') : (tenant.socialMedia?.instagram || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="https://instagram.com/..." autoComplete="off" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
             </div>
           </div>
@@ -929,9 +1019,32 @@ const Profile = () => {
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '360px' }}>
               <div className="modal-header"><h2>Change Password</h2><button onClick={() => setShowPasswordModal(false)} className="close-btn">&times;</button></div>
               <form onSubmit={handlePasswordChange}>
-                <div className="form-group"><label>Current Password *</label><input type="password" value={passwordData.currentPassword} onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })} required className="form-control" /></div>
-                <div className="form-group"><label>New Password * (min 6 chars)</label><input type="password" value={passwordData.newPassword} onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })} required minLength={6} className="form-control" /></div>
-                <div className="form-group"><label>Confirm New Password *</label><input type="password" value={passwordData.confirmPassword} onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })} required className="form-control" /></div>
+                {[
+                  { label: 'Current Password *', key: 'current', field: 'currentPassword' },
+                  { label: 'New Password * (min 6 chars)', key: 'new', field: 'newPassword', min: 6 },
+                  { label: 'Confirm New Password *', key: 'confirm', field: 'confirmPassword' },
+                ].map(({ label, key, field, min }) => (
+                  <div className="form-group" key={key}>
+                    <label>{label}</label>
+                    <div style={{ position: 'relative' }}>
+                      <input
+                        type={showPwFields[key] ? 'text' : 'password'}
+                        value={passwordData[field]}
+                        onChange={(e) => setPasswordData({ ...passwordData, [field]: e.target.value })}
+                        required minLength={min}
+                        className="form-control"
+                        style={{ paddingRight: '36px' }}
+                      />
+                      <button type="button" onClick={() => setShowPwFields(p => ({ ...p, [key]: !p[key] }))}
+                        style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '2px' }}>
+                        {showPwFields[key]
+                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        }
+                      </button>
+                    </div>
+                  </div>
+                ))}
                 <div className="modal-actions"><button type="button" onClick={() => setShowPasswordModal(false)} className="btn-secondary">Cancel</button><button type="submit" className="btn-primary" disabled={changingPassword}>{changingPassword ? 'Changing...' : 'Change Password'}</button></div>
               </form>
             </div>

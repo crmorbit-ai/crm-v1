@@ -88,16 +88,22 @@ const NotificationDropdown = ({ onClose, onSeeAll }) => {
 
   return (
     <div style={{
-      position: 'absolute',
-      top: 'calc(100% + 8px)',
-      right: 0,
+      position: 'fixed',
+      top: '60px',
+      right: '12px',
       width: '360px',
+      minWidth: '360px',
+      maxWidth: '360px',
       background: '#fff',
       border: '1px solid #e5e7eb',
       borderRadius: '12px',
       boxShadow: '0 8px 30px rgba(0,0,0,0.12)',
       zIndex: 9999,
-      overflow: 'hidden'
+      overflow: 'hidden',
+      wordBreak: 'normal',
+      whiteSpace: 'normal',
+      writingMode: 'horizontal-tb',
+      textOrientation: 'mixed',
     }}>
       {/* Header */}
       <div style={{ padding: '14px 16px', borderBottom: '1px solid #f3f4f6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

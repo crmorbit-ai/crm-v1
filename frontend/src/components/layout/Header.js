@@ -37,21 +37,21 @@ const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
   const tenantLogoUrl = getTenantLogoUrl();
 
   return (
-    <header className="h-16 bg-background border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-40">
-      <div className="flex items-center gap-4">
+    <header className="h-16 bg-background border-b flex items-center justify-between px-4 md:px-6 sticky top-0 z-40 overflow-hidden">
+      <div className="flex items-center gap-4 min-w-0 flex-1">
         {isMobile && (
-          <Button variant="ghost" size="icon" onClick={onMenuClick}>
+          <Button variant="ghost" size="icon" onClick={onMenuClick} className="flex-shrink-0">
             <Menu className="h-5 w-5" />
           </Button>
         )}
-        <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">
+        <h1 className="text-lg md:text-xl font-semibold text-foreground truncate max-w-xs md:max-w-sm">
           {title}
         </h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-shrink-0">
         {actionButton && !isMobile && (
-          <div>{actionButton}</div>
+          <div className="flex-shrink-0">{actionButton}</div>
         )}
 
         <NotificationBell />
@@ -68,11 +68,11 @@ const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
                 </AvatarFallback>
               </Avatar>
               {!isMobile && (
-                <div className="text-left hidden sm:block">
-                  <p className="text-sm font-medium leading-none">
+                <div className="text-left hidden sm:block" style={{ maxWidth: '140px' }}>
+                  <p className="text-sm font-medium leading-none truncate">
                     {user?.firstName} {user?.lastName}
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground truncate">
                     {user?.userType?.replace(/_/g, ' ')}
                   </p>
                 </div>

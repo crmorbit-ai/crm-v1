@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { tenantCheckAccess } from '../../services/monetizationService';
 import { cn } from '../../lib/utils';
 import { Button } from '../ui/button';
-import { ScrollArea } from '../ui/scroll-area';
 import {
   ChevronDown,
   ChevronRight,
@@ -16,6 +15,29 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
   const { hasPermission, isSaasOwner, user } = useAuth();
   const [hasMonetization, setHasMonetization] = useState(false);
   const isTenantAdmin = ['TENANT_ADMIN', 'TENANT_MANAGER'].includes(user?.userType);
+  const scrollRef = useRef(null);
+
+  // BUG-87: Save scroll position before route changes
+  const getViewport = () => {
+    if (!scrollRef.current) return null;
+    return scrollRef.current.querySelector('[data-radix-scroll-area-viewport]')
+      || scrollRef.current.querySelector('[style*="overflow"]')
+      || scrollRef.current;
+  };
+
+  // Save scroll on every scroll event
+  const handleScrollSave = () => {
+    const el = getViewport();
+    if (el) sessionStorage.setItem('sidebar-scroll', String(el.scrollTop));
+  };
+
+  // Restore scroll BEFORE browser paints — no flicker
+  useLayoutEffect(() => {
+    const saved = sessionStorage.getItem('sidebar-scroll');
+    if (!saved) return;
+    const el = getViewport();
+    if (el) el.scrollTop = parseInt(saved, 10);
+  }, [location.pathname]);
 
   useEffect(() => {
     if (!isSaasOwner()) {
@@ -159,7 +181,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
         </div>
 
         {/* Navigation */}
-        <ScrollArea className="flex-1 px-3 py-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-3 py-4" onScroll={handleScrollSave} style={{overflowY:'auto'}}>
           <nav className="space-y-1">
             {/* SAAS Owner Navigation */}
             {isSaasOwner() ? (
@@ -276,7 +298,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
               </>
             )}
           </nav>
-        </ScrollArea>
+        </div>
 
         {/* Footer */}
         <div className="p-4 border-t border-white/20 text-center">

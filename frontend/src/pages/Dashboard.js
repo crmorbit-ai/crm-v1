@@ -6,6 +6,8 @@ import { leadService } from '../services/leadService';
 import { accountService } from '../services/accountService';
 import { contactService } from '../services/contactService';
 import { opportunityService } from '../services/opportunityService';
+import taskService from '../services/taskService';
+import { activityLogService } from '../services/activityLogService';
 import { useAuth } from '../context/AuthContext';
 
 const STATS_CACHE_KEY  = 'dashboard_stats_cache';
@@ -116,6 +118,8 @@ const Dashboard = () => {
 
   const cached = getCached();
   const [stats,     setStats]     = useState(cached || {leads:null,accounts:null,contacts:null,opportunities:null});
+  const [totalTasks,    setTotalTasks]    = useState(0);
+  const [totalActivity, setTotalActivity] = useState(0);
   const [loading,   setLoading]   = useState(!cached);
   const [spinning,  setSpinning]  = useState(false);
   const [animated,  setAnimated]  = useState(false);
@@ -128,13 +132,17 @@ const Dashboard = () => {
   const load = async (isRefresh=false) => {
     if (isRefresh) setSpinning(true); else if (!getCached()) setLoading(true);
     try {
-      const [l,a,c,o] = await Promise.all([
+      const [l,a,c,o,t,act] = await Promise.all([
         leadService.getLeadStats().catch(()=>({data:null})),
         accountService.getAccountStats().catch(()=>({data:null})),
         contactService.getContactStats().catch(()=>({data:null})),
         opportunityService.getOpportunityStats().catch(()=>({data:null})),
+        taskService.getTasks({ limit:1 }).catch(()=>({data:null})),
+        activityLogService.getActivityLogs({ limit:1 }).catch(()=>({data:null})),
       ]);
       const ns = { leads:l.data, accounts:a.data, contacts:c.data, opportunities:o.data };
+      setTotalTasks(t?.data?.total || t?.data?.pagination?.total || t?.data?.tasks?.length || 0);
+      setTotalActivity(act?.data?.total || act?.data?.pagination?.total || act?.data?.logs?.length || 0);
       setStats(ns);
       try { localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(ns)); localStorage.setItem(STATS_CACHE_EXP, String(Date.now()+CACHE_DURATION)); } catch(_){}
     } catch(e){ console.error(e); }
@@ -290,7 +298,7 @@ const Dashboard = () => {
           { label:'Total Leads',    val:totalLeads,    new:newLeads,    to:'/leads',         c1:'#1e1b4b', c2:'#4f46e5', icon:'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75' },
           { label:'Accounts',       val:totalAccounts, new:newAccounts, to:'/accounts',      c1:'#4a044e', c2:'#a21caf', icon:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z' },
           { label:'Contacts',       val:totalContacts, new:newContacts, to:'/contacts',      c1:'#0c2a4a', c2:'#0369a1', icon:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
-          { label:'Opportunities',  val:totalOpps,     new:closingMonth,to:'/opportunities', c1:'#052e16', c2:'#15803d', icon:'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6', newLabel:'closing' },
+          { label:'Opportunities',  val:totalOpps,     new:closingMonth,to:'/opportunities', c1:'#052e16', c2:'#15803d', icon:'M22 3H2l8 9.46V19l4 2v-8.54L22 3z', newLabel:'closing' },
         ].map((k,i)=>(
           <Link key={k.label} to={k.to} style={{textDecoration:'none',animationDelay:`${i*0.07}s`}} className="db-fade">
             <div className="kpi-card" style={{
@@ -452,9 +460,9 @@ const Dashboard = () => {
               {label:'Leads',        to:'/leads',         color:'#6366F1', bg:'linear-gradient(135deg,#EEF2FF,#F5F3FF)', icon:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0 2-2h2a2 2 0 0 0 2 2', count:totalLeads },
               {label:'Accounts',     to:'/accounts',      color:'#8B5CF6', bg:'linear-gradient(135deg,#F5F3FF,#EDE9FE)', icon:'M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z', count:totalAccounts },
               {label:'Contacts',     to:'/contacts',      color:'#0EA5E9', bg:'linear-gradient(135deg,#F0F9FF,#E0F2FE)', icon:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z', count:totalContacts },
-              {label:'Deals',        to:'/opportunities', color:'#10B981', bg:'linear-gradient(135deg,#ECFDF5,#D1FAE5)', icon:'M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6', count:totalOpps },
-              {label:'Tasks',        to:'/tasks',         color:'#F59E0B', bg:'linear-gradient(135deg,#FFFBEB,#FEF3C7)', icon:'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11', count:null },
-              {label:'Activity',     to:'/activity-logs', color:'#EF4444', bg:'linear-gradient(135deg,#FFF1F2,#FFE4E6)', icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', count:null },
+              {label:'Deals',        to:'/opportunities', color:'#10B981', bg:'linear-gradient(135deg,#ECFDF5,#D1FAE5)', icon:'M22 3H2l8 9.46V19l4 2v-8.54L22 3z', count:totalOpps },
+              {label:'Tasks',        to:'/tasks',         color:'#F59E0B', bg:'linear-gradient(135deg,#FFFBEB,#FEF3C7)', icon:'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11', count:totalTasks },
+              {label:'Activity',     to:'/activity-logs', color:'#EF4444', bg:'linear-gradient(135deg,#FFF1F2,#FFE4E6)', icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z', count:totalActivity },
             ].map(a=>(
               <Link key={a.label} to={a.to} style={{textDecoration:'none'}} className="qa-tile">
                 <div style={{borderRadius:'12px',padding:'12px 10px',background:a.bg,border:`1px solid ${a.color}20`,cursor:'pointer',height:'100%'}}>
