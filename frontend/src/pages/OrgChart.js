@@ -290,20 +290,32 @@ const OrgChart = () => {
         .oc-node:hover rect:first-of-type { filter: drop-shadow(0 6px 20px rgba(99,102,241,0.18)); }
         .oc-left-item:hover { background: rgba(255,255,255,0.08) !important; }
         .oc-left-item:hover .oc-left-name { color: #fff !important; }
+        /* ── Responsive ── */
+        @media (max-width: 1024px) {
+          .oc-header-stats { gap: 4px !important; }
+          .oc-header-stats > div { padding: 5px 10px !important; min-width: 58px !important; }
+        }
         @media (max-width: 768px) {
           .oc-header-stats { display: none !important; }
-          .oc-header-search { width: 130px !important; }
+          .oc-header-divider { display: none !important; }
+          .oc-header-search { width: 120px !important; }
+          .oc-topbar { padding: 0 10px !important; height: auto !important; min-height: 56px !important; flex-wrap: wrap !important; gap: 6px !important; padding-top: 8px !important; padding-bottom: 8px !important; }
+          .oc-topbar-title { font-size: 16px !important; }
+          .oc-topbar-right { gap: 4px !important; flex-wrap: nowrap !important; overflow-x: auto !important; }
+          .oc-org-switcher-label { display: none !important; }
           .oc-main-layout { flex-direction: column !important; }
-          .oc-left-panel { width: 100% !important; min-width: unset !important; max-height: 180px !important; overflow-y: auto !important; border-radius: 0 !important; }
-          .oc-topbar { padding: 0 12px !important; height: 56px !important; }
-          .oc-topbar-title { font-size: 15px !important; }
-          .oc-topbar-right button > span:not(:first-child) { display: none !important; }
-          .oc-topbar-right { gap: 4px !important; flex-wrap: nowrap !important; }
+          .oc-left-panel { width: 100% !important; min-width: unset !important; height: auto !important; max-height: 160px !important; overflow-y: auto !important; border-radius: 0 !important; flex-direction: row !important; flex-wrap: wrap !important; }
+          .oc-left-panel-inner { flex-direction: row !important; flex-wrap: wrap !important; padding: 6px 8px !important; gap: 4px !important; }
+          .oc-right-panel { display: none !important; }
+          .oc-canvas { border-radius: 0 0 20px 20px !important; }
         }
         @media (max-width: 480px) {
-          .oc-header-stats { display: none !important; }
-          .oc-left-panel { max-height: 140px !important; }
-          .oc-topbar { height: 52px !important; }
+          .oc-topbar { padding: 6px 8px !important; }
+          .oc-topbar-title { font-size: 14px !important; }
+          .oc-topbar-icon { display: none !important; }
+          .oc-left-panel { max-height: 120px !important; }
+          .oc-header-search { width: 100px !important; }
+          .oc-zoom-label { display: none !important; }
         }
       `}</style>
 
@@ -328,10 +340,10 @@ const OrgChart = () => {
           <div className="oc-topbar" style={{position:'relative',zIndex:1,display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,height:72}}>
 
             {/* LEFT — Title + stats */}
-            <div style={{display:'flex',alignItems:'center',gap:20}}>
+            <div style={{display:'flex',alignItems:'center',gap:20,flexShrink:0,minWidth:0}}>
               {/* Icon + title */}
               <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <div style={{width:38,height:38,borderRadius:12,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,backdropFilter:'blur(4px)'}}>
+                <div className="oc-topbar-icon" style={{width:38,height:38,borderRadius:12,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.15)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,backdropFilter:'blur(4px)',flexShrink:0}}>
                   🏢
                 </div>
                 <div>
@@ -347,19 +359,19 @@ const OrgChart = () => {
               </div>
 
               {/* Divider */}
-              <div style={{width:1,height:32,background:'rgba(255,255,255,0.1)'}} />
+              <div className="oc-header-divider" style={{width:1,height:32,background:'rgba(255,255,255,0.1)'}} />
 
               {/* Stats */}
-              <div className="oc-header-stats" style={{display:'flex',gap:6}}>
+              <div className="oc-header-stats" style={{display:'flex',gap:6,flexShrink:0}}>
                 {[
-                  {n:users.length,         l:'Members',   c:'#a78bfa', icon:'👥'},
-                  {n:rootUsers.length,     l:'Top Level', c:'#67e8f9', icon:'⬆'},
-                  {n:users.filter(u=>u.designation).length, l:'Designated', c:'#86efac', icon:'🏷'},
+                  {n:users.length,         l:'Members',   c:'#a78bfa'},
+                  {n:rootUsers.length,     l:'Top Level', c:'#67e8f9'},
+                  {n:users.filter(u=>u.designation).length, l:'Designated', c:'#86efac'},
                 ].map(s=>(
-                  <div key={s.l} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 12px',borderRadius:10,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',backdropFilter:'blur(4px)'}}>
-                    <div style={{textAlign:'right'}}>
-                      <div style={{fontSize:16,fontWeight:900,color:s.c,lineHeight:1}}>{s.n}</div>
-                      <div style={{fontSize:9,color:'rgba(255,255,255,0.35)',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px',marginTop:1}}>{s.l}</div>
+                  <div key={s.l} style={{display:'flex',alignItems:'center',gap:7,padding:'6px 14px',borderRadius:10,background:'rgba(255,255,255,0.07)',border:'1px solid rgba(255,255,255,0.1)',backdropFilter:'blur(4px)',flexShrink:0,minWidth:72}}>
+                    <div style={{textAlign:'center',whiteSpace:'nowrap'}}>
+                      <div style={{fontSize:18,fontWeight:900,color:s.c,lineHeight:1,whiteSpace:'nowrap'}}>{s.n}</div>
+                      <div style={{fontSize:9,color:'rgba(255,255,255,0.4)',fontWeight:700,textTransform:'uppercase',letterSpacing:'0.8px',marginTop:3,whiteSpace:'nowrap'}}>{s.l}</div>
                     </div>
                   </div>
                 ))}
@@ -380,7 +392,7 @@ const OrgChart = () => {
                     backdropFilter:'blur(4px)',transition:'all 0.2s',whiteSpace:'nowrap',
                   }}>
                     <span style={{fontSize:13}}>🏢</span>
-                    <span>{selectedOrg?selectedOrg.organizationName:'My Organization'}</span>
+                    <span className="oc-org-switcher-label">{selectedOrg?selectedOrg.organizationName:'My Organization'}</span>
                     {isViewingOtherOrg&&<span style={{fontSize:8,background:'#7c3aed',padding:'1px 6px',borderRadius:6,fontWeight:800,letterSpacing:'0.5px'}}>EXTERNAL</span>}
                     <span style={{fontSize:9,opacity:0.5}}>▼</span>
                   </button>
@@ -444,7 +456,7 @@ const OrgChart = () => {
               {/* Zoom controls */}
               <div style={{display:'flex',alignItems:'center',gap:1,padding:'4px',borderRadius:10,border:'1px solid rgba(255,255,255,0.12)',background:'rgba(255,255,255,0.07)',backdropFilter:'blur(4px)'}}>
                 <button onClick={()=>setZoom(z=>Math.max(0.3,z-0.1))} style={{width:28,height:28,border:'none',borderRadius:7,background:'transparent',cursor:'pointer',fontSize:15,color:'rgba(255,255,255,0.7)',display:'flex',alignItems:'center',justifyContent:'center'}}>−</button>
-                <span style={{fontSize:11,fontWeight:800,color:'#fff',width:36,textAlign:'center'}}>{Math.round(zoom*100)}%</span>
+                <span className="oc-zoom-label" style={{fontSize:11,fontWeight:800,color:'#fff',width:36,textAlign:'center'}}>{Math.round(zoom*100)}%</span>
                 <button onClick={()=>setZoom(z=>Math.min(2,z+0.1))} style={{width:28,height:28,border:'none',borderRadius:7,background:'transparent',cursor:'pointer',fontSize:15,color:'rgba(255,255,255,0.7)',display:'flex',alignItems:'center',justifyContent:'center'}}>+</button>
               </div>
 
@@ -514,11 +526,11 @@ const OrgChart = () => {
           {/* ── CANVAS ─────────────────────────────────────── */}
           <div style={{
             flex:1, overflow:'auto', position:'relative',
-            background:'#fefce8',
-            backgroundImage:'radial-gradient(circle,#d1d5db 1px,transparent 1px)',
+            background:'#f1f5f9',
+            backgroundImage:'radial-gradient(circle,#cbd5e1 1px,transparent 1px)',
             backgroundSize:'24px 24px',
           }}
-          className="oc-scroll"
+          className="oc-scroll oc-canvas"
           >
             {/* Read only badge */}
             {isViewingOtherOrg && (
@@ -528,27 +540,29 @@ const OrgChart = () => {
             )}
 
             {rootUsers.length > 0 ? (
-              <div style={{ transform:`scale(${zoom})`, transformOrigin:'top left', padding:'30px', display:'inline-block' }}>
-                {/* Only show roots that have at least 1 direct report (connected trees) */}
-                {rootUsers.filter(root => getDR(root, users).length > 0).map(root => (
-                  <div key={root._id} style={{ display:'inline-block', marginRight:60, verticalAlign:'top' }}>
-                    <CanvasTree
-                      users={users.filter(u => {
-                        const inSubtree = (id) => {
-                          if (id === root._id) return true;
-                          const u2 = users.find(x => x._id === id);
-                          if (!u2) return false;
-                          return inSubtree(u2.reportsTo?._id || u2.reportsTo);
-                        };
-                        return inSubtree(u._id);
-                      })}
-                      focusUser={focusUser}
-                      onSelect={setFocus}
-                      getDR={getDR}
-                      rootId={root._id}
-                    />
-                  </div>
-                ))}
+              <div style={{ transform:`scale(${zoom})`, transformOrigin:'top left', padding:'30px', display:'flex', flexDirection:'column', gap:40, minWidth:'max-content' }}>
+                {/* Connected trees — side by side */}
+                <div style={{ display:'flex', gap:60, alignItems:'flex-start', flexWrap:'wrap' }}>
+                  {rootUsers.filter(root => getDR(root, users).length > 0).map(root => (
+                    <div key={root._id}>
+                      <CanvasTree
+                        users={users.filter(u => {
+                          const inSubtree = (id) => {
+                            if (id === root._id) return true;
+                            const u2 = users.find(x => x._id === id);
+                            if (!u2) return false;
+                            return inSubtree(u2.reportsTo?._id || u2.reportsTo);
+                          };
+                          return inSubtree(u._id);
+                        })}
+                        focusUser={focusUser}
+                        onSelect={setFocus}
+                        getDR={getDR}
+                        rootId={root._id}
+                      />
+                    </div>
+                  ))}
+                </div>
 
                 {/* Unassigned users — no parent, no children */}
                 {(() => {
@@ -560,24 +574,26 @@ const OrgChart = () => {
                   });
                   if (!unassigned.length) return null;
                   return (
-                    <div style={{ display:'inline-block', verticalAlign:'top', marginLeft:20 }}>
-                      <div style={{ fontSize:10, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:12 }}>
-                        No Reporting Structure · {unassigned.length}
+                    <div>
+                      <div style={{ fontSize:10, fontWeight:800, color:'#94a3b8', textTransform:'uppercase', letterSpacing:'1px', marginBottom:14, display:'flex', alignItems:'center', gap:8 }}>
+                        <span>No Reporting Structure</span>
+                        <span style={{ background:'#e2e8f0', color:'#64748b', fontSize:9, fontWeight:800, padding:'2px 8px', borderRadius:99 }}>{unassigned.length}</span>
                       </div>
-                      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                      <div style={{ display:'flex', flexWrap:'wrap', gap:10 }}>
                         {unassigned.map(u => {
                           const rc = ROLE_COLOR[u.userType] || ROLE_COLOR.TENANT_USER;
                           return (
-                            <div key={u._id} onClick={() => setFocus(u)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'#fff', borderRadius:12, border:`1.5px dashed ${rc.bar}44`, cursor:'pointer', opacity:0.7, transition:'all 0.15s', minWidth:200 }}
-                              onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.borderStyle='solid';}}
-                              onMouseLeave={e=>{e.currentTarget.style.opacity='0.7';e.currentTarget.style.borderStyle='dashed';}}
+                            <div key={u._id} onClick={() => setFocus(u)}
+                              style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', background:'#fff', borderRadius:12, border:`1.5px dashed ${rc.bar}44`, cursor:'pointer', opacity:0.8, transition:'all 0.15s', minWidth:200, maxWidth:240, boxShadow:'0 1px 4px rgba(0,0,0,0.06)' }}
+                              onMouseEnter={e=>{e.currentTarget.style.opacity='1';e.currentTarget.style.borderStyle='solid';e.currentTarget.style.boxShadow='0 4px 12px rgba(0,0,0,0.1)';}}
+                              onMouseLeave={e=>{e.currentTarget.style.opacity='0.8';e.currentTarget.style.borderStyle='dashed';e.currentTarget.style.boxShadow='0 1px 4px rgba(0,0,0,0.06)';}}
                             >
                               <div style={{ width:34,height:34,borderRadius:'50%',background:avGrad(u.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:12,flexShrink:0 }}>
                                 {u.firstName?.[0]}{u.lastName?.[0]}
                               </div>
-                              <div>
-                                <div style={{ fontSize:12, fontWeight:700, color:'#475569' }}>{u.firstName} {u.lastName}</div>
-                                {u.designation && <div style={{ fontSize:10, color:'#94a3b8' }}>{u.designation}</div>}
+                              <div style={{ minWidth:0 }}>
+                                <div style={{ fontSize:12, fontWeight:700, color:'#475569', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.firstName} {u.lastName}</div>
+                                {u.designation && <div style={{ fontSize:10, color:'#94a3b8', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{u.designation}</div>}
                               </div>
                             </div>
                           );
@@ -597,8 +613,8 @@ const OrgChart = () => {
           </div>
 
           {/* ── RIGHT PROFILE PANEL ────────────────────────── */}
-          {focusUser && window.innerWidth > 640 && (
-            <div className="oc-slide" style={{
+          {focusUser && (
+            <div className="oc-slide oc-right-panel" style={{
               width:260, flexShrink:0,
               background:'#fff',
               borderLeft:'1px solid #f1f5f9',
