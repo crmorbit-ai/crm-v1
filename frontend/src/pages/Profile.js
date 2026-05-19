@@ -68,6 +68,7 @@ const Profile = () => {
   const [editedUser, setEditedUser] = useState({
     firstName: '', lastName: '', phone: '', profilePicture: ''
   });
+  const [personalError, setPersonalError] = useState('');
 
   // Edit mode - Organization Info
   const [isEditingOrg, setIsEditingOrg] = useState(false);
@@ -110,7 +111,9 @@ const Profile = () => {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [changingPassword, setChangingPassword] = useState(false);
-  const [showPwFields, setShowPwFields] = useState({ current: false, new: false, confirm: false });
+  const [showCurrentPw, setShowCurrentPw] = useState(false);
+  const [showNewPw,     setShowNewPw]     = useState(false);
+  const [showConfirmPw, setShowConfirmPw] = useState(false);
 
   // PIN management
   const [isPinSet, setIsPinSet] = useState(false);
@@ -235,6 +238,7 @@ const Profile = () => {
     if (isEditing) {
       setEditedUser({ firstName: user.firstName || '', lastName: user.lastName || '', phone: user.phone || '', profilePicture: user.profilePicture || '' });
     }
+    setPersonalError('');
     setIsEditing(!isEditing);
   };
 
@@ -244,43 +248,36 @@ const Profile = () => {
   };
 
   const handleSave = async () => {
-    // BUG-100,101,110,111: Name — only letters, spaces, single hyphens allowed
-    const strictNameRegex = /^[a-zA-Z\s\-]{2,50}$/;
+    setPersonalError('');
+    const err = (msg) => { setPersonalError(msg); return true; };
+    const strictNameRegex = /^[a-zA-Z\s\-]{2,30}$/;
     const hasConsecHyphens = (v) => /--/.test(v) || /^\-/.test(v) || /\-$/.test(v);
-    if (!editedUser.firstName?.trim() || !strictNameRegex.test(editedUser.firstName.trim())) {
-      alert('First name can only contain alphabetical characters (no numbers or symbols).'); return;
-    }
-    if (hasConsecHyphens(editedUser.firstName.trim())) {
-      alert('First name cannot have consecutive or trailing hyphens.'); return;
-    }
-    if (!editedUser.lastName?.trim() || !strictNameRegex.test(editedUser.lastName.trim())) {
-      alert('Last name can only contain alphabetical characters (no numbers or symbols).'); return;
-    }
-    if (hasConsecHyphens(editedUser.lastName.trim())) {
-      alert('Last name cannot have consecutive or trailing hyphens.'); return;
-    }
-    // BUG-82,102,109: Phone — digits/+/- only, no all-zeros, no trailing hyphens
+    const fn = editedUser.firstName?.trim();
+    const ln = editedUser.lastName?.trim();
+    if (!fn && err('First name is required.')) return;
+    if (fn.length < 2 && err('First name must be at least 2 characters.')) return;
+    if (fn.length > 30 && err('First name must not exceed 30 characters.')) return;
+    if (!strictNameRegex.test(fn) && err('First name: letters only, 2–30 characters (no numbers or symbols).')) return;
+    if (hasConsecHyphens(fn) && err('First name cannot have consecutive or trailing hyphens.')) return;
+    if (!ln && err('Last name is required.')) return;
+    if (ln.length < 2 && err('Last name must be at least 2 characters.')) return;
+    if (ln.length > 30 && err('Last name must not exceed 30 characters.')) return;
+    if (!strictNameRegex.test(ln) && err('Last name: letters only, 2–30 characters (no numbers or symbols).')) return;
+    if (hasConsecHyphens(ln) && err('Last name cannot have consecutive or trailing hyphens.')) return;
     if (editedUser.phone) {
       const phoneClean = editedUser.phone.replace(/[\s\-()]/g, '');
       const phoneRegex = /^\+?[0-9]{7,15}$/;
-      if (!phoneRegex.test(phoneClean)) {
-        alert('Please enter a valid phone number (7–15 digits, only numbers and + allowed).'); return;
-      }
-      if (/--/.test(editedUser.phone) || /\-$/.test(editedUser.phone.trim())) {
-        alert('Phone number cannot have consecutive or trailing hyphens.'); return;
-      }
-      // BUG-102: reject all-zero numbers like +000000000000
-      if (/^[+\s]*0+$/.test(phoneClean)) {
-        alert('Please enter a valid working phone number.'); return;
-      }
+      if (!phoneRegex.test(phoneClean) && err('Please enter a valid phone number (7–15 digits, only numbers and + allowed).')) return;
+      if ((/--/.test(editedUser.phone) || /\-$/.test(editedUser.phone.trim())) && err('Phone number cannot have consecutive or trailing hyphens.')) return;
+      if (/^[+\s]*0+$/.test(phoneClean) && err('Please enter a valid working phone number.')) return;
     }
     try {
       setSaving(true);
       const response = await profileService.updateProfile(editedUser);
-      setUser(response.data); setIsEditing(false);
+      setUser(response.data); setIsEditing(false); setPersonalError('');
       if (updateUser) updateUser(response.data);
       showToast('Profile updated successfully!');
-    } catch (error) { console.error('Update profile error:', error); alert(error.response?.data?.message || 'Error updating profile'); }
+    } catch (error) { console.error('Update profile error:', error); setPersonalError(error.response?.data?.message || 'Error updating profile'); }
     finally { setSaving(false); }
   };
 
@@ -294,6 +291,7 @@ const Profile = () => {
       showToast('Password updated successfully!');
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setShowCurrentPw(false); setShowNewPw(false); setShowConfirmPw(false);
     } catch (error) { console.error('Password change error:', error); alert(error.response?.data?.message || 'Error changing password'); }
     finally { setChangingPassword(false); }
   };
@@ -698,14 +696,19 @@ const Profile = () => {
                 )}
               </div>
             </div>
+            {personalError && (
+              <div style={{ margin: '0 0 10px', padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 12, color: '#dc2626', fontWeight: 500 }}>
+                ❌ {personalError}
+              </div>
+            )}
             <div className="profile-grid-2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>First Name</label>
-                <input type="text" name="firstName" value={isEditing ? editedUser.firstName : user.firstName} onChange={handleInputChange} disabled={!isEditing} maxLength={50} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
+                <input type="text" name="firstName" value={isEditing ? editedUser.firstName : user.firstName} onChange={handleInputChange} disabled={!isEditing} minLength={2} maxLength={30} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Last Name</label>
-                <input type="text" name="lastName" value={isEditing ? editedUser.lastName : user.lastName} onChange={handleInputChange} disabled={!isEditing} maxLength={50} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
+                <input type="text" name="lastName" value={isEditing ? editedUser.lastName : user.lastName} onChange={handleInputChange} disabled={!isEditing} minLength={2} maxLength={30} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Email</label>
@@ -1133,37 +1136,62 @@ const Profile = () => {
 
         {/* Password Change Modal */}
         {showPasswordModal && (
-          <div className="modal-overlay" onClick={() => setShowPasswordModal(false)}>
+          <div className="modal-overlay" onClick={() => { setShowPasswordModal(false); setPasswordData({ currentPassword:'', newPassword:'', confirmPassword:'' }); setShowCurrentPw(false); setShowNewPw(false); setShowConfirmPw(false); }}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '360px' }}>
               <div className="modal-header"><h2>Change Password</h2><button type="button" onClick={() => setShowPasswordModal(false)} className="close-btn">&times;</button></div>
               <form onSubmit={handlePasswordChange}>
-                {[
-                  { label: 'Current Password *', key: 'current', field: 'currentPassword' },
-                  { label: 'New Password * (6–16 chars)', key: 'new', field: 'newPassword', min: 6 },
-                  { label: 'Confirm New Password *', key: 'confirm', field: 'confirmPassword' },
-                ].map(({ label, key, field, min }) => (
-                  <div className="form-group" key={key}>
-                    <label>{label}</label>
-                    <div style={{ position: 'relative' }}>
-                      <input
-                        type={showPwFields[key] ? 'text' : 'password'}
-                        value={passwordData[field]}
-                        onChange={(e) => setPasswordData({ ...passwordData, [field]: e.target.value })}
-                        required minLength={min} maxLength={16}
-                        className="form-control"
-                        style={{ paddingRight: '36px' }}
-                      />
-                      <button type="button" onClick={() => setShowPwFields(p => ({ ...p, [key]: !p[key] }))}
-                        style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', padding: '2px' }}>
-                        {showPwFields[key]
-                          ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
-                          : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        }
-                      </button>
-                    </div>
+                {/* Current Password */}
+                <div className="form-group">
+                  <label>Current Password *</label>
+                  <div style={{ position: 'relative' }}>
+                    <input type={showCurrentPw ? 'text' : 'password'} value={passwordData.currentPassword}
+                      onChange={(e) => setPasswordData(p => ({ ...p, currentPassword: e.target.value }))}
+                      required maxLength={16} className="form-control" style={{ paddingRight: '36px' }} />
+                    <button type="button" onClick={() => setShowCurrentPw(v => !v)}
+                      style={{ position:'absolute', right:'8px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#6b7280', padding:'2px', display:'flex', alignItems:'center' }}>
+                      {showCurrentPw
+                        ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      }
+                    </button>
                   </div>
-                ))}
-                <div className="modal-actions"><button type="button" onClick={() => setShowPasswordModal(false)} className="btn-secondary">Cancel</button><button type="submit" className="btn-primary" disabled={changingPassword}>{changingPassword ? 'Changing...' : 'Change Password'}</button></div>
+                </div>
+                {/* New Password */}
+                <div className="form-group">
+                  <label>New Password * (6–16 chars)</label>
+                  <div style={{ position: 'relative' }}>
+                    <input type={showNewPw ? 'text' : 'password'} value={passwordData.newPassword}
+                      onChange={(e) => setPasswordData(p => ({ ...p, newPassword: e.target.value }))}
+                      required minLength={6} maxLength={16} className="form-control" style={{ paddingRight: '36px' }} />
+                    <button type="button" onClick={() => setShowNewPw(v => !v)}
+                      style={{ position:'absolute', right:'8px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#6b7280', padding:'2px', display:'flex', alignItems:'center' }}>
+                      {showNewPw
+                        ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      }
+                    </button>
+                  </div>
+                </div>
+                {/* Confirm Password */}
+                <div className="form-group">
+                  <label>Confirm New Password *</label>
+                  <div style={{ position: 'relative' }}>
+                    <input type={showConfirmPw ? 'text' : 'password'} value={passwordData.confirmPassword}
+                      onChange={(e) => setPasswordData(p => ({ ...p, confirmPassword: e.target.value }))}
+                      required maxLength={16} className="form-control" style={{ paddingRight: '36px' }} />
+                    <button type="button" onClick={() => setShowConfirmPw(v => !v)}
+                      style={{ position:'absolute', right:'8px', top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'#6b7280', padding:'2px', display:'flex', alignItems:'center' }}>
+                      {showConfirmPw
+                        ? <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        : <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+                      }
+                    </button>
+                  </div>
+                </div>
+                <div className="modal-actions">
+                  <button type="button" onClick={() => { setShowPasswordModal(false); setPasswordData({ currentPassword:'', newPassword:'', confirmPassword:'' }); setShowCurrentPw(false); setShowNewPw(false); setShowConfirmPw(false); }} className="btn-secondary">Cancel</button>
+                  <button type="submit" className="btn-primary" disabled={changingPassword}>{changingPassword ? 'Changing...' : 'Change Password'}</button>
+                </div>
               </form>
             </div>
           </div>

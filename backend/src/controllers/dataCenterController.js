@@ -70,6 +70,7 @@ const getCandidates = async (req, res) => {
     // Search by name, email, skills
     if (search) {
       query.$or = [
+        { customerName: { $regex: search, $options: 'i' } },
         { firstName: { $regex: search, $options: 'i' } },
         { lastName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },

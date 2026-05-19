@@ -179,11 +179,11 @@ const DCCitySelect = ({ value, countryIso, stateIso, onChange }) => {
 const DEFAULT_CUSTOMER_FIELDS = [
   { fieldName: 'customerName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
   { fieldName: 'customerType', label: 'Customer Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Other', value: 'Other' }] },
-  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
-  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
-  { fieldName: 'currentDesignation', label: 'Current Designation', fieldType: 'dropdown', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'Software Engineer', value: 'Software Engineer' }, { label: 'Senior Software Engineer', value: 'Senior Software Engineer' }, { label: 'Lead Engineer', value: 'Lead Engineer' }, { label: 'Principal Engineer', value: 'Principal Engineer' }, { label: 'Engineering Manager', value: 'Engineering Manager' }, { label: 'Frontend Developer', value: 'Frontend Developer' }, { label: 'Backend Developer', value: 'Backend Developer' }, { label: 'Full Stack Developer', value: 'Full Stack Developer' }, { label: 'DevOps Engineer', value: 'DevOps Engineer' }, { label: 'Data Scientist', value: 'Data Scientist' }, { label: 'Data Analyst', value: 'Data Analyst' }, { label: 'Business Analyst', value: 'Business Analyst' }, { label: 'Product Manager', value: 'Product Manager' }, { label: 'Project Manager', value: 'Project Manager' }, { label: 'Scrum Master', value: 'Scrum Master' }, { label: 'QA Engineer', value: 'QA Engineer' }, { label: 'UI/UX Designer', value: 'UI/UX Designer' }, { label: 'Sales Executive', value: 'Sales Executive' }, { label: 'Sales Manager', value: 'Sales Manager' }, { label: 'Marketing Executive', value: 'Marketing Executive' }, { label: 'HR Executive', value: 'HR Executive' }, { label: 'HR Manager', value: 'HR Manager' }, { label: 'Recruiter', value: 'Recruiter' }, { label: 'Finance Analyst', value: 'Finance Analyst' }, { label: 'Accountant', value: 'Accountant' }, { label: 'Operations Executive', value: 'Operations Executive' }, { label: 'Team Lead', value: 'Team Lead' }, { label: 'Director', value: 'Director' }, { label: 'VP', value: 'VP' }, { label: 'CTO', value: 'CTO' }, { label: 'CEO', value: 'CEO' }, { label: 'Other', value: 'Other' }] },
-  { fieldName: 'currentCompany', label: 'Current Company', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11 },
-  { fieldName: 'totalExperience', label: 'Total Experience (yrs)', fieldType: 'number', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 12 },
+  { fieldName: 'email', label: 'Email *', fieldType: 'email', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
+  { fieldName: 'phone', label: 'Phone (Optional)', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
+  { fieldName: 'currentDesignation', label: 'Current Designation *', fieldType: 'dropdown', section: 'Professional Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'Software Engineer', value: 'Software Engineer' }, { label: 'Senior Software Engineer', value: 'Senior Software Engineer' }, { label: 'Lead Engineer', value: 'Lead Engineer' }, { label: 'Principal Engineer', value: 'Principal Engineer' }, { label: 'Engineering Manager', value: 'Engineering Manager' }, { label: 'Frontend Developer', value: 'Frontend Developer' }, { label: 'Backend Developer', value: 'Backend Developer' }, { label: 'Full Stack Developer', value: 'Full Stack Developer' }, { label: 'DevOps Engineer', value: 'DevOps Engineer' }, { label: 'Data Scientist', value: 'Data Scientist' }, { label: 'Data Analyst', value: 'Data Analyst' }, { label: 'Business Analyst', value: 'Business Analyst' }, { label: 'Product Manager', value: 'Product Manager' }, { label: 'Project Manager', value: 'Project Manager' }, { label: 'Scrum Master', value: 'Scrum Master' }, { label: 'QA Engineer', value: 'QA Engineer' }, { label: 'UI/UX Designer', value: 'UI/UX Designer' }, { label: 'Sales Executive', value: 'Sales Executive' }, { label: 'Sales Manager', value: 'Sales Manager' }, { label: 'Marketing Executive', value: 'Marketing Executive' }, { label: 'HR Executive', value: 'HR Executive' }, { label: 'HR Manager', value: 'HR Manager' }, { label: 'Recruiter', value: 'Recruiter' }, { label: 'Finance Analyst', value: 'Finance Analyst' }, { label: 'Accountant', value: 'Accountant' }, { label: 'Operations Executive', value: 'Operations Executive' }, { label: 'Team Lead', value: 'Team Lead' }, { label: 'Director', value: 'Director' }, { label: 'VP', value: 'VP' }, { label: 'CTO', value: 'CTO' }, { label: 'CEO', value: 'CEO' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'currentCompany', label: 'Current Company (Optional)', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11 },
+  { fieldName: 'totalExperience', label: 'Total Experience (yrs) (Optional)', fieldType: 'number', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 12 },
   { fieldName: 'skills', label: 'Skills', fieldType: 'text', section: 'Skills & Experience', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
   { fieldName: 'country', label: 'Country', fieldType: 'dropdown', section: 'Location & Availability', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
   { fieldName: 'state', label: 'State', fieldType: 'dropdown', section: 'Location & Availability', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 31 },
@@ -242,6 +242,7 @@ const DataCenter = () => {
     search: '', skills: '', experience_min: '', experience_max: '', location: '',
     availability: '', lastActive: '', ctc_min: '', ctc_max: '', status: '', sourceWebsite: ''
   });
+  const [searchError, setSearchError] = useState('');
 
   const [moveForm, setMoveForm] = useState({ leadStatus: 'New', leadSource: 'Customer', rating: 'Warm', assignTo: '' });
 
@@ -289,10 +290,11 @@ const DataCenter = () => {
     return columnsArray;
   };
 
-  const loadCandidates = async () => {
+  const loadCandidates = async (overrideFilters) => {
     try {
       setLoading(true);
-      const params = { page: pagination.page, limit: pagination.limit, ...filters };
+      const activeFilters = overrideFilters !== undefined ? overrideFilters : filters;
+      const params = { page: pagination.page, limit: pagination.limit, ...activeFilters };
       const response = await dataCenterService.getCandidates(params);
       const candidatesData = response.data.candidates;
       setCandidates(candidatesData);
@@ -446,14 +448,33 @@ const DataCenter = () => {
   };
 
   const applyFilters = () => {
+    // BUG-135 & BUG-136: reject text fields with no letters or numbers
+    const textFields = [
+      [filters.search,   'Search'],
+      [filters.skills,   'Skills'],
+      [filters.location, 'Location'],
+    ];
+    for (const [val, label] of textFields) {
+      if (val && val.trim() && !/[a-zA-Z0-9]/.test(val)) {
+        setSearchError(`${label}: Please provide valid alphanumeric keywords for your filters.`);
+        return;
+      }
+    }
+    setSearchError('');
+    // BUG-132: skip API call if all filters are empty
+    const hasActiveFilter = Object.values(filters).some(v => v !== '' && v !== null && v !== undefined);
+    if (!hasActiveFilter) return;
     setPagination({ ...pagination, page: 1 });
     loadCandidates();
   };
 
   const clearFilters = () => {
-    setFilters({ search: '', skills: '', experience_min: '', experience_max: '', location: '', availability: '', lastActive: '', ctc_min: '', ctc_max: '', status: '', sourceWebsite: '' });
+    // BUG-134: pass empty filters directly so loadCandidates doesn't use stale state
+    const emptyFilters = { search: '', skills: '', experience_min: '', experience_max: '', location: '', availability: '', lastActive: '', ctc_min: '', ctc_max: '', status: '', sourceWebsite: '' };
+    setFilters(emptyFilters);
+    setSearchError('');
     setPagination({ ...pagination, page: 1 });
-    setTimeout(() => loadCandidates(), 100);
+    loadCandidates(emptyFilters);
   };
 
   const handleSelectCandidate = (candidateId) => {
@@ -846,7 +867,74 @@ const DataCenter = () => {
                   ))}
                 </div>
                 {wizardStep < CUSTOMER_WIZARD_STEPS.length - 1 ? (
-                  <button type="button" onClick={() => setWizardStep(s => s + 1)}
+                  <button type="button" onClick={() => {
+                    // BUG-123 & BUG-124: Validate Customer Name on step 0 before advancing
+                    if (wizardStep === 0) {
+                      const name = (fieldValues['customerName'] || '').trim();
+                      if (!name) {
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name is required to build a database profile.' }));
+                        return;
+                      }
+                      if (/[0-9]/.test(name)) {
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name cannot contain numbers.' }));
+                        return;
+                      }
+                      const onlySpecial = /^[^a-zA-Z]+$/.test(name);
+                      if (onlySpecial) {
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name must contain letters.' }));
+                        return;
+                      }
+                      if (/--/.test(name) || /^\-/.test(name) || /\-$/.test(name)) {
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name cannot have consecutive or trailing hyphens.' }));
+                        return;
+                      }
+                      // Email — required + strict format
+                      const emailVal = (fieldValues['email'] || '').trim();
+                      if (!emailVal) {
+                        setFieldErrors(prev => ({ ...prev, email: 'Email is required.' }));
+                        return;
+                      }
+                      const strictEmailRegex = /^[a-zA-Z0-9][a-zA-Z0-9._%+\-]*@[a-zA-Z0-9][a-zA-Z0-9.\-]*\.[a-zA-Z]{2,}$/;
+                      if (!strictEmailRegex.test(emailVal) || /--/.test(emailVal) || /\.\./.test(emailVal)) {
+                        setFieldErrors(prev => ({ ...prev, email: 'Please enter a valid email address (e.g., name@example.com).' }));
+                        return;
+                      }
+                      // Phone — optional but if filled must be valid
+                      const phoneVal = (fieldValues['phone'] || '').trim();
+                      if (phoneVal) {
+                        const phoneDigits = phoneVal.replace(/[\s\-()]/g, '');
+                        if (!/^\+?[0-9]{7,15}$/.test(phoneDigits)) {
+                          setFieldErrors(prev => ({ ...prev, phone: 'Please enter a valid phone number (digits only, 7–15 numbers).' }));
+                          return;
+                        }
+                        if (/[a-zA-Z]/.test(phoneVal)) {
+                          setFieldErrors(prev => ({ ...prev, phone: 'Phone number cannot contain letters.' }));
+                          return;
+                        }
+                        if (/[^0-9\+\-\s\(\)]/.test(phoneVal)) {
+                          setFieldErrors(prev => ({ ...prev, phone: 'Phone number can only contain digits, +, -, spaces.' }));
+                          return;
+                        }
+                        if (!/[1-9]/.test(phoneDigits)) {
+                          setFieldErrors(prev => ({ ...prev, phone: 'Please enter a valid phone number (cannot be all zeros).' }));
+                          return;
+                        }
+                      }
+                      // BUG-126: Customer Type is required
+                      if (!fieldValues['customerType']) {
+                        setFieldErrors(prev => ({ ...prev, customerType: 'Please select a Customer Type before proceeding.' }));
+                        return;
+                      }
+                    }
+                    // BUG-130: Step 1 — Current Designation required
+                    if (wizardStep === 1) {
+                      if (!fieldValues['currentDesignation']) {
+                        setFieldErrors(prev => ({ ...prev, currentDesignation: 'Please select a Current Designation to proceed.' }));
+                        return;
+                      }
+                    }
+                    setWizardStep(s => s + 1);
+                  }}
                     style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
                     Next →
                   </button>
@@ -887,7 +975,7 @@ const DataCenter = () => {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                          <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: '#1e3c72' }}>{getDetailName(selectedCandidateData)}</h2>
+                          <h2 style={{ fontSize: '18px', fontWeight: '700', margin: 0, color: '#1e3c72', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '220px' }}>{getDetailName(selectedCandidateData)}</h2>
                           {selectedCandidateData.customerNumber && <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '2px 8px', borderRadius: '5px' }}>{String(selectedCandidateData.customerNumber).padStart(5, '0')}</span>}
                         </div>
                         {selectedCandidateData.email && <p style={{ color: '#666', fontSize: '13px', margin: 0 }}>{selectedCandidateData.email}</p>}
@@ -1040,6 +1128,11 @@ const DataCenter = () => {
             <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Location</label><input type="text" name="location" placeholder="Delhi..." value={filters.location} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
             <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Availability</label><select name="availability" value={filters.availability} onChange={handleFilterChange} className="crm-form-select" style={{ padding: '6px 8px', fontSize: '12px' }}><option value="">All</option><option value="Immediate">Immediate</option><option value="15 Days">15 Days</option><option value="30 Days">30 Days</option></select></div>
           </div>
+          {searchError && (
+            <div style={{ marginTop: 8, padding: '6px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 11, color: '#dc2626', fontWeight: 500 }}>
+              ❌ {searchError}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
             <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={applyFilters}>Apply</button>
             <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={clearFilters}>Clear</button>
@@ -1070,7 +1163,7 @@ const DataCenter = () => {
                       <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} style={{ width: '16px', height: '16px' }} />
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
-                          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>{candidate.customerName || getDetailName(candidate)}</h3>
+                          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{candidate.customerName || getDetailName(candidate)}</h3>
                           {candidate.customerNumber && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{String(candidate.customerNumber).padStart(5, '0')}</span>}
                         </div>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{candidate.currentDesignation || 'N/A'}</p>
