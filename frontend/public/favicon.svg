@@ -1,4 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
-  <rect width="32" height="32" rx="6" fill="#3b82f6"/>
-  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" font-family="Arial, sans-serif" font-weight="bold" font-size="22" fill="white">U</text>
+  <defs>
+    <linearGradient id="uGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a6e"/>
+      <stop offset="100%" stop-color="#3730a3"/>
+    </linearGradient>
+  </defs>
+  <!-- White background -->
+  <rect width="32" height="32" rx="5" fill="#ffffff"/>
+  <!-- Big U in navy (logo color) -->
+  <text x="16" y="24" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-weight="900" font-size="24" fill="url(#uGrad)">U</text>
+  <!-- Small teal dot bottom right - represents CRM teal color -->
+  <circle cx="26" cy="26" r="4" fill="#0d7c7c"/>
+  <text x="26" y="29" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="5" fill="#ffffff">C</text>
 </svg>
