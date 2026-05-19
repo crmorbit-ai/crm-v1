@@ -54,15 +54,26 @@ const DCCountrySelect = ({ value, onChange }) => {
   @media(max-width:768px){
     .datacent-grid4,.datacent-grid3{grid-template-columns:repeat(2,1fr)!important;}
     .datacent-grid2{grid-template-columns:1fr!important;}
-    .datacent-split{flex-direction:column!important;}
+    .datacent-split{flex-direction:column!important; height:auto!important; overflow:visible!important;}
     .datacent-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
     .datacent-panel{width:100%!important;}
     .datacent-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
     .datacent-form-row{grid-template-columns:1fr!important;}
     .datacent-hide{display:none!important;}
+    #datacenter-split-container{flex-direction:column!important;height:auto!important;overflow:visible!important;}
+    #datacenter-split-container > div{flex:1 1 100%!important;width:100%!important;max-height:none!important;border-right:none!important;border-bottom:1px solid #e0e0e0;}
+    .dc-wizard-bottom{flex-wrap:nowrap!important;gap:8px!important;}
+    .dc-wizard-bottom button{white-space:nowrap!important;}
+    .dc-wizard-dots{display:none!important;}
+    .dc-wizard-bottom .dc-save-btn{flex:1 1 auto!important;text-align:center!important;}
+    .resp-grid-6{grid-template-columns:repeat(2,1fr)!important;}
+    .dc-action-bar{flex-wrap:wrap!important;gap:6px!important;}
+    .dc-divider{display:none!important;}
   }
   @media(max-width:480px){
     .datacent-grid4,.datacent-grid3,.datacent-grid2{grid-template-columns:1fr!important;}
+    .resp-grid-6{grid-template-columns:1fr 1fr!important;}
+    .dc-action-bar button{font-size:11px!important;padding:6px 8px!important;}
   }
 `}</style>
       <label style={{ display:'block', fontSize:'11px', fontWeight:'700', marginBottom:'5px', textTransform:'uppercase', letterSpacing:'0.4px', color:'#475569' }}>Country</label>
@@ -262,6 +273,7 @@ const DataCenter = () => {
 
   const [wizardStep, setWizardStep] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const [selectedCountryIso, setSelectedCountryIso] = useState('');
   const [selectedStateIso, setSelectedStateIso] = useState('');
   const [detailPanelWidth, setDetailPanelWidth] = useState(42);
@@ -444,15 +456,21 @@ const DataCenter = () => {
   };
 
   const handleFilterChange = (e) => {
-    setFilters({ ...filters, [e.target.name]: e.target.value });
+    const updated = { ...filters, [e.target.name]: e.target.value };
+    setFilters(updated);
+    // BUG-138: auto-reload when all fields are cleared manually
+    const allEmpty = Object.values(updated).every(v => v === '' || v === null || v === undefined);
+    if (allEmpty) {
+      setSearchError('');
+      loadCandidates(updated);
+    }
   };
 
   const applyFilters = () => {
-    // BUG-135 & BUG-136: reject text fields with no letters or numbers
+    // BUG-135 & BUG-136: reject Search and Skills if only special chars (no letters/numbers)
     const textFields = [
-      [filters.search,   'Search'],
-      [filters.skills,   'Skills'],
-      [filters.location, 'Location'],
+      [filters.search, 'Search'],
+      [filters.skills, 'Skills'],
     ];
     for (const [val, label] of textFields) {
       if (val && val.trim() && !/[a-zA-Z0-9]/.test(val)) {
@@ -570,6 +588,7 @@ const DataCenter = () => {
   const handleCreateCandidate = async () => {
     if (creating) return;
     setCreating(true);
+    setCreateError('');
     try {
       const candidateData = {};
       fieldDefinitions.forEach(field => {
@@ -580,16 +599,16 @@ const DataCenter = () => {
       });
 
       await dataCenterService.createCandidate(candidateData);
-      alert('Candidate created successfully!');
       setFieldValues({});
       setFieldErrors({});
+      setCreateError('');
       setShowCreateForm(false);
       setWizardStep(0);
       loadCandidates();
     } catch (error) {
       if (error?.isPermissionDenied) return;
       console.error('Create candidate error:', error);
-      alert(error.response?.data?.message || 'Failed to create candidate');
+      setCreateError(error.message || error.response?.data?.message || 'Failed to create customer. Please try again.');
     } finally { setCreating(false); }
   };
 
@@ -623,19 +642,21 @@ const DataCenter = () => {
     e.preventDefault();
     const container = document.getElementById('datacenter-split-container');
     if (!container) return;
-    const startX = e.clientX;
+    const startX = e.clientX ?? e.touches?.[0]?.clientX;
     const startWidth = detailPanelWidth;
     const containerW = container.getBoundingClientRect().width;
     const onMove = (mv) => {
-      const delta = ((mv.clientX - startX) / containerW) * 100;
-      setDetailPanelWidth(Math.max(25, Math.min(65, startWidth + delta)));
+      const clientX = mv.clientX ?? mv.touches?.[0]?.clientX;
+      if (clientX === undefined) return;
+      const delta = ((clientX - startX) / containerW) * 100;
+      setDetailPanelWidth(Math.max(25, Math.min(70, startWidth + delta)));
     };
     const onUp = () => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', onUp);
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
     };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
   };
 
   const closeSidePanel = () => {
@@ -760,13 +781,13 @@ const DataCenter = () => {
       {/* Action Buttons Section */}
       <div className="action-bar">
         <div className="action-bar-left">
-          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { closeAllForms(); setSelectedCandidateId(null); setSelectedCandidateData(null); setDetailExpanded(false); setShowCreateForm(true); }}>Add Customer</button>
+          <button className="crm-btn crm-btn-primary crm-btn-sm" onClick={() => { setSelectedCandidateId(null); setSelectedCandidateData(null); setDetailExpanded(false); setShowCreateForm(true); }}>Add Customer</button>
           {hasPermission('field_management', 'read') && (
-            <button onClick={() => { closeAllForms(); setShowManageFields(v => !v); }} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
+            <button onClick={() => setShowManageFields(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontWeight: '600', cursor: 'pointer', fontSize: '13px' }}>
               <Settings style={{ width: '13px', height: '13px' }} /> Manage Fields
             </button>
           )}
-          <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setShowFilters(!showFilters)}>{showFilters ? 'Hide' : 'Show'} Filters</button>
+          <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setShowFilters(v => !v)}>{showFilters ? 'Hide' : 'Show'} Filters</button>
           <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv,.xlsx,.xls" onChange={handleFileUpload} />
           <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => fileInputRef.current?.click()} disabled={uploading}>{uploading ? 'Uploading...' : 'Upload CSV'}</button>
           <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={handleExport}>Export {selectedCandidates.length > 0 ? `(${selectedCandidates.length})` : ''}</button>
@@ -830,6 +851,13 @@ const DataCenter = () => {
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+                {createError && (
+                  <div style={{ marginBottom: 12, padding: '10px 14px', background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: 8, fontSize: 12, color: '#dc2626', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16, flexShrink: 0 }}>❌</span>
+                    <span>{createError}</span>
+                    <button type="button" onClick={() => setCreateError('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: 16, padding: 0, flexShrink: 0 }}>×</button>
+                  </div>
+                )}
                 <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
                   <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{CUSTOMER_WIZARD_STEPS[wizardStep]?.icon} {CUSTOMER_WIZARD_STEPS[wizardStep]?.label}</h4>
                   <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{CUSTOMER_WIZARD_STEPS[wizardStep]?.desc}</p>
@@ -856,12 +884,12 @@ const DataCenter = () => {
                   );
                 })()}
               </div>
-              <div style={{ padding: '11px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+              <div className="dc-wizard-bottom" style={{ padding: '11px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                 <button type="button" onClick={() => { if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); setFieldValues({}); setWizardStep(0); setSelectedCountryIso(''); setSelectedStateIso(''); } }}
-                  style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
+                  style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   {wizardStep === 0 ? 'Cancel' : '← Back'}
                 </button>
-                <div style={{ display: 'flex', gap: '4px' }}>
+                <div className="dc-wizard-dots" style={{ display: 'flex', gap: '4px' }}>
                   {CUSTOMER_WIZARD_STEPS.map((_, idx) => (
                     <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
                   ))}
@@ -935,12 +963,12 @@ const DataCenter = () => {
                     }
                     setWizardStep(s => s + 1);
                   }}
-                    style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
+                    className="dc-save-btn" style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)', whiteSpace: 'nowrap' }}>
                     Next →
                   </button>
                 ) : (
                   <button type="button" onClick={handleCreateCandidate} disabled={creating}
-                    style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(16,185,129,0.25)' }}>
+                    className="dc-save-btn" style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: creating ? '#94a3b8' : 'linear-gradient(135deg,#059669 0%,#10b981 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: creating ? 'not-allowed' : 'pointer', boxShadow: creating ? 'none' : '0 2px 8px rgba(16,185,129,0.25)', whiteSpace: 'nowrap' }}>
                     {creating ? 'Saving...' : '✓ Save Customer'}
                   </button>
                 )}
@@ -1095,8 +1123,10 @@ const DataCenter = () => {
 
         {/* Drag Divider */}
         {(selectedCandidateId || showCreateForm) && !detailExpanded && (
-          <div onMouseDown={handleDividerDrag} style={{ width: '6px', cursor: 'col-resize', background: 'transparent', flexShrink: 0, position: 'relative', zIndex: 1, userSelect: 'none' }}>
-            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '4px', height: '40px', borderRadius: '2px', background: '#cbd5e1' }} />
+          <div className="dc-divider" onPointerDown={handleDividerDrag} style={{ width: '8px', cursor: 'col-resize', background: 'transparent', flexShrink: 0, position: 'relative', zIndex: 2, userSelect: 'none', touchAction: 'none' }}
+            onMouseEnter={e => { e.currentTarget.querySelector('.dc-divider-handle').style.background = '#94a3b8'; e.currentTarget.querySelector('.dc-divider-handle').style.height = '60px'; }}
+            onMouseLeave={e => { e.currentTarget.querySelector('.dc-divider-handle').style.background = '#cbd5e1'; e.currentTarget.querySelector('.dc-divider-handle').style.height = '40px'; }}>
+            <div className="dc-divider-handle" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '4px', height: '40px', borderRadius: '2px', background: '#cbd5e1', transition: 'all 0.15s' }} />
           </div>
         )}
 
@@ -1121,12 +1151,11 @@ const DataCenter = () => {
         <div className="filters-container" style={{ padding: '12px', marginBottom: '12px' }}>
           <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>Advanced Search Filters</h3>
           <div className="resp-grid-6">
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Search</label><input type="text" name="search" placeholder="Name, email..." value={filters.search} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Skills</label><input type="text" name="skills" placeholder="React, Node..." value={filters.skills} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Min Exp</label><input type="number" name="experience_min" placeholder="0" value={filters.experience_min} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Max Exp</label><input type="number" name="experience_max" placeholder="10" value={filters.experience_max} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Location</label><input type="text" name="location" placeholder="Delhi..." value={filters.location} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Availability</label><select name="availability" value={filters.availability} onChange={handleFilterChange} className="crm-form-select" style={{ padding: '6px 8px', fontSize: '12px' }}><option value="">All</option><option value="Immediate">Immediate</option><option value="15 Days">15 Days</option><option value="30 Days">30 Days</option></select></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Search</label><input type="text" name="search" placeholder="Name, email..." value={filters.search} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} maxLength={100} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Skills</label><input type="text" name="skills" placeholder="React, Node..." value={filters.skills} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} maxLength={50} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Min Exp</label><input type="number" name="experience_min" placeholder="0" value={filters.experience_min} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} min={0} max={30} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Max Exp</label><input type="number" name="experience_max" placeholder="10" value={filters.experience_max} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} min={0} max={30} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Location</label><input type="text" name="location" placeholder="Delhi..." value={filters.location} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} maxLength={50} /></div>
           </div>
           {searchError && (
             <div style={{ marginTop: 8, padding: '6px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 11, color: '#dc2626', fontWeight: 500 }}>

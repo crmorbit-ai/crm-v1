@@ -32,6 +32,25 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
   const [addBtnHover, setAddBtnHover] = useState(false);
   const [confirmDeleteField, setConfirmDeleteField] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [dragField, setDragField] = useState(null);
+  const [dragOverField, setDragOverField] = useState(null);
+  const [formWidth, setFormWidth] = useState(280);
+
+  const handlePanelDividerDrag = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = formWidth;
+    const onMove = (mv) => {
+      const newW = Math.max(180, Math.min(420, startW + (mv.clientX - startX)));
+      setFormWidth(newW);
+    };
+    const onUp = () => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+    };
+    document.addEventListener('pointermove', onMove);
+    document.addEventListener('pointerup', onUp);
+  };
 
   const handleSectionChange = (section) => {
     setForm(p => ({ ...p, section, afterField: '__end__' }));
@@ -40,6 +59,20 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
   const toggleSection = (section) => {
     setCollapsedSections(p => ({ ...p, [section]: !p[section] }));
   };
+
+  const handleDragStart = (field) => setDragField(field);
+  const handleDragOver = (e, field) => { e.preventDefault(); setDragOverField(field); };
+  const handleDrop = (targetField) => {
+    if (!dragField || dragField.fieldName === targetField.fieldName) { setDragField(null); setDragOverField(null); return; }
+    // Swap displayOrder values to reorder
+    if (onToggle && dragField.section === targetField.section) {
+      const tempOrder = dragField.displayOrder;
+      onToggle({ ...dragField, displayOrder: targetField.displayOrder, _reorder: true });
+      onToggle({ ...targetField, displayOrder: tempOrder, _reorder: true });
+    }
+    setDragField(null); setDragOverField(null);
+  };
+  const handleDragEnd = () => { setDragField(null); setDragOverField(null); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -91,12 +124,13 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
     <div style={{
       marginBottom: '12px',
       borderRadius: '12px',
-      overflow: 'hidden',
       boxShadow: '0 4px 20px rgba(30,60,114,0.10)',
       border: '1px solid #e2e8f0',
       background: '#fff',
       display: 'flex',
       flexDirection: 'column',
+      maxHeight: '380px',
+      overflow: 'hidden',
     }}>
       {/* Header */}
       <div style={{
@@ -131,17 +165,17 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
       </div>
 
       {/* Body: split layout when form is open */}
-      <div style={{ display: 'flex', minHeight: 0 }}>
+      <div style={{ display: 'flex', flex: 1, minHeight: 0, overflow: 'hidden' }}>
 
         {/* Left: Add Field Form (slides in) */}
         {showAddForm && (
           <div style={{
-            flex: '0 0 280px',
-            borderRight: '1px solid #e2e8f0',
+            flex: `0 0 ${formWidth}px`,
+            borderRight: 'none',
             background: 'linear-gradient(160deg, #f8fafc 0%, #eff6ff 100%)',
             padding: '12px',
             overflowY: 'auto',
-            maxHeight: '340px',
+            minWidth: 0,
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
               <span style={{ fontSize: '12px', fontWeight: '700', color: '#1e3c72' }}>Add New Field</span>
@@ -197,12 +231,24 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
           </div>
         )}
 
+        {/* Draggable divider between form and fields list */}
+        {showAddForm && (
+          <div
+            onPointerDown={handlePanelDividerDrag}
+            style={{ width: '6px', flexShrink: 0, cursor: 'col-resize', background: '#e2e8f0', position: 'relative', zIndex: 2, touchAction: 'none', userSelect: 'none' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#94a3b8'}
+            onMouseLeave={e => e.currentTarget.style.background = '#e2e8f0'}
+          >
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: '2px', height: '32px', borderRadius: '2px', background: '#94a3b8' }} />
+          </div>
+        )}
+
         {/* Right: Fields List */}
         <div style={{
           flex: showAddForm ? '1 1 55%' : '1 1 100%',
           padding: '10px',
           overflowY: 'auto',
-          maxHeight: '340px',
+          minHeight: 0,
           transition: 'flex 0.2s',
         }}>
           {canAdd && !showAddForm && (
@@ -305,13 +351,22 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
                       return (
                         <div
                           key={field._id || field.fieldName}
+                          draggable
+                          onDragStart={() => handleDragStart(field)}
+                          onDragOver={(e) => handleDragOver(e, field)}
+                          onDrop={() => handleDrop(field)}
+                          onDragEnd={handleDragEnd}
                           style={{
                             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                             padding: '5px 8px', borderRadius: '6px',
-                            border: `1px solid ${field.isActive ? palette.chip : '#e5e7eb'}`,
-                            background: field.isActive ? palette.light : '#fafafa',
+                            border: dragOverField?.fieldName === field.fieldName ? '1.5px dashed #3b82f6' : `1px solid ${field.isActive ? palette.chip : '#e5e7eb'}`,
+                            background: dragField?.fieldName === field.fieldName ? '#f0f9ff' : dragOverField?.fieldName === field.fieldName ? '#eff6ff' : field.isActive ? palette.light : '#fafafa',
+                            opacity: dragField?.fieldName === field.fieldName ? 0.5 : 1,
+                            cursor: 'grab', transition: 'all 0.15s',
                           }}
                         >
+                          {/* Drag handle */}
+                          <span style={{ fontSize: 10, color: '#cbd5e1', marginRight: 4, cursor: 'grab', flexShrink: 0 }}>⠿</span>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: '11px', fontWeight: '600', color: field.isActive ? '#1e293b' : '#9ca3af', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {field.label}
