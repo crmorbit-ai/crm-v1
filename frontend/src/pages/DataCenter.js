@@ -67,6 +67,7 @@ const DCCountrySelect = ({ value, onChange }) => {
     .dc-wizard-dots{display:none!important;}
     .dc-wizard-bottom .dc-save-btn{flex:1 1 auto!important;text-align:center!important;}
     .resp-grid-6{grid-template-columns:repeat(2,1fr)!important;}
+    .dc-filter-grid{grid-template-columns:repeat(2,1fr)!important;}
     .dc-action-bar{flex-wrap:wrap!important;gap:6px!important;}
     .dc-divider{display:none!important;}
   }
@@ -283,7 +284,7 @@ const DataCenter = () => {
   const extractColumns = (candidatesData) => {
     if (!candidatesData || candidatesData.length === 0) return [];
     const allKeys = new Set();
-    const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource'];
+    const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource', 'customerNumber'];
 
     candidatesData.forEach(candidate => {
       Object.keys(candidate).forEach(key => {
@@ -534,35 +535,40 @@ const DataCenter = () => {
   };
 
   const handleMoveToLeads = async () => {
-    if (selectedCandidates.length === 0) { alert('Please select at least one candidate'); return; }
+    if (selectedCandidates.length === 0) { alert('Please select at least one customer'); return; }
     try {
       const data = { candidateIds: selectedCandidates, ...moveForm };
       const response = await dataCenterService.moveToLeads(data);
-      alert(`Successfully moved ${response.data.success.length} candidates to Leads!`);
+      const moved = response?.data?.success?.length || 0;
+      const failed = response?.data?.failed?.length || 0;
+      if (moved > 0) {
+        alert(`Successfully moved ${moved} customer(s) to Leads.${failed > 0 ? ` ${failed} failed.` : ''}`);
+      } else {
+        alert(`Move failed. ${failed > 0 ? response.data.failed[0]?.reason : 'No customers were moved.'}`);
+      }
       setSelectedCandidates([]);
-      setShowMoveForm(false);
       loadCandidates();
     } catch (error) {
       if (error?.isPermissionDenied) return;
       console.error('Error moving to leads:', error);
-      alert('Failed to move candidates to leads');
+      alert(error?.message || 'Failed to move customers to leads. Please try again.');
     }
   };
 
   const handleDeleteCandidates = async () => {
     if (selectedCandidates.length === 0) { alert('Please select at least one candidate'); return; }
-    const confirmed = window.confirm(`Are you sure you want to delete ${selectedCandidates.length} candidate(s)? This action cannot be undone.`);
+    const confirmed = window.confirm(`Are you sure you want to delete ${selectedCandidates.length} customer(s)? This action cannot be undone.`);
     if (!confirmed) return;
 
     try {
       const response = await dataCenterService.deleteCandidates(selectedCandidates);
-      alert(`Successfully deleted ${response.data.deleted} candidate(s)!`);
+      alert(`Successfully deleted ${response.data.deleted} customer(s)!`);
       setSelectedCandidates([]);
       loadCandidates();
     } catch (error) {
       if (error?.isPermissionDenied) return;
       console.error('Error deleting candidates:', error);
-      alert('Failed to delete candidates');
+      alert('Failed to delete customers');
     }
   };
 
@@ -669,15 +675,24 @@ const DataCenter = () => {
   const handleDetailMoveToLead = async () => {
     try {
       const data = { candidateIds: [selectedCandidateId], ...detailMoveForm };
-      await dataCenterService.moveToLeads(data);
-      alert('Successfully moved to Leads!');
-      setShowDetailMoveForm(false);
-      closeSidePanel();
-      loadCandidates();
+      const response = await dataCenterService.moveToLeads(data);
+      const moved = response?.data?.success?.length || 0;
+      const failed = response?.data?.failed?.length || 0;
+      const alreadyMoved = response?.data?.alreadyMoved?.length || 0;
+      if (alreadyMoved > 0) {
+        alert('This customer has already been moved to Leads.');
+      } else if (moved > 0) {
+        alert('Successfully moved to Leads.');
+        setShowDetailMoveForm(false);
+        closeSidePanel();
+        loadCandidates();
+      } else {
+        alert(`Move failed: ${failed > 0 ? response.data.failed[0]?.reason : 'Unknown error.'}`);
+      }
     } catch (error) {
       if (error?.isPermissionDenied) return;
       console.error('Error moving to lead:', error);
-      alert('Failed to move to leads');
+      alert(error?.message || 'Failed to move to leads. Please try again.');
     }
   };
 
@@ -772,7 +787,7 @@ const DataCenter = () => {
       {/* ── WIZARD OVERLAY ── */}
 
       <div className="stats-grid">
-        <div className="stat-card"><div className="stat-label">Total Candidates</div><div className="stat-value">{stats.total}</div><div className="stat-change">Complete database</div></div>
+        <div className="stat-card"><div className="stat-label">Total Customers</div><div className="stat-value">{stats.total}</div><div className="stat-change">Complete database</div></div>
         <div className="stat-card"><div className="stat-label">Available Now</div><div className="stat-value">{stats.available}</div><div className="stat-change positive">Ready to hire</div></div>
         <div className="stat-card"><div className="stat-label">Immediate Join</div><div className="stat-value">{stats.immediate}</div><div className="stat-change positive">Can join immediately</div></div>
         <div className="stat-card"><div className="stat-label">Active This Week</div><div className="stat-value">{stats.thisWeek}</div><div className="stat-change">Recent activity</div></div>
@@ -803,9 +818,9 @@ const DataCenter = () => {
 
         {selectedCandidates.length > 0 && (
           <div className="bulk-actions-bar">
-            <span className="selection-count">{selectedCandidates.length} Selected</span>
+            <span className="selection-count" style={{ whiteSpace: 'nowrap' }}>{selectedCandidates.length} Selected</span>
             <BulkCommunication selectedCandidates={selectedCandidates} candidates={candidates} myProducts={myProducts} loadMyProducts={loadMyProducts} onSuccess={() => setSelectedCandidates([])} />
-            <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => { closeAllForms(); setShowMoveForm(true); }}>Move to Leads</button>
+            <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => { if (selectedCandidates.length === 0) { alert('Please select at least one customer'); return; } if (window.confirm(`Move ${selectedCandidates.length} customer(s) to Leads?`)) { handleMoveToLeads(); } }}>Move to Leads</button>
             <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={handleDeleteCandidates}>Delete</button>
             <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={() => setSelectedCandidates([])}>Clear</button>
           </div>
@@ -1150,12 +1165,12 @@ const DataCenter = () => {
       {showFilters && (
         <div className="filters-container" style={{ padding: '12px', marginBottom: '12px' }}>
           <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '700', color: '#1e3c72' }}>Advanced Search Filters</h3>
-          <div className="resp-grid-6">
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Search</label><input type="text" name="search" placeholder="Name, email..." value={filters.search} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} maxLength={100} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Skills</label><input type="text" name="skills" placeholder="React, Node..." value={filters.skills} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} maxLength={50} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Min Exp</label><input type="number" name="experience_min" placeholder="0" value={filters.experience_min} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} min={0} max={30} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Max Exp</label><input type="number" name="experience_max" placeholder="10" value={filters.experience_max} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} min={0} max={30} /></div>
-            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block' }}>Location</label><input type="text" name="location" placeholder="Delhi..." value={filters.location} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px' }} maxLength={50} /></div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '8px' }} className="dc-filter-grid">
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block', whiteSpace: 'nowrap' }}>Search</label><input type="text" name="search" placeholder="Search..." value={filters.search} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} maxLength={100} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block', whiteSpace: 'nowrap' }}>Skills</label><input type="text" name="skills" placeholder="Skills..." value={filters.skills} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} maxLength={50} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block', whiteSpace: 'nowrap' }}>Min Exp</label><input type="number" name="experience_min" placeholder="0" value={filters.experience_min} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} min={0} max={30} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block', whiteSpace: 'nowrap' }}>Max Exp</label><input type="number" name="experience_max" placeholder="10" value={filters.experience_max} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} min={0} max={30} /></div>
+            <div><label style={{ fontSize: '11px', fontWeight: '600', color: '#374151', marginBottom: '2px', display: 'block', whiteSpace: 'nowrap' }}>Location</label><input type="text" name="location" placeholder="Delhi..." value={filters.location} onChange={handleFilterChange} className="crm-form-input" style={{ padding: '6px 8px', fontSize: '12px', width: '100%', boxSizing: 'border-box' }} maxLength={50} /></div>
           </div>
           {searchError && (
             <div style={{ marginTop: 8, padding: '6px 10px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 6, fontSize: 11, color: '#dc2626', fontWeight: 500 }}>
@@ -1171,7 +1186,7 @@ const DataCenter = () => {
       {/* Candidates Display */}
       <div className="crm-card">
         <div className="crm-card-header" style={{ padding: '10px 16px' }}>
-          <h2 className="crm-card-title" style={{ fontSize: '14px' }}>{viewMode === 'grid' ? 'Candidate Cards' : 'Candidate List'} ({pagination.total})</h2>
+          <h2 className="crm-card-title" style={{ fontSize: '14px' }}>{viewMode === 'grid' ? 'Customer Cards' : 'Customer List'} ({pagination.total})</h2>
         </div>
 
         {loading ? (
@@ -1216,10 +1231,13 @@ const DataCenter = () => {
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
                   <thead>
                     <tr>
-                      <th style={{ width: '40px', padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
-                        <input type="checkbox" checked={selectedCandidates.length === candidates.length && candidates.length > 0} onChange={handleSelectAll} style={{ width: '16px', height: '16px' }} />
+                      <th style={{ width: '80px', padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          <input type="checkbox" checked={selectedCandidates.length === candidates.length && candidates.length > 0} onChange={handleSelectAll} style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
+                          <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }} title="Select All Records">All</span>
+                        </label>
                       </th>
-                      <th style={{ padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>#ID</th>
+                      <th style={{ padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Customer ID</th>
                       {displayColumns.map((column) => (
                         <th key={column} style={{ padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{formatFieldName(column)}</th>
                       ))}

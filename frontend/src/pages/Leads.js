@@ -555,6 +555,9 @@ const Leads = () => {
   // Detail Panel Form Data
   const [detailEditData, setDetailEditData] = useState({});
   const [detailTaskData, setDetailTaskData] = useState({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+  const [taskSubjectError, setTaskSubjectError] = useState('');
+  const [callSubjectError, setCallSubjectError] = useState('');
+  const [noteTitleError, setNoteTitleError] = useState('');
   const [detailMeetingData, setDetailMeetingData] = useState({ title: '', from: '', to: '', location: '', meetingType: 'Online', description: '' });
   const [detailCallData, setDetailCallData] = useState({ subject: '', callStartTime: '', callDuration: '', callType: 'Outbound', callPurpose: 'Follow-up', callResult: 'Completed', description: '' });
   const [detailNoteData, setDetailNoteData] = useState({ title: '', content: '' });
@@ -1035,6 +1038,22 @@ const Leads = () => {
             hasError = true;
           }
         }
+        // BUG-156: customerName — no special chars, max 100
+        if (field.fieldName === 'customerName') {
+          const val = String(fieldValues['customerName'] || '').trim();
+          if (val && /^[^a-zA-Z0-9]+$/.test(val)) {
+            errors['customerName'] = 'Please enter a valid Customer Name using letters only.';
+            hasError = true;
+          }
+          if (val && /[0-9]/.test(val)) {
+            errors['customerName'] = 'Customer Name cannot contain numbers.';
+            hasError = true;
+          }
+          if (val && val.length > 100) {
+            errors['customerName'] = 'Customer Name must not exceed 100 characters.';
+            hasError = true;
+          }
+        }
       });
     });
     if (hasError) setFieldErrors(prev => ({ ...prev, ...errors }));
@@ -1273,6 +1292,11 @@ const Leads = () => {
   // Detail Panel - Create Task
   const handleDetailCreateTask = async (e) => {
     e.preventDefault();
+    const subj = (detailTaskData.subject || '').trim();
+    if (!subj || !/[a-zA-Z0-9]/.test(subj)) {
+      setTaskSubjectError('Please enter a meaningful subject containing letters or digits.'); return;
+    }
+    setTaskSubjectError('');
     try {
       setError('');
       await taskService.createTask({ ...detailTaskData, relatedTo: 'Lead', relatedToId: selectedLeadId });
@@ -1308,6 +1332,11 @@ const Leads = () => {
   // Detail Panel - Create Call
   const handleDetailCreateCall = async (e) => {
     e.preventDefault();
+    const subj = (detailCallData.subject || '').trim();
+    if (!subj || !/[a-zA-Z0-9]/.test(subj)) {
+      setCallSubjectError('Please enter a valid subject containing letters or digits.'); return;
+    }
+    setCallSubjectError('');
     try {
       setError('');
       const response = await fetch(`${API_URL}/calls`, {
@@ -1329,6 +1358,16 @@ const Leads = () => {
   // Detail Panel - Create Note
   const handleDetailCreateNote = async (e) => {
     e.preventDefault();
+    const ttl = (detailNoteData.title || '').trim();
+    if (!ttl || !/[a-zA-Z0-9]/.test(ttl)) {
+      setNoteTitleError('Please enter a valid title containing letters or numeric characters.'); return;
+    }
+    setNoteTitleError('');
+    // BUG-161: Content must contain at least one letter
+    const cnt = (detailNoteData.content || '').trim();
+    if (!cnt || !/[a-zA-Z]/.test(cnt)) {
+      setError('Please enter valid note text content containing actual word structures.'); return;
+    }
     try {
       setError('');
       await noteService.createNote({ ...detailNoteData, relatedTo: 'Lead', relatedToId: selectedLeadId });
@@ -1343,6 +1382,7 @@ const Leads = () => {
   // Detail Panel - Edit Lead
   const openDetailEditForm = () => {
     if (!selectedLeadData) return;
+    setError('');
     setDetailEditData({
       customerName: selectedLeadData.customerName || '',
       email: selectedLeadData.email,
@@ -1373,13 +1413,17 @@ const Leads = () => {
     e.preventDefault();
     try {
       setError('');
-      await leadService.updateLead(selectedLeadId, detailEditData);
-      setSuccess('Lead updated successfully!');
+      const response = await leadService.updateLead(selectedLeadId, detailEditData);
+      // Use backend response directly to update UI instantly
+      const updatedLead = response?.data;
+      if (updatedLead) {
+        setSelectedLeadData(updatedLead);
+        setLeads(prev => prev.map(l => l._id === selectedLeadId ? { ...l, ...updatedLead } : l));
+      }
+      setSuccess('Lead updated successfully.');
       setShowDetailEditForm(false);
-      const response = await leadService.getLead(selectedLeadId);
-      if (response?.success) setSelectedLeadData(response.data);
-      loadLeads();
       setTimeout(() => setSuccess(''), 3000);
+      loadLeads();
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to update lead'); }
   };
 
@@ -1457,7 +1501,7 @@ const Leads = () => {
       };
       const response = await leadService.convertLead(selectedLeadId, payload);
       if (response.success) {
-        setSuccess('Lead converted successfully!');
+        setSuccess('Lead converted successfully.');
         setShowDetailConvertForm(false);
         closeSidePanel();
         loadLeads();
@@ -1474,7 +1518,7 @@ const Leads = () => {
   const canDeleteLead = hasPermission('lead_management', 'delete');
 
   const handleBulkDelete = async (deleteAll = false) => {
-    const count = deleteAll ? 'ALL leads' : `${selectedLeads.length} selected leads`;
+    const count = deleteAll ? 'ALL leads' : `${selectedLeads.length} selected ${selectedLeads.length === 1 ? 'lead' : 'leads'}`;
     if (!window.confirm(`Delete ${count}? This cannot be undone.`)) return;
     try {
       await leadService.bulkDeleteLeads(selectedLeads, deleteAll);
@@ -2016,9 +2060,10 @@ const Leads = () => {
                         <button onClick={() => setShowDetailEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
                       </div>
                       <form onSubmit={handleDetailUpdateLead}>
+                        {error && <div style={{ marginBottom: 8, padding: '6px 10px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, fontSize: 11, color: '#dc2626', fontWeight: 600 }}>❌ {error}</div>}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                          <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Name *</label><input type="text" name="customerName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', width: '100%' }} value={detailEditData.customerName || ''} onChange={handleDetailEditChange} required /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} required /></div>
+                          <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Name *</label><input type="text" name="customerName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', width: '100%' }} value={detailEditData.customerName || ''} onChange={handleDetailEditChange} /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="text" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Company</label><input type="text" name="company" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.company || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Job Title</label><input type="text" name="jobTitle" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.jobTitle || ''} onChange={handleDetailEditChange} /></div>
@@ -2295,7 +2340,11 @@ const Leads = () => {
                             )}
                             <form onSubmit={handleDetailCreateTask}>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
-                                <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.subject} onChange={(e) => setDetailTaskData({ ...detailTaskData, subject: e.target.value })} required /></div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                  <label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label>
+                                  <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', borderColor: taskSubjectError ? '#ef4444' : undefined }} value={detailTaskData.subject} onChange={(e) => { setDetailTaskData({ ...detailTaskData, subject: e.target.value }); setTaskSubjectError(''); }} />
+                                  {taskSubjectError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>⚠ {taskSubjectError}</div>}
+                                </div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date *</label><input type="date" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Priority</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.priority} onChange={(e) => setDetailTaskData({ ...detailTaskData, priority: e.target.value })}><option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option></select></div>
                               </div>
@@ -2339,7 +2388,11 @@ const Leads = () => {
                             </div>
                             <form onSubmit={handleDetailCreateCall}>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
-                                <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.subject} onChange={(e) => setDetailCallData({ ...detailCallData, subject: e.target.value })} required /></div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                  <label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label>
+                                  <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', borderColor: callSubjectError ? '#ef4444' : undefined }} value={detailCallData.subject} onChange={(e) => { setDetailCallData({ ...detailCallData, subject: e.target.value }); setCallSubjectError(''); }} />
+                                  {callSubjectError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>⚠ {callSubjectError}</div>}
+                                </div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Call Time *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callStartTime} onChange={(e) => setDetailCallData({ ...detailCallData, callStartTime: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Duration (min)</label><input type="number" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callDuration} onChange={(e) => setDetailCallData({ ...detailCallData, callDuration: e.target.value })} min="0" /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Type</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callType} onChange={(e) => setDetailCallData({ ...detailCallData, callType: e.target.value })}><option value="Outbound">Outbound</option><option value="Inbound">Inbound</option><option value="Missed">Missed</option></select></div>
@@ -2442,7 +2495,11 @@ const Leads = () => {
                               <button onClick={() => setShowDetailNoteForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '14px', color: '#64748b' }}>✕</button>
                             </div>
                             <form onSubmit={handleDetailCreateNote}>
-                              <div style={{ marginBottom: '8px' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Title *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailNoteData.title} onChange={(e) => setDetailNoteData({ ...detailNoteData, title: e.target.value })} required /></div>
+                              <div style={{ marginBottom: '8px' }}>
+                                <label style={{ fontSize: '10px', fontWeight: '600' }}>Title *</label>
+                                <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', borderColor: noteTitleError ? '#ef4444' : undefined }} value={detailNoteData.title} onChange={(e) => { setDetailNoteData({ ...detailNoteData, title: e.target.value }); setNoteTitleError(''); }} />
+                                {noteTitleError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>⚠ {noteTitleError}</div>}
+                              </div>
                               <div style={{ marginBottom: '8px' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Content *</label><textarea className="crm-form-textarea" rows="3" style={{ width: '100%', padding: '4px 6px', fontSize: '11px' }} value={detailNoteData.content} onChange={(e) => setDetailNoteData({ ...detailNoteData, content: e.target.value })} required /></div>
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                                 <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailNoteForm(false)}>Cancel</button>

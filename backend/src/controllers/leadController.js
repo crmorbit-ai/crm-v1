@@ -569,7 +569,7 @@ const updateLead = async (req, res) => {
 
     // Fields to track (product handled separately)
     const allowedFields = [
-      'firstName', 'lastName', 'email', 'phone', 'mobilePhone', 'fax',
+      'customerName', 'firstName', 'lastName', 'email', 'phone', 'mobilePhone', 'fax',
       'company', 'jobTitle', 'website', 'leadSource', 'leadStatus',
       'industry', 'numberOfEmployees', 'annualRevenue', 'rating',
       'emailOptOut', 'doNotCall', 'skypeId', 'secondaryEmail', 'twitter',
@@ -580,10 +580,10 @@ const updateLead = async (req, res) => {
     // Track changes BEFORE updating
     const changes = trackChanges(lead, req.body, allowedFields);
 
-    // Update fields
+    // Update fields — use lead.set() for reliable dynamic field tracking
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        lead[field] = req.body[field];
+        lead.set(field, req.body[field]);
       }
     });
 

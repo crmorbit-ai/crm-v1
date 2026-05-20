@@ -356,7 +356,15 @@ const Meetings = () => {
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
                         onFocus={e => e.target.style.borderColor = '#8b5cf6'}
                         onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
-                      <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px' }}>Separate multiple emails with commas</div>
+                      <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '4px', lineHeight: '1.5', wordSpacing: '0.05em', letterSpacing: '0.01em' }}>
+                        Separate multiple emails with commas.
+                      </div>
+                      {formData.participants && formData.participants.trim() && (
+                        <div style={{ marginTop: '6px', padding: '6px 10px', background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '6px', fontSize: '10px', color: '#166534', lineHeight: '1.5', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>📧</span>
+                          <span>Email invitation will be sent to all participants when the meeting is created.</span>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div style={{ marginBottom: '12px', background: '#f8fafc', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0' }}>

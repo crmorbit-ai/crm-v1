@@ -768,7 +768,22 @@ const Contacts = () => {
                   ))}
                 </div>
                 {wizardStep < CONTACT_WIZARD_STEPS.length - 1 ? (
-                  <button type="button" onClick={() => setWizardStep(s => s + 1)}
+                  <button type="button" onClick={() => {
+                    // BUG-164: Validate Customer Name (firstName) on step 0
+                    if (wizardStep === 0) {
+                      const name = (fieldValues['firstName'] || '').trim();
+                      if (!name) {
+                        setFieldErrors(prev => ({ ...prev, firstName: 'Customer Name is required.' })); return;
+                      }
+                      if (!/[a-zA-Z]/.test(name)) {
+                        setFieldErrors(prev => ({ ...prev, firstName: 'Please enter a valid customer name containing alphabetical characters.' })); return;
+                      }
+                      if (/^[^a-zA-Z0-9]+$/.test(name)) {
+                        setFieldErrors(prev => ({ ...prev, firstName: 'Please enter a valid customer name containing alphabetical characters.' })); return;
+                      }
+                    }
+                    setWizardStep(s => s + 1);
+                  }}
                     style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
                     Next →
                   </button>
