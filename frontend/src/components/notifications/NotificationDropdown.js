@@ -73,14 +73,16 @@ const NotificationDropdown = ({ onClose, onSeeAll }) => {
   }, []);
 
   const handleClick = async (notif) => {
-    if (!notif.isRead) {
-      await notificationService.markAsRead(notif._id);
-      fetchUnreadCount();
+    try {
+      if (!notif.isRead) {
+        await notificationService.markAsRead(notif._id);
+        fetchUnreadCount();
+      }
+    } catch {
+      // silent — don't block navigation if markAsRead fails
     }
     const base = notif.entityType ? ENTITY_ROUTES[notif.entityType] : null;
-    if (base && notif.entityId) {
-      navigate(`${base}/${notif.entityId}`);
-    } else if (base) {
+    if (base) {
       navigate(base);
     }
     onClose();

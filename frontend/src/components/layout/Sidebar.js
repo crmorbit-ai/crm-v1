@@ -10,7 +10,7 @@ import {
   X,
 } from 'lucide-react';
 
-const Sidebar = ({ isOpen, onClose, isMobile }) => {
+const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
   const location = useLocation();
   const { hasPermission, isSaasOwner, user } = useAuth();
   const [hasMonetization, setHasMonetization] = useState(false);
@@ -90,10 +90,8 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
         to={to}
         onClick={handleNavClick}
         className={cn(
-          "block px-3 py-2 text-sm rounded-md transition-all duration-200",
-          active
-            ? "bg-yellow-400 text-gray-900 font-semibold shadow-lg"
-            : "text-white/90 hover:bg-white/10 hover:text-white"
+          "block px-3 py-2 text-sm rounded-md",
+          active ? "sidebar-nav-item-active" : "sidebar-nav-item"
         )}
       >
         {label}
@@ -122,7 +120,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
       <div className="mb-1">
         <button
           onClick={() => toggleSection(section)}
-          className="flex items-center justify-between w-full px-3 py-2 text-sm font-semibold text-white hover:bg-white/10 rounded-md transition-colors"
+          className="sidebar-section-btn flex items-center justify-between w-full px-3 py-1.5 rounded-md"
         >
           <span>{title}</span>
           {openSections[section] ? (
@@ -140,34 +138,70 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
     );
   };
 
-  // Sidebar styles with original gradient
+  // Sidebar styles — screenshot teal with movement
   const sidebarStyle = {
-    background: 'linear-gradient(135deg, #5db9de 0%, #47b9e1 25%, #131d21 50%, #95b5ef 75%, #2a5298 100%)',
+    background: 'linear-gradient(135deg, #1e3045, #1a4a42, #1d3d55, #153d35, #1e3a4a, #163832, #1e3045)',
     backgroundSize: '400% 400%',
-    animation: 'gradientShift 15s ease infinite',
+    animation: 'sidebarFlow 8s ease infinite',
+    borderRight: '1px solid rgba(255,255,255,0.08)',
+    boxShadow: '4px 0 24px rgba(0,0,0,0.4)',
   };
 
   return (
     <>
-      {/* Gradient animation keyframes */}
       <style>{`
-        @keyframes gradientShift {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
+        @keyframes sidebarFlow {
+          0%   { background-position: 0% 50%; }
+          25%  { background-position: 100% 0%; }
+          50%  { background-position: 100% 100%; }
+          75%  { background-position: 0% 100%; }
           100% { background-position: 0% 50%; }
         }
+        .sidebar-nav-item-active {
+          background: rgba(255,255,255,0.15);
+          color: #ffffff !important;
+          font-weight: 600;
+          border-left: 3px solid #7dd3fc;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        .sidebar-nav-item {
+          color: #ffffff !important;
+          border-left: 3px solid transparent;
+          transition: all 0.18s ease;
+        }
+        .sidebar-nav-item:hover {
+          background: rgba(255,255,255,0.12);
+          color: #ffffff !important;
+          border-left: 3px solid rgba(255,255,255,0.7);
+        }
+        .sidebar-section-btn {
+          color: #ffffff !important;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 0.09em;
+          text-transform: uppercase;
+          transition: all 0.15s ease;
+        }
+        .sidebar-section-btn:hover {
+          color: #ffffff !important;
+          background: rgba(255,255,255,0.08);
+        }
+        .sidebar-section-btn svg { color: #ffffff !important; }
+        .sidebar-divider { border-color: rgba(255,255,255,0.1); }
       `}</style>
 
       <div
-        style={sidebarStyle}
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 w-64 flex flex-col transition-transform duration-300 shadow-2xl",
-          isMobile && !isOpen && "-translate-x-full",
-          isMobile && isOpen && "translate-x-0"
-        )}
+        className="fixed inset-y-0 left-0 z-50 w-64 flex flex-col shadow-2xl"
+        style={{
+          ...sidebarStyle,
+          transform: isMobile
+            ? (isOpen ? 'translateX(0)' : 'translateX(-100%)')
+            : (isDesktopOpen ? 'translateX(0)' : 'translateX(-100%)'),
+          transition: 'transform 0.3s ease',
+        }}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-4 bg-white border-b border-blue-300/30">
+        <div className="h-16 flex items-center justify-between px-4 bg-white border-b" style={{ borderColor: 'rgba(0,0,0,0.08)' }}>
           <img
             src="/logo.png"
             alt="CRM"
@@ -189,7 +223,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                 {/* SAAS Dashboard */}
                 <NavItem to="/saas/dashboard" label="SAAS Dashboard" />
 
-                <div className="my-3 border-t border-white/20" />
+                <div className="my-3 border-t sidebar-divider" />
 
                 {/* Tenant Management */}
                 <NavSection title="Tenant Management" section="tenantManagement">
@@ -219,7 +253,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                 {/* Dashboard - always visible */}
                 <NavItem to="/dashboard" label="Dashboard" />
 
-                <div className="my-3 border-t border-white/20" />
+                <div className="my-3 border-t sidebar-divider" />
 
                 {/* Sales */}
                 <NavSection title="Sales" section="sales" permissions={['data_center']}>
@@ -269,7 +303,7 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
                   <NavItem to="/social-media" label="Social Media" permission="user_management" />
                 </NavSection>
 
-                <div className="my-3 border-t border-white/20" />
+                <div className="my-3 border-t sidebar-divider" />
 
                 {/* Access Management */}
                 <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'audit_logs']}>
@@ -301,9 +335,9 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-white/20 text-center">
-          <p className="text-xs text-white/70">© 2026 Unified crm</p>
-          <p className="text-xs text-white/70 mt-1">Version 1.0.0</p>
+        <div className="p-4 text-center" style={{ borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.15)' }}>
+          <p className="text-xs" style={{ color: '#ffffff' }}>© 2026 Unified CRM</p>
+          <p className="text-xs mt-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Version 1.0.0</p>
         </div>
       </div>
     </>

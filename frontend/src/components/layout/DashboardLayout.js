@@ -56,19 +56,16 @@ const formatPermissionMessage = (raw) => {
 };
 
 const DashboardLayout = ({ children, title, actionButton }) => {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [sidebarOpen, setSidebarOpen] = useState(true); // desktop: open by default
   const [permissionToast, setPermissionToast] = useState(null);
 
   useEffect(() => {
     const handleResize = () => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
-      if (!mobile) {
-        setSidebarOpen(false);
-      }
+      if (mobile) setSidebarOpen(false);
     };
-
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
@@ -139,9 +136,10 @@ const DashboardLayout = ({ children, title, actionButton }) => {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         isMobile={isMobile}
+        isDesktopOpen={sidebarOpen}
       />
 
-      <div className={cn("flex flex-col min-h-screen", !isMobile && "ml-64")}>
+      <div style={{ marginLeft: !isMobile && sidebarOpen ? '256px' : '0', transition: 'margin-left 0.3s ease' }} className="flex flex-col min-h-screen">
         <Header
           title={title}
           actionButton={actionButton}

@@ -39,6 +39,8 @@ const Opportunities = () => {
   const [accounts, setAccounts] = useState([]);
   const [users, setUsers] = useState([]);
   const fileInputRef = useRef(null);
+  const opportunityNameRef = useRef(null);
+  const formModalRef = useRef(null);
 
   // Preview state
   const [previewModal, setPreviewModal] = useState(null); // { blobUrl, fileName, fileType }
@@ -90,11 +92,32 @@ const Opportunities = () => {
     }
   };
 
+  const scrollToError = (ref) => {
+    if (ref?.current) {
+      ref.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ref.current.focus();
+    } else if (formModalRef?.current) {
+      formModalRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
-    if (!formData.opportunityName || !formData.account || !formData.closeDate) {
-      setFormError('Deal name, company, and close date are required.');
+
+    if (!formData.opportunityName.trim()) {
+      setFormError('Deal name is required.');
+      scrollToError(opportunityNameRef);
+      return;
+    }
+    if (formData.opportunityName.trim().length > 80) {
+      setFormError('Deal name must be 80 characters or less.');
+      scrollToError(opportunityNameRef);
+      return;
+    }
+    if (!formData.account || !formData.closeDate) {
+      setFormError('Company and close date are required.');
+      formModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     setFormSubmitting(true);
@@ -324,7 +347,7 @@ const Opportunities = () => {
           position:'fixed',inset:0,background:'rgba(0,0,0,0.4)',zIndex:1000,
           display:'flex',alignItems:'center',justifyContent:'center'
         }}>
-          <div style={{
+          <div ref={formModalRef} style={{
             background:'white',borderRadius:'10px',padding:'28px',width:'480px',
             maxHeight:'90vh',overflowY:'auto',boxShadow:'0 8px 32px rgba(0,0,0,0.18)'
           }}>
@@ -346,10 +369,15 @@ const Opportunities = () => {
                   Deal Name <span style={{color:'red'}}>*</span>
                 </label>
                 <input
+                  ref={opportunityNameRef}
                   type="text" name="opportunityName" value={formData.opportunityName}
                   onChange={handleFormChange} placeholder="Enter deal name"
+                  maxLength={80}
                   style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:'6px',fontSize:'13px',boxSizing:'border-box'}}
                 />
+                <div style={{textAlign:'right',fontSize:'11px',marginTop:'3px',color: formData.opportunityName.length > 72 ? '#ef4444' : '#9ca3af'}}>
+                  {formData.opportunityName.length}/80
+                </div>
               </div>
 
               {/* Company (Account) */}

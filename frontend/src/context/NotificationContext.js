@@ -33,8 +33,8 @@ export const NotificationProvider = ({ children }) => {
 
     fetchUnreadCount();
 
-    // Poll every 30 seconds
-    intervalRef.current = setInterval(fetchUnreadCount, 30000);
+    // Poll every 60 seconds
+    intervalRef.current = setInterval(fetchUnreadCount, 60000);
 
     return () => clearInterval(intervalRef.current);
   }, [user, fetchUnreadCount]);

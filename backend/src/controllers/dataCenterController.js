@@ -170,7 +170,8 @@ const getCandidates = async (req, res) => {
       .sort({ lastActiveOn: -1 })
       .limit(parseInt(limit))
       .skip(skip)
-      .select('-__v');
+      .select('-__v')
+      .lean();
 
     return successResponse(res, {
       candidates,

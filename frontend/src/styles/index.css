@@ -62,6 +62,7 @@
   }
 }
 
+
 /* Keep some utility classes for backward compatibility during migration */
 .loading {
   display: flex;

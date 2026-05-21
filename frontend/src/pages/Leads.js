@@ -1293,8 +1293,15 @@ const Leads = () => {
   const handleDetailCreateTask = async (e) => {
     e.preventDefault();
     const subj = (detailTaskData.subject || '').trim();
-    if (!subj || !/[a-zA-Z0-9]/.test(subj)) {
-      setTaskSubjectError('Please enter a meaningful subject containing letters or digits.'); return;
+    if (!subj) {
+      setTaskSubjectError('Subject is required.'); return;
+    }
+    if (!/[a-zA-Z]/.test(subj)) {
+      setTaskSubjectError('Please provide a valid descriptive text subject for this task.'); return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    if (detailTaskData.dueDate && detailTaskData.dueDate < today) {
+      setTaskSubjectError('Due Date cannot be set in the past. Please select a current or future calendar date.'); return;
     }
     setTaskSubjectError('');
     try {
@@ -1311,6 +1318,14 @@ const Leads = () => {
   // Detail Panel - Create Meeting
   const handleDetailCreateMeeting = async (e) => {
     e.preventDefault();
+    if (detailMeetingData.from) {
+      const now = new Date();
+      const fromDate = new Date(detailMeetingData.from);
+      if (fromDate < now) {
+        setError('Meeting date cannot be set in the past. Please select a current or future calendar date.');
+        return;
+      }
+    }
     try {
       setError('');
       const response = await fetch(`${API_URL}/meetings`, {
@@ -1333,8 +1348,11 @@ const Leads = () => {
   const handleDetailCreateCall = async (e) => {
     e.preventDefault();
     const subj = (detailCallData.subject || '').trim();
-    if (!subj || !/[a-zA-Z0-9]/.test(subj)) {
-      setCallSubjectError('Please enter a valid subject containing letters or digits.'); return;
+    if (!subj) {
+      setCallSubjectError('Subject is required.'); return;
+    }
+    if (!/[a-zA-Z]/.test(subj)) {
+      setCallSubjectError('Please enter a valid call subject using descriptive text.'); return;
     }
     setCallSubjectError('');
     try {
@@ -1359,8 +1377,11 @@ const Leads = () => {
   const handleDetailCreateNote = async (e) => {
     e.preventDefault();
     const ttl = (detailNoteData.title || '').trim();
-    if (!ttl || !/[a-zA-Z0-9]/.test(ttl)) {
-      setNoteTitleError('Please enter a valid title containing letters or numeric characters.'); return;
+    if (!ttl) {
+      setNoteTitleError('Title is required.'); return;
+    }
+    if (!/[a-zA-Z]/.test(ttl)) {
+      setNoteTitleError('Please enter a valid note title using descriptive text.'); return;
     }
     setNoteTitleError('');
     // BUG-161: Content must contain at least one letter
@@ -2345,7 +2366,7 @@ const Leads = () => {
                                   <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', borderColor: taskSubjectError ? '#ef4444' : undefined }} value={detailTaskData.subject} onChange={(e) => { setDetailTaskData({ ...detailTaskData, subject: e.target.value }); setTaskSubjectError(''); }} />
                                   {taskSubjectError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>⚠ {taskSubjectError}</div>}
                                 </div>
-                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date *</label><input type="date" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date *</label><input type="date" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} min={new Date().toISOString().split('T')[0]} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Priority</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.priority} onChange={(e) => setDetailTaskData({ ...detailTaskData, priority: e.target.value })}><option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option></select></div>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
@@ -2366,7 +2387,7 @@ const Leads = () => {
                             <form onSubmit={handleDetailCreateMeeting}>
                               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '6px', marginBottom: '8px' }}>
                                 <div style={{ gridColumn: '1 / -1' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Title *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.title} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, title: e.target.value })} required /></div>
-                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>From *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.from} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, from: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>From *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.from} min={new Date().toISOString().slice(0,16)} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, from: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>To *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.to} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, to: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Location</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.location} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, location: e.target.value })} /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Type</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailMeetingData.meetingType} onChange={(e) => setDetailMeetingData({ ...detailMeetingData, meetingType: e.target.value })}><option value="Online">Online</option><option value="In-Person">In-Person</option></select></div>
@@ -2390,7 +2411,7 @@ const Leads = () => {
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
                                 <div style={{ gridColumn: 'span 2' }}>
                                   <label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label>
-                                  <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', borderColor: callSubjectError ? '#ef4444' : undefined }} value={detailCallData.subject} onChange={(e) => { setDetailCallData({ ...detailCallData, subject: e.target.value }); setCallSubjectError(''); }} />
+                                  <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', borderColor: callSubjectError ? '#ef4444' : undefined }} value={detailCallData.subject} maxLength={150} onChange={(e) => { setDetailCallData({ ...detailCallData, subject: e.target.value }); setCallSubjectError(''); }} />
                                   {callSubjectError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>⚠ {callSubjectError}</div>}
                                 </div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Call Time *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailCallData.callStartTime} onChange={(e) => setDetailCallData({ ...detailCallData, callStartTime: e.target.value })} required /></div>
@@ -2811,7 +2832,7 @@ const Leads = () => {
           </div>
           {selectedLeads.length > 0 && (
             <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'5px 12px', background:'#eff6ff', borderRadius:'8px', border:'1px solid #93c5fd' }}>
-              <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e40af' }}>{selectedLeads.length} selected</span>
+              <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e40af', whiteSpace:'nowrap' }}>{selectedLeads.length} selected</span>
               <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
                 style={{ padding:'4px 10px', borderRadius:'6px', border:'none', background:'#3b82f6', color:'#fff', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>
                 Assign to Group
