@@ -193,8 +193,18 @@ const invoiceSchema = new mongoose.Schema({
 invoiceSchema.pre('save', async function(next) {
   if (this.isNew && !this.invoiceNumber) {
     const year = new Date().getFullYear();
-    const count = await this.constructor.countDocuments({ tenant: this.tenant });
-    this.invoiceNumber = `INV-${year}-${String(count + 1).padStart(5, '0')}`;
+    const prefix = `INV-${year}-`;
+    const last = await this.constructor.findOne(
+      { invoiceNumber: { $regex: `^${prefix}` } },
+      { invoiceNumber: 1 },
+      { sort: { invoiceNumber: -1 } }
+    );
+    let nextNum = 1;
+    if (last?.invoiceNumber) {
+      const lastNum = parseInt(last.invoiceNumber.replace(prefix, ''), 10);
+      if (!isNaN(lastNum)) nextNum = lastNum + 1;
+    }
+    this.invoiceNumber = `${prefix}${String(nextNum).padStart(5, '0')}`;
   }
   next();
 });

@@ -527,7 +527,7 @@ const Leads = () => {
     window.addEventListener('mouseup', onMouseUp);
   }, []);
 
-  const [stats, setStats] = useState({ total: 0, new: 0, qualified: 0, contacted: 0 });
+  const [globalStats, setGlobalStats] = useState({ total: 0, new: 0, qualified: 0, contacted: 0 });
 
 
   // Side Panel State
@@ -612,6 +612,8 @@ const Leads = () => {
     templateService.getTemplates('lead').then(r => setLeadTemplates(r?.data || [])).catch(() => {});
     templateService.getTemplates('task').then(r => setTaskTemplates(r?.data || [])).catch(() => {});
   }, [pagination.page, filters]);
+
+  useEffect(() => { refreshGlobalStats(); }, []);
 
   // Sync filter with URL params when navigating from another page
   useEffect(() => {
@@ -867,6 +869,19 @@ const Leads = () => {
     else if (fieldName === 'phone') debouncedPhoneVerify(value);
   };
 
+  const refreshGlobalStats = () => {
+    leadService.getLeadStats().then(res => {
+      if (res?.data) {
+        setGlobalStats({
+          total: res.data.total || 0,
+          new: res.data.leadsByStatus?.New || 0,
+          qualified: res.data.leadsByStatus?.Qualified || 0,
+          contacted: res.data.leadsByStatus?.Contacted || 0,
+        });
+      }
+    }).catch(() => {});
+  };
+
   const loadLeads = async () => {
     try {
       setLoading(true);
@@ -880,12 +895,6 @@ const Leads = () => {
 
         // displayColumns is now derived via useEffect watching leads + field defs
 
-        setStats({
-          total: response.data.pagination?.total || 0,
-          new: leadsData.filter(l => l.leadStatus === 'New').length,
-          qualified: leadsData.filter(l => l.leadStatus === 'Qualified').length,
-          contacted: leadsData.filter(l => l.leadStatus === 'Contacted').length
-        });
       }
     } catch (err) {
       if (err?.isPermissionDenied) return;
@@ -974,6 +983,7 @@ const Leads = () => {
       setShowCreateForm(false);
       resetForm();
       loadLeads();
+      refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       if (err?.isPermissionDenied) return;
@@ -1014,6 +1024,7 @@ const Leads = () => {
       setShowCreateForm(false);
       resetForm();
       loadLeads();
+      refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       if (err?.isPermissionDenied) return;
@@ -1466,6 +1477,7 @@ const Leads = () => {
       setSuccess('Lead deleted successfully!');
       closeSidePanel();
       loadLeads();
+      refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to delete lead'); }
   };
@@ -1546,6 +1558,7 @@ const Leads = () => {
       setSuccess(deleteAll ? 'All leads deleted!' : `${selectedLeads.length} leads deleted!`);
       setSelectedLeads([]);
       loadLeads();
+      refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to delete leads');
@@ -1562,6 +1575,7 @@ const Leads = () => {
       await leadService.deleteLead(leadId);
       setSuccess('Lead deleted successfully!');
       loadLeads();
+      refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       if (err?.isPermissionDenied) return;
@@ -1691,7 +1705,7 @@ const Leads = () => {
         >
           <div className="stat-icon"><Target className="h-5 w-5" /></div>
           <div>
-            <p className="stat-value">{stats.total}</p>
+            <p className="stat-value">{globalStats.total}</p>
             <p className="stat-label">Total Leads</p>
           </div>
         </div>
@@ -1708,7 +1722,7 @@ const Leads = () => {
         >
           <div className="stat-icon" style={{background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'}}><Target className="h-5 w-5" /></div>
           <div>
-            <p className="stat-value text-blue-600">{stats.new}</p>
+            <p className="stat-value text-blue-600">{globalStats.new}</p>
             <p className="stat-label">New Leads</p>
           </div>
         </div>
@@ -1725,7 +1739,7 @@ const Leads = () => {
         >
           <div className="stat-icon" style={{background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)'}}><Target className="h-5 w-5" /></div>
           <div>
-            <p className="stat-value text-green-600">{stats.qualified}</p>
+            <p className="stat-value text-green-600">{globalStats.qualified}</p>
             <p className="stat-label">Qualified</p>
           </div>
         </div>
@@ -1742,7 +1756,7 @@ const Leads = () => {
         >
           <div className="stat-icon" style={{background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)'}}><Target className="h-5 w-5" /></div>
           <div>
-            <p className="stat-value text-purple-600">{stats.contacted}</p>
+            <p className="stat-value text-purple-600">{globalStats.contacted}</p>
             <p className="stat-label">Contacted</p>
           </div>
         </div>
@@ -2578,87 +2592,83 @@ const Leads = () => {
 
 
       {/* ── FILTER BAR ── */}
-      <div style={{ background:'white', borderRadius:'14px', padding:'12px 16px', marginBottom:'16px', border:'1.5px solid #e2e8f0', boxShadow:'0 2px 8px rgba(0,0,0,0.04)', display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center' }}>
-        {/* Action buttons — LEFT */}
-        {hasPermission('field_management', 'read') && (
-          <button onClick={() => { closeAllForms(); setShowAddFieldForm(false); setShowManageFields(v => !v); }}
-            style={{ display:'flex', alignItems:'center', gap:'6px', background:'linear-gradient(135deg,#4A90E2 0%,#2c5364 100%)', color:'#fff', border:'none', borderRadius:'8px', padding:'8px 16px', fontWeight:'600', cursor:'pointer', fontSize:'13px' }}>
-            <Settings className="h-4 w-4" /> Manage Fields
-          </button>
-        )}
-        <button className="crm-btn crm-btn-primary" onClick={() => {
-          if (!canCreateLead) { setError('Access Restricted: You do not have permission to create leads.'); return; }
-          closeAllForms(); setSelectedLeadId(null); setSelectedLeadData(null); setDetailExpanded(false); resetForm(); setWizardStep(0); setShowCreateForm(true);
-        }}>
-          + New Lead
-        </button>
-        {/* Search */}
-        <div style={{ position:'relative', flex:'1', minWidth:'200px', maxWidth:'280px' }}>
-          <span style={{ position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)', fontSize:'13px', pointerEvents:'none', color:'#94a3b8' }}>🔍</span>
-          <input type="text" placeholder="Search leads..." value={filters.search}
-            onChange={(e) => handleFilterChange('search', e.target.value)}
-            onFocus={e => { e.target.style.borderColor='#6366f1'; e.target.style.background='#fff'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
-            onBlur={e => { e.target.style.borderColor='#e2e8f0'; e.target.style.background='#f8fafc'; e.target.style.boxShadow='none'; }}
-            style={{ width:'100%', padding:'9px 12px 9px 34px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', outline:'none', boxSizing:'border-box', transition:'all 0.2s', color:'#374151' }} />
+      <div style={{ background:'white', borderRadius:'14px', padding:'12px 16px', marginBottom:'16px', border:'1.5px solid #e2e8f0', boxShadow:'0 2px 8px rgba(0,0,0,0.04)', display:'flex', flexDirection:'column', gap:'10px' }}>
+        {/* Row 1 — Filters */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center' }}>
+          <div style={{ position:'relative', flex:'1', minWidth:'200px', maxWidth:'280px' }}>
+            <span style={{ position:'absolute', left:'11px', top:'50%', transform:'translateY(-50%)', fontSize:'13px', pointerEvents:'none', color:'#94a3b8' }}>🔍</span>
+            <input type="text" placeholder="Search leads..." value={filters.search}
+              onChange={(e) => handleFilterChange('search', e.target.value)}
+              onFocus={e => { e.target.style.borderColor='#6366f1'; e.target.style.background='#fff'; e.target.style.boxShadow='0 0 0 3px rgba(99,102,241,0.12)'; }}
+              onBlur={e => { e.target.style.borderColor='#e2e8f0'; e.target.style.background='#f8fafc'; e.target.style.boxShadow='none'; }}
+              style={{ width:'100%', padding:'9px 12px 9px 34px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', outline:'none', boxSizing:'border-box', transition:'all 0.2s', color:'#374151' }} />
+          </div>
+          <select value={filters.leadStatus} onChange={(e) => handleFilterChange('leadStatus', e.target.value)}
+            style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
+            <option value="">All Status</option>
+            <option value="New">New</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Qualified">Qualified</option>
+            <option value="Unqualified">Unqualified</option>
+            <option value="Lost">Lost</option>
+          </select>
+          <select value={filters.leadSource} onChange={(e) => handleFilterChange('leadSource', e.target.value)}
+            style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
+            <option value="">All Sources</option>
+            <option value="Website">Website</option>
+            <option value="Referral">Referral</option>
+            <option value="Campaign">Campaign</option>
+            <option value="Cold Call">Cold Call</option>
+            <option value="Social Media">Social Media</option>
+          </select>
+          <select value={filters.rating} onChange={(e) => handleFilterChange('rating', e.target.value)}
+            style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
+            <option value="">All Ratings</option>
+            <option value="Hot">🔥 Hot</option>
+            <option value="Warm">🌤 Warm</option>
+            <option value="Cold">❄️ Cold</option>
+          </select>
         </div>
-        {/* Status */}
-        <select value={filters.leadStatus} onChange={(e) => handleFilterChange('leadStatus', e.target.value)}
-          style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
-          <option value="">All Status</option>
-          <option value="New">New</option>
-          <option value="Contacted">Contacted</option>
-          <option value="Qualified">Qualified</option>
-          <option value="Unqualified">Unqualified</option>
-          <option value="Lost">Lost</option>
-        </select>
-        {/* Source */}
-        <select value={filters.leadSource} onChange={(e) => handleFilterChange('leadSource', e.target.value)}
-          style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
-          <option value="">All Sources</option>
-          <option value="Website">Website</option>
-          <option value="Referral">Referral</option>
-          <option value="Campaign">Campaign</option>
-          <option value="Cold Call">Cold Call</option>
-          <option value="Social Media">Social Media</option>
-        </select>
-        {/* Rating */}
-        <select value={filters.rating} onChange={(e) => handleFilterChange('rating', e.target.value)}
-          style={{ padding:'9px 12px', border:'1.5px solid #e2e8f0', borderRadius:'10px', fontSize:'13px', background:'#f8fafc', cursor:'pointer', fontWeight:'500', color:'#374151', outline:'none' }}>
-          <option value="">All Ratings</option>
-          <option value="Hot">🔥 Hot</option>
-          <option value="Warm">🌤 Warm</option>
-          <option value="Cold">❄️ Cold</option>
-        </select>
-        <div style={{ flex:1 }} />
-        {/* View toggle */}
-        <div style={{ display:'flex', background:'#f1f5f9', borderRadius:'10px', padding:'3px', border:'1.5px solid #e2e8f0' }}>
-          {[['table', <List className="h-3.5 w-3.5" />, 'List'], ['grid', <LayoutGrid className="h-3.5 w-3.5" />, 'Grid']].map(([mode, icon, lbl]) => (
-            <button key={mode} onClick={() => setViewMode(mode)}
-              style={{ display:'flex', alignItems:'center', gap:'5px', padding:'6px 13px', borderRadius:'8px', border:'none', fontSize:'12px', fontWeight:'600', cursor:'pointer', transition:'all 0.18s', background: viewMode === mode ? 'white' : 'transparent', color: viewMode === mode ? '#0f172a' : '#94a3b8', boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
-              {icon} {lbl}
+        {/* Row 2 — Action buttons */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:'10px', alignItems:'center' }}>
+          {hasPermission('field_management', 'read') && (
+            <button onClick={() => { closeAllForms(); setShowAddFieldForm(false); setShowManageFields(v => !v); }}
+              style={{ display:'flex', alignItems:'center', gap:'6px', background:'linear-gradient(135deg,#4A90E2 0%,#2c5364 100%)', color:'#fff', border:'none', borderRadius:'8px', padding:'8px 16px', fontWeight:'600', cursor:'pointer', fontSize:'13px' }}>
+              <Settings className="h-4 w-4" /> Manage Fields
             </button>
-          ))}
+          )}
+          <button className="crm-btn crm-btn-primary" onClick={() => {
+            if (!canCreateLead) { setError('Access Restricted: You do not have permission to create leads.'); return; }
+            closeAllForms(); setSelectedLeadId(null); setSelectedLeadData(null); setDetailExpanded(false); resetForm(); setWizardStep(0); setShowCreateForm(true);
+          }}>
+            + New Lead
+          </button>
+          {selectedLeads.length > 0 && (
+            <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(245,158,11,0.3)' }}>
+              <Users className="h-4 w-4" /> Assign {selectedLeads.length}
+            </button>
+          )}
+          {canImportLeads && (
+            <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>
+              <Upload className="h-4 w-4 mr-1" /> Bulk Upload
+            </button>
+          )}
+          {canDeleteLead && (
+            <button onClick={() => handleBulkDelete(true)}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'#f43f5e', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(244,63,94,0.3)' }}>
+              <Trash2 className="h-4 w-4" /> Delete All
+            </button>
+          )}
+          <div style={{ marginLeft:'auto', display:'flex', background:'#f1f5f9', borderRadius:'10px', padding:'3px', border:'1.5px solid #e2e8f0' }}>
+            {[['table', <List className="h-3.5 w-3.5" />, 'List'], ['grid', <LayoutGrid className="h-3.5 w-3.5" />, 'Grid']].map(([mode, icon, lbl]) => (
+              <button key={mode} onClick={() => setViewMode(mode)}
+                style={{ display:'flex', alignItems:'center', gap:'5px', padding:'6px 13px', borderRadius:'8px', border:'none', fontSize:'12px', fontWeight:'600', cursor:'pointer', transition:'all 0.18s', background: viewMode === mode ? 'white' : 'transparent', color: viewMode === mode ? '#0f172a' : '#94a3b8', boxShadow: viewMode === mode ? '0 1px 4px rgba(0,0,0,0.1)' : 'none' }}>
+                {icon} {lbl}
+              </button>
+            ))}
+          </div>
         </div>
-        {/* Bulk assign */}
-        {selectedLeads.length > 0 && (
-          <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
-            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(245,158,11,0.3)' }}>
-            <Users className="h-4 w-4" /> Assign {selectedLeads.length}
-          </button>
-        )}
-        {/* Bulk Upload */}
-        {canImportLeads && (
-          <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>
-            <Upload className="h-4 w-4 mr-1" /> Bulk Upload
-          </button>
-        )}
-        {/* Delete All */}
-        {canDeleteLead && (
-          <button onClick={() => handleBulkDelete(true)}
-            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'#f43f5e', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(244,63,94,0.3)' }}>
-            <Trash2 className="h-4 w-4" /> Delete All
-          </button>
-        )}
       </div>
       {/* Inline Add Product Form - Compact */}
       {showAddProductForm && (
@@ -2831,7 +2841,7 @@ const Leads = () => {
             <span style={{ fontSize:'12px', fontWeight:'700', background:'#ede9fe', color:'#5b21b6', padding:'2px 9px', borderRadius:'99px' }}>{pagination.total}</span>
           </div>
           {selectedLeads.length > 0 && (
-            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'5px 12px', background:'#eff6ff', borderRadius:'8px', border:'1px solid #93c5fd' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'5px 12px', background:'#eff6ff', borderRadius:'8px', border:'1px solid #93c5fd', flexWrap:'nowrap', flexShrink:0 }}>
               <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e40af', whiteSpace:'nowrap' }}>{selectedLeads.length} selected</span>
               <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
                 style={{ padding:'4px 10px', borderRadius:'6px', border:'none', background:'#3b82f6', color:'#fff', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>

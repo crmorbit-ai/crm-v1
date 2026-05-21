@@ -105,7 +105,18 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
 
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
-    setLoading(true); setError('');
+    setError('');
+
+    // Frontend validation
+    if (!formData.customerName?.trim()) { setError('Customer name is required. Please select or enter a customer.'); return; }
+    if (!formData.customerEmail?.trim()) { setError('Customer email is required. The selected customer may not have an email — please enter it manually.'); return; }
+    if (!formData.title?.trim()) { setError('Quotation title is required.'); return; }
+    if (!formData.expiryDate) { setError('Expiry date is required.'); return; }
+    for (let i = 0; i < formData.items.length; i++) {
+      if (!formData.items[i].productName?.trim()) { setError(`Item ${i + 1}: product name is required.`); return; }
+    }
+
+    setLoading(true);
     try {
       const data = { ...formData, ...calcTotals() };
       if (isEdit) { await quotationService.updateQuotation(id, data); navigate('/quotations'); }
@@ -114,7 +125,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
         if (embedded && onSuccess) onSuccess(res?.data);
         else navigate('/quotations');
       }
-    } catch (err) { setError(err.message||'Failed to save'); } finally { setLoading(false); }
+    } catch (err) { setError(err.error || err.message || 'Failed to save quotation'); } finally { setLoading(false); }
   };
 
   const totals = calcTotals();
@@ -258,7 +269,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
 
   if (embedded) {
     return (
-      <div style={{ height:'100%', display:'flex', flexDirection:'column' }}>
+      <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column' }}>
         <div style={{ background:'linear-gradient(135deg, #022c22 0%, #064e3b 100%)', flexShrink:0 }}>
           <div style={{ padding:'12px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
@@ -425,9 +436,13 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
             {customers.map(c=><option key={c._id} value={c._id}>{customerType==='Account'?c.accountName:`${c.firstName} ${c.lastName}`} - {c.email}</option>)}
           </select>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'16px' }}>
-            <div><label className="crm-form-label">Name *</label><input name="customerName" value={formData.customerName} readOnly className="crm-form-input" style={{ background:'#f5f5f5' }} /></div>
-            <div><label className="crm-form-label">Email *</label><input name="customerEmail" value={formData.customerEmail} readOnly className="crm-form-input" style={{ background:'#f5f5f5' }} /></div>
-            <div><label className="crm-form-label">Phone</label><input name="customerPhone" value={formData.customerPhone} readOnly className="crm-form-input" style={{ background:'#f5f5f5' }} /></div>
+            <div><label className="crm-form-label">Name *</label><input name="customerName" value={formData.customerName} onChange={inp} className="crm-form-input" placeholder="Customer name" /></div>
+            <div>
+              <label className="crm-form-label">Email *</label>
+              <input name="customerEmail" value={formData.customerEmail} onChange={inp} className="crm-form-input" placeholder="customer@email.com" />
+              {!formData.customerEmail?.trim() && formData.customer && <p style={{ fontSize:'11px', color:'#ef4444', margin:'4px 0 0' }}>This customer has no email — please enter it manually.</p>}
+            </div>
+            <div><label className="crm-form-label">Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} className="crm-form-input" placeholder="Phone number" /></div>
           </div>
         </div>
         {/* Quotation Templates */}
@@ -514,9 +529,9 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
           <div style={{ marginBottom:'12px' }}><label className="crm-form-label">Terms</label><textarea name="terms" value={formData.terms} onChange={inp} rows="3" className="crm-form-textarea" /></div>
           <div><label className="crm-form-label">Notes</label><textarea name="notes" value={formData.notes} onChange={inp} rows="3" className="crm-form-textarea" /></div>
         </div>
-        <div style={{ display:'flex', gap:'12px', justifyContent:'flex-end' }}>
-          <button type="button" onClick={()=>navigate('/quotations')} className="btn-secondary">Cancel</button>
-          <button type="submit" className="btn-primary" disabled={loading}>{loading?'Saving...':isEdit?'Update':'Create Quotation'}</button>
+        <div style={{ position:'sticky', bottom:0, background:'#fff', borderTop:'1.5px solid #e2e8f0', padding:'14px 0 4px', display:'flex', gap:'12px', justifyContent:'flex-end', flexWrap:'wrap', zIndex:10 }}>
+          <button type="button" onClick={()=>navigate('/quotations')} className="btn-secondary" style={{ flex:'0 0 auto' }}>Cancel</button>
+          <button type="submit" className="btn-primary" disabled={loading} style={{ flex:'0 0 auto' }}>{loading?'Saving...':isEdit?'Update':'Create Quotation'}</button>
         </div>
       </form>
     </DashboardLayout>

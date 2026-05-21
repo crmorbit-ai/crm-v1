@@ -232,6 +232,7 @@ const getContactStats = async (req, res) => {
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') query.tenant = req.user.tenant;
     const total = await Contact.countDocuments(query);
     const primaryContacts = await Contact.countDocuments({ ...query, isPrimary: true });
+    const withAccount = await Contact.countDocuments({ ...query, account: { $ne: null } });
     const byDepartment = await Contact.aggregate([
       { $match: { ...query, department: { $ne: null, $ne: '' } } },
       { $group: { _id: '$department', count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 5 }
@@ -240,7 +241,7 @@ const getContactStats = async (req, res) => {
     startOfMonth.setDate(1);
     startOfMonth.setHours(0, 0, 0, 0);
     const newThisMonth = await Contact.countDocuments({ ...query, createdAt: { $gte: startOfMonth } });
-    successResponse(res, 200, 'Statistics retrieved successfully', { total, primaryContacts, newThisMonth, byDepartment });
+    successResponse(res, 200, 'Statistics retrieved successfully', { total, primaryContacts, withAccount, newThisMonth, byDepartment });
   } catch (error) {
     console.error('Get contact stats error:', error);
     errorResponse(res, 500, 'Server error');

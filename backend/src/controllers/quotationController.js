@@ -36,9 +36,10 @@ exports.createQuotation = async (req, res) => {
     });
   } catch (error) {
     console.error('Error creating quotation:', error);
-    res.status(500).json({
+    const isDuplicate = error.code === 11000;
+    res.status(isDuplicate ? 409 : 500).json({
       success: false,
-      message: 'Error creating quotation',
+      message: isDuplicate ? 'Quotation number conflict — please try again.' : 'Error creating quotation',
       error: error.message
     });
   }
@@ -307,9 +308,10 @@ exports.convertToInvoice = async (req, res) => {
       data: invoice
     });
   } catch (error) {
-    res.status(500).json({
+    const isDuplicate = error.code === 11000;
+    res.status(isDuplicate ? 409 : 500).json({
       success: false,
-      message: 'Error converting quotation to invoice',
+      message: isDuplicate ? 'Invoice number conflict — please try again.' : 'Error converting quotation to invoice',
       error: error.message
     });
   }

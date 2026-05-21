@@ -149,8 +149,18 @@ const quotationSchema = new mongoose.Schema({
 quotationSchema.pre('save', async function(next) {
   if (this.isNew && !this.quotationNumber) {
     const year = new Date().getFullYear();
-    const count = await this.constructor.countDocuments({ tenant: this.tenant });
-    this.quotationNumber = `QT-${year}-${String(count + 1).padStart(5, '0')}`;
+    const prefix = `QT-${year}-`;
+    const last = await this.constructor.findOne(
+      { quotationNumber: { $regex: `^${prefix}` } },
+      { quotationNumber: 1 },
+      { sort: { quotationNumber: -1 } }
+    );
+    let nextNum = 1;
+    if (last?.quotationNumber) {
+      const lastNum = parseInt(last.quotationNumber.replace(prefix, ''), 10);
+      if (!isNaN(lastNum)) nextNum = lastNum + 1;
+    }
+    this.quotationNumber = `${prefix}${String(nextNum).padStart(5, '0')}`;
   }
   next();
 });

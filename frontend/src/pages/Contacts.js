@@ -231,6 +231,7 @@ const Contacts = () => {
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
   const [stats, setStats] = useState({ total: 0, primary: 0, withAccount: 0, recent: 0 });
+  const [globalStats, setGlobalStats] = useState({ total: 0, primary: 0, withAccount: 0 });
 
   // Manage Fields
   const [showManageFields, setShowManageFields] = useState(false);
@@ -270,6 +271,20 @@ const Contacts = () => {
     loadCustomFields();
   }, [pagination.page, filters.search, filters.account, filters.title, filters.isPrimary, filters.hasAccount]);
 
+  useEffect(() => { refreshGlobalStats(); }, []);
+
+  const refreshGlobalStats = () => {
+    contactService.getContactStats().then(res => {
+      if (res?.data) {
+        setGlobalStats({
+          total: res.data.total || 0,
+          primary: res.data.primaryContacts || 0,
+          withAccount: res.data.withAccount || 0,
+        });
+      }
+    }).catch(() => {});
+  };
+
   const loadContacts = async () => {
     try {
       setLoading(true);
@@ -279,9 +294,7 @@ const Contacts = () => {
         const contactsData = response.data.contacts || [];
         setContacts(contactsData);
         setPagination(prev => ({ ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0 }));
-        const primary = contactsData.filter(c => c.isPrimary).length;
-        const withAccount = contactsData.filter(c => c.account).length;
-        setStats({ total: response.data.pagination?.total || 0, primary, withAccount, recent: contactsData.length });
+        setStats(prev => ({ ...prev, recent: contactsData.length }));
       }
     } catch (err) {
       if (err?.isPermissionDenied) return;
@@ -431,6 +444,7 @@ const Contacts = () => {
       setWizardStep(0);
       resetForm();
       loadContacts();
+      refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create contact'); }
     finally { setCreating(false); }
@@ -617,6 +631,7 @@ const Contacts = () => {
       setSuccess('Contact deleted successfully!');
       closeSidePanel();
       loadContacts();
+      refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to delete contact'); }
   };
@@ -647,7 +662,7 @@ const Contacts = () => {
               }}
             >
               <div className="stat-label">Total Contacts</div>
-              <div className="stat-value">{stats.total}</div>
+              <div className="stat-value">{globalStats.total}</div>
             </div>
             <div
               className="stat-card"
@@ -661,7 +676,7 @@ const Contacts = () => {
               }}
             >
               <div className="stat-label">Primary Contacts</div>
-              <div className="stat-value">{stats.primary}</div>
+              <div className="stat-value">{globalStats.primary}</div>
             </div>
             <div
               className="stat-card"
@@ -675,9 +690,17 @@ const Contacts = () => {
               }}
             >
               <div className="stat-label">With Account</div>
-              <div className="stat-value">{stats.withAccount}</div>
+              <div className="stat-value">{globalStats.withAccount}</div>
             </div>
-            <div className="stat-card">
+            <div
+              className="stat-card"
+              style={{
+                cursor: 'pointer',
+                border: '1px solid #e2e8f0',
+                background: 'linear-gradient(135deg, rgb(153 255 251) 0%, rgb(255 255 255) 100%)',
+                transition: 'all 0.2s'
+              }}
+            >
               <div className="stat-label">This Page</div>
               <div className="stat-value">{stats.recent}</div>
             </div>
