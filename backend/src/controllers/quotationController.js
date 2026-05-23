@@ -1,6 +1,8 @@
 const Quotation = require('../models/Quotation');
 const Invoice = require('../models/Invoice');
 const Tenant = require('../models/Tenant');
+const ProductItem = require('../models/ProductItem');
+const StockTransaction = require('../models/StockTransaction');
 const { logActivity } = require('../middleware/activityLogger');
 const { generateQuotationPDF } = require('../services/pdfService');
 const emailService = require('../services/emailService');
@@ -263,6 +265,32 @@ exports.convertToInvoice = async (req, res) => {
       });
     }
 
+    // Check inventory availability before conversion
+    const insufficientItems = [];
+    for (const item of quotation.items || []) {
+      if (item.product) {
+        const product = await ProductItem.findOne({ _id: item.product, tenant: quotation.tenant });
+        if (product) {
+          const availableStock = product.stock - product.committedStock;
+          if (availableStock < item.quantity) {
+            insufficientItems.push({
+              productName: product.name,
+              required: item.quantity,
+              available: availableStock
+            });
+          }
+        }
+      }
+    }
+
+    if (insufficientItems.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Insufficient inventory for some items',
+        insufficientItems
+      });
+    }
+
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
 
@@ -290,6 +318,17 @@ exports.convertToInvoice = async (req, res) => {
     });
 
     await invoice.save();
+
+    // Commit stock for all items in quotation
+    for (const item of quotation.items || []) {
+      if (item.product) {
+        const product = await ProductItem.findOne({ _id: item.product, tenant: quotation.tenant });
+        if (product) {
+          product.committedStock = (product.committedStock || 0) + item.quantity;
+          await product.save();
+        }
+      }
+    }
 
     quotation.convertedToInvoice = true;
     quotation.invoice = invoice._id;
@@ -332,11 +371,41 @@ exports.updateQuotationStatus = async (req, res) => {
       });
     }
 
+    const previousStatus = quotation.status;
     quotation.status = status;
-    if (status === 'viewed' && !quotation.viewedAt) {
-      quotation.viewedAt = new Date();
-    }
+    if (status === 'viewed' && !quotation.viewedAt) quotation.viewedAt = new Date();
     await quotation.save();
+
+    // Stock reservation logic
+    const itemsWithProduct = (quotation.items || []).filter(i => i.product);
+
+    // Quotation accepted → commit stock
+    if (status === 'accepted' && previousStatus !== 'accepted') {
+      for (const item of itemsWithProduct) {
+        const product = await ProductItem.findOne({ _id: item.product, tenant: req.user.tenant });
+        if (!product) continue;
+        product.committedStock = Math.min(product.stock, (product.committedStock || 0) + item.quantity);
+        await product.save();
+        await StockTransaction.create({
+          tenant: req.user.tenant, product: product._id, productName: product.name,
+          type: 'stock_out', quantity: item.quantity,
+          previousStock: product.stock, newStock: product.stock,
+          reason: `Quotation accepted — ${quotation.quotationNumber}`,
+          referenceType: 'invoice', referenceId: quotation._id,
+          referenceNumber: quotation.quotationNumber, createdBy: req.user.id
+        });
+      }
+    }
+
+    // Quotation rejected/expired → release committed stock
+    if (['rejected', 'expired'].includes(status) && previousStatus === 'accepted') {
+      for (const item of itemsWithProduct) {
+        const product = await ProductItem.findOne({ _id: item.product, tenant: req.user.tenant });
+        if (!product) continue;
+        product.committedStock = Math.max(0, (product.committedStock || 0) - item.quantity);
+        await product.save();
+      }
+    }
 
     await logActivity(req, 'quotation.status_updated', 'Quotation', quotation._id, {
       quotationNumber: quotation.quotationNumber,

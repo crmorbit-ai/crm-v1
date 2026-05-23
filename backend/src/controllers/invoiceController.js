@@ -1,4 +1,6 @@
 const Invoice = require('../models/Invoice');
+const ProductItem = require('../models/ProductItem');
+const StockTransaction = require('../models/StockTransaction');
 const fs = require('fs');
 
 exports.createInvoice = async (req, res) => {
@@ -370,9 +372,46 @@ exports.updateInvoiceStatus = async (req, res) => {
       });
     }
 
+    const previousStatus = invoice.status;
     invoice.status = status;
     await invoice.save();
 
+    // Auto stock deduction when invoice marked as paid
+    if (status === 'paid' && previousStatus !== 'paid') {
+      const itemsWithProduct = (invoice.items || []).filter(item => item.product);
+      for (const item of itemsWithProduct) {
+        try {
+          const product = await ProductItem.findOne({ _id: item.product, tenant: req.user.tenant });
+          if (!product) continue;
+          const previousStock = product.stock;
+          const deductQty = item.quantity || 1;
+          const newStock = Math.max(0, previousStock - deductQty);
+          const previousCommitted = product.committedStock || 0;
+          const newCommitted = Math.max(0, previousCommitted - deductQty);
+
+          product.stock = newStock;
+          product.committedStock = newCommitted;
+          await product.save();
+
+          await StockTransaction.create({
+            tenant: req.user.tenant,
+            product: product._id,
+            productName: product.name,
+            type: 'stock_out',
+            quantity: deductQty,
+            previousStock,
+            newStock,
+            reason: `Invoice paid — ${invoice.invoiceNumber}`,
+            referenceType: 'invoice',
+            referenceId: invoice._id,
+            referenceNumber: invoice.invoiceNumber,
+            createdBy: req.user.id
+          });
+        } catch (err) {
+          console.error('Stock deduction error for product', item.product, err.message);
+        }
+      }
+    }
 
     res.json({
       success: true,
