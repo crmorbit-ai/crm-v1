@@ -5,12 +5,11 @@ const PurchaseOrder = require('../models/PurchaseOrder');
 // ─── GET /api/inventory ───────────────────────────────────────────────────────
 exports.getInventory = async (req, res) => {
   try {
-    const { search, stockStatus, category, itemType, page = 1, limit = 50 } = req.query;
+    const { search, stockStatus, category, page = 1, limit = 50 } = req.query;
     const query = { tenant: req.user.tenant, isActive: true };
 
     if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { articleNumber: { $regex: search, $options: 'i' } }];
     if (category) query.category = category;
-    if (itemType) query.itemType = itemType;
 
     let products = await ProductItem.find(query).sort({ name: 1 });
 
@@ -327,230 +326,12 @@ exports.getStockAging = async (req, res) => {
   }
 };
 
-// ─── GET /api/inventory/by-type ─────────────────────────────────────────────
-exports.getInventoryByType = async (req, res) => {
-  try {
-    const { itemType, page = 1, limit = 50 } = req.query;
-    const query = { tenant: req.user.tenant, isActive: true };
-
-    if (itemType) query.itemType = itemType;
-
-    let items = await ProductItem.find(query).sort({ name: 1 });
-    const total = items.length;
-    const paginated = items.slice((page - 1) * limit, page * limit);
-
-    const summary = {
-      total: total,
-      byItemType: {
-        product: await ProductItem.countDocuments({ ...query, itemType: 'product' }),
-        service: await ProductItem.countDocuments({ ...query, itemType: 'service' }),
-        lead: await ProductItem.countDocuments({ ...query, itemType: 'lead' })
-      }
-    };
-
-    res.json({ success: true, data: { items: paginated, pagination: { total, page: Number(page), pages: Math.ceil(total / limit) }, summary } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch inventory by type', error: error.message });
-  }
-};
-
-// ─── GET /api/inventory/service ──────────────────────────────────────────────
-exports.getServiceInventory = async (req, res) => {
-  try {
-    const { search, category, page = 1, limit = 50 } = req.query;
-    const query = { tenant: req.user.tenant, isActive: true, itemType: 'service' };
-
-    if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { articleNumber: { $regex: search, $options: 'i' } }];
-    if (category) query.category = category;
-
-    let services = await ProductItem.find(query).sort({ name: 1 });
-    const total = services.length;
-    const paginated = services.slice((page - 1) * limit, page * limit);
-
-    const summary = {
-      totalServices: services.length,
-      outOfStock: services.filter(s => s.stock === 0).length,
-      lowStock: services.filter(s => s.stock > 0 && s.stock <= s.lowStockThreshold).length,
-      available: services.filter(s => s.stock > s.lowStockThreshold).length
-    };
-
-    res.json({ success: true, data: { services: paginated, pagination: { total, page: Number(page), pages: Math.ceil(total / limit) }, summary } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch service inventory', error: error.message });
-  }
-};
-
-// ─── GET /api/inventory/lead ────────────────────────────────────────────────
-exports.getLeadInventory = async (req, res) => {
-  try {
-    const { search, category, page = 1, limit = 50 } = req.query;
-    const query = { tenant: req.user.tenant, isActive: true, itemType: 'lead' };
-
-    if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { articleNumber: { $regex: search, $options: 'i' } }];
-    if (category) query.category = category;
-
-    let leads = await ProductItem.find(query).sort({ name: 1 });
-    const total = leads.length;
-    const paginated = leads.slice((page - 1) * limit, page * limit);
-
-    const summary = {
-      totalLeads: leads.length,
-      outOfStock: leads.filter(l => l.stock === 0).length,
-      lowStock: leads.filter(l => l.stock > 0 && l.stock <= l.lowStockThreshold).length,
-      available: leads.filter(l => l.stock > l.lowStockThreshold).length
-    };
-
-    res.json({ success: true, data: { leads: paginated, pagination: { total, page: Number(page), pages: Math.ceil(total / limit) }, summary } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch lead inventory', error: error.message });
-  }
-};
-
-// ─── GET /api/inventory/hr-visibility ────────────────────────────────────────
-exports.getHRVisibility = async (req, res) => {
-  try {
-    const { itemType = 'service' } = req.query;
-    const query = { tenant: req.user.tenant, isActive: true, itemType };
-
-    const items = await ProductItem.find(query).sort({ name: 1 });
-
-    const visibility = items.map(item => ({
-      _id: item._id,
-      name: item.name,
-      category: item.category,
-      stock: item.stock,
-      availableStock: item.availableStock,
-      lowStockThreshold: item.lowStockThreshold,
-      isAvailable: item.stock > 0,
-      stockStatus: item.stockStatus,
-      unit: item.unit
-    }));
-
-    const summary = {
-      total: items.length,
-      available: visibility.filter(v => v.isAvailable).length,
-      outOfStock: visibility.filter(v => v.stock === 0).length,
-      lowStock: visibility.filter(v => v.stock > 0 && v.stock <= v.lowStockThreshold).length
-    };
-
-    res.json({ success: true, data: { visibility, summary } });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch HR visibility', error: error.message });
-  }
-};
-
-// ─── GET /api/inventory/categories-breakdown ────────────────────────────────
-exports.getCategoriesBreakdown = async (req, res) => {
-  try {
-    const items = await ProductItem.find({ tenant: req.user.tenant, isActive: true });
-
-    const categoriesMap = {};
-
-    for (const item of items) {
-      const key = `${item.categoryType || 'product'}:${item.category}`;
-      if (!categoriesMap[key]) {
-        categoriesMap[key] = {
-          categoryType: item.categoryType || 'product',
-          category: item.category,
-          items: [],
-          totalStock: 0,
-          totalCommitted: 0,
-          totalAvailable: 0
-        };
-      }
-
-      categoriesMap[key].items.push({
-        _id: item._id,
-        name: item.name,
-        articleNumber: item.articleNumber,
-        stock: item.stock,
-        committedStock: item.committedStock,
-        availableStock: item.availableStock
-      });
-
-      categoriesMap[key].totalStock += item.stock;
-      categoriesMap[key].totalCommitted += item.committedStock;
-      categoriesMap[key].totalAvailable += item.availableStock;
-    }
-
-    const breakdown = Object.values(categoriesMap).sort((a, b) =>
-      a.categoryType.localeCompare(b.categoryType) || a.category.localeCompare(b.category)
-    );
-
-    res.json({ success: true, data: breakdown });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to fetch categories breakdown', error: error.message });
-  }
-};
-
-// ─── POST /api/inventory/check-availability ──────────────────────────────────
-exports.checkAvailability = async (req, res) => {
-  try {
-    const { items } = req.body; // items: [{ productId: id, quantity: n }, ...]
-
-    if (!Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ success: false, message: 'Items array is required' });
-    }
-
-    const results = [];
-    const unavailable = [];
-
-    for (const item of items) {
-      const product = await ProductItem.findOne({ _id: item.productId, tenant: req.user.tenant });
-      if (!product) {
-        unavailable.push({ productId: item.productId, reason: 'Product not found' });
-        continue;
-      }
-
-      const availableStock = product.stock - product.committedStock;
-      const isAvailable = availableStock >= item.quantity;
-
-      results.push({
-        productId: product._id,
-        productName: product.name,
-        requiredQty: item.quantity,
-        availableQty: availableStock,
-        stockOnHand: product.stock,
-        committedQty: product.committedStock,
-        isAvailable,
-        itemType: product.itemType,
-        category: product.category
-      });
-
-      if (!isAvailable) {
-        unavailable.push({
-          productId: product._id,
-          productName: product.name,
-          requiredQty: item.quantity,
-          availableQty: availableStock,
-          shortage: item.quantity - availableStock
-        });
-      }
-    }
-
-    res.json({
-      success: true,
-      data: {
-        items: results,
-        unavailable,
-        allAvailable: unavailable.length === 0
-      }
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'Failed to check availability', error: error.message });
-  }
-};
 
 // ─── GET /api/inventory/dashboard ────────────────────────────────────────────
 exports.getDashboard = async (req, res) => {
   try {
     const tenant = req.user.tenant;
     const products = await ProductItem.find({ tenant, isActive: true });
-    const productsByType = {
-      product: products.filter(p => p.itemType === 'product'),
-      service: products.filter(p => p.itemType === 'service'),
-      lead: products.filter(p => p.itemType === 'lead')
-    };
     const transactions = await StockTransaction.find({ tenant }).sort({ createdAt: -1 });
 
     // Top selling products
@@ -585,37 +366,12 @@ exports.getDashboard = async (req, res) => {
       success: true,
       data: {
         summary: {
-          totalItems: products.length,
-          byType: {
-            products: productsByType.product.length,
-            services: productsByType.service.length,
-            leads: productsByType.lead.length
-          },
+          totalProducts: products.length,
           totalStockValue: products.reduce((s, p) => s + p.stock * (p.costPrice || p.price), 0),
           lowStockCount: lowStockItems.length,
           outOfStockCount: outOfStockItems.length,
           totalCommitted: products.reduce((s, p) => s + p.committedStock, 0),
           pendingPOCount: pendingPOs.length
-        },
-        byItemType: {
-          products: {
-            total: productsByType.product.length,
-            available: productsByType.product.filter(p => p.stock > p.lowStockThreshold).length,
-            lowStock: productsByType.product.filter(p => p.stock > 0 && p.stock <= p.lowStockThreshold).length,
-            outOfStock: productsByType.product.filter(p => p.stock === 0).length
-          },
-          services: {
-            total: productsByType.service.length,
-            available: productsByType.service.filter(s => s.stock > s.lowStockThreshold).length,
-            lowStock: productsByType.service.filter(s => s.stock > 0 && s.stock <= s.lowStockThreshold).length,
-            outOfStock: productsByType.service.filter(s => s.stock === 0).length
-          },
-          leads: {
-            total: productsByType.lead.length,
-            available: productsByType.lead.filter(l => l.stock > l.lowStockThreshold).length,
-            lowStock: productsByType.lead.filter(l => l.stock > 0 && l.stock <= l.lowStockThreshold).length,
-            outOfStock: productsByType.lead.filter(l => l.stock === 0).length
-          }
         },
         topSelling,
         pendingPOs,

@@ -62,6 +62,11 @@ const purchaseOrderSchema = new mongoose.Schema({
       required: true,
       min: 1
     },
+    receivedQuantity: {
+      type: Number,
+      default: 0,
+      min: 0
+    },
     unitPrice: {
       type: Number,
       required: true,
@@ -82,6 +87,24 @@ const purchaseOrderSchema = new mongoose.Schema({
       required: true
     }
   }],
+
+  // Receive history — each receive event logged here
+  receives: [{
+    receiveDate: { type: Date, default: Date.now },
+    receivedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    items: [{
+      product: { type: mongoose.Schema.Types.ObjectId, ref: 'ProductItem' },
+      productName: String,
+      quantity: Number
+    }],
+    notes: String
+  }],
+
+  receiveStatus: {
+    type: String,
+    enum: ['pending', 'partially_received', 'fully_received'],
+    default: 'pending'
+  },
 
   // Totals
   subtotal: {
@@ -154,8 +177,18 @@ const purchaseOrderSchema = new mongoose.Schema({
 purchaseOrderSchema.pre('save', async function(next) {
   if (this.isNew && !this.poNumber) {
     const year = new Date().getFullYear();
-    const count = await this.constructor.countDocuments({ tenant: this.tenant });
-    this.poNumber = `PO-${year}-${String(count + 1).padStart(5, '0')}`;
+    const prefix = `PO-${year}-`;
+    const last = await this.constructor.findOne(
+      { poNumber: { $regex: `^${prefix}` } },
+      { poNumber: 1 },
+      { sort: { poNumber: -1 } }
+    );
+    let nextNum = 1;
+    if (last?.poNumber) {
+      const lastNum = parseInt(last.poNumber.replace(prefix, ''), 10);
+      if (!isNaN(lastNum)) nextNum = lastNum + 1;
+    }
+    this.poNumber = `${prefix}${String(nextNum).padStart(5, '0')}`;
   }
 
   // Calculate totals if items changed

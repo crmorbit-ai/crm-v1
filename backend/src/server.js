@@ -119,6 +119,7 @@ app.use('/api/rfi', require('./routes/rfi'));
 app.use('/api/quotations', require('./routes/quotations'));
 app.use('/api/purchase-orders', require('./routes/purchaseOrders'));
 app.use('/api/invoices', require('./routes/invoices'));
+app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/user-settings', require('./routes/userSettings'));
 app.use('/api/support-tickets', require('./routes/supportTickets'));
 app.use('/api/ai', require('./routes/ai'));

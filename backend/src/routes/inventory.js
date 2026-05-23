@@ -8,25 +8,7 @@ router.use(protect);
 // Dashboard
 router.get('/dashboard', inv.getDashboard);
 
-// Stock overview by type
-router.get('/by-type', inv.getInventoryByType);
-
-// Service inventory
-router.get('/service', inv.getServiceInventory);
-
-// Lead inventory
-router.get('/lead', inv.getLeadInventory);
-
-// HR visibility
-router.get('/hr-visibility', inv.getHRVisibility);
-
-// Categories breakdown
-router.get('/categories-breakdown', inv.getCategoriesBreakdown);
-
-// Check availability for multiple items
-router.post('/check-availability', inv.checkAvailability);
-
-// Stock overview (all)
+// Stock overview
 router.get('/', inv.getInventory);
 
 // Transactions

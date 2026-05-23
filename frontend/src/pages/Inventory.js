@@ -156,8 +156,6 @@ const fmtShort= v => v>=10000000?`₹${(v/10000000).toFixed(1)}Cr`:v>=100000?`�
 const TABS = [
   {key:'dashboard', label:'Dashboard',    icon:'📊'},
   {key:'stock',     label:'Stock',        icon:'📦'},
-  {key:'services',  label:'Services',     icon:'🔧'},
-  {key:'leads',     label:'Leads',        icon:'🎯'},
   {key:'history',   label:'Movements',    icon:'📋'},
   {key:'summary',   label:'Summary',      icon:'📄'},
   {key:'valuation', label:'Valuation',    icon:'💰'},
@@ -200,8 +198,6 @@ export default function Inventory() {
 
   const [dashboard, setDashboard] = useState(null);
   const [products, setProducts]   = useState([]);
-  const [services, setServices]   = useState([]);
-  const [leads, setLeads]         = useState([]);
   const [summary, setSummary]     = useState({});
   const [txList, setTxList]       = useState([]);
   const [stockSum, setStockSum]   = useState([]);
@@ -209,13 +205,10 @@ export default function Inventory() {
   const [abcData, setAbc]         = useState(null);
   const [agingData, setAging]     = useState([]);
   const [pag, setPag]             = useState({page:1,pages:1,total:0});
-  const [sPag, setServicePag]     = useState({page:1,pages:1,total:0});
-  const [lPag, setLeadPag]        = useState({page:1,pages:1,total:0});
   const [txPag, setTxPag]         = useState({page:1,pages:1,total:0});
 
   const [search, setSearch]       = useState('');
   const [filt, setFilt]           = useState('');
-  const [itemType, setItemType]   = useState('product');
   const [selProduct, setSelProduct] = useState(null);
 
   const [adjModal, setAdjModal]   = useState(null);
@@ -237,26 +230,10 @@ export default function Inventory() {
   const loadStock = useCallback(async (page=1) => {
     setLoading(true);
     try {
-      const r=await inventoryService.getInventory({search,stockStatus:filt,itemType:'product',page,limit:25});
+      const r=await inventoryService.getInventory({search,stockStatus:filt,page,limit:25});
       if(r?.data){ setProducts(r.data.products||[]); setSummary(r.data.summary||{}); setPag(r.data.pagination); }
     } catch { err('Failed'); } finally { setLoading(false); }
   },[search,filt]);
-
-  const loadServices = useCallback(async (page=1) => {
-    setLoading(true);
-    try {
-      const r=await inventoryService.getServiceInventory({search,page,limit:25});
-      if(r?.data){ setServices(r.data.services||[]); setServicePag(r.data.pagination); }
-    } catch { err('Failed'); } finally { setLoading(false); }
-  },[search]);
-
-  const loadLeads = useCallback(async (page=1) => {
-    setLoading(true);
-    try {
-      const r=await inventoryService.getLeadInventory({search,page,limit:25});
-      if(r?.data){ setLeads(r.data.leads||[]); setLeadPag(r.data.pagination); }
-    } catch { err('Failed'); } finally { setLoading(false); }
-  },[search]);
 
   const loadTx = useCallback(async (page=1) => {
     setLoading(true);
@@ -277,15 +254,11 @@ export default function Inventory() {
   useEffect(()=>{
     if(tab==='dashboard') loadDashboard();
     else if(tab==='stock') loadStock(1);
-    else if(tab==='services') loadServices(1);
-    else if(tab==='leads') loadLeads(1);
     else if(tab==='history') loadTx(1);
     else if(['summary','valuation','abc','aging'].includes(tab)) loadReport(tab);
   },[tab]);
 
   useEffect(()=>{ if(tab==='stock') loadStock(1); },[search,filt]);
-  useEffect(()=>{ if(tab==='services') loadServices(1); },[search]);
-  useEffect(()=>{ if(tab==='leads') loadLeads(1); },[search]);
 
   const handleAdjust = async () => {
     if(!adjForm.qty||Number(adjForm.qty)<=0){ setAdjErr('Enter a valid quantity.'); return; }
@@ -862,105 +835,7 @@ export default function Inventory() {
     );
   };
 
-  // ── SERVICES ─────────────────────────────────────────────────────────────────
-  const TabServices = () => (
-    <div style={{display:'flex',gap:10,minHeight:500}}>
-      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
-        <div style={{background:'#fff',borderRadius:'8px 8px 0 0',border:'1px solid #d1d5db',borderBottom:'none',padding:'8px 12px',display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
-          <div style={{position:'relative',flex:1,minWidth:140}}>
-            <Search style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',width:13,color:'#94a3b8'}} />
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search services..." style={{width:'100%',padding:'5px 10px 5px 28px',border:'1px solid #d1d5db',borderRadius:5,fontSize:12,outline:'none',background:'#f9fafb',boxSizing:'border-box'}} />
-          </div>
-          <span style={{marginLeft:'auto',fontSize:10,color:'#94a3b8',fontWeight:600}}>{services.length||0} services</span>
-        </div>
-        <div style={{overflowX:'auto',borderRadius:'0 0 8px 8px',border:'1px solid #d1d5db',background:'#fff',flex:1}}>
-          {loading ? <Spin /> : services.length===0 ? <Empty text="No services found" /> : (
-            <table style={{width:'100%',borderCollapse:'collapse'}}>
-              <thead>
-                <tr>
-                  {['#','Service','Article #','On Hand','Available','Status','Actions'].map(h=>(
-                    <th key={h} className="xTh" style={{padding:'7px 10px'}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {services.map((s,i)=>{
-                  const avail=Math.max(0,s.stock-(s.committedStock||0));
-                  const sc=STOCK_CFG[s.stockStatus]||STOCK_CFG.in_stock;
-                  return (
-                    <tr key={s._id} className="xRow" onClick={()=>setSelProduct(selProduct?._id===s._id?null:s)}>
-                      <td className="xTd xNum">{(sPag.page-1)*25+i+1}</td>
-                      <td className="xTd" style={{fontWeight:700,fontSize:13}}>
-                        {s.name}
-                        <div style={{fontSize:10,color:'#94a3b8',fontWeight:400}}>{s.category}</div>
-                      </td>
-                      <td className="xTd">{s.articleNumber}</td>
-                      <td className="xTd" style={{fontWeight:700,fontSize:13}}>{fmtNum(s.stock)}</td>
-                      <td className="xTd" style={{fontWeight:700,fontSize:12,color:avail>0?'#059669':'#dc2626'}}>{fmtNum(avail)}</td>
-                      <td className="xTd"><span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:sc.bg,color:sc.color}}>{sc.label}</span></td>
-                      <td className="xTd" style={{whiteSpace:'normal',overflow:'visible',textOverflow:'unset'}}><button onClick={e=>{e.stopPropagation();setAdjModal(s);setAdjForm({type:'stock_in',qty:'',reasonLabel:'',reason:''});}} style={{padding:'4px 8px',borderRadius:4,background:'#ede9fe',color:'#6366f1',border:'none',fontSize:10,fontWeight:600,cursor:'pointer'}}>Adjust</button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-        <Pager data={sPag} onPage={p=>loadServices(p)} />
-      </div>
-    </div>
-  );
-
-  // ── LEADS ────────────────────────────────────────────────────────────────────
-  const TabLeads = () => (
-    <div style={{display:'flex',gap:10,minHeight:500}}>
-      <div style={{flex:1,minWidth:0,display:'flex',flexDirection:'column'}}>
-        <div style={{background:'#fff',borderRadius:'8px 8px 0 0',border:'1px solid #d1d5db',borderBottom:'none',padding:'8px 12px',display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
-          <div style={{position:'relative',flex:1,minWidth:140}}>
-            <Search style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',width:13,color:'#94a3b8'}} />
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search leads..." style={{width:'100%',padding:'5px 10px 5px 28px',border:'1px solid #d1d5db',borderRadius:5,fontSize:12,outline:'none',background:'#f9fafb',boxSizing:'border-box'}} />
-          </div>
-          <span style={{marginLeft:'auto',fontSize:10,color:'#94a3b8',fontWeight:600}}>{leads.length||0} leads</span>
-        </div>
-        <div style={{overflowX:'auto',borderRadius:'0 0 8px 8px',border:'1px solid #d1d5db',background:'#fff',flex:1}}>
-          {loading ? <Spin /> : leads.length===0 ? <Empty text="No leads found" /> : (
-            <table style={{width:'100%',borderCollapse:'collapse'}}>
-              <thead>
-                <tr>
-                  {['#','Lead','Article #','On Hand','Available','Status','Actions'].map(h=>(
-                    <th key={h} className="xTh" style={{padding:'7px 10px'}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {leads.map((l,i)=>{
-                  const avail=Math.max(0,l.stock-(l.committedStock||0));
-                  const sc=STOCK_CFG[l.stockStatus]||STOCK_CFG.in_stock;
-                  return (
-                    <tr key={l._id} className="xRow" onClick={()=>setSelProduct(selProduct?._id===l._id?null:l)}>
-                      <td className="xTd xNum">{(lPag.page-1)*25+i+1}</td>
-                      <td className="xTd" style={{fontWeight:700,fontSize:13}}>
-                        {l.name}
-                        <div style={{fontSize:10,color:'#94a3b8',fontWeight:400}}>{l.category}</div>
-                      </td>
-                      <td className="xTd">{l.articleNumber}</td>
-                      <td className="xTd" style={{fontWeight:700,fontSize:13}}>{fmtNum(l.stock)}</td>
-                      <td className="xTd" style={{fontWeight:700,fontSize:12,color:avail>0?'#059669':'#dc2626'}}>{fmtNum(avail)}</td>
-                      <td className="xTd"><span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:sc.bg,color:sc.color}}>{sc.label}</span></td>
-                      <td className="xTd" style={{whiteSpace:'normal',overflow:'visible',textOverflow:'unset'}}><button onClick={e=>{e.stopPropagation();setAdjModal(l);setAdjForm({type:'stock_in',qty:'',reasonLabel:'',reason:''});}} style={{padding:'4px 8px',borderRadius:4,background:'#ede9fe',color:'#6366f1',border:'none',fontSize:10,fontWeight:600,cursor:'pointer'}}>Adjust</button></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-        <Pager data={lPag} onPage={p=>loadLeads(p)} />
-      </div>
-    </div>
-  );
-
-  const RENDER = {dashboard:TabDashboard,stock:TabStock,services:TabServices,leads:TabLeads,history:TabHistory,summary:TabSummary,valuation:TabValuation,abc:TabABC,aging:TabAging};
+  const RENDER = {dashboard:TabDashboard,stock:TabStock,history:TabHistory,summary:TabSummary,valuation:TabValuation,abc:TabABC,aging:TabAging};
 
   return (
     <DashboardLayout title="Inventory">

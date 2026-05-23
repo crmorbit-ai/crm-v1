@@ -265,32 +265,6 @@ exports.convertToInvoice = async (req, res) => {
       });
     }
 
-    // Check inventory availability before conversion
-    const insufficientItems = [];
-    for (const item of quotation.items || []) {
-      if (item.product) {
-        const product = await ProductItem.findOne({ _id: item.product, tenant: quotation.tenant });
-        if (product) {
-          const availableStock = product.stock - product.committedStock;
-          if (availableStock < item.quantity) {
-            insufficientItems.push({
-              productName: product.name,
-              required: item.quantity,
-              available: availableStock
-            });
-          }
-        }
-      }
-    }
-
-    if (insufficientItems.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Insufficient inventory for some items',
-        insufficientItems
-      });
-    }
-
     const dueDate = new Date();
     dueDate.setDate(dueDate.getDate() + 30);
 
@@ -318,17 +292,6 @@ exports.convertToInvoice = async (req, res) => {
     });
 
     await invoice.save();
-
-    // Commit stock for all items in quotation
-    for (const item of quotation.items || []) {
-      if (item.product) {
-        const product = await ProductItem.findOne({ _id: item.product, tenant: quotation.tenant });
-        if (product) {
-          product.committedStock = (product.committedStock || 0) + item.quantity;
-          await product.save();
-        }
-      }
-    }
 
     quotation.convertedToInvoice = true;
     quotation.invoice = invoice._id;

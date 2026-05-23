@@ -287,6 +287,7 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                 {/* Product */}
                 <NavSection title="Product" section="product" permissions={['product_management']}>
                   <NavItem to="/products-management" label="Product" permission="product_management" />
+                  <NavItem to="/inventory" label="Inventory" permission="product_management" />
                   <NavItem to="/products" label="Product Marketplace" permission="product_management" />
                 </NavSection>
 

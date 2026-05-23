@@ -14,23 +14,10 @@ const productItemSchema = new mongoose.Schema({
     uppercase: true
   },
 
-  itemType: {
-    type: String,
-    enum: ['product', 'service', 'lead'],
-    default: 'product',
-    index: true
-  },
-
   category: {
     type: String,
     required: [true, 'Category is required'],
     trim: true
-  },
-
-  categoryType: {
-    type: String,
-    enum: ['product', 'service'],
-    default: 'product'
   },
 
   unit: {

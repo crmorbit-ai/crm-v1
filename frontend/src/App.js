@@ -50,6 +50,7 @@ import QuotationDetail from './pages/QuotationDetail';
 import Invoices from './pages/Invoices';
 import InvoiceForm from './pages/InvoiceForm';
 import InvoiceDetail from './pages/InvoiceDetail';
+import Inventory from './pages/Inventory';
 import RFIs from './pages/RFIs';
 import RFIForm from './pages/RFIForm';
 import RFIDetail from './pages/RFIDetail';
@@ -190,6 +191,7 @@ function AppRoutes() {
         <Route path="/purchase-orders/new" element={<ProtectedRoute requireTenant><PurchaseOrderForm /></ProtectedRoute>} />
         <Route path="/purchase-orders/:id" element={<ProtectedRoute requireTenant><PurchaseOrderDetail /></ProtectedRoute>} />
         <Route path="/purchase-orders/:id/edit" element={<ProtectedRoute requireTenant><PurchaseOrderForm /></ProtectedRoute>} />
+        <Route path="/inventory" element={<ProtectedRoute requireTenant><Inventory /></ProtectedRoute>} />
         <Route path="/invoices" element={<ProtectedRoute requireTenant><Invoices /></ProtectedRoute>} />
         <Route path="/invoices/new" element={<ProtectedRoute requireTenant><InvoiceForm /></ProtectedRoute>} />
         <Route path="/invoices/:id" element={<ProtectedRoute requireTenant><InvoiceDetail /></ProtectedRoute>} />

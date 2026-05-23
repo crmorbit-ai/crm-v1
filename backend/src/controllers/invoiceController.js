@@ -386,13 +386,8 @@ exports.updateInvoiceStatus = async (req, res) => {
           const previousStock = product.stock;
           const deductQty = item.quantity || 1;
           const newStock = Math.max(0, previousStock - deductQty);
-          const previousCommitted = product.committedStock || 0;
-          const newCommitted = Math.max(0, previousCommitted - deductQty);
-
           product.stock = newStock;
-          product.committedStock = newCommitted;
           await product.save();
-
           await StockTransaction.create({
             tenant: req.user.tenant,
             product: product._id,
