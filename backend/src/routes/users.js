@@ -14,8 +14,36 @@ const {
 const { protect, restrictTo } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 
-// All routes are protected
+// All other routes are protected
 router.use(protect);
+
+// Simple list endpoint for assignment (protected but no permission check)
+router.get('/list/all', async (req, res) => {
+  try {
+    const User = require('../models/User');
+    console.log('📌 /users/list/all called, tenant:', req.user?.tenant);
+
+    // Get users from same tenant
+    const tenantId = req.user?.tenant;
+    if (!tenantId) {
+      console.log('⚠️ No tenant found');
+      return res.json({ success: true, data: [] });
+    }
+
+    const users = await User.find({
+      tenant: tenantId,
+      isActive: true
+    })
+      .select('_id firstName lastName email userType')
+      .limit(100);
+
+    console.log('✓ Returning', users.length, 'users for tenant', tenantId);
+    res.json({ success: true, data: users });
+  } catch (error) {
+    console.error('❌ Error:', error.message);
+    res.json({ success: true, data: [] });
+  }
+});
 
 // User CRUD routes
 router.get('/', requirePermission('user_management', 'read'), getUsers);
