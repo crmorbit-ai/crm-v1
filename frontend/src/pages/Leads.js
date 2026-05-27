@@ -1493,17 +1493,18 @@ const Leads = () => {
     setError('');
     try {
       const lead = selectedLeadData;
+
       const payload = {
         createAccount: detailConversionData.createAccount,
         createContact: detailConversionData.createContact,
         createOpportunity: detailConversionData.createOpportunity,
         accountData: detailConversionData.createAccount ? {
-          accountName: lead.customerName || lead.currentCompany || lead.company || '',
+          accountName: lead.company || lead.currentCompany || lead.customerName || '',
           accountType: lead.customerType || 'Customer',
           industry: lead.industry || '',
           website: lead.website || lead.sourceWebsite || '',
-          phone: lead.phone || '',
-          email: lead.email || '',
+          phone: lead.company ? (lead.phone || '') : '',
+          email: lead.company ? (lead.email || '') : '',
           annualRevenue: lead.annualRevenue || '',
           numberOfEmployees: lead.numberOfEmployees || '',
           description: lead.description || '',
@@ -1514,8 +1515,8 @@ const Leads = () => {
           }
         } : {},
         contactData: detailConversionData.createContact ? {
-          firstName: lead.customerName || lead.currentCompany || lead.company || '',
-          lastName: '',
+          firstName: lead.firstName || lead.customerName || '',
+          lastName: lead.lastName || '',
           email: lead.email || '',
           phone: lead.phone || '',
           mobile: lead.alternatePhone || '',
@@ -1532,6 +1533,7 @@ const Leads = () => {
           leadSource: lead.leadSource || lead.source || ''
         } : {}
       };
+
       const response = await leadService.convertLead(selectedLeadId, payload);
       if (response.success) {
         setSuccess('Lead converted successfully.');
@@ -1547,7 +1549,6 @@ const Leads = () => {
 
   const canCreateLead = hasPermission('lead_management', 'create');
   const canImportLeads = hasPermission('lead_management', 'import');
-  const canManageProducts = hasPermission('product_management', 'create');
   const canDeleteLead = hasPermission('lead_management', 'delete');
 
   const handleBulkDelete = async (deleteAll = false) => {
@@ -2142,11 +2143,11 @@ const Leads = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '8px', background: detailConversionData.createAccount ? '#dbeafe' : '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', cursor: 'pointer' }}>
                             <input type="checkbox" name="createAccount" checked={detailConversionData.createAccount} onChange={handleDetailConversionChange} />
-                            <div><div style={{ fontWeight: '600' }}>Account</div><div style={{ fontSize: '10px', color: '#64748b' }}>{selectedLeadData.customerName || '—'}</div></div>
+                            <div><div style={{ fontWeight: '600' }}>Account</div><div style={{ fontSize: '10px', color: '#64748b' }}>{selectedLeadData.company || selectedLeadData.currentCompany || selectedLeadData.customerName || '—'}</div></div>
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '8px', background: detailConversionData.createContact ? '#dbeafe' : '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', cursor: 'pointer' }}>
                             <input type="checkbox" name="createContact" checked={detailConversionData.createContact} onChange={handleDetailConversionChange} />
-                            <div><div style={{ fontWeight: '600' }}>Contact</div><div style={{ fontSize: '10px', color: '#64748b' }}>{selectedLeadData.email || '—'}</div></div>
+                            <div><div style={{ fontWeight: '600' }}>Contact</div><div style={{ fontSize: '10px', color: '#64748b' }}>{(selectedLeadData.firstName && selectedLeadData.lastName) ? `${selectedLeadData.firstName} ${selectedLeadData.lastName}` : (selectedLeadData.customerName || selectedLeadData.email || '—')}</div></div>
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '8px', background: detailConversionData.createOpportunity ? '#dbeafe' : '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', cursor: 'pointer' }}>
                             <input type="checkbox" name="createOpportunity" checked={detailConversionData.createOpportunity} onChange={handleDetailConversionChange} />

@@ -12,8 +12,8 @@ import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import '../styles/crm.css';
 
 const DEFAULT_ACCOUNT_FIELDS = [
-  { fieldName: 'accountName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
-  { fieldName: 'accountType', label: 'Customer Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Vendor', value: 'Vendor' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'accountName', label: 'Account Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'accountType', label: 'Account Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Vendor', value: 'Vendor' }, { label: 'Other', value: 'Other' }] },
   { fieldName: 'contactPerson', label: 'Contact Person', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
   { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
   { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
@@ -791,8 +791,8 @@ const Accounts = () => {
                       </div>
                       <form onSubmit={handleDetailUpdateAccount}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Name *</label><input type="text" name="accountName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountName || ''} onChange={handleDetailEditChange} required /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Type</label><select name="accountType" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountType || 'Customer'} onChange={handleDetailEditChange}><option value="Customer">Customer</option><option value="Prospect">Prospect</option><option value="Partner">Partner</option><option value="Reseller">Reseller</option><option value="Vendor">Vendor</option><option value="Other">Other</option></select></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Account Name *</label><input type="text" name="accountName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountName || ''} onChange={handleDetailEditChange} required /></div>
+                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Account Type</label><select name="accountType" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountType || 'Customer'} onChange={handleDetailEditChange}><option value="Customer">Customer</option><option value="Prospect">Prospect</option><option value="Partner">Partner</option><option value="Reseller">Reseller</option><option value="Vendor">Vendor</option><option value="Other">Other</option></select></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Contact Person</label><input type="text" name="contactPerson" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.contactPerson || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} /></div>
                           <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
@@ -1231,7 +1231,7 @@ const Accounts = () => {
                   const avatarBg = name => AVCOLORS[(name?.charCodeAt(0)||0) % AVCOLORS.length];
 
                   const ACCT_COL_MAP = {
-                    accountName: { label:'Customer Name', width:230,
+                    accountName: { label:'Account Name', width:230,
                       render: a => {
                         const name = a.accountName || '—';
                         const ini  = name[0]?.toUpperCase() || '?';
