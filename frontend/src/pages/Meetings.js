@@ -31,6 +31,10 @@ const Meetings = () => {
     relatedTo: '', relatedToId: '', description: '', participants: '', isIndependent: true
   });
 
+  // Inline error states for field-level validation
+  const [titleError, setTitleError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
+
   const [entitySearch, setEntitySearch] = useState('');
   const [entityResults, setEntityResults] = useState([]);
   const [selectedEntity, setSelectedEntity] = useState(null);
@@ -85,9 +89,35 @@ const Meetings = () => {
 
   const handleCreate = async (e) => {
     e.preventDefault();
+
+    // Clear previous errors
+    setTitleError('');
+    setDescriptionError('');
+
     if (!formData.isIndependent && !formData.relatedToId) {
       setError('Please select a ' + formData.relatedTo);
       setTimeout(() => setError(''), 3000);
+      return;
+    }
+    // Bug Fix #1: Title must contain letters, not just numbers
+    if (!/[a-zA-Z]/.test(formData.title.trim())) {
+      setTitleError('Title must contain text characters describing the event');
+      return;
+    }
+    // Bug Fix #2: Title character limit (max 100 characters)
+    if (formData.title.length > 100) {
+      setTitleError('Title cannot exceed 100 characters');
+      return;
+    }
+    // Bug Fix #3: Description must contain letters if provided, not just numbers
+    if (formData.description && formData.description.trim() && !/[a-zA-Z]/.test(formData.description.trim())) {
+      setDescriptionError('Content description must contain descriptive text letters');
+      return;
+    }
+    // Validate To Date is not before From Date
+    if (formData.from && formData.to && new Date(formData.to) < new Date(formData.from)) {
+      setError('End time must be after start time');
+      setTimeout(() => setError(''), 4000);
       return;
     }
     try {
@@ -287,11 +317,20 @@ const Meetings = () => {
                   {/* Title */}
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Title *</label>
-                    <input type="text" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} required
+                    <input type="text" value={formData.title} onChange={e => {
+                      setFormData({...formData, title: e.target.value});
+                      setTitleError('');
+                    }} required
+                      maxLength={100}
                       placeholder="Meeting title..."
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: titleError ? '1px solid #EF4444' : '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
                       onFocus={e => e.target.style.borderColor = '#8b5cf6'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                      onBlur={e => e.target.style.borderColor = titleError ? '#EF4444' : '#e2e8f0'} />
+                    {titleError && (
+                      <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>
+                        {titleError}
+                      </div>
+                    )}
                   </div>
 
                   {/* From + To */}
@@ -306,6 +345,7 @@ const Meetings = () => {
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>To *</label>
                       <input type="datetime-local" value={formData.to} onChange={e => setFormData({...formData, to: e.target.value})} required
+                        min={formData.from}
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
                         onFocus={e => e.target.style.borderColor = '#8b5cf6'}
                         onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
@@ -413,11 +453,19 @@ const Meetings = () => {
                   {/* Description */}
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Description</label>
-                    <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3"
+                    <textarea value={formData.description} onChange={e => {
+                      setFormData({...formData, description: e.target.value});
+                      setDescriptionError('');
+                    }} rows="3"
                       placeholder="Meeting agenda or notes..."
-                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', lineHeight: '1.5' }}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: descriptionError ? '1px solid #EF4444' : '1.5px solid #e2e8f0', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', lineHeight: '1.5' }}
                       onFocus={e => e.target.style.borderColor = '#8b5cf6'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                      onBlur={e => e.target.style.borderColor = descriptionError ? '#EF4444' : '#e2e8f0'} />
+                    {descriptionError && (
+                      <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>
+                        {descriptionError}
+                      </div>
+                    )}
                   </div>
 
                   {/* Buttons */}

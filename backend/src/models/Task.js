@@ -28,14 +28,12 @@ const taskSchema = new mongoose.Schema({
   // Related To
   relatedTo: {
     type: String,
-    enum: ['Lead', 'Account', 'Contact', 'Opportunity', 'Deal'],
-    required: true
+    enum: ['Lead', 'Account', 'Contact', 'Opportunity', 'Deal']
   },
-  
+
   relatedToId: {
     type: mongoose.Schema.Types.ObjectId,
-    refPath: 'relatedTo',
-    required: true
+    refPath: 'relatedTo'
   },
   
   // Additional Information

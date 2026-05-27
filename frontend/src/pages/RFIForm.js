@@ -30,6 +30,14 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
   const [rfiTemplates, setRfiTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
+  // Field-level validation errors
+  const [fieldErrors, setFieldErrors] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerSelection: '',
+    title: ''
+  });
+
   const [formData, setFormData] = useState({
     customerName: '', customerEmail: '', customerPhone: '', customerCompany: '',
     title: '', description: '', priority: 'medium', dueDate: '',
@@ -89,7 +97,55 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
     finally { setLoading(false); }
   };
 
-  const inp = (e) => { const { name, value } = e.target; setFormData(p => ({ ...p, [name]: value })); };
+  const inp = (e) => {
+    const { name, value } = e.target;
+    setFormData(p => ({ ...p, [name]: value }));
+    // Clear error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateStep = (step) => {
+    const errors = {};
+
+    if (step === 0) {
+      // Step 1: Customer validation
+
+      // Check if customer is selected from dropdown (optional check - can be enabled if needed)
+      // Uncomment below lines if SELECT CUSTOMER dropdown should be mandatory
+      // if (!formData.customer) {
+      //   errors.customerSelection = 'Please choose an existing contact profile to proceed';
+      // }
+
+      if (!formData.customerName || !formData.customerName.trim()) {
+        errors.customerName = 'Customer Name is required';
+      } else if (!/[a-zA-Z]/.test(formData.customerName.trim())) {
+        errors.customerName = 'Name must contain letters, not just numbers or special characters';
+      }
+      if (!formData.customerEmail || !formData.customerEmail.trim()) {
+        errors.customerEmail = 'A valid customer email address is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail.trim())) {
+        errors.customerEmail = 'Please enter a valid email format';
+      }
+    } else if (step === 1) {
+      // Step 2: RFI Details validation
+      if (!formData.title || !formData.title.trim()) {
+        errors.title = 'RFI Title is a mandatory required field';
+      } else if (!/[a-zA-Z]/.test(formData.title.trim())) {
+        errors.title = 'Title must contain descriptive text letters';
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNextStep = () => {
+    if (validateStep(wizardStep)) {
+      setWizardStep(s => s + 1);
+    }
+  };
 
   const addReq = () => setFormData(p => ({ ...p, requirements: [...p.requirements, { category: '', question: '', answer: '' }] }));
   const updReq = (i, f, v) => setFormData(p => ({ ...p, requirements: p.requirements.map((r, j) => j === i ? { ...r, [f]: v } : r) }));
@@ -98,17 +154,47 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
     setLoading(true); setError('');
+
+    // Validate required fields before submission
+    if (!formData.customerName || !formData.customerName.trim()) {
+      setError('Customer Name is required');
+      setLoading(false);
+      return;
+    }
+    if (!formData.customerEmail || !formData.customerEmail.trim()) {
+      setError('Customer Email is required');
+      setLoading(false);
+      return;
+    }
+    if (!formData.title || !formData.title.trim()) {
+      setError('RFI Title is required');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isEdit) {
         await rfiService.updateRFI(id, formData);
-        alert('RFI updated!'); navigate('/rfi');
+        alert('RFI updated successfully!');
+        navigate('/rfi');
       } else {
         const res = await rfiService.createRFI(formData);
-        if (embedded && onSuccess) { onSuccess(res.data); }
-        else { alert('RFI created!'); navigate(res.data?._id ? `/rfi/${res.data._id}` : '/rfi'); }
+        if (embedded && onSuccess) {
+          onSuccess(res.data);
+        } else {
+          alert('RFI created successfully!');
+          navigate(res.data?._id ? `/rfi/${res.data._id}` : '/rfi');
+        }
       }
-    } catch (err) { if (!err?.isPermissionDenied) setError(err.message || 'Failed to save'); }
-    finally { setLoading(false); }
+    } catch (err) {
+      if (!err?.isPermissionDenied) {
+        const errorMsg = err.response?.data?.message || err.message || 'Failed to save RFI. Please check all required fields.';
+        setError(errorMsg);
+        console.error('RFI Save Error:', err);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const btnSty = (active) => ({
@@ -187,8 +273,16 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
             </select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-            <div><label style={ls}>Name *</label><input name="customerName" value={formData.customerName} onChange={inp} style={is} required /></div>
-            <div><label style={ls}>Email *</label><input name="customerEmail" type="email" value={formData.customerEmail} onChange={inp} style={is} required /></div>
+            <div>
+              <label style={ls}>Name *</label>
+              <input name="customerName" value={formData.customerName} onChange={inp} style={{...is, border: fieldErrors.customerName ? '1px solid #EF4444' : '1.5px solid #e2e8f0'}} required />
+              {fieldErrors.customerName && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>{fieldErrors.customerName}</div>}
+            </div>
+            <div>
+              <label style={ls}>Email *</label>
+              <input name="customerEmail" type="email" value={formData.customerEmail} onChange={inp} style={{...is, border: fieldErrors.customerEmail ? '1px solid #EF4444' : '1.5px solid #e2e8f0'}} required />
+              {fieldErrors.customerEmail && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>{fieldErrors.customerEmail}</div>}
+            </div>
             <div><label style={ls}>Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} style={is} /></div>
             <div><label style={ls}>Company</label><input name="customerCompany" value={formData.customerCompany} onChange={inp} style={is} /></div>
           </div>
@@ -196,7 +290,11 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
       );
       case 1: return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div><label style={ls}>Title *</label><input name="title" value={formData.title} onChange={inp} style={is} placeholder="e.g., Product Information Request" required /></div>
+          <div>
+            <label style={ls}>Title *</label>
+            <input name="title" value={formData.title} onChange={inp} style={{...is, border: fieldErrors.title ? '1px solid #EF4444' : '1.5px solid #e2e8f0'}} placeholder="e.g., Product Information Request" required />
+            {fieldErrors.title && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>{fieldErrors.title}</div>}
+          </div>
           <div><label style={ls}>Description</label><textarea name="description" value={formData.description} onChange={inp} rows="3" style={{ ...is, resize: 'vertical' }} placeholder="Describe what information is needed..." /></div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
@@ -244,42 +342,49 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
   if (embedded) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-        {/* Dark gradient header */}
-        <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', flexShrink: 0 }}>
-          <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        {/* Clean Simple Header */}
+        <div style={{ background: 'linear-gradient(135deg, #4338ca 0%, #6366f1 100%)', flexShrink: 0 }}>
+          {/* Top bar */}
+          <div style={{ padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>📋</div>
+              <div style={{ fontSize: '20px' }}>📋</div>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New RFI</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep+1} of {STEPS.length}</div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: 'white' }}>New RFI</div>
+                <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.7)' }}>Step {wizardStep+1} of {STEPS.length}</div>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: '8px', padding: '6px 10px', color: 'white', cursor: 'pointer', fontSize: '16px', lineHeight: 1, fontWeight: '700' }}>✕</button>
           </div>
-          <div style={{ display: 'flex', padding: '8px 10px 0' }}>
+
+          {/* Progress dots */}
+          <div style={{ display: 'flex', gap: '8px', padding: '0 14px 12px', justifyContent: 'center' }}>
             {STEPS.map((s, idx) => {
               const done = idx < wizardStep, active = idx === wizardStep;
               return (
-                <div key={idx} onClick={() => done && setWizardStep(idx)}
-                  style={{ flex: 1, textAlign: 'center', padding: '5px 2px', borderRadius: '6px 6px 0 0', cursor: done ? 'pointer' : 'default',
-                    background: active ? 'rgba(99,102,241,0.22)' : done ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.04)',
-                    borderBottom: active ? '2px solid #6366f1' : done ? '2px solid #10b981' : '2px solid transparent' }}>
-                  <div style={{ fontSize: '12px', color: active ? '#c7d2fe' : done ? '#6ee7b7' : 'rgba(255,255,255,0.25)', fontWeight: '700' }}>{done ? '✓' : s.icon}</div>
-                  <div style={{ fontSize: '9px', color: active ? 'rgba(255,255,255,0.65)' : done ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{s.label}</div>
-                </div>
+                <div key={idx}
+                  onClick={() => done && setWizardStep(idx)}
+                  style={{
+                    width: active ? '32px' : '8px',
+                    height: '8px',
+                    borderRadius: '4px',
+                    background: done || active ? 'white' : 'rgba(255,255,255,0.3)',
+                    cursor: done ? 'pointer' : 'default',
+                    transition: 'all 0.3s'
+                  }}
+                />
               );
             })}
-          </div>
-          <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
-            <div style={{ height: '100%', background: 'linear-gradient(90deg,#6366f1,#8b5cf6)', borderRadius: '99px', width: `${(wizardStep/STEPS.length)*100}%`, transition: 'width 0.35s ease' }} />
           </div>
         </div>
 
         {/* Step body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
-          <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-            <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{STEPS[wizardStep].icon} {STEPS[wizardStep].label}</h4>
-            <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{STEPS[wizardStep].desc}</p>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+          <div style={{ marginBottom: '16px' }}>
+            <h4 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: '700', color: '#1f2937', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '24px' }}>{STEPS[wizardStep].icon}</span>
+              {STEPS[wizardStep].label}
+            </h4>
+            <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>{STEPS[wizardStep].desc}</p>
           </div>
           {error && <div className="error-message" style={{ marginBottom: '12px' }}>{error}</div>}
           {renderStep()}
@@ -297,7 +402,7 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
             ))}
           </div>
           {wizardStep < STEPS.length - 1 ? (
-            <button type="button" onClick={() => setWizardStep(s => s+1)}
+            <button type="button" onClick={handleNextStep}
               style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#4338ca 0%,#6366f1 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(99,102,241,0.25)' }}>
               Next →
             </button>

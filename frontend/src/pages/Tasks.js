@@ -31,6 +31,10 @@ const Tasks = () => {
   const [taskTemplates, setTaskTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
+  // Inline error states for field-level validation
+  const [subjectError, setSubjectError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
+
   // Related To state
   const [relatedToType, setRelatedToType] = useState('');
   const [relatedToSearch, setRelatedToSearch] = useState('');
@@ -106,10 +110,35 @@ const Tasks = () => {
     setRelatedToType(''); setRelatedToSearch(''); setRelatedToId('');
     setRelatedToOptions([]); setShowRelatedDropdown(false);
     setSelectedTemplate(null);
+    setSubjectError('');
+    setDescriptionError('');
   };
 
   const handleCreate = async (e) => {
     e.preventDefault();
+
+    // Clear previous errors
+    setSubjectError('');
+    setDescriptionError('');
+
+    // Validate subject must contain letters
+    if (!/[a-zA-Z]/.test(formData.subject.trim())) {
+      setSubjectError('Subject must contain descriptive text letters');
+      return;
+    }
+
+    // Validate subject character limit
+    if (formData.subject.length > 100) {
+      setSubjectError('Subject cannot exceed 100 characters');
+      return;
+    }
+
+    // Validate description must contain letters if provided
+    if (formData.description && formData.description.trim() && !/[a-zA-Z]/.test(formData.description.trim())) {
+      setDescriptionError('Description must contain descriptive text letters');
+      return;
+    }
+
     try {
       const payload = { ...formData };
       if (relatedToType && relatedToId) { payload.relatedTo = relatedToType; payload.relatedToId = relatedToId; }
@@ -379,11 +408,20 @@ const Tasks = () => {
                       {/* Subject */}
                       <div style={{ marginBottom: '14px' }}>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Subject *</label>
-                        <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} required
+                        <input type="text" value={formData.subject} onChange={e => {
+                          setFormData({...formData, subject: e.target.value});
+                          setSubjectError('');
+                        }} required
+                          maxLength={100}
                           placeholder="Enter task subject..."
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: subjectError ? '1px solid #EF4444' : '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
                           onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                          onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                          onBlur={e => e.target.style.borderColor = subjectError ? '#EF4444' : '#e2e8f0'} />
+                        {subjectError && (
+                          <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>
+                            {subjectError}
+                          </div>
+                        )}
                       </div>
 
                       {/* Due Date + Priority */}
@@ -457,11 +495,19 @@ const Tasks = () => {
                       {/* Description */}
                       <div style={{ marginBottom: '16px' }}>
                         <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Description</label>
-                        <textarea value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} rows="3"
+                        <textarea value={formData.description} onChange={e => {
+                          setFormData({...formData, description: e.target.value});
+                          setDescriptionError('');
+                        }} rows="3"
                           placeholder="Add task details or notes..."
-                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', lineHeight: '1.5' }}
+                          style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: descriptionError ? '1px solid #EF4444' : '1.5px solid #e2e8f0', fontSize: '13px', resize: 'vertical', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit', lineHeight: '1.5' }}
                           onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                          onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                          onBlur={e => e.target.style.borderColor = descriptionError ? '#EF4444' : '#e2e8f0'} />
+                        {descriptionError && (
+                          <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>
+                            {descriptionError}
+                          </div>
+                        )}
                       </div>
 
                       {/* Buttons */}

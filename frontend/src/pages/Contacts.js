@@ -262,6 +262,7 @@ const Contacts = () => {
   // Detail Panel Form Data
   const [detailEditData, setDetailEditData] = useState({});
   const [detailTaskData, setDetailTaskData] = useState({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+  const [taskFormError, setTaskFormError] = useState('');
   const [detailNoteData, setDetailNoteData] = useState({ title: '', content: '' });
 
 
@@ -567,13 +568,20 @@ const Contacts = () => {
     e.preventDefault();
     try {
       setError('');
+      setTaskFormError('');
+      // Validate subject contains at least one letter
+      if (!/[a-zA-Z]/.test(detailTaskData.subject.trim())) {
+        setTaskFormError('Subject must contain descriptive text letters.');
+        return;
+      }
       await taskService.createTask({ ...detailTaskData, relatedTo: 'Contact', relatedToId: selectedContactId });
       setSuccess('Task created successfully!');
       setShowDetailTaskForm(false);
       setDetailTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+      setTaskFormError('');
       loadDetailTasks(selectedContactId);
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create task'); }
+    } catch (err) { if (err?.isPermissionDenied) return; setTaskFormError(err.message || 'Failed to create task'); }
   };
 
   const handleDetailCreateNote = async (e) => {
@@ -1041,12 +1049,39 @@ const Contacts = () => {
                           <div style={{ marginBottom: '12px', padding: '10px', background: '#F0FDF4', borderRadius: '6px', border: '1px solid #86EFAC' }}>
                             <form onSubmit={handleDetailCreateTask}>
                               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '8px' }}>
-                                <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label><input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.subject} onChange={(e) => setDetailTaskData({ ...detailTaskData, subject: e.target.value })} required /></div>
+                                <div style={{ gridColumn: 'span 2' }}>
+                                  <label style={{ fontSize: '10px', fontWeight: '600' }}>Subject *</label>
+                                  <input
+                                    type="text"
+                                    className="crm-form-input"
+                                    style={{
+                                      padding: '4px 6px',
+                                      fontSize: '11px',
+                                      border: taskFormError ? '1px solid #EF4444' : undefined
+                                    }}
+                                    value={detailTaskData.subject}
+                                    onChange={(e) => {
+                                      setDetailTaskData({ ...detailTaskData, subject: e.target.value });
+                                      setTaskFormError('');
+                                    }}
+                                    required
+                                  />
+                                  {taskFormError && (
+                                    <div style={{
+                                      fontSize: '10px',
+                                      color: '#DC2626',
+                                      marginTop: '3px',
+                                      fontWeight: '600'
+                                    }}>
+                                      {taskFormError}
+                                    </div>
+                                  )}
+                                </div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date *</label><input type="date" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Priority</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.priority} onChange={(e) => setDetailTaskData({ ...detailTaskData, priority: e.target.value })}><option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option></select></div>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
-                                <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailTaskForm(false)}>Cancel</button>
+                                <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => { setShowDetailTaskForm(false); setTaskFormError(''); }}>Cancel</button>
                                 <button type="submit" className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }}>Create</button>
                               </div>
                             </form>

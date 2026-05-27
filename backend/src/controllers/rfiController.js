@@ -4,24 +4,28 @@ const Tenant = require('../models/Tenant');
 const { logActivity } = require('../middleware/activityLogger');
 
 exports.createRFI = async (req, res) => {
+  const session = await RFI.startSession();
+
   try {
-    const rfiData = {
-      ...req.body,
-      tenant: req.user.tenant,
-      createdBy: req.user.id
-    };
+    await session.withTransaction(async () => {
+      const rfiData = {
+        ...req.body,
+        tenant: req.user.tenant,
+        createdBy: req.user.id
+      };
 
-    const rfi = new RFI(rfiData);
-    await rfi.save();
+      const rfi = new RFI(rfiData);
+      await rfi.save({ session });
 
-    await logActivity(req, 'rfi.created', 'RFI', rfi._id, {
-      rfiNumber: rfi.rfiNumber,
-      customerName: rfi.customerName
-    });
+      await logActivity(req, 'rfi.created', 'RFI', rfi._id, {
+        rfiNumber: rfi.rfiNumber,
+        customerName: rfi.customerName
+      });
 
-    res.status(201).json({
-      success: true,
-      data: rfi
+      res.status(201).json({
+        success: true,
+        data: rfi
+      });
     });
   } catch (error) {
     console.error('Error creating RFI:', error);
@@ -30,6 +34,8 @@ exports.createRFI = async (req, res) => {
       message: 'Error creating RFI',
       error: error.message
     });
+  } finally {
+    session.endSession();
   }
 };
 

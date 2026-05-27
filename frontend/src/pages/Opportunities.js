@@ -46,6 +46,10 @@ const Opportunities = () => {
   const [previewModal, setPreviewModal] = useState(null); // { blobUrl, fileName, fileType }
   const [previewLoading, setPreviewLoading] = useState(false);
 
+  // Detail panel state
+  const [selectedDeal, setSelectedDeal] = useState(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
+
   const stages = [
     { name: 'Qualification', color: '#3B82F6', percentage: 10 },
     { name: 'Needs Analysis', color: '#8B5CF6', percentage: 20 },
@@ -101,6 +105,16 @@ const Opportunities = () => {
     }
   };
 
+  const openDealDetail = (deal) => {
+    setSelectedDeal(deal);
+    setShowDetailPanel(true);
+  };
+
+  const closeDealDetail = () => {
+    setSelectedDeal(null);
+    setShowDetailPanel(false);
+  };
+
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
@@ -115,8 +129,23 @@ const Opportunities = () => {
       scrollToError(opportunityNameRef);
       return;
     }
+    // Check if deal name contains at least one letter
+    if (!/[a-zA-Z]/.test(formData.opportunityName.trim())) {
+      setFormError('Deal name must contain letters describing the opportunity.');
+      scrollToError(opportunityNameRef);
+      return;
+    }
     if (!formData.account || !formData.closeDate) {
       setFormError('Company and close date are required.');
+      formModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    // Check if close date is in the future
+    const selectedDate = new Date(formData.closeDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to start of day for comparison
+    if (selectedDate < today) {
+      setFormError('Close date must be a future-facing date summary point.');
       formModalRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
@@ -292,6 +321,18 @@ const Opportunities = () => {
   return (
     <DashboardLayout title="Deal Pipeline">
       <style>{oppResponsiveCss}</style>
+      <style>{`
+        @keyframes slideInLeft {
+          from {
+            transform: translateY(-50%) translateX(-100px);
+            opacity: 0;
+          }
+          to {
+            transform: translateY(-50%) translateX(0);
+            opacity: 1;
+          }
+        }
+      `}</style>
 
       {/* ── Page Header ── */}
       <div className="opp-header" style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:'20px',flexWrap:'wrap',gap:'12px'}}>
@@ -438,6 +479,7 @@ const Opportunities = () => {
                 </label>
                 <input
                   type="date" name="closeDate" value={formData.closeDate} onChange={handleFormChange}
+                  min={new Date().toISOString().split('T')[0]}
                   style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:'6px',fontSize:'13px',boxSizing:'border-box'}}
                 />
               </div>
@@ -634,6 +676,7 @@ const Opportunities = () => {
                         key={opp._id}
                         draggable
                         onDragStart={(e) => handleDragStart(e, opp)}
+                        onClick={() => openDealDetail(opp)}
                         style={{
                           background:'white',
                           borderRadius:'10px',
@@ -665,20 +708,17 @@ const Opportunities = () => {
                           background: isWon ? '#ECFDF5' : isLost ? '#FEF2F2' : '#F0FDF4',
                           borderRadius:'6px',padding:'4px 8px',marginBottom:'10px'
                         }}>
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={isLost?'#DC2626':'#059669'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                          </svg>
                           <span style={{fontSize:'13px',fontWeight:'700',color: isLost ? '#DC2626' : '#059669'}}>
                             ₹{(opp.amount||0).toLocaleString('en-IN')}
                           </span>
                         </div>
 
-                        {/* Company */}
+                        {/* Company/Customer */}
                         {opp.account && (
                           <div style={{display:'flex',alignItems:'center',gap:'5px',marginBottom:'5px'}}>
                             <div style={{width:'16px',height:'16px',borderRadius:'4px',background:'#EFF6FF',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
                               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+                                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                               </svg>
                             </div>
                             <span style={{fontSize:'11px',color:'#475569',fontWeight:'500',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
@@ -770,6 +810,266 @@ const Opportunities = () => {
             );
           })}
         </div>
+      )}
+
+      {/* Deal Detail Side Panel - Clean & Simple */}
+      {showDetailPanel && selectedDeal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '280px',
+            transform: 'translateY(-50%)',
+            width: '420px',
+            maxHeight: '85vh',
+            background: 'white',
+            borderRadius: '16px',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.1)',
+            zIndex: 1000,
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slideInLeft 0.3s ease-out',
+            border: '1px solid #E5E7EB'
+          }}
+        >
+          {/* Header - Simple & Clean */}
+          <div style={{
+            padding: '24px',
+            background: '#F9FAFB',
+            borderRadius: '16px 16px 0 0',
+            borderBottom: '2px solid #E5E7EB',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'flex-start'
+          }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px' }}>
+                <div style={{
+                  width: '48px',
+                  height: '48px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  borderRadius: '12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '24px',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.25)'
+                }}>
+                  💼
+                </div>
+                <h2 style={{ fontSize: '20px', fontWeight: '700', color: '#1F2937', margin: 0 }}>
+                  {selectedDeal.opportunityName}
+                </h2>
+              </div>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{
+                  padding: '6px 12px',
+                  background: '#EEF2FF',
+                  color: '#4F46E5',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                  fontWeight: '600',
+                  border: '1px solid #C7D2FE'
+                }}>
+                  {selectedDeal.stage}
+                </span>
+                <span style={{
+                  padding: '6px 12px',
+                  background: '#ECFDF5',
+                  color: '#059669',
+                  fontSize: '15px',
+                  fontWeight: '700',
+                  borderRadius: '8px',
+                  border: '1px solid #A7F3D0'
+                }}>
+                  ₹{(selectedDeal.amount || 0).toLocaleString('en-IN')}
+                </span>
+              </div>
+            </div>
+            <button
+              onClick={closeDealDetail}
+              style={{
+                background: 'white',
+                border: '1px solid #E5E7EB',
+                cursor: 'pointer',
+                fontSize: '20px',
+                color: '#6B7280',
+                padding: '8px',
+                borderRadius: '8px',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = '#F3F4F6';
+                e.currentTarget.style.color = '#1F2937';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'white';
+                e.currentTarget.style.color = '#6B7280';
+              }}
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Content - Simple Scroll */}
+          <div style={{
+            flex: 1,
+            overflowY: 'auto',
+            padding: '20px',
+            background: 'white'
+          }}>
+              {/* Deal ID */}
+              {selectedDeal.dealId && (
+                <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #F3F4F6' }}>
+                  <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+                    Deal ID
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#111827', fontFamily: 'monospace', fontWeight: '600' }}>
+                    {selectedDeal.dealId}
+                  </div>
+                </div>
+              )}
+
+              {/* Company */}
+              {selectedDeal.account && (
+                <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #F3F4F6' }}>
+                  <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+                    Company
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#111827', fontWeight: '600' }}>
+                    {selectedDeal.account.accountName}
+                  </div>
+                </div>
+              )}
+
+              {/* Account Manager */}
+              {selectedDeal.accountManager && (
+                <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #F3F4F6' }}>
+                  <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600', display: 'block', marginBottom: '10px' }}>
+                    Account Manager
+                  </label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'white',
+                      fontSize: '16px',
+                      fontWeight: '700'
+                    }}>
+                      {selectedDeal.accountManager.firstName?.charAt(0)}
+                    </div>
+                    <div style={{ fontSize: '14px', color: '#111827', fontWeight: '600' }}>
+                      {selectedDeal.accountManager.firstName} {selectedDeal.accountManager.lastName}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Close Date */}
+              {selectedDeal.closeDate && (
+                <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #F3F4F6' }}>
+                  <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+                    Expected Close Date
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#111827', fontWeight: '600' }}>
+                    {new Date(selectedDeal.closeDate).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'long',
+                      year: 'numeric'
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Contract */}
+              {selectedDeal.contract?.url && (
+                <div style={{ marginBottom: '20px', paddingBottom: '20px', borderBottom: '1px solid #F3F4F6' }}>
+                  <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600', display: 'block', marginBottom: '10px' }}>
+                    Contract Document
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button
+                      onClick={() => handlePreviewContract(selectedDeal._id, selectedDeal.contract.fileName, selectedDeal.contract.fileType)}
+                      style={{
+                        flex: 1,
+                        background: '#3B82F6',
+                        border: 'none',
+                        color: 'white',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#2563EB'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = '#3B82F6'}
+                    >
+                      Preview
+                    </button>
+                    <button
+                      onClick={() => handleDownloadContract(selectedDeal._id, selectedDeal.contract.fileName)}
+                      style={{
+                        flex: 1,
+                        background: 'white',
+                        border: '1px solid #E5E7EB',
+                        color: '#374151',
+                        padding: '10px 14px',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#F9FAFB'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Owner */}
+              {selectedDeal.owner && (
+                <div style={{ marginBottom: '20px' }}>
+                  <label style={{ fontSize: '12px', color: '#6B7280', fontWeight: '600', display: 'block', marginBottom: '6px' }}>
+                    Deal Owner
+                  </label>
+                  <div style={{ fontSize: '14px', color: '#111827', fontWeight: '600' }}>
+                    {selectedDeal.owner.firstName} {selectedDeal.owner.lastName}
+                  </div>
+                </div>
+              )}
+          </div>
+        </div>
+      )}
+
+      {/* Overlay */}
+      {showDetailPanel && (
+        <div
+          onClick={closeDealDetail}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999
+          }}
+        />
       )}
     </DashboardLayout>
   );

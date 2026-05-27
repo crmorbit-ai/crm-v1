@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 const rfiSchema = new mongoose.Schema({
   rfiNumber: {
@@ -93,27 +94,39 @@ const rfiSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Auto-generate RFI number
+// Auto-generate RFI number using atomic counter
 rfiSchema.pre('save', async function(next) {
   if (this.isNew && !this.rfiNumber) {
-    const year = new Date().getFullYear();
-    const prefix = `RFI-${year}-`;
+    try {
+      const year = new Date().getFullYear();
 
-    // Find the last RFI number for this year and tenant
-    const lastRFI = await this.constructor.findOne({
-      tenant: this.tenant,
-      rfiNumber: { $regex: `^${prefix}` }
-    }).sort({ rfiNumber: -1 });
+      // Use findOneAndUpdate with atomic increment - RACE CONDITION SAFE
+      const counter = await Counter.findOneAndUpdate(
+        {
+          name: 'rfi',
+          tenant: this.tenant,
+          year: year
+        },
+        {
+          $inc: { sequence: 1 }
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
+        }
+      );
 
-    let nextNumber = 1;
-    if (lastRFI && lastRFI.rfiNumber) {
-      const lastNumber = parseInt(lastRFI.rfiNumber.split('-')[2], 10);
-      nextNumber = lastNumber + 1;
+      const nextNumber = counter.sequence;
+      this.rfiNumber = `RFI-${year}-${String(nextNumber).padStart(5, '0')}`;
+
+      next();
+    } catch (err) {
+      return next(err);
     }
-
-    this.rfiNumber = `${prefix}${String(nextNumber).padStart(5, '0')}`;
+  } else {
+    next();
   }
-  next();
 });
 
 // Indexes

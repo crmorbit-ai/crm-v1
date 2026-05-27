@@ -218,13 +218,6 @@ const Accounts = () => {
   const [filters, setFilters] = useState({ search: '', accountType: searchParams.get('type') || '', industry: '' });
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  const [formData, setFormData] = useState({
-    accountName: '', accountType: 'Customer', industry: '', phone: '', website: '', fax: '',
-    annualRevenue: '', numberOfEmployees: '', billingStreet: '', billingCity: '', billingState: '',
-    billingCountry: '', billingZipCode: '', shippingStreet: '', shippingCity: '', shippingState: '',
-    shippingCountry: '', shippingZipCode: '', description: ''
-  });
-
   const [fieldDefinitions, setFieldDefinitions] = useState(
     () => DEFAULT_ACCOUNT_FIELDS.filter(f => !getAcctDisabled().includes(f.fieldName)).map(f => ({ ...f, isActive: true, _isStd: true })).sort((a, b) => a.displayOrder - b.displayOrder)
   );
@@ -263,6 +256,11 @@ const Accounts = () => {
     loadCustomFields();
   }, [pagination.page, filters.search, filters.accountType, filters.industry]);
 
+  // Load global stats once on mount (independent of filters)
+  useEffect(() => {
+    loadStats();
+  }, []);
+
   // Sync filter with URL params when navigating from another page
   useEffect(() => {
     const typeParam = searchParams.get('type');
@@ -270,6 +268,22 @@ const Accounts = () => {
       setFilters(prev => ({ ...prev, accountType: typeParam }));
     }
   }, [searchParams]);
+
+  const loadStats = async () => {
+    try {
+      const response = await accountService.getAccountStats();
+      if (response.success && response.data) {
+        setStats({
+          total: response.data.total || 0,
+          customers: response.data.byType?.customers || 0,
+          prospects: response.data.byType?.prospects || 0,
+          partners: response.data.byType?.partners || 0
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load account stats:', err);
+    }
+  };
 
   const loadAccounts = async () => {
     try {
@@ -280,10 +294,6 @@ const Accounts = () => {
         const accountsData = response.data.accounts || [];
         setAccounts(accountsData);
         setPagination(prev => ({ ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0 }));
-        const customers = accountsData.filter(a => a.accountType === 'Customer').length;
-        const prospects = accountsData.filter(a => a.accountType === 'Prospect').length;
-        const partners = accountsData.filter(a => a.accountType === 'Partner').length;
-        setStats({ total: response.data.pagination?.total || 0, customers, prospects, partners });
       }
     } catch (err) {
       if (err?.isPermissionDenied) return;
@@ -434,21 +444,17 @@ const Accounts = () => {
       setWizardStep(0);
       resetForm();
       loadAccounts();
+      loadStats(); // Reload global stats after create
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create account'); }
     finally { setCreating(false); }
   };
 
   const resetForm = () => {
-    setFormData({ accountName: '', accountType: 'Customer', industry: '', phone: '', website: '', fax: '', annualRevenue: '', numberOfEmployees: '', billingStreet: '', billingCity: '', billingState: '', billingCountry: '', billingZipCode: '', shippingStreet: '', shippingCity: '', shippingState: '', shippingCountry: '', shippingZipCode: '', description: '' });
     setFieldValues({});
     setFieldErrors({});
     setSelectedCountryIso('');
     setSelectedStateIso('');
-  };
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleFilterChange = (e) => {
@@ -555,6 +561,7 @@ const Accounts = () => {
       const response = await accountService.getAccount(selectedAccountId);
       if (response?.success) setSelectedAccountData(response.data);
       loadAccounts();
+      loadStats(); // Reload global stats after update
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to update account'); }
   };
@@ -571,6 +578,7 @@ const Accounts = () => {
       setSuccess('Account deleted successfully!');
       closeSidePanel();
       loadAccounts();
+      loadStats(); // Reload global stats after delete
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to delete account'); }
   };

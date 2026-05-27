@@ -138,8 +138,8 @@ const createTask = async (req, res) => {
 
     console.log('Create task body:', req.body); // DEBUG
 
-    if (!subject || !dueDate || !relatedTo || !relatedToId) {
-      return errorResponse(res, 400, 'Please provide subject, dueDate, relatedTo, and relatedToId');
+    if (!subject || !dueDate) {
+      return errorResponse(res, 400, 'Please provide subject and dueDate');
     }
 
     let tenant;
