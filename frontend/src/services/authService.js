@@ -3,8 +3,8 @@ import api from './api';
 // Note: api.js interceptor already returns response.data, so we return directly
 
 export const authService = {
-  login: async (email, password) => {
-    const response = await api.post('/auth/login', { email, password });
+  login: async (loginName, password) => {
+    const response = await api.post('/auth/login', { loginName, password });
     return response;
   },
 
@@ -59,6 +59,11 @@ export const authService = {
   // Register method (alias for registerStep1)
   register: async (formData) => {
     const response = await api.post('/auth/register-step1', formData);
+    return response;
+  },
+
+  verifyTenantAdminPassword: async (password) => {
+    const response = await api.post('/auth/verify-tenant-admin-password', { password });
     return response;
   }
 };

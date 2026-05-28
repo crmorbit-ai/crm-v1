@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
 import { groupService } from '../services/groupService';
+import { authService } from '../services/authService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 const FEATURES = [
@@ -111,6 +112,11 @@ const TeamManagement = () => {
   const [dragging, setDragging]       = useState(false);
   const [dragStartX, setDragStartX]   = useState(0);
   const [dragStartW, setDragStartW]   = useState(380);
+  const [verifyModal, setVerifyModal] = useState({ open:false, pendingData:null });
+  const [verifyPwd, setVerifyPwd]     = useState('');
+  const [showVerifyPwd, setShowVerifyPwd] = useState(false);
+  const [verifying, setVerifying]     = useState(false);
+  const [verifyError, setVerifyError] = useState('');
 
   useEffect(() => {
     if (!dragging) return;
@@ -171,12 +177,25 @@ const TeamManagement = () => {
   const openGroupPanel = (g=null) => { setPanelMode('group'); setEditingItem(g); setGroupForm(g?{name:g.name,description:g.description||'',members:g.members?.map(m=>m._id)||[]}:{name:'',description:'',members:[]}); setShowPanel(true); };
 
   const handleUserSubmit = async e => {
-    e.preventDefault(); if(submitting) return; setSubmitting(true);
+    e.preventDefault(); if(submitting) return;
+
+    // ALWAYS show verification modal when creating new user (email daala ho ya nahi)
+    // Tenant admin password verification required for all new user creation
+    if (!editingItem) {
+      setVerifyModal({ open: true, pendingData: { ...userForm, tenant: user.tenant?._id } });
+      setVerifyPwd('');
+      setShowVerifyPwd(false);
+      setVerifyError('');
+      return;
+    }
+
+    // For editing existing user, proceed directly without verification
+    setSubmitting(true);
     try {
-      let uid;
-      if(editingItem){ await userService.updateUser(editingItem._id,userForm); uid=editingItem._id; showMsg('User updated!'); }
-      else { const r=await userService.createUser({...userForm,tenant:user.tenant?._id}); uid=r.user?._id||r._id; showMsg('User created!'); }
+      await userService.updateUser(editingItem._id,userForm);
+      const uid = editingItem._id;
       if(uid) await userService.assignGroups(uid,userForm.groups);
+      showMsg('User updated!');
       closePanel(); loadData();
     } catch(e){ if(e?.isPermissionDenied) return; showMsg(e.message||'Error',true); }
     finally { setSubmitting(false); }
@@ -204,6 +223,42 @@ const TeamManagement = () => {
     try{ setSubmitting(true); await userService.resetUserPassword(resetModal.userId,resetForm.newPassword); showMsg(`Password reset for ${resetModal.userName}`); setResetModal({open:false,userId:null,userName:''}); }
     catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message||'Failed',true); }
     finally{ setSubmitting(false); }
+  };
+
+  const handleVerifyAndCreate = async e => {
+    e.preventDefault();
+    if(!verifyPwd){
+      setVerifyError('Please enter your password');
+      return;
+    }
+
+    setVerifying(true);
+    setVerifyError('');
+    try {
+      // Verify tenant admin password
+      await authService.verifyTenantAdminPassword(verifyPwd);
+
+      // If verification successful, create the user
+      const r = await userService.createUser(verifyModal.pendingData);
+      const uid = r.user?._id || r._id;
+      if(uid) await userService.assignGroups(uid, verifyModal.pendingData.groups || []);
+
+      showMsg('User created successfully!');
+      setVerifyModal({ open: false, pendingData: null });
+      setVerifyPwd('');
+      setVerifyError('');
+      closePanel();
+      loadData();
+    } catch(e) {
+      if(e?.isPermissionDenied) return;
+      // Show inline error message for wrong password
+      const errorMsg = e.message === 'Invalid password'
+        ? 'Incorrect password! Please try again.'
+        : (e.message || 'Verification failed. Please try again.');
+      setVerifyError(errorMsg);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   const handleRoleSubmit = async e => {
@@ -238,8 +293,9 @@ const TeamManagement = () => {
     catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message||'Error',true); }
   };
   const handleNext = () => {
-    if(!userForm.firstName.trim()||!userForm.lastName.trim()||!userForm.email.trim()){ showMsg('Fill required fields',true); return; }
-    if(!editingItem&&userForm.password.length<4){ showMsg('Min 4 characters',true); return; }
+    // Email is now optional, only check required fields
+    if(!userForm.firstName.trim()||!userForm.lastName.trim()||!userForm.loginName.trim()){ showMsg('Fill required fields (First Name, Last Name, Login Name)',true); return; }
+    if(!editingItem&&userForm.password.length<4){ showMsg('Password must be at least 4 characters',true); return; }
     setUserStep(2);
   };
 
@@ -558,11 +614,11 @@ const TeamManagement = () => {
                     </div>
                   </div>
 
-                  {/* Row 3: Login Email (used for login) */}
+                  {/* Row 3: Email (optional - validation uses tenant admin email) */}
                   <div style={{marginBottom:10}}>
-                    <Label>Email * <span style={{textTransform:'none',fontWeight:400,color:'#94a3b8',letterSpacing:0}}>— used for login</span></Label>
+                    <Label>Email <span style={{textTransform:'none',fontWeight:400,color:'#94a3b8',letterSpacing:0}}>— optional (uses tenant admin email for validation if blank)</span></Label>
                     <div style={{position:'relative'}}>
-                      <Inp type="email" style={{paddingRight:70}} value={userForm.email} onChange={e=>setUserForm({...userForm,email:e.target.value})} placeholder="john@example.com" disabled={!!editingItem} />
+                      <Inp type="email" style={{paddingRight:70}} value={userForm.email} onChange={e=>setUserForm({...userForm,email:e.target.value})} placeholder="john@example.com (optional)" disabled={!!editingItem} />
                       <CopyBtn fkey="email" val={userForm.email} copied={copied} onCopy={copyVal} />
                     </div>
                   </div>
@@ -1148,6 +1204,54 @@ const TeamManagement = () => {
         </div>
       )}
 
+      {/* ════════════════════════════════════════════
+          TENANT ADMIN PASSWORD VERIFICATION MODAL
+      ════════════════════════════════════════════ */}
+      {verifyModal.open&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(7,4,20,0.7)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+          <div className="xModalIn" style={{background:'#fff',borderRadius:20,width:'100%',maxWidth:440,boxShadow:'0 30px 80px rgba(0,0,0,0.28)',overflow:'hidden'}}>
+            <div style={{padding:'14px 20px',background:'linear-gradient(135deg,#f59e0b,#d97706)',position:'relative',overflow:'hidden'}}>
+              <div style={{position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(255,255,255,0.2) 0%,transparent 70%)',pointerEvents:'none'}} />
+              <button onClick={()=>{setVerifyModal({open:false,pendingData:null});setVerifyPwd('');setVerifyError('');}} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+              <div style={{display:'flex',alignItems:'center',gap:11,position:'relative',zIndex:1}}>
+                <div style={{width:36,height:36,borderRadius:10,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔐</div>
+                <div>
+                  <div style={{fontSize:15,fontWeight:800,color:'#fff',lineHeight:1.25}}>Verify Your Password</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,.7)',marginTop:2}}>Confirm tenant admin password to create user</div>
+                </div>
+              </div>
+            </div>
+            <div style={{padding:'24px 26px'}}>
+              <div style={{background:'#fffbeb',border:'1.5px solid #fde68a',borderRadius:12,padding:'12px 14px',marginBottom:18,display:'flex',gap:10}}>
+                <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
+                <div style={{fontSize:12,color:'#92400e',lineHeight:1.5}}>
+                  <strong>Security Verification Required</strong><br/>
+                  For security, all new team users are validated using the tenant admin's email (<strong>{user?.email}</strong>). Please confirm your password to proceed with user creation.
+                </div>
+              </div>
+              <form onSubmit={handleVerifyAndCreate}>
+                <div style={{marginBottom:20}}>
+                  <Label>Tenant Admin Password</Label>
+                  <div style={{position:'relative'}}>
+                    <Inp type={showVerifyPwd?'text':'password'} style={{paddingRight:40,borderColor:verifyError?'#ef4444':'#e2e8f0'}} value={verifyPwd} onChange={e=>{setVerifyPwd(e.target.value);setVerifyError('');}} placeholder="Enter your password" required autoFocus />
+                    <button type="button" onClick={()=>setShowVerifyPwd(v=>!v)} style={{position:'absolute',right:11,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showVerifyPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
+                  </div>
+                  {verifyError&&<div style={{marginTop:6,fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
+                    <span>⚠️</span> {verifyError}
+                  </div>}
+                </div>
+                <div style={{display:'flex',gap:10}}>
+                  <button type="button" onClick={()=>{setVerifyModal({open:false,pendingData:null});setVerifyPwd('');setVerifyError('');}} style={{flex:1,padding:'11px 0',border:'1.5px solid #e2e8f0',borderRadius:11,background:'#f8fafc',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
+                  <PriBtn type="submit" disabled={verifying} style={{flex:1,marginTop:0,background:verifying?'#cbd5e1':'linear-gradient(135deg,#f59e0b,#d97706)',boxShadow:verifying?'none':'0 4px 14px rgba(245,158,11,0.4)'}}>
+                    {verifying?'Verifying...':'Verify & Create User'}
+                  </PriBtn>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══════════ REPORTS PAGE (full tab) ══════════ */}
       {activeTab==='reports'&&(()=>{
         const now   = new Date();
@@ -1717,7 +1821,7 @@ const TeamManagement = () => {
                               userType: obj.usertype||'TENANT_USER',
                               phone: obj.phone||'', loginName: obj.loginname||'',
                               department: obj.department||'',
-                              _error: (!obj.firstname||!obj.lastname||!obj.email||!obj.password)?'Missing required fields':''
+                              _error: (!obj.firstname||!obj.lastname||!obj.loginname||!obj.password)?'Missing required fields (firstname, lastname, loginname, password)':''
                             };
                           });
                           if(rows.length>100){ setBulkError('Max 100 users per import'); return; }

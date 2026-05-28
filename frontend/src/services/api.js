@@ -37,8 +37,13 @@ api.interceptors.response.use(
     if (error.response) {
       // Handle 401 unauthorized
       if (error.response.status === 401) {
-        localStorage.removeItem('token');
-        window.location.href = '/login';
+        // Exception: Don't auto-logout for tenant admin password verification errors
+        const isPasswordVerification = error.config?.url?.includes('/verify-tenant-admin-password');
+
+        if (!isPasswordVerification) {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }
       }
 
       // Handle 403 permission denied — show global toast

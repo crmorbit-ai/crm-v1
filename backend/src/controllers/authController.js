@@ -37,15 +37,23 @@ const generateOTP = () => {
  */
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { loginName, email, password } = req.body;
+
+    // Accept either loginName or email (for backward compatibility with SAAS Admin)
+    const identifier = loginName || email;
 
     // Validation
-    if (!email || !password) {
-      return errorResponse(res, 400, 'Please provide email and password');
+    if (!identifier || !password) {
+      return errorResponse(res, 400, 'Please provide login credentials and password');
     }
 
-    // Find user
-    const user = await User.findOne({ email }).populate('roles').populate('tenant');
+    // Try to find user by loginName first, then by email
+    let user = await User.findOne({ loginName: identifier.toLowerCase() }).populate('roles').populate('tenant');
+
+    if (!user) {
+      // Try email (for SAAS Admin backward compatibility)
+      user = await User.findOne({ email: identifier.toLowerCase() }).populate('roles').populate('tenant');
+    }
 
     if (!user) {
       return errorResponse(res, 401, 'Invalid credentials');
@@ -106,15 +114,16 @@ const login = async (req, res) => {
       .map(e => e.trim().toLowerCase())
       .filter(e => e);
 
-    const isInSaasWhitelist = saasAdminEmails.includes(user.email.toLowerCase());
+    // Check SAAS whitelist using email if available, otherwise skip
+    const isInSaasWhitelist = user.email ? saasAdminEmails.includes(user.email.toLowerCase()) : false;
 
     if (isInSaasWhitelist && user.userType !== 'SAAS_OWNER') {
       user.userType = 'SAAS_OWNER';
       user.tenant = null;
-      console.log(`🔑 Login: ${user.email} upgraded to SAAS_OWNER`);
+      console.log(`🔑 Login: ${user.loginName} (${user.email}) upgraded to SAAS_OWNER`);
     } else if (!isInSaasWhitelist && user.userType === 'SAAS_OWNER') {
       user.userType = 'TENANT_ADMIN';
-      console.log(`🔒 Login: ${user.email} downgraded from SAAS_OWNER`);
+      console.log(`🔒 Login: ${user.loginName} downgraded from SAAS_OWNER`);
     }
     // ============================================
 
@@ -1217,6 +1226,43 @@ const googleOAuthCallback = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Verify tenant admin password (used when creating user without email)
+ * @route   POST /api/auth/verify-tenant-admin-password
+ * @access  Private
+ */
+const verifyTenantAdminPassword = async (req, res) => {
+  try {
+    const { password } = req.body;
+
+    if (!password) {
+      return errorResponse(res, 400, 'Password is required');
+    }
+
+    // Get the current user's details
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    // Only TENANT_ADMIN can verify (team users shouldn't be able to verify their own password)
+    if (user.userType !== 'TENANT_ADMIN') {
+      return errorResponse(res, 403, 'Only Tenant Admin can verify password');
+    }
+
+    // Verify password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return errorResponse(res, 401, 'Invalid password');
+    }
+
+    successResponse(res, 200, 'Password verified successfully');
+  } catch (error) {
+    console.error('Verify tenant admin password error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   login,
   registerTenant,
@@ -1231,5 +1277,6 @@ module.exports = {
   forgotPassword,
   verifyOTP,
   resetPassword,
-  changePassword
+  changePassword,
+  verifyTenantAdminPassword // NEW
 };

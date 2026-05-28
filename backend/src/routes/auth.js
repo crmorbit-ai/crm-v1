@@ -14,7 +14,8 @@ const {
   forgotPassword,
   verifyOTP,
   resetPassword,
-  changePassword
+  changePassword,
+  verifyTenantAdminPassword // NEW
 } = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
 const multer = require('multer');
@@ -67,5 +68,8 @@ router.post('/logout', protect, logout);
 
 // Change Password (Dashboard)
 router.post('/change-password', protect, changePassword);
+
+// Verify Tenant Admin Password (used when creating user without email)
+router.post('/verify-tenant-admin-password', protect, verifyTenantAdminPassword);
 
 module.exports = router;

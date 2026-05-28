@@ -148,15 +148,40 @@ const createUser = async (req, res) => {
   try {
     const { email, password, firstName, lastName, userType, tenant, roles, groups, loginName, department, subDepartment, personalEmail, officeEmail, phone, alternatePhone, reportingManager, viewingPin, designation, reportsTo } = req.body;
 
-    // Validation
-    if (!email || !password || !firstName || !lastName || !userType) {
-      return errorResponse(res, 400, 'Please provide all required fields');
+    // Validation - loginName is now mandatory, email is optional
+    if (!loginName || !password || !firstName || !lastName || !userType) {
+      return errorResponse(res, 400, 'Please provide all required fields (loginName, password, firstName, lastName, userType)');
     }
 
-    // Check if email already exists
-    const existingUser = await User.findOne({ email });
+    // Check if loginName already exists
+    const existingUser = await User.findOne({ loginName: loginName.toLowerCase() });
     if (existingUser) {
-      return errorResponse(res, 400, 'Email already exists');
+      return errorResponse(res, 400, 'Login name already exists');
+    }
+
+    // If email is provided, check if it already exists
+    if (email) {
+      const existingEmailUser = await User.findOne({ email });
+      if (existingEmailUser) {
+        return errorResponse(res, 400, 'Email already exists');
+      }
+    }
+
+    // ALWAYS use tenant admin email for validation (chahe user ne email daali ho ya nahi)
+    // Tenant admin ka email se hi validation hoga
+    let finalEmail = email; // Use provided email if given
+    if (tenant) {
+      const tenantData = await Tenant.findById(tenant);
+      if (tenantData && tenantData.adminEmail) {
+        // For validation purposes, we'll use tenant admin email
+        // But store user's provided email in the user document if they gave one
+        console.log(`✅ User validation will be done using tenant admin email: ${tenantData.adminEmail}`);
+        if (!email) {
+          // Only set finalEmail to tenant admin if user didn't provide one
+          finalEmail = tenantData.adminEmail;
+          console.log(`📧 No email provided by user, using tenant admin email: ${finalEmail}`);
+        }
+      }
     }
 
     // Validate userType permissions
@@ -244,17 +269,17 @@ const createUser = async (req, res) => {
 
     // Create user data
     const userData = {
-      email,
+      email: finalEmail || email,  // Use tenant admin email if no email provided
       password,
       firstName,
       lastName,
+      loginName: loginName.toLowerCase(),  // Store loginName in lowercase for consistency
       userType,
       tenant: tenant || null,
       roles: roles || [],
       groups: groups || [],
       isActive: true,
       isProfileComplete: true,  // Admin-created users don't need profile completion
-      ...(loginName        && { loginName }),
       ...(department       && { department }),
       ...(subDepartment    && { subDepartment }),
       ...(personalEmail    && { personalEmail }),

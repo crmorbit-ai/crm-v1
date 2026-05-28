@@ -80,7 +80,7 @@ const EyeOff = () => <svg width="17" height="17" viewBox="0 0 24 24" fill="none"
 const Login = () => {
   const navigate = useNavigate();
   const { login, user } = useAuth();
-  const [formData, setFormData] = useState({ email: '', password: '' });
+  const [formData, setFormData] = useState({ loginName: '', password: '' });
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState('');
   const [errorCode, setErrorCode] = useState(null);
@@ -95,14 +95,16 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
-    const rx = /^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?@[a-zA-Z0-9]([a-zA-Z0-9.-]*[a-zA-Z0-9])?\.[a-zA-Z]{2,}$/;
-    if (!rx.test(formData.email) || /\.{2,}/.test(formData.email)) {
-      setError('Please enter a valid email address');
+
+    // Validate loginName (no email validation needed now)
+    if (!formData.loginName || !formData.loginName.trim()) {
+      setError('Please enter your login name');
       setTimeout(() => setError(''), 6000); return;
     }
+
     setLoading(true);
     try {
-      const response = await login(formData.email, formData.password);
+      const response = await login(formData.loginName, formData.password);
       Promise.all([
         leadService.getLeadStats().catch(() => null),
         accountService.getAccountStats().catch(() => null),
@@ -118,7 +120,7 @@ const Login = () => {
     } catch (err) {
       const code    = err?.errors?.code || err?.response?.data?.errors?.code || null;
       const meta    = err?.errors || err?.response?.data?.errors || null;
-      const message = err?.message || err?.response?.data?.message || 'Invalid email or password';
+      const message = err?.message || err?.response?.data?.message || 'Invalid login name or password';
       setError(message); setErrorCode(code); setErrorMeta(meta); setLoading(false);
       setTimeout(() => { setError(''); setErrorCode(null); setErrorMeta(null); }, 6000);
     }
@@ -179,8 +181,8 @@ const Login = () => {
 
         <form onSubmit={handleSubmit}>
           <div style={{marginBottom:11}}>
-            <label className="ln-lbl">Email address <span style={{color:'#ef4444'}}>*</span></label>
-            <input className="ln-inp" type="email" name="email" value={formData.email} onChange={handleChange} required placeholder="you@company.com"/>
+            <label className="ln-lbl">Login Name <span style={{color:'#ef4444'}}>*</span></label>
+            <input className="ln-inp" type="text" name="loginName" value={formData.loginName} onChange={handleChange} required placeholder="Enter your login name" autoComplete="username"/>
           </div>
 
           <div style={{marginBottom:16}}>

@@ -83,6 +83,8 @@ export const AuthProvider = ({ children }) => {
   const loadUser = async () => {
     try {
       const response = await authService.getMe();
+      console.log('✅ User loaded from backend:', response.data);
+      console.log('📋 User roles:', response.data.roles);
       setUser(response.data);
       cacheUser(response.data); // Cache for future
     } catch (error) {
@@ -93,8 +95,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
-    const response = await authService.login(email, password);
+  const login = async (loginName, password) => {
+    const response = await authService.login(loginName, password);
     const { token, user } = response.data;
     setToken(token);
     setUser(user);
@@ -164,6 +166,11 @@ export const AuthProvider = ({ children }) => {
     // TENANT_ADMIN has all permissions within their tenant
     if (user.userType === 'TENANT_ADMIN') return true;
 
+    // Debug log for TENANT_MANAGER
+    if (user.userType === 'TENANT_MANAGER') {
+      console.log('🔍 Permission Check:', { feature, action, userRoles: user.roles, customPerms: user.customPermissions });
+    }
+
     // Check custom permissions
     if (user.customPermissions) {
       const perm = user.customPermissions.find(p => p.feature === feature);
@@ -173,9 +180,9 @@ export const AuthProvider = ({ children }) => {
     }
 
     // Check role permissions
-    if (user.roles) {
+    if (user.roles && Array.isArray(user.roles)) {
       for (const role of user.roles) {
-        if (role.permissions) {
+        if (role.permissions && Array.isArray(role.permissions)) {
           const perm = role.permissions.find(p => p.feature === feature);
           if (perm && (perm.actions.includes(action) || perm.actions.includes('manage'))) {
             return true;

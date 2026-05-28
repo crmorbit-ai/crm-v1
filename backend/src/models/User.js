@@ -4,8 +4,9 @@ const bcrypt = require('bcryptjs');
 const userSchema = new mongoose.Schema({
   email: {
     type: String,
-    required: true,
+    required: false,  // Email is now optional
     unique: true,
+    sparse: true,  // Allow multiple null emails
     lowercase: true,
     trim: true
   },
@@ -86,7 +87,15 @@ const userSchema = new mongoose.Schema({
   },
   loginName: {
     type: String,
-    trim: true
+    required: function() {
+      // Login name required ONLY for team users created via user management
+      // SAAS Admin/Owner and Tenant Admin use email for login
+      return this.userType === 'TENANT_USER' || this.userType === 'TENANT_MANAGER';
+    },
+    unique: true,
+    sparse: true,  // Allow multiple null values
+    trim: true,
+    lowercase: true
   },
   department: {
     type: String,
