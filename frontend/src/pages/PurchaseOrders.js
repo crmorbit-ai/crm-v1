@@ -144,7 +144,11 @@ const PurchaseOrders = () => {
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
-            <button onClick={fetchPurchaseOrders} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Search</button>
+            <button onClick={(e) => {
+              e.preventDefault();
+              if (!searchTerm.trim()) return;
+              fetchPurchaseOrders();
+            }} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#f59e0b', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Search</button>
           </div>
           {error && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px 14px', borderRadius: '8px', marginTop: '8px', fontSize: '13px' }}>{error}</div>}
         </div>

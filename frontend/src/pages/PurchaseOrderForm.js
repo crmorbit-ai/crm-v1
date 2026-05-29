@@ -492,37 +492,37 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
         {/* Dark gradient header */}
         <div style={{ background: 'linear-gradient(135deg, #451a03 0%, #78350f 100%)', flexShrink: 0 }}>
-          <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#f59e0b,#d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>📦</div>
+          <div style={{ padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div style={{ width: '26px', height: '26px', borderRadius: '6px', background: 'linear-gradient(135deg,#f59e0b,#d97706)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '13px' }}>📦</div>
               <div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Purchase Order</div>
-                <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {STEPS.length}</div>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: 'white' }}>New Purchase Order</div>
+                <div style={{ fontSize: '9px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {STEPS.length}</div>
               </div>
             </div>
-            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '6px', padding: '4px 8px', color: 'white', cursor: 'pointer', fontSize: '14px', lineHeight: 1 }}>✕</button>
           </div>
-          <div style={{ display: 'flex', padding: '8px 10px 0' }}>
+          <div style={{ display: 'flex', padding: '6px 8px 0' }}>
             {STEPS.map((s, idx) => {
               const done = idx < wizardStep, active = idx === wizardStep;
               return (
                 <div key={idx} onClick={() => done && setWizardStep(idx)}
-                  style={{ flex: 1, textAlign: 'center', padding: '5px 2px', borderRadius: '6px 6px 0 0', cursor: done ? 'pointer' : 'default',
+                  style={{ flex: 1, textAlign: 'center', padding: '4px 2px', borderRadius: '4px 4px 0 0', cursor: done ? 'pointer' : 'default',
                     background: active ? 'rgba(245,158,11,0.22)' : done ? 'rgba(245,158,11,0.12)' : 'rgba(255,255,255,0.04)',
                     borderBottom: active ? '2px solid #f59e0b' : done ? '2px solid #fcd34d' : '2px solid transparent' }}>
-                  <div style={{ fontSize: '12px', color: active ? '#fde68a' : done ? '#fcd34d' : 'rgba(255,255,255,0.25)', fontWeight: '700' }}>{done ? '✓' : s.icon}</div>
-                  <div style={{ fontSize: '9px', color: active ? 'rgba(255,255,255,0.65)' : done ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{s.label}</div>
+                  <div style={{ fontSize: '11px', color: active ? '#fde68a' : done ? '#fcd34d' : 'rgba(255,255,255,0.25)', fontWeight: '700' }}>{done ? '✓' : s.icon}</div>
+                  <div style={{ fontSize: '8px', color: active ? 'rgba(255,255,255,0.65)' : done ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: '1px' }}>{s.label}</div>
                 </div>
               );
             })}
           </div>
-          <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
+          <div style={{ height: '2px', background: 'rgba(255,255,255,0.08)', margin: '0 8px 6px' }}>
             <div style={{ height: '100%', background: 'linear-gradient(90deg,#f59e0b,#d97706)', borderRadius: '99px', width: `${(wizardStep / STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
           </div>
         </div>
 
         {/* Step body */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', padding: '10px 14px' }}>
           <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
             <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{STEPS[wizardStep].icon} {STEPS[wizardStep].label}</h4>
             <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{STEPS[wizardStep].desc}</p>
@@ -532,7 +532,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
         </div>
 
         {/* Footer */}
-        <div style={{ padding: '11px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
+        <div style={{ padding: '8px 12px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
           <button type="button" onClick={() => wizardStep > 0 ? setWizardStep(s => s - 1) : onClose()}
             style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
             {wizardStep === 0 ? 'Cancel' : '← Back'}
