@@ -93,7 +93,7 @@ const Quotations = () => {
     </DashboardLayout>
   );
 
-  const thStyle = { padding: '10px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', background: '#f8fafc' };
+  const thStyle = { padding: '10px 16px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', background: '#f8fafc', position: 'sticky', top: 0, zIndex: 10 };
   const tdStyle = { padding: '12px 16px', borderBottom: '1px solid #f8fafc', verticalAlign: 'middle' };
 
   return (
@@ -145,7 +145,11 @@ const Quotations = () => {
               <option value="rejected">Rejected</option>
               <option value="expired">Expired</option>
             </select>
-            <button onClick={fetchQuotations} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Search</button>
+            <button onClick={(e) => {
+              e.preventDefault();
+              if (!searchTerm.trim()) return;
+              fetchQuotations();
+            }} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#10b981', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Search</button>
           </div>
           {error && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px 14px', borderRadius: '8px', marginTop: '8px', fontSize: '13px' }}>{error}</div>}
         </div>

@@ -269,7 +269,6 @@ const createUser = async (req, res) => {
 
     // Create user data
     const userData = {
-      email: finalEmail || email,  // Use tenant admin email if no email provided
       password,
       firstName,
       lastName,
@@ -280,6 +279,7 @@ const createUser = async (req, res) => {
       groups: groups || [],
       isActive: true,
       isProfileComplete: true,  // Admin-created users don't need profile completion
+      addedBy: req.user._id,
       ...(department       && { department }),
       ...(subDepartment    && { subDepartment }),
       ...(personalEmail    && { personalEmail }),
@@ -289,9 +289,14 @@ const createUser = async (req, res) => {
       ...(reportingManager && { reportingManager }),
       ...(designation      && { designation }),
       ...(reportsTo        && { reportsTo }),
-      addedBy: req.user._id,
       ...(hashedPin && { viewingPin: hashedPin, isViewingPinSet: true })
     };
+
+    // Only add email if it has a value (optional field)
+    const emailValue = finalEmail || email;
+    if (emailValue && emailValue.trim()) {
+      userData.email = emailValue.trim().toLowerCase();
+    }
 
     const user = await User.create(userData);
 

@@ -72,6 +72,14 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
   };
 
   const handleCustomerSelect = (cid) => {
+    if (!cid) {
+      // Clear selection - unlock fields
+      setFormData(p => ({
+        ...p, customer: '', customerModel: '',
+        customerName: '', customerEmail: '', customerPhone: '', customerCompany: ''
+      }));
+      return;
+    }
     const c = customers.find(x => x._id === cid);
     if (!c) return;
     let name = '';
@@ -275,16 +283,16 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={ls}>Name *</label>
-              <input name="customerName" value={formData.customerName} onChange={inp} style={{...is, border: fieldErrors.customerName ? '1px solid #EF4444' : '1.5px solid #e2e8f0'}} required />
+              <input name="customerName" value={formData.customerName} onChange={inp} disabled={!!formData.customer} style={{...is, border: fieldErrors.customerName ? '1px solid #EF4444' : '1.5px solid #e2e8f0', opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} required />
               {fieldErrors.customerName && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>{fieldErrors.customerName}</div>}
             </div>
             <div>
               <label style={ls}>Email *</label>
-              <input name="customerEmail" type="email" value={formData.customerEmail} onChange={inp} style={{...is, border: fieldErrors.customerEmail ? '1px solid #EF4444' : '1.5px solid #e2e8f0'}} required />
+              <input name="customerEmail" type="email" value={formData.customerEmail} onChange={inp} disabled={!!formData.customer} style={{...is, border: fieldErrors.customerEmail ? '1px solid #EF4444' : '1.5px solid #e2e8f0', opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} required />
               {fieldErrors.customerEmail && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px' }}>{fieldErrors.customerEmail}</div>}
             </div>
-            <div><label style={ls}>Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} style={is} /></div>
-            <div><label style={ls}>Company</label><input name="customerCompany" value={formData.customerCompany} onChange={inp} style={is} /></div>
+            <div><label style={ls}>Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} disabled={!!formData.customer} style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} /></div>
+            <div><label style={ls}>Company</label><input name="customerCompany" value={formData.customerCompany} onChange={inp} disabled={!!formData.customer} style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} /></div>
           </div>
         </div>
       );
@@ -433,10 +441,10 @@ const RFIForm = ({ embedded, onClose, onSuccess }) => {
             <div><label className="crm-form-label">Select Customer</label><select className="crm-form-select" onChange={e => handleCustomerSelect(e.target.value)}><option value="">Select...</option>{customers.map(c => <option key={c._id} value={c._id}>{customerType === 'Account' ? (c.companyName || c.accountName || c.name) : customerType === 'Lead' ? (c.customerName || c.name || c.email) : `${c.firstName || ''} ${c.lastName || ''}`.trim()}</option>)}</select></div>
           </div>
           <div className="resp-grid-2" style={{gap:'16px'}}>
-            <div><label className="crm-form-label">Name *</label><input name="customerName" value={formData.customerName} onChange={inp} className="crm-form-input" required /></div>
-            <div><label className="crm-form-label">Email *</label><input type="email" name="customerEmail" value={formData.customerEmail} onChange={inp} className="crm-form-input" required /></div>
-            <div><label className="crm-form-label">Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} className="crm-form-input" /></div>
-            <div><label className="crm-form-label">Company</label><input name="customerCompany" value={formData.customerCompany} onChange={inp} className="crm-form-input" /></div>
+            <div><label className="crm-form-label">Name *</label><input name="customerName" value={formData.customerName} onChange={inp} disabled={!!formData.customer} className="crm-form-input" style={{opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : 'white'}} required /></div>
+            <div><label className="crm-form-label">Email *</label><input type="email" name="customerEmail" value={formData.customerEmail} onChange={inp} disabled={!!formData.customer} className="crm-form-input" style={{opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : 'white'}} required /></div>
+            <div><label className="crm-form-label">Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} disabled={!!formData.customer} className="crm-form-input" style={{opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : 'white'}} /></div>
+            <div><label className="crm-form-label">Company</label><input name="customerCompany" value={formData.customerCompany} onChange={inp} disabled={!!formData.customer} className="crm-form-input" style={{opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : 'white'}} /></div>
           </div>
         </div>
         <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>

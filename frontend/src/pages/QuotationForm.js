@@ -32,6 +32,15 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
   const [quotationTemplates, setQuotationTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
+  // Field-level validation errors
+  const [fieldErrors, setFieldErrors] = useState({
+    customerName: '',
+    customerEmail: '',
+    title: '',
+    quotationDate: '',
+    expiryDate: ''
+  });
+
   const [formData, setFormData] = useState({
     customerName: '', customerEmail: '', customerPhone: '', customerAddress: '',
     title: '', description: '',
@@ -75,13 +84,96 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
   };
 
   const handleCustomerSelect = (cid) => {
+    if (!cid) {
+      setFormData(p => ({ ...p, customer: '', customerModel: '', customerName: '', customerEmail: '', customerPhone: '', customerAddress: '' }));
+      return;
+    }
     const c = customers.find(x => x._id===cid); if (!c) return;
     setFormData(p => ({ ...p, customer: cid, customerModel: customerType,
       customerName: customerType==='Account' ? c.accountName : `${c.firstName} ${c.lastName}`,
       customerEmail: c.email, customerPhone: c.phone||c.mobile||'', customerAddress: c.address||c.billingAddress||'' }));
+    // Clear errors when customer is selected
+    setFieldErrors(prev => ({ ...prev, customerName: '', customerEmail: '' }));
   };
 
-  const inp = (e) => { const {name,value}=e.target; setFormData(p=>({...p,[name]:value})); };
+  const inp = (e) => {
+    const {name,value}=e.target;
+    setFormData(p=>({...p,[name]:value}));
+    // Clear error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const validateStep = (step) => {
+    const errors = {};
+
+    if (step === 0) {
+      // Step 1: Customer validation
+      if (!formData.customerName || !formData.customerName.trim()) {
+        errors.customerName = 'Customer Name is required';
+      } else if (!/[a-zA-Z]/.test(formData.customerName.trim())) {
+        errors.customerName = 'Name must contain letters';
+      }
+      if (!formData.customerEmail || !formData.customerEmail.trim()) {
+        errors.customerEmail = 'Customer Email is required';
+      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.customerEmail.trim())) {
+        errors.customerEmail = 'Please enter a valid email format';
+      }
+    } else if (step === 1) {
+      // Step 2: Details validation
+      if (!formData.title || !formData.title.trim()) {
+        errors.title = 'Quotation Title is required';
+      } else if (formData.title.trim().length > 50) {
+        errors.title = 'Title must not exceed 50 characters';
+      } else if (!/[a-zA-Z]/.test(formData.title.trim())) {
+        errors.title = 'Title must contain alphabetic letters, not just numbers or symbols';
+      }
+
+      // Quotation Date validation - cannot be in the past
+      if (formData.quotationDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Reset time to midnight for accurate date comparison
+        const selectedDate = new Date(formData.quotationDate);
+        selectedDate.setHours(0, 0, 0, 0);
+
+        if (selectedDate < today) {
+          errors.quotationDate = 'Quotation date cannot be a past date';
+        }
+      }
+
+      // Expiry Date validation - cannot be in the past and must be >= Quotation Date
+      if (formData.expiryDate) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const expiryDate = new Date(formData.expiryDate);
+        expiryDate.setHours(0, 0, 0, 0);
+
+        if (expiryDate < today) {
+          errors.expiryDate = 'Expiry date cannot be a past date';
+        }
+
+        // Check if expiry date is before quotation date
+        if (formData.quotationDate) {
+          const quotationDate = new Date(formData.quotationDate);
+          quotationDate.setHours(0, 0, 0, 0);
+
+          if (expiryDate < quotationDate) {
+            errors.expiryDate = 'Expiry date must be on or after the Quotation Date';
+          }
+        }
+      }
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleNextStep = () => {
+    if (validateStep(wizardStep)) {
+      setWizardStep(s => s + 1);
+    }
+  };
 
   const addItem = () => setFormData(p => ({ ...p, items: [...p.items, { productName:'', description:'', quantity:1, unitPrice:0, discount:0, tax:18, total:0 }] }));
   const removeItem = (i) => setFormData(p => ({ ...p, items: p.items.filter((_,j)=>j!==i) }));
@@ -202,19 +294,40 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
             </select>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
-            <div><label style={ls}>Name *</label><input name="customerName" value={formData.customerName} readOnly style={{ ...is, background:'#f0f0f0' }} /></div>
-            <div><label style={ls}>Email *</label><input name="customerEmail" value={formData.customerEmail} readOnly style={{ ...is, background:'#f0f0f0' }} /></div>
-            <div><label style={ls}>Phone</label><input name="customerPhone" value={formData.customerPhone} readOnly style={{ ...is, background:'#f0f0f0' }} /></div>
-            <div><label style={ls}>Address</label><input name="customerAddress" value={formData.customerAddress} readOnly style={{ ...is, background:'#f0f0f0' }} /></div>
+            <div>
+              <label style={ls}>Name *</label>
+              <input name="customerName" value={formData.customerName} onChange={inp} disabled={!!formData.customer} style={{ ...is, border: fieldErrors.customerName ? '1.5px solid #EF4444' : '1.5px solid #e2e8f0', opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc' }} />
+              {fieldErrors.customerName && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px', fontWeight: '600' }}>{fieldErrors.customerName}</div>}
+            </div>
+            <div>
+              <label style={ls}>Email *</label>
+              <input name="customerEmail" type="email" value={formData.customerEmail} onChange={inp} disabled={!!formData.customer} style={{ ...is, border: fieldErrors.customerEmail ? '1.5px solid #EF4444' : '1.5px solid #e2e8f0', opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc' }} />
+              {fieldErrors.customerEmail && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px', fontWeight: '600' }}>{fieldErrors.customerEmail}</div>}
+            </div>
+            <div><label style={ls}>Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} disabled={!!formData.customer} style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} /></div>
+            <div><label style={ls}>Address</label><input name="customerAddress" value={formData.customerAddress} onChange={inp} disabled={!!formData.customer} style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} /></div>
           </div>
         </div>
       );
       case 1: return (
         <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
-          <div><label style={ls}>Title *</label><input name="title" value={formData.title} onChange={inp} style={is} required /></div>
+          <div>
+            <label style={ls}>Title *</label>
+            <input name="title" value={formData.title} onChange={inp} maxLength={50} style={{...is, border: fieldErrors.title ? '1.5px solid #EF4444' : '1.5px solid #e2e8f0'}} required />
+            {fieldErrors.title && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px', fontWeight: '600' }}>{fieldErrors.title}</div>}
+            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', textAlign: 'right' }}>{formData.title.length}/50</div>
+          </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
-            <div><label style={ls}>Quotation Date *</label><input name="quotationDate" type="date" value={formData.quotationDate} onChange={inp} style={is} required /></div>
-            <div><label style={ls}>Expiry Date *</label><input name="expiryDate" type="date" value={formData.expiryDate} onChange={inp} style={is} required /></div>
+            <div>
+              <label style={ls}>Quotation Date *</label>
+              <input name="quotationDate" type="date" value={formData.quotationDate} onChange={inp} min={new Date().toISOString().split('T')[0]} style={{...is, border: fieldErrors.quotationDate ? '1.5px solid #EF4444' : '1.5px solid #e2e8f0'}} required />
+              {fieldErrors.quotationDate && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px', fontWeight: '600' }}>{fieldErrors.quotationDate}</div>}
+            </div>
+            <div>
+              <label style={ls}>Expiry Date *</label>
+              <input name="expiryDate" type="date" value={formData.expiryDate} onChange={inp} min={new Date().toISOString().split('T')[0]} style={{...is, border: fieldErrors.expiryDate ? '1.5px solid #EF4444' : '1.5px solid #e2e8f0'}} required />
+              {fieldErrors.expiryDate && <div style={{ fontSize: '10px', color: '#DC2626', marginTop: '3px', fontWeight: '600' }}>{fieldErrors.expiryDate}</div>}
+            </div>
           </div>
           <div><label style={ls}>Description</label><textarea name="description" value={formData.description} onChange={inp} rows="3" style={{ ...is, resize:'vertical' }} /></div>
         </div>
@@ -271,33 +384,33 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
     return (
       <div style={{ flex:1, minHeight:0, display:'flex', flexDirection:'column' }}>
         <div style={{ background:'linear-gradient(135deg, #022c22 0%, #064e3b 100%)', flexShrink:0 }}>
-          <div style={{ padding:'12px 14px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-              <div style={{ width:'30px', height:'30px', borderRadius:'8px', background:'linear-gradient(135deg,#10b981,#059669)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'15px' }}>💰</div>
+          <div style={{ padding:'8px 12px', display:'flex', justifyContent:'space-between', alignItems:'center', borderBottom:'1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+              <div style={{ width:'26px', height:'26px', borderRadius:'6px', background:'linear-gradient(135deg,#10b981,#059669)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'13px' }}>💰</div>
               <div>
-                <div style={{ fontSize:'13px', fontWeight:'700', color:'white' }}>New Quotation</div>
-                <div style={{ fontSize:'10px', color:'rgba(255,255,255,0.45)' }}>{selectedTemplate ? '⚡ Template Mode — Quick Create' : `Step ${wizardStep+1} of ${STEPS.length}`}</div>
+                <div style={{ fontSize:'12px', fontWeight:'700', color:'white' }}>New Quotation</div>
+                <div style={{ fontSize:'9px', color:'rgba(255,255,255,0.45)' }}>{selectedTemplate ? '⚡ Template Mode' : `Step ${wizardStep+1} of ${STEPS.length}`}</div>
               </div>
             </div>
-            <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'7px', padding:'5px 9px', color:'white', cursor:'pointer', fontSize:'15px', lineHeight:1 }}>✕</button>
+            <button onClick={onClose} style={{ background:'rgba(255,255,255,0.1)', border:'none', borderRadius:'6px', padding:'4px 8px', color:'white', cursor:'pointer', fontSize:'14px', lineHeight:1 }}>✕</button>
           </div>
           {!selectedTemplate && (
             <>
-              <div style={{ display:'flex', padding:'8px 10px 0' }}>
+              <div style={{ display:'flex', padding:'6px 8px 0' }}>
                 {STEPS.map((s,idx) => { const done=idx<wizardStep, active=idx===wizardStep; return (
-                  <div key={idx} onClick={()=>done&&setWizardStep(idx)} style={{ flex:1, textAlign:'center', padding:'5px 2px', borderRadius:'6px 6px 0 0', cursor:done?'pointer':'default', background:active?'rgba(16,185,129,0.22)':done?'rgba(16,185,129,0.12)':'rgba(255,255,255,0.04)', borderBottom:active?'2px solid #10b981':done?'2px solid #34d399':'2px solid transparent' }}>
-                    <div style={{ fontSize:'12px', color:active?'#6ee7b7':done?'#6ee7b7':'rgba(255,255,255,0.25)', fontWeight:'700' }}>{done?'✓':s.icon}</div>
-                    <div style={{ fontSize:'9px', color:active?'rgba(255,255,255,0.65)':done?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:'1px' }}>{s.label}</div>
+                  <div key={idx} onClick={()=>done&&setWizardStep(idx)} style={{ flex:1, textAlign:'center', padding:'4px 2px', borderRadius:'4px 4px 0 0', cursor:done?'pointer':'default', background:active?'rgba(16,185,129,0.22)':done?'rgba(16,185,129,0.12)':'rgba(255,255,255,0.04)', borderBottom:active?'2px solid #10b981':done?'2px solid #34d399':'2px solid transparent' }}>
+                    <div style={{ fontSize:'11px', color:active?'#6ee7b7':done?'#6ee7b7':'rgba(255,255,255,0.25)', fontWeight:'700' }}>{done?'✓':s.icon}</div>
+                    <div style={{ fontSize:'8px', color:active?'rgba(255,255,255,0.65)':done?'rgba(255,255,255,0.4)':'rgba(255,255,255,0.2)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginTop:'1px' }}>{s.label}</div>
                   </div>
                 ); })}
               </div>
-              <div style={{ height:'3px', background:'rgba(255,255,255,0.08)', margin:'0 10px 8px' }}>
+              <div style={{ height:'2px', background:'rgba(255,255,255,0.08)', margin:'0 8px 6px' }}>
                 <div style={{ height:'100%', background:'linear-gradient(90deg,#10b981,#059669)', borderRadius:'99px', width:`${(wizardStep/STEPS.length)*100}%`, transition:'width 0.35s ease' }} />
               </div>
             </>
           )}
         </div>
-        <div style={{ flex:1, overflowY:'auto', padding:'14px 16px' }}>
+        <div style={{ flex:1, overflowY:'auto', padding:'10px 14px' }}>
           {error && <div className="error-message" style={{ marginBottom:'12px' }}>{error}</div>}
           {selectedTemplate ? (() => {
             const appliedTemplate = quotationTemplates.find(t => t._id === selectedTemplate);
@@ -388,7 +501,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
             </>
           )}
         </div>
-        <div style={{ padding:'11px 14px', borderTop:'1px solid #f1f5f9', background:'#fafbfc', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+        <div style={{ padding:'8px 12px', borderTop:'1px solid #f1f5f9', background:'#fafbfc', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
           <button type="button"
             onClick={() => selectedTemplate ? setSelectedTemplate(null) : wizardStep>0 ? setWizardStep(s=>s-1) : onClose()}
             style={{ padding:'7px 14px', borderRadius:'8px', border:'1px solid #e2e8f0', background:'#fff', color:'#64748b', fontSize:'12px', fontWeight:'600', cursor:'pointer' }}>
@@ -405,7 +518,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
                 {STEPS.map((_,idx)=><div key={idx} style={{ width:idx===wizardStep?'16px':'5px', height:'5px', borderRadius:'99px', background:idx<wizardStep?'#059669':idx===wizardStep?'#10b981':'#e2e8f0', transition:'all 0.25s' }} />)}
               </div>
               {wizardStep<STEPS.length-1 ? (
-                <button type="button" onClick={()=>setWizardStep(s=>s+1)} style={{ padding:'7px 18px', borderRadius:'8px', border:'none', background:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.25)' }}>Next →</button>
+                <button type="button" onClick={handleNextStep} style={{ padding:'7px 18px', borderRadius:'8px', border:'none', background:'linear-gradient(135deg,#065f46 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.25)' }}>Next →</button>
               ) : (
                 <button type="button" onClick={handleSubmit} disabled={loading} style={{ padding:'7px 18px', borderRadius:'8px', border:'none', background:loading?'#94a3b8':'linear-gradient(135deg,#059669 0%,#10b981 100%)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:loading?'not-allowed':'pointer', boxShadow:loading?'none':'0 2px 8px rgba(16,185,129,0.25)' }}>
                   {loading?'Saving...':'✓ Save Quotation'}
@@ -489,9 +602,13 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
         <div className="crm-card" style={{ marginBottom:'20px', padding:'24px' }}>
           <h3 style={{ marginBottom:'20px', marginTop:0 }}>Details</h3>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'16px' }}>
-            <div><label className="crm-form-label">Title *</label><input name="title" value={formData.title} onChange={inp} className="crm-form-input" required /></div>
-            <div><label className="crm-form-label">Quotation Date *</label><input name="quotationDate" type="date" value={formData.quotationDate} onChange={inp} className="crm-form-input" required /></div>
-            <div><label className="crm-form-label">Expiry Date *</label><input name="expiryDate" type="date" value={formData.expiryDate} onChange={inp} className="crm-form-input" required /></div>
+            <div>
+              <label className="crm-form-label">Title *</label>
+              <input name="title" value={formData.title} onChange={inp} maxLength={50} className="crm-form-input" required />
+              <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px', textAlign: 'right' }}>{formData.title.length}/50</div>
+            </div>
+            <div><label className="crm-form-label">Quotation Date *</label><input name="quotationDate" type="date" value={formData.quotationDate} onChange={inp} min={new Date().toISOString().split('T')[0]} className="crm-form-input" required /></div>
+            <div><label className="crm-form-label">Expiry Date *</label><input name="expiryDate" type="date" value={formData.expiryDate} onChange={inp} min={new Date().toISOString().split('T')[0]} className="crm-form-input" required /></div>
             <div style={{ gridColumn:'1/-1' }}><label className="crm-form-label">Description</label><textarea name="description" value={formData.description} onChange={inp} rows="3" className="crm-form-textarea" /></div>
           </div>
         </div>

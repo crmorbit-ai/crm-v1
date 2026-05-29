@@ -139,7 +139,11 @@ const RFIs = () => {
               <option value="converted">Converted</option>
               <option value="closed">Closed</option>
             </select>
-            <button onClick={fetchRFIs} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#6366f1', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Search</button>
+            <button onClick={(e) => {
+              e.preventDefault();
+              if (!searchTerm.trim()) return;
+              fetchRFIs();
+            }} style={{ padding: '7px 14px', borderRadius: '8px', border: 'none', background: '#6366f1', color: 'white', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>Search</button>
           </div>
           {error && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px 14px', borderRadius: '8px', marginTop: '8px', fontSize: '13px' }}>{error}</div>}
         </div>
