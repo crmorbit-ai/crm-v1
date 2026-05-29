@@ -13,10 +13,19 @@ const generateToken = (user) => {
 
   const payload = {
     id: user._id,
-    email: user.email,
     userType: user.userType,
     tenant: tenantId
   };
+
+  // Only add email if it exists (email is optional for some users)
+  if (user.email) {
+    payload.email = user.email;
+  }
+
+  // Add loginName for users who login with loginName instead of email
+  if (user.loginName) {
+    payload.loginName = user.loginName;
+  }
 
   return jwt.sign(payload, process.env.JWT_SECRET, {
     expiresIn: process.env.JWT_EXPIRE || '24h'

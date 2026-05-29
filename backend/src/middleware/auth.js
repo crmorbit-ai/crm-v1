@@ -80,26 +80,29 @@ const protect = async (req, res, next) => {
     // 🔐 DYNAMIC SAAS ADMIN CHECK (from .env)
     // ============================================
     // Check if user's email is in SAAS_ADMIN_EMAILS whitelist
-    const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
-      .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email);
+    // Only check if user has an email (email is optional for some users)
+    if (user.email) {
+      const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
+        .split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(email => email);
 
-    const isInSaasWhitelist = saasAdminEmails.includes(user.email.toLowerCase());
+      const isInSaasWhitelist = saasAdminEmails.includes(user.email.toLowerCase());
 
-    // If user is in whitelist but not SAAS_OWNER, upgrade them
-    if (isInSaasWhitelist && user.userType !== 'SAAS_OWNER') {
-      user.userType = 'SAAS_OWNER';
-      user.tenant = null; // SAAS owners don't belong to a tenant
-      await user.save();
-      console.log(`🔑 User ${user.email} upgraded to SAAS_OWNER (added to .env whitelist)`);
-    }
+      // If user is in whitelist but not SAAS_OWNER, upgrade them
+      if (isInSaasWhitelist && user.userType !== 'SAAS_OWNER') {
+        user.userType = 'SAAS_OWNER';
+        user.tenant = null; // SAAS owners don't belong to a tenant
+        await user.save();
+        console.log(`🔑 User ${user.email} upgraded to SAAS_OWNER (added to .env whitelist)`);
+      }
 
-    // If user is SAAS_OWNER but NOT in whitelist, downgrade them
-    if (!isInSaasWhitelist && user.userType === 'SAAS_OWNER') {
-      user.userType = 'TENANT_ADMIN'; // Downgrade to tenant admin
-      await user.save();
-      console.log(`🔒 User ${user.email} downgraded from SAAS_OWNER (removed from .env whitelist)`);
+      // If user is SAAS_OWNER but NOT in whitelist, downgrade them
+      if (!isInSaasWhitelist && user.userType === 'SAAS_OWNER') {
+        user.userType = 'TENANT_ADMIN'; // Downgrade to tenant admin
+        await user.save();
+        console.log(`🔒 User ${user.email} downgraded from SAAS_OWNER (removed from .env whitelist)`);
+      }
     }
     // ============================================
 
@@ -147,13 +150,16 @@ const requireSaasAccess = (req, res, next) => {
 
   // Double-check against .env whitelist for SAAS_OWNER
   if (req.user.userType === 'SAAS_OWNER') {
-    const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
-      .split(',')
-      .map(email => email.trim().toLowerCase())
-      .filter(email => email);
+    // Only check email if user has one
+    if (req.user.email) {
+      const saasAdminEmails = (process.env.SAAS_ADMIN_EMAILS || '')
+        .split(',')
+        .map(email => email.trim().toLowerCase())
+        .filter(email => email);
 
-    if (!saasAdminEmails.includes(req.user.email.toLowerCase())) {
-      return errorResponse(res, 403, 'Your email is not authorized for SAAS admin access');
+      if (!saasAdminEmails.includes(req.user.email.toLowerCase())) {
+        return errorResponse(res, 403, 'Your email is not authorized for SAAS admin access');
+      }
     }
   }
 
