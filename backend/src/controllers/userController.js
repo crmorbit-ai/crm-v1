@@ -369,9 +369,19 @@ const updateUser = async (req, res) => {
     // Fields that can be updated
     const allowedFields = ['firstName', 'lastName', 'phone', 'alternatePhone', 'personalEmail', 'officeEmail', 'profilePicture', 'isActive', 'roles', 'groups', 'customPermissions', 'loginName', 'department', 'subDepartment', 'reportingManager', 'designation', 'reportsTo'];
 
-    // SAAS owners and TENANT_ADMIN can change userType
-    if (req.body.userType && (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN' || req.user.userType === 'TENANT_ADMIN')) {
+    // ✅ SECURITY: Prevent users from changing their own role
+    // Only SAAS owners and SAAS admins can change userType, and TENANT_ADMIN cannot change their own userType
+    const isSelfUpdate = user._id.toString() === req.user._id.toString();
+
+    if (req.body.userType && (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN')) {
+      // SAAS admins can change anyone's userType
       allowedFields.push('userType');
+    } else if (req.body.userType && req.user.userType === 'TENANT_ADMIN' && !isSelfUpdate) {
+      // TENANT_ADMIN can change other users' userType, but NOT their own
+      allowedFields.push('userType');
+    } else if (req.body.userType && isSelfUpdate) {
+      // ❌ Users cannot change their own userType
+      return errorResponse(res, 403, 'You cannot change your own user type. Contact your administrator.');
     }
 
     // Track changes BEFORE updating

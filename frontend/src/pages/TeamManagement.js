@@ -564,20 +564,25 @@ const TeamManagement = () => {
                 <>
                   {/* user type visual cards */}
                   <div style={{marginBottom:14}}>
-                    <Label>User Type</Label>
+                    <Label>User Type {editingItem && editingItem._id === user._id && <span style={{textTransform:'none',fontWeight:400,color:'#94a3b8',marginLeft:6}}>— cannot change your own role</span>}</Label>
                     <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}}>
                       {[
                         {v:'TENANT_USER',   e:'👤',n:'User',   d:'Role-based', sel:{borderColor:'#3b82f6',bg:'#eff6ff',c:'#1d4ed8'}},
                         {v:'TENANT_MANAGER',e:'📊',n:'Manager',d:'Team lead',  sel:{borderColor:'#8b5cf6',bg:'#f5f3ff',c:'#6d28d9'}},
                         {v:'TENANT_ADMIN',  e:'⚡',n:'Admin',  d:'Full access',sel:{borderColor:'#f59e0b',bg:'#fffbeb',c:'#92400e'}},
-                      ].map(o=>(
-                        <div key={o.v} className="xTypeCard" onClick={()=>setUserForm({...userForm,userType:o.v,roles:[]})}
-                          style={{padding:'10px 6px',borderRadius:10,cursor:'pointer',border:`1.5px solid ${userForm.userType===o.v?o.sel.borderColor:'#e2e8f0'}`,background:userForm.userType===o.v?o.sel.bg:'#fafbff',textAlign:'center',transition:'all 0.15s',display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                      ].map(o=>{
+                        // ✅ SECURITY: Disable userType change if editing own profile
+                        const isSelfEdit = editingItem && editingItem._id === user._id;
+                        const isDisabled = isSelfEdit;
+                        return (
+                        <div key={o.v} className="xTypeCard"
+                          onClick={isDisabled ? undefined : ()=>setUserForm({...userForm,userType:o.v,roles:[]})}
+                          style={{padding:'10px 6px',borderRadius:10,cursor:isDisabled?'not-allowed':'pointer',border:`1.5px solid ${userForm.userType===o.v?o.sel.borderColor:'#e2e8f0'}`,background:userForm.userType===o.v?o.sel.bg:'#fafbff',textAlign:'center',transition:'all 0.15s',display:'flex',flexDirection:'column',alignItems:'center',gap:3,opacity:isDisabled?0.5:1}}>
                           <span style={{fontSize:20}}>{o.e}</span>
                           <span style={{fontSize:11,fontWeight:800,color:userForm.userType===o.v?o.sel.c:'#475569'}}>{o.n}</span>
                           <span style={{fontSize:9,color:'#94a3b8'}}>{o.d}</span>
                         </div>
-                      ))}
+                      )})}
                     </div>
                   </div>
 
