@@ -6,10 +6,10 @@ const purchaseOrderSchema = new mongoose.Schema({
     unique: true
   },
 
-  // Customer's PO Number (external)
+  // Customer's PO Number (external) - Optional
   customerPONumber: {
     type: String,
-    required: true
+    required: false
   },
 
   title: {
@@ -39,11 +39,10 @@ const purchaseOrderSchema = new mongoose.Schema({
     ref: 'Quotation'
   },
 
-  // PO Details
+  // PO Details - Optional (can be left blank)
   poDate: {
     type: Date,
-    required: true,
-    default: Date.now
+    required: false
   },
 
   deliveryDate: Date,

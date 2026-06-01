@@ -23,6 +23,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [quotations, setQuotations] = useState([]);
@@ -41,10 +42,10 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
     title: '',
     description: '',
     items: [],
-    poDate: new Date().toISOString().split('T')[0],
+    poDate: '',
     deliveryDate: '',
-    paymentTerms: 'Payment due within 30 days.',
-    terms: 'Standard terms and conditions apply.',
+    paymentTerms: '',
+    terms: '',
     notes: ''
   });
 
@@ -106,6 +107,13 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
         customerPhone: customer.phone || customer.mobile || '',
         customerAddress: customer.address || customer.billingAddress || ''
       }));
+      // Clear validation errors when customer is selected
+      setValidationErrors(prev => ({
+        ...prev,
+        customer: '',
+        customerName: '',
+        customerEmail: ''
+      }));
     }
   };
 
@@ -129,8 +137,8 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
         items: quotation.items,
         poDate: new Date().toISOString().split('T')[0],
         deliveryDate: deliveryDate.toISOString().split('T')[0],
-        paymentTerms: quotation.terms || 'Payment due within 30 days.',
-        terms: 'Standard terms and conditions apply.',
+        paymentTerms: quotation.terms || '',
+        terms: '',
         notes: quotation.notes || '',
         customerPONumber: ''
       });
@@ -157,6 +165,10 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear validation error for this field when user types
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleFileChange = (e) => { const file = e.target.files[0]; if (file) setPoFile(file); };
@@ -208,8 +220,64 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
 
   const handleCancel = () => { if (embedded && onClose) onClose(); else navigate('/purchase-orders'); };
 
+  // ✅ Validate current step before moving to next
+  const validateStep = (step) => {
+    const errors = {};
+
+    // Step 0: PO Info
+    if (step === 0) {
+      if (!formData.title || !formData.title.trim()) {
+        errors.title = 'Purchase Order Title is a required field';
+      }
+    }
+
+    // Step 1: Customer Info
+    if (step === 1) {
+      // Customer Name is mandatory (either from dropdown or manual entry)
+      if (!formData.customerName || !formData.customerName.trim()) {
+        errors.customerName = 'Customer Name is a required field';
+      }
+      // Customer Email is mandatory (either from dropdown or manual entry)
+      if (!formData.customerEmail || !formData.customerEmail.trim()) {
+        errors.customerEmail = 'Customer Email is a required field';
+      } else {
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.customerEmail)) {
+          errors.customerEmail = 'A valid customer email is required';
+        }
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle Next button click with validation
+  const handleNext = () => {
+    if (validateStep(wizardStep)) {
+      setWizardStep(s => s + 1);
+      setValidationErrors({});
+    }
+  };
+
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
+
+    // ✅ Final validation before submit
+    if (!formData.title || !formData.title.trim()) {
+      setError('Purchase Order Title is required');
+      return;
+    }
+    if (!formData.customerName || !formData.customerName.trim()) {
+      setError('Customer Name is required');
+      return;
+    }
+    if (!formData.items || formData.items.length === 0) {
+      setError('Please add at least one item to the purchase order');
+      return;
+    }
+
     setLoading(true);
     setError('');
     try {
@@ -237,6 +305,14 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
       formDataToSend.append('totalAmount', totals.totalAmount);
       if (poFile) formDataToSend.append('poDocument', poFile);
 
+      // Debug: Log what we're sending
+      console.log('📦 Submitting PO with data:', {
+        title: formData.title,
+        customerName: formData.customerName,
+        items: formData.items,
+        totals
+      });
+
       if (isEdit) {
         await purchaseOrderService.updatePurchaseOrder(id, formDataToSend);
         alert('Purchase order updated successfully!');
@@ -252,7 +328,11 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
         }
       }
     } catch (err) {
-      setError(err.message || 'Failed to save purchase order');
+      console.error('Purchase Order Creation Error:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Error creating purchase order';
+      setError(errorMsg);
+      // Scroll to top to show error
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally { setLoading(false); }
   };
 
@@ -328,16 +408,16 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={ls}>Customer PO Number *</label>
-                <input style={is} type="text" name="customerPONumber" value={formData.customerPONumber} onChange={handleInputChange} placeholder="Customer's PO number" />
+                <label style={ls}>Customer PO Number</label>
+                <input style={is} type="text" name="customerPONumber" value={formData.customerPONumber} onChange={handleInputChange} placeholder="Customer's PO number (optional)" />
               </div>
               <div>
                 <label style={ls}>PO Document</label>
                 <input style={is} type="file" onChange={handleFileChange} accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
               </div>
               <div>
-                <label style={ls}>PO Date *</label>
-                <input style={is} type="date" name="poDate" value={formData.poDate} onChange={handleInputChange} />
+                <label style={ls}>PO Date</label>
+                <input style={is} type="date" name="poDate" value={formData.poDate} onChange={handleInputChange} min={new Date().toISOString().split('T')[0]} />
               </div>
               <div>
                 <label style={ls}>Delivery Date</label>
@@ -346,7 +426,8 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
             </div>
             <div>
               <label style={ls}>Title *</label>
-              <input style={is} type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="Purchase Order Title" />
+              <input style={{...is, borderColor: validationErrors.title ? '#ef4444' : '#e2e8f0'}} type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="Purchase Order Title" />
+              {validationErrors.title && <div style={{fontSize:'11px',color:'#ef4444',marginTop:'4px'}}>{validationErrors.title}</div>}
             </div>
             <div>
               <label style={ls}>Description</label>
@@ -368,28 +449,31 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
               </div>
             </div>
             <div>
-              <label style={ls}>Select Customer</label>
+              <label style={ls}>Select Customer (Optional)</label>
               <select style={is} onChange={e => handleCustomerSelect(e.target.value)} value={formData.customer?._id || formData.customer || ''}>
-                <option value="">-- Select {customerType} --</option>
+                <option value="">-- Select {customerType} to auto-fill --</option>
                 {customers.map(c => <option key={c._id} value={c._id}>{customerType === 'Account' ? c.accountName : `${c.firstName} ${c.lastName}`} - {c.email}</option>)}
               </select>
+              <div style={{fontSize:'10px',color:'#64748b',marginTop:'3px'}}>💡 Select to auto-fill customer details or enter manually below</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={ls}>Customer Name *</label>
-                <input style={{ ...is, background: '#f5f5f5' }} type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} readOnly />
+                <input style={{ ...is, borderColor: validationErrors.customerName ? '#ef4444' : '#e2e8f0' }} type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} placeholder="Enter name or select from dropdown" />
+                {validationErrors.customerName && <div style={{fontSize:'11px',color:'#ef4444',marginTop:'4px'}}>{validationErrors.customerName}</div>}
               </div>
               <div>
                 <label style={ls}>Email *</label>
-                <input style={{ ...is, background: '#f5f5f5' }} type="email" name="customerEmail" value={formData.customerEmail} onChange={handleInputChange} readOnly />
+                <input style={{ ...is, borderColor: validationErrors.customerEmail ? '#ef4444' : '#e2e8f0' }} type="email" name="customerEmail" value={formData.customerEmail} onChange={handleInputChange} placeholder="Enter email or select from dropdown" />
+                {validationErrors.customerEmail && <div style={{fontSize:'11px',color:'#ef4444',marginTop:'4px'}}>{validationErrors.customerEmail}</div>}
               </div>
               <div>
                 <label style={ls}>Phone</label>
-                <input style={{ ...is, background: '#f5f5f5' }} type="text" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} readOnly />
+                <input style={is} type="text" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} placeholder="Optional" />
               </div>
               <div>
                 <label style={ls}>Address</label>
-                <input style={{ ...is, background: '#f5f5f5' }} type="text" name="customerAddress" value={formData.customerAddress} onChange={handleInputChange} readOnly />
+                <input style={is} type="text" name="customerAddress" value={formData.customerAddress} onChange={handleInputChange} placeholder="Optional" />
               </div>
             </div>
           </div>
@@ -543,7 +627,7 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
             ))}
           </div>
           {wizardStep < STEPS.length - 1 ? (
-            <button type="button" onClick={() => setWizardStep(s => s + 1)}
+            <button type="button" onClick={handleNext}
               style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#b45309 0%,#f59e0b 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(245,158,11,0.25)' }}>
               Next →
             </button>
@@ -575,16 +659,16 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
               <div style={{ fontSize: '12px', color: '#4361ee', marginTop: '4px', fontWeight: '500' }}>💡 Select a quotation to automatically fill customer details and items</div>
             </div>
             <div>
-              <label className="crm-form-label">Customer PO Number *</label>
-              <input type="text" name="customerPONumber" value={formData.customerPONumber} onChange={handleInputChange} className="crm-form-input" placeholder="Customer's PO number" required />
+              <label className="crm-form-label">Customer PO Number</label>
+              <input type="text" name="customerPONumber" value={formData.customerPONumber} onChange={handleInputChange} className="crm-form-input" placeholder="Customer's PO number (optional)" />
             </div>
             <div>
               <label className="crm-form-label">PO Document</label>
               <input type="file" onChange={handleFileChange} className="crm-form-input" accept=".pdf,.doc,.docx,.jpg,.jpeg,.png" />
             </div>
             <div>
-              <label className="crm-form-label">PO Date *</label>
-              <input type="date" name="poDate" value={formData.poDate} onChange={handleInputChange} className="crm-form-input" required />
+              <label className="crm-form-label">PO Date</label>
+              <input type="date" name="poDate" value={formData.poDate} onChange={handleInputChange} className="crm-form-input" min={new Date().toISOString().split('T')[0]} />
             </div>
             <div>
               <label className="crm-form-label">Delivery Date</label>
@@ -659,8 +743,8 @@ const PurchaseOrderForm = ({ embedded, onClose, onSuccess }) => {
 
         <div className="crm-card" style={{ marginBottom: '24px', padding: '24px' }}>
           <h2 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '600' }}>Terms & Conditions</h2>
-          <div style={{ marginBottom: '16px' }}><label className="crm-form-label">Payment Terms</label><textarea name="paymentTerms" value={formData.paymentTerms} onChange={handleInputChange} className="crm-form-textarea" rows="2" /></div>
-          <div style={{ marginBottom: '16px' }}><label className="crm-form-label">Terms & Conditions</label><textarea name="terms" value={formData.terms} onChange={handleInputChange} className="crm-form-textarea" rows="3" /></div>
+          <div style={{ marginBottom: '16px' }}><label className="crm-form-label">Payment Terms</label><textarea name="paymentTerms" value={formData.paymentTerms} onChange={handleInputChange} className="crm-form-textarea" rows="2" placeholder="Enter payment terms here..." /></div>
+          <div style={{ marginBottom: '16px' }}><label className="crm-form-label">Terms & Conditions</label><textarea name="terms" value={formData.terms} onChange={handleInputChange} className="crm-form-textarea" rows="3" placeholder="Enter terms and conditions here..." /></div>
           <div><label className="crm-form-label">Notes</label><textarea name="notes" value={formData.notes} onChange={handleInputChange} className="crm-form-textarea" rows="3" /></div>
         </div>
 

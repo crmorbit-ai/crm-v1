@@ -21,6 +21,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState({});
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [customerType, setCustomerType] = useState('Lead');
@@ -93,6 +94,13 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
         customerPhone: customer.phone || customer.mobile || '',
         customerAddress: customer.address || customer.billingAddress || ''
       }));
+      // Clear validation errors when customer is selected
+      setValidationErrors(prev => ({
+        ...prev,
+        customer: '',
+        customerName: '',
+        customerEmail: ''
+      }));
     }
   };
 
@@ -114,6 +122,10 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    // Clear validation error when user types
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({ ...prev, [name]: '' }));
+    }
   };
 
   const addItem = () => {
@@ -162,6 +174,40 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   };
 
   const handleCancel = () => { if (embedded && onClose) onClose(); else navigate('/invoices'); };
+
+  // ✅ Validate current step before moving to next
+  const validateStep = (step) => {
+    const errors = {};
+
+    // Step 0: Customer Info
+    if (step === 0) {
+      // Customer Name is mandatory (either from dropdown or manual entry)
+      if (!formData.customerName || !formData.customerName.trim()) {
+        errors.customerName = 'Customer Name is required';
+      }
+      // Customer Email is mandatory (either from dropdown or manual entry)
+      if (!formData.customerEmail || !formData.customerEmail.trim()) {
+        errors.customerEmail = 'Customer Email is required';
+      } else {
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(formData.customerEmail)) {
+          errors.customerEmail = 'A valid customer email is required';
+        }
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Handle Next button click with validation
+  const handleNext = () => {
+    if (validateStep(wizardStep)) {
+      setWizardStep(s => s + 1);
+      setValidationErrors({});
+    }
+  };
 
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
@@ -262,23 +308,26 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
               </div>
             </div>
             <div>
-              <label style={ls}>Select Customer</label>
+              <label style={ls}>Select Customer (Optional)</label>
               <select style={is} onChange={e => handleCustomerSelect(e.target.value)} value={formData.customer || ''}>
-                <option value="">-- Select {customerType} --</option>
+                <option value="">-- Select {customerType} to auto-fill --</option>
                 {customers.map(c => {
                   const name = customerType === 'Account' ? c.accountName : `${c.firstName} ${c.lastName}`;
                   return <option key={c._id} value={c._id}>{name} - {c.email}</option>;
                 })}
               </select>
+              <div style={{fontSize:'10px',color:'#64748b',marginTop:'3px'}}>💡 Select to auto-fill customer details or enter manually below</div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={ls}>Customer Name *</label>
-                <input style={{ ...is, background: '#f5f5f5' }} type="text" name="customerName" value={formData.customerName} onChange={handleChange} readOnly />
+                <input style={{ ...is, borderColor: validationErrors.customerName ? '#ef4444' : '#e2e8f0' }} type="text" name="customerName" value={formData.customerName} onChange={handleChange} placeholder="Enter customer name or select from dropdown" />
+                {validationErrors.customerName && <div style={{fontSize:'11px',color:'#ef4444',marginTop:'4px'}}>{validationErrors.customerName}</div>}
               </div>
               <div>
                 <label style={ls}>Customer Email *</label>
-                <input style={{ ...is, background: '#f5f5f5' }} type="email" name="customerEmail" value={formData.customerEmail} onChange={handleChange} readOnly />
+                <input style={{ ...is, borderColor: validationErrors.customerEmail ? '#ef4444' : '#e2e8f0' }} type="email" name="customerEmail" value={formData.customerEmail} onChange={handleChange} placeholder="Enter customer email or select from dropdown" />
+                {validationErrors.customerEmail && <div style={{fontSize:'11px',color:'#ef4444',marginTop:'4px'}}>{validationErrors.customerEmail}</div>}
               </div>
               <div>
                 <label style={ls}>Customer Phone</label>
@@ -461,7 +510,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
             ))}
           </div>
           {wizardStep < STEPS.length - 1 ? (
-            <button type="button" onClick={() => setWizardStep(s => s + 1)}
+            <button type="button" onClick={handleNext}
               style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3a8a 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.25)' }}>
               Next →
             </button>
