@@ -44,6 +44,22 @@ export const userService = {
   bulkCreateUsers: async (users) => {
     const response = await api.post('/users/bulk', { users });
     return response.data;
+  },
+
+  // SAAS Admin - User Management
+  saasDeactivateUser: async (id, reason) => {
+    const response = await api.post(`/users/${id}/deactivate`, { reason });
+    return response.data;
+  },
+
+  saasReactivateUser: async (id) => {
+    const response = await api.post(`/users/${id}/reactivate`);
+    return response.data;
+  },
+
+  saasPermanentDeleteUser: async (id) => {
+    const response = await api.delete(`/users/${id}/permanent`);
+    return response.data;
   }
 };
 

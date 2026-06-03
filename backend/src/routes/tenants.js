@@ -13,7 +13,8 @@ const {
   rejectDeletion,
   recoverTenant,
   assignManager,
-  bulkAssignManager
+  bulkAssignManager,
+  forceReactivateUsers
 } = require('../controllers/tenantController');
 const { protect, requireSaasAccess, requireTenant } = require('../middleware/auth');
 
@@ -41,5 +42,6 @@ router.post('/:id/assign-manager', assignManager);
 router.post('/:id/approve-deletion', approveDeletion);
 router.post('/:id/reject-deletion', rejectDeletion);
 router.post('/:id/recover', recoverTenant);
+router.post('/:id/reactivate-users', forceReactivateUsers); // Emergency fix
 
 module.exports = router;

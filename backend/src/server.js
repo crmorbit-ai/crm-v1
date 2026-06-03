@@ -13,6 +13,7 @@ const imapIdleService = require('./services/imapIdleService');
 const emailSyncJob = require('./jobs/emailSyncJob');
 const { startDeletionCleanupJob } = require('./jobs/deletionCleanup');
 const { startScheduledPostsJob } = require('./jobs/scheduledPostsJob');
+const { startPasswordExpiryChecker } = require('./jobs/passwordExpiryChecker');
 const emailWorker = require('./jobs/emailWorker');
 
 // Initialize Express
@@ -218,6 +219,7 @@ const startServer = async () => {
       emailSyncJob.start();
       startDeletionCleanupJob();
       startScheduledPostsJob();
+      startPasswordExpiryChecker();
       emailWorker.poll();
       console.log('✅ SQS Email Worker started');
 

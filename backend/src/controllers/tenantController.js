@@ -13,6 +13,30 @@ const {
 } = require('../utils/emailService');
 
 /**
+ * Generate unique deletion request ID in format: DRQ-YYYY-XXXX
+ */
+const generateDeletionRequestId = async () => {
+  const year = new Date().getFullYear();
+  const prefix = `DRQ-${year}-`;
+
+  // Find the latest deletion request ID for this year
+  const latestTenant = await Tenant.findOne({
+    'deletionRequest.requestId': { $regex: `^${prefix}` }
+  })
+    .sort({ 'deletionRequest.requestId': -1 })
+    .select('deletionRequest.requestId')
+    .lean();
+
+  let nextNumber = 1;
+  if (latestTenant?.deletionRequest?.requestId) {
+    const lastNumber = parseInt(latestTenant.deletionRequest.requestId.split('-')[2]);
+    nextNumber = lastNumber + 1;
+  }
+
+  return `${prefix}${String(nextNumber).padStart(4, '0')}`;
+};
+
+/**
  * @desc    Get all tenants (SAAS owner view)
  * @route   GET /api/tenants
  * @access  Private (SAAS owner/admin only)
@@ -373,14 +397,24 @@ const requestDeletion = async (req, res) => {
       return errorResponse(res, 400, 'Your account is already scheduled for deletion.');
     }
 
+    // Generate unique deletion request ID
+    const requestId = await generateDeletionRequestId();
+
     tenant.deletionRequest = {
+      requestId: requestId,
       status: 'pending',
       requestedAt: new Date(),
       reason: reason || '',
       requestedBy: req.user._id
     };
 
+    // NOTE: We DON'T deactivate tenant or cancel subscription in pending state
+    // Only block all users. Tenant/subscription will be cancelled only on approval.
+
     await tenant.save();
+
+    // Block ALL tenant users immediately (admin + team members)
+    await User.updateMany({ tenant: tenant._id }, { isActive: false });
 
     // Get tenant admin email for confirmation
     const tenantAdmin = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' }).select('email firstName');
@@ -395,7 +429,7 @@ const requestDeletion = async (req, res) => {
 
     // Send confirmation to tenant admin
     if (tenantAdmin) {
-      sendDeletionRequestConfirmation(tenantAdmin.email, tenant.organizationName, tenantAdmin.firstName).catch(err =>
+      sendDeletionRequestConfirmation(tenantAdmin.email, tenant.organizationName, tenantAdmin.firstName, requestId).catch(err =>
         console.error('Failed to send deletion confirmation to tenant:', err)
       );
     }
@@ -429,7 +463,7 @@ const approveDeletion = async (req, res) => {
     }
 
     const permanentDeleteAt = new Date();
-    permanentDeleteAt.setDate(permanentDeleteAt.getDate() + 45);
+    permanentDeleteAt.setDate(permanentDeleteAt.getDate() + 30);
 
     tenant.deletionRequest.status           = 'approved';
     tenant.deletionRequest.approvedAt       = new Date();
@@ -450,7 +484,7 @@ const approveDeletion = async (req, res) => {
       fromPlan:   tenant.subscription?.planName || 'Free',
       toPlan:     tenant.subscription?.planName || 'Free',
       changeType: 'cancel',
-      reason:     'Deletion request approved — 45 day window',
+      reason:     'Deletion request approved — 30 day window',
       changedBy:  'admin',
       changedAt:  new Date(),
     }).catch(() => {});
@@ -471,7 +505,7 @@ const approveDeletion = async (req, res) => {
       approvedBy: req.user._id
     });
 
-    successResponse(res, 200, 'Deletion request approved. Account will be permanently deleted after 45 days.', {
+    successResponse(res, 200, 'Deletion request approved. Account will be permanently deleted after 30 days.', {
       deletionRequest: tenant.deletionRequest
     });
   } catch (error) {
@@ -486,26 +520,49 @@ const approveDeletion = async (req, res) => {
  * @access  Private (SAAS_OWNER / SAAS_ADMIN only)
  */
 const rejectDeletion = async (req, res) => {
+  const session = await require('mongoose').startSession();
+  session.startTransaction();
+
   try {
     const { rejectionReason } = req.body;
-    const tenant = await Tenant.findById(req.params.id);
+    const tenant = await Tenant.findById(req.params.id).session(session);
 
     if (!tenant) {
+      await session.abortTransaction();
+      session.endSession();
       return errorResponse(res, 404, 'Tenant not found');
     }
 
     if (!tenant.deletionRequest || tenant.deletionRequest.status !== 'pending') {
+      await session.abortTransaction();
+      session.endSession();
       return errorResponse(res, 400, 'No pending deletion request found for this organization.');
     }
+
+    console.log(`🔄 Rejecting deletion for tenant: ${tenant.organizationName} (${tenant._id})`);
 
     tenant.deletionRequest.status = 'rejected';
     tenant.deletionRequest.rejectedAt = new Date();
     tenant.deletionRequest.rejectedBy = req.user._id;
     tenant.deletionRequest.rejectionReason = rejectionReason || '';
 
-    await tenant.save();
+    // Save tenant changes
+    await tenant.save({ session });
+    console.log(`✅ Tenant deletion status updated to 'rejected'`);
 
-    // Get tenant admin email
+    // Reactivate ALL tenant users (they were blocked during pending state)
+    const updateResult = await User.updateMany(
+      { tenant: tenant._id },
+      { $set: { isActive: true } },
+      { session }
+    );
+    console.log(`✅ Reactivated ${updateResult.modifiedCount} users for tenant ${tenant.organizationName}`);
+
+    // Commit transaction
+    await session.commitTransaction();
+    session.endSession();
+
+    // Get tenant admin email (after transaction committed)
     const tenantAdmin = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' }).select('email firstName');
     if (tenantAdmin) {
       sendDeletionRejectedEmail(tenantAdmin.email, tenant.organizationName, rejectionReason, tenantAdmin.firstName).catch(err =>
@@ -515,14 +572,20 @@ const rejectDeletion = async (req, res) => {
 
     await logActivity(req, 'tenant.deletion_rejected', 'Tenant', tenant._id, {
       rejectionReason,
-      rejectedBy: req.user._id
+      rejectedBy: req.user._id,
+      usersReactivated: updateResult.modifiedCount
     });
 
+    console.log(`🎉 Deletion rejection complete for ${tenant.organizationName} - ${updateResult.modifiedCount} users reactivated`);
+
     successResponse(res, 200, 'Deletion request rejected. Organization account remains active.', {
-      deletionRequest: tenant.deletionRequest
+      deletionRequest: tenant.deletionRequest,
+      usersReactivated: updateResult.modifiedCount
     });
   } catch (error) {
-    console.error('Reject deletion error:', error);
+    await session.abortTransaction();
+    session.endSession();
+    console.error('❌ Reject deletion error:', error);
     errorResponse(res, 500, 'Server error');
   }
 };
@@ -659,6 +722,35 @@ const bulkAssignManager = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Force reactivate all users for a tenant (emergency fix)
+ * @route   POST /api/tenants/:id/reactivate-users
+ * @access  Private (SAAS_OWNER / SAAS_ADMIN only)
+ */
+const forceReactivateUsers = async (req, res) => {
+  try {
+    const tenant = await Tenant.findById(req.params.id);
+    if (!tenant) {
+      return errorResponse(res, 404, 'Tenant not found');
+    }
+
+    const updateResult = await User.updateMany(
+      { tenant: tenant._id },
+      { $set: { isActive: true } }
+    );
+
+    console.log(`🔧 Force reactivated ${updateResult.modifiedCount} users for tenant ${tenant.organizationName}`);
+
+    successResponse(res, 200, `Reactivated ${updateResult.modifiedCount} users`, {
+      modifiedCount: updateResult.modifiedCount,
+      tenantName: tenant.organizationName
+    });
+  } catch (error) {
+    console.error('Force reactivate users error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getTenants,
   getTenant,
@@ -672,5 +764,6 @@ module.exports = {
   rejectDeletion,
   recoverTenant,
   assignManager,
-  bulkAssignManager
+  bulkAssignManager,
+  forceReactivateUsers
 };

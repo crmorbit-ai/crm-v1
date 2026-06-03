@@ -56,13 +56,14 @@ const sesClient = new SESClient({
 });
 
 const FROM_ADDRESS = `"${process.env.SES_FROM_NAME || 'Unified CRM'}" <${process.env.SES_FROM_EMAIL || 'no-reply@texora.ai'}>`;
+const FROM_ADDRESS_NOREPLY = `"${process.env.SES_FROM_NAME || 'Unified CRM'}" <no-reply@texora.ai>`;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://unified-crm.texora.ai';
 const YEAR = new Date().getFullYear();
 
 // ─── Send via SES ─────────────────────────────────────────────────────────────
-const sendViaSES = async (to, subject, html) => {
+const sendViaSES = async (to, subject, html, fromAddress = FROM_ADDRESS) => {
   const command = new SendEmailCommand({
-    Source: FROM_ADDRESS,
+    Source: fromAddress,
     Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
     Message: {
       Subject: { Data: subject, Charset: 'UTF-8' },
@@ -73,13 +74,14 @@ const sendViaSES = async (to, subject, html) => {
     },
   });
   const result = await sesClient.send(command);
-  console.log('✅ SES email sent:', result.MessageId, '→', to);
+  console.log('✅ SES email sent:', result.MessageId, '→', to, 'from', fromAddress);
   return result.MessageId;
 };
 
 const sendMail = async (opts) => {
   const toArr = Array.isArray(opts.to) ? opts.to : opts.to.split(/,\s*/);
-  const messageId = await sendViaSES(toArr, opts.subject, opts.html);
+  const fromAddress = opts.fromNoreply ? FROM_ADDRESS_NOREPLY : FROM_ADDRESS;
+  const messageId = await sendViaSES(toArr, opts.subject, opts.html, fromAddress);
   return { messageId };
 };
 
@@ -585,13 +587,15 @@ const sendPaymentSuccessEmail = async ({ email, userName, orgName, planName, amo
 // ─── 11–15. Org Deletion Flow ─────────────────────────────────────────────────
 const sendDeletionRequestNotification = async (saasAdminEmail, tenant, reason) => {
   const requestDate = new Date().toLocaleDateString('en-IN', { day:'2-digit', month:'long', year:'numeric' });
+  const requestId = tenant.deletionRequest?.requestId || 'N/A';
   const html = baseTemplate({
     preheader: `Deletion request received from ${tenant.organizationName}`,
     accentColor: '#ef4444',
     body: `
-      <h2 style="font-size:22px;margin-bottom:4px;">Deletion Request Received</h2>
+      <h2 style="font-size:22px;margin-bottom:4px;">🚨 Deletion Request Received</h2>
       <p style="color:#6b7280;font-size:14px;margin-bottom:24px;">An organization has requested account deletion.</p>
       <div class="info-card">
+        <div class="info-row"><span class="info-label">Request ID</span><span class="info-value" style="font-family:monospace;font-weight:700;color:#ef4444;">${requestId}</span></div>
         <div class="info-row"><span class="info-label">Organization</span><span class="info-value">${tenant.organizationName}</span></div>
         <div class="info-row"><span class="info-label">Org ID</span><span class="info-value">${tenant.organizationId || 'N/A'}</span></div>
         <div class="info-row"><span class="info-label">Contact Email</span><span class="info-value">${tenant.contactEmail || 'N/A'}</span></div>
@@ -604,11 +608,11 @@ const sendDeletionRequestNotification = async (saasAdminEmail, tenant, reason) =
       <p style="color:#6b7280;font-size:13px;">Please review and contact the organization admin before approving permanent deletion.</p>
     `
   });
-  await sendMail({ to: saasAdminEmail, subject: `Deletion Request: ${tenant.organizationName}`, html });
+  await sendMail({ to: saasAdminEmail, subject: `🚨 Deletion Request ${requestId}: ${tenant.organizationName}`, html });
   return { success: true };
 };
 
-const sendDeletionRequestConfirmation = async (tenantEmail, orgName, firstName) => {
+const sendDeletionRequestConfirmation = async (tenantEmail, orgName, firstName, requestId) => {
   const html = baseTemplate({
     preheader: `We've received your deletion request for ${orgName}.`,
     accentColor: '#f59e0b',
@@ -617,9 +621,14 @@ const sendDeletionRequestConfirmation = async (tenantEmail, orgName, firstName) 
       <p style="color:#6b7280;font-size:14px;margin-bottom:24px;">${orgName}</p>
       <p>Hi <strong>${firstName || 'Admin'}</strong>,</p>
       <p>We have received your request to delete the organization <strong>${orgName}</strong>. Our team will review it and get in touch with you shortly.</p>
+      ${requestId ? `
+      <div class="info-card">
+        <div class="info-row"><span class="info-label">Request ID</span><span class="info-value" style="font-family:monospace;font-weight:700;color:#f59e0b;">${requestId}</span></div>
+      </div>
+      ` : ''}
       <div class="alert-yellow">
         <strong>What happens next?</strong><br/>
-        Our SAAS admin will review your request &rarr; We may contact you for clarification &rarr; You will receive a decision email &rarr; If approved, you get a <strong>45-day recovery window</strong>.
+        Our SAAS admin will review your request &rarr; We may contact you for clarification &rarr; You will receive a decision email &rarr; If approved, you get a <strong>30-day recovery window</strong>.
       </div>
       <p style="color:#6b7280;font-size:13px;">If you wish to cancel this request, please contact us at <a href="mailto:${process.env.SMTP_USER}">${process.env.SMTP_USER}</a>.</p>
     `
@@ -641,7 +650,7 @@ const sendDeletionApprovedEmail = async (tenantEmail, orgName, permanentDeleteAt
       <div class="info-card">
         <div class="info-row"><span class="info-label">Organization</span><span class="info-value">${orgName}</span></div>
         <div class="info-row"><span class="info-label">Permanent deletion on</span><span class="info-value" style="color:#ef4444;">${deleteDate}</span></div>
-        <div class="info-row"><span class="info-label">Recovery window</span><span class="info-value">45 days</span></div>
+        <div class="info-row"><span class="info-label">Recovery window</span><span class="info-value">30 days</span></div>
       </div>
       <div class="alert-green">
         <strong>Recovery window active:</strong> Contact our support before <strong>${deleteDate}</strong> to restore your account and all data.
@@ -696,6 +705,48 @@ const sendAccountRecoveredEmail = async (tenantEmail, orgName, firstName) => {
   return { success: true };
 };
 
+// Password Expiry Warning Email
+const sendPasswordExpiryWarning = async (userEmail, userName, daysRemaining) => {
+  const html = baseTemplate({
+    preheader: `Your password expires in ${daysRemaining} days. Change it now to keep your account secure.`,
+    body: `
+      <h2 style="font-size:22px;margin-bottom:4px;">⏰ Password Expiry Warning</h2>
+      <p>Hi <strong>${userName}</strong>,</p>
+      <p>Your password will expire in <strong style="color:#dc2626;font-size:18px;">${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}</strong>.</p>
+      <div class="alert-yellow">
+        <strong>🔐 Security Policy:</strong> Passwords must be changed every 90 days to keep your account secure.
+      </div>
+      <p>After expiry, you'll be required to change your password before accessing your account.</p>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${FRONTEND_URL}/security" class="btn">Change Password Now &rarr;</a>
+      </div>
+      <p style="color:#6b7280;font-size:13px;">Need help? Contact support at <a href="mailto:${process.env.SMTP_USER}">${process.env.SMTP_USER}</a>.</p>
+    `
+  });
+  await sendMail({ to: userEmail, subject: `🔐 Password Expires in ${daysRemaining} Days`, html, fromNoreply: true });
+  return { success: true };
+};
+
+// Password Expired Email
+const sendPasswordExpiredEmail = async (userEmail, userName) => {
+  const html = baseTemplate({
+    preheader: 'Your password has expired. Reset it now to access your account.',
+    body: `
+      <h2 style="font-size:22px;margin-bottom:4px;">🔒 Password Expired</h2>
+      <p>Hi <strong>${userName}</strong>,</p>
+      <p>Your password has expired as per our 90-day security policy.</p>
+      <div class="alert-red">
+        You must reset your password before you can log in again.
+      </div>
+      <div style="text-align:center;margin:28px 0;">
+        <a href="${FRONTEND_URL}/forgot-password" class="btn">Reset Password Now &rarr;</a>
+      </div>
+      <p style="color:#6b7280;font-size:13px;">This is a security measure to protect your account. Thank you for understanding.</p>
+    `
+  });
+  await sendMail({ to: userEmail, subject: '🔒 Password Expired — Action Required', html, fromNoreply: true });
+  return { success: true };
+};
 
 module.exports = {
   sendPasswordResetOTP,
@@ -713,6 +764,8 @@ module.exports = {
   sendAccountRecoveredEmail,
   sendContactInquiryReply,
   sendPaymentSuccessEmail,
+  sendPasswordExpiryWarning,
+  sendPasswordExpiredEmail,
   sendMail,
   createTransporter,
 };

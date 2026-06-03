@@ -74,6 +74,7 @@ import SaasAdmins from './pages/SaasAdmins';
 import SaasNotifications from './pages/SaasNotifications';
 import SaasContactInquiries from './pages/SaasContactInquiries';
 import Tenants from './pages/Tenants';
+import SaasTenantUsers from './pages/SaasTenantUsers';
 import ResellerManagement from './pages/ResellerManagement';
 import ResellerRegister from './pages/ResellerRegister';
 import ResellerLogin from './pages/ResellerLogin';
@@ -234,6 +235,7 @@ function AppRoutes() {
         {/* SAAS Owner */}
         <Route path="/saas/dashboard" element={<ProtectedRoute requireSaas allowManager><SaasDashboard /></ProtectedRoute>} />
         <Route path="/saas/tenants" element={<ProtectedRoute requireSaas allowManager><Tenants /></ProtectedRoute>} />
+        <Route path="/saas/tenants/:tenantId/users" element={<ProtectedRoute requireSaas allowManager><SaasTenantUsers /></ProtectedRoute>} />
         <Route path="/saas/subscriptions" element={<ProtectedRoute requireSaas><SaasSubscriptions /></ProtectedRoute>} />
         <Route path="/saas/plans" element={<ProtectedRoute requireSaas><SaasPlans /></ProtectedRoute>} />
         <Route path="/saas/monetization" element={<ProtectedRoute requireSaas><Monetization /></ProtectedRoute>} />

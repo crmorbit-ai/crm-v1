@@ -547,15 +547,24 @@ const Profile = () => {
       setDeletionError('Organization name does not match. Please type it exactly.');
       return;
     }
+
     try {
       setDeletionLoading(true);
       setDeletionError('');
+
+      // Wait for API to complete - backend will block users
       await profileService.requestDeletion(deletionReason);
-      setDeletionSuccess(true);
-      await loadProfile();
+
+      // API successful - NOW clear everything and redirect immediately
+      // No modal close, no state updates - direct jump to login
+      localStorage.clear();
+      sessionStorage.clear();
+
+      // Use location.href with immediate redirect - no animations
+      window.location.href = '/login?message=' + encodeURIComponent('Your deletion request has been submitted. All access has been blocked. Our team will contact you shortly.');
     } catch (err) {
+      // Only show error if API failed
       setDeletionError(err.response?.data?.message || 'Failed to submit deletion request. Please try again.');
-    } finally {
       setDeletionLoading(false);
     }
   };
@@ -818,12 +827,12 @@ const Profile = () => {
                 <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>Delete this Organization</p>
                 <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
                   {tenant.deletionRequest?.status === 'approved'
-                    ? `Deletion approved. ${tenant.deletionRequest.permanentDeleteAt ? `Permanent deletion on ${new Date(tenant.deletionRequest.permanentDeleteAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}.` : ''} Contact support to recover.`
+                    ? `Deletion approved${tenant.deletionRequest.requestId ? ` (${tenant.deletionRequest.requestId})` : ''}. ${tenant.deletionRequest.permanentDeleteAt ? `Permanent deletion on ${new Date(tenant.deletionRequest.permanentDeleteAt).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}.` : ''} Contact support to recover.`
                     : tenant.deletionRequest?.status === 'pending'
-                    ? 'Your deletion request is pending review by the admin.'
+                    ? `Your deletion request${tenant.deletionRequest.requestId ? ` (${tenant.deletionRequest.requestId})` : ''} is pending review by the admin.`
                     : tenant.deletionRequest?.status === 'rejected'
-                    ? `Request rejected${tenant.deletionRequest.rejectionReason ? `: "${tenant.deletionRequest.rejectionReason}"` : ''}. You can submit a new request.`
-                    : 'Once requested, you will have a 45-day window to recover your account before data is permanently deleted.'}
+                    ? `Request${tenant.deletionRequest.requestId ? ` ${tenant.deletionRequest.requestId}` : ''} rejected${tenant.deletionRequest.rejectionReason ? `: "${tenant.deletionRequest.rejectionReason}"` : ''}. You can submit a new request.`
+                    : 'Once requested, you will have a 30-day window to recover your account before data is permanently deleted.'}
                 </p>
               </div>
               <div>
@@ -850,8 +859,16 @@ const Profile = () => {
 
         {/* Deletion Request Modal */}
         {showDeletionModal && (
-          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-            <div style={{ background: '#fff', borderRadius: '14px', padding: '32px', maxWidth: '480px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px', overflowY: 'auto' }}>
+            {/* Full-screen loading overlay when submitting */}
+            {deletionLoading && (
+              <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, flexDirection: 'column', gap: '16px' }}>
+                <div style={{ width: '48px', height: '48px', border: '4px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }}></div>
+                <p style={{ color: '#fff', fontSize: '16px', fontWeight: '600' }}>Processing deletion request...</p>
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+              </div>
+            )}
+            <div style={{ background: '#fff', borderRadius: '14px', padding: '32px', maxWidth: '540px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto', margin: 'auto', opacity: deletionLoading ? 0.3 : 1, pointerEvents: deletionLoading ? 'none' : 'auto' }}>
               {deletionSuccess ? (
                 <>
                   <div style={{ textAlign: 'center', marginBottom: '20px' }}>
@@ -875,23 +892,45 @@ const Profile = () => {
                         <ul style={{ margin: 0, paddingLeft: '18px', color: '#b91c1c', fontSize: '13px', lineHeight: '1.7' }}>
                           <li>All your team members will lose access immediately after approval</li>
                           <li>All leads, contacts, accounts and data will be scheduled for deletion</li>
-                          <li>You will have <strong>45 days</strong> to recover the account by contacting support</li>
-                          <li>After 45 days, all data is <strong>permanently deleted</strong></li>
+                          <li>You will have <strong>30 days</strong> to recover the account by contacting support</li>
+                          <li>After 30 days, all data is <strong>permanently deleted</strong></li>
                         </ul>
                       </div>
-                      <div style={{ marginBottom: '16px' }}>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Reason for deletion (optional)</label>
-                        <textarea
+                      <div style={{ marginBottom: '20px' }}>
+                        <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>Why are you deleting your organization? *</label>
+                        <select
                           value={deletionReason}
                           onChange={e => setDeletionReason(e.target.value)}
-                          placeholder="Tell us why you want to delete this organization..."
-                          rows={3}
-                          style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', resize: 'vertical', fontFamily: 'inherit', boxSizing: 'border-box' }}
-                        />
+                          style={{ width: '100%', padding: '11px 14px', border: '1.5px solid #d1d5db', borderRadius: '8px', fontSize: '14px', fontFamily: 'inherit', boxSizing: 'border-box', background: '#fff', cursor: 'pointer', outline: 'none' }}
+                        >
+                          <option value="">-- Select a reason --</option>
+                          <option value="Switching to another CRM">Switching to another CRM</option>
+                          <option value="No longer need CRM services">No longer need CRM services</option>
+                          <option value="Business closed/discontinued">Business closed/discontinued</option>
+                          <option value="Too expensive">Too expensive</option>
+                          <option value="Missing features we need">Missing features we need</option>
+                          <option value="Difficult to use">Difficult to use</option>
+                          <option value="Poor customer support">Poor customer support</option>
+                          <option value="Data privacy concerns">Data privacy concerns</option>
+                          <option value="Team resistance/adoption issues">Team resistance/adoption issues</option>
+                          <option value="Other">Other</option>
+                        </select>
                       </div>
                       <div style={{ display: 'flex', gap: '10px' }}>
                         <button type="button" onClick={closeDeletionModal} style={{ flex: 1, padding: '11px', background: '#f3f4f6', border: '1px solid #e5e7eb', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#374151' }}>Cancel</button>
-                        <button type="button" onClick={() => setDeletionStep(2)} style={{ flex: 1, padding: '11px', background: '#dc2626', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#fff' }}>Continue</button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (!deletionReason) {
+                              alert('Please select a reason for deletion');
+                              return;
+                            }
+                            setDeletionStep(2);
+                          }}
+                          style={{ flex: 1, padding: '11px', background: '#dc2626', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', color: '#fff' }}
+                        >
+                          Continue
+                        </button>
                       </div>
                     </>
                   )}

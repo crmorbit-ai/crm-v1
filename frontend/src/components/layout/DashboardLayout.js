@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import PasswordExpiryBanner from '../PasswordExpiryBanner';
 import { cn } from '../../lib/utils';
 
 // Map backend feature slugs → readable names
@@ -92,6 +93,9 @@ const DashboardLayout = ({ children, title, actionButton }) => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Password Expiry Warning Banner */}
+      <PasswordExpiryBanner />
+
       {/* Permission Denied Toast */}
       {permissionToast && (
         <div style={{

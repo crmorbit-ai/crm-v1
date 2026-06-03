@@ -9,7 +9,12 @@ const {
   deleteUser,
   assignRoles,
   assignGroups,
-  resetUserPassword
+  resetUserPassword,
+  deactivateUser,
+  reactivateUser,
+  permanentDeleteUser,
+  sendUserCreationOTP,
+  verifyUserCreationOTP
 } = require('../controllers/userController');
 const { protect, restrictTo } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
@@ -59,5 +64,15 @@ router.post('/:id/assign-groups', requirePermission('user_management', 'manage')
 
 // Admin password reset
 router.put('/:id/reset-password', requirePermission('user_management', 'manage'), resetUserPassword);
+
+// User creation OTP verification
+router.post('/send-creation-otp', sendUserCreationOTP);
+router.post('/verify-creation-otp', verifyUserCreationOTP);
+
+// SAAS Admin - User management
+const { requireSaasAccess } = require('../middleware/auth');
+router.post('/:id/deactivate', requireSaasAccess, deactivateUser);
+router.post('/:id/reactivate', requireSaasAccess, reactivateUser);
+router.delete('/:id/permanent', requireSaasAccess, permanentDeleteUser);
 
 module.exports = router;

@@ -1,13 +1,15 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { tenantService } from '../services/tenantService';
+import { userService } from '../services/userService';
 import { API_URL } from '../config/api.config';
 import { useAuth } from '../context/AuthContext';
 import SaasLayout, { StatCard, Card, Badge, Button, Table, DetailPanel, InfoRow, useWindowSize } from '../components/layout/SaasLayout';
 
 const Tenants = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const isManager = user?.saasRole === 'Manager';
   const [searchParams, setSearchParams] = useSearchParams();
   const [stats, setStats] = useState({ total: 0, active: 0, trial: 0, suspended: 0, deletionRequested: 0 });
@@ -18,6 +20,18 @@ const Tenants = () => {
   const [selectedTenant, setSelectedTenant] = useState(null);
   const [allTenants, setAllTenants] = useState([]);
   const [managers, setManagers] = useState([]);
+  const [showUsersList, setShowUsersList] = useState(false);
+  const [tenantUsers, setTenantUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
+  // User action modals
+  const [deactivateModal, setDeactivateModal] = useState(false);
+  const [deactivateUser, setDeactivateUser] = useState(null);
+  const [deactivateReason, setDeactivateReason] = useState('');
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deleteUser, setDeleteUser] = useState(null);
+  const [deleteConfirmName, setDeleteConfirmName] = useState('');
+  const [actionToast, setActionToast] = useState({ show: false, msg: '', success: true });
   const [assigningManager, setAssigningManager] = useState(false);
   const [checkedTenants, setCheckedTenants] = useState(new Set());
   const [bulkManagerId, setBulkManagerId] = useState('');
@@ -223,6 +237,88 @@ const Tenants = () => {
       return;
     }
     setSelectedTenant(tenant);
+    setShowUsersList(false); // Reset users list when switching tenants
+  };
+
+  // Load tenant users
+  const loadTenantUsers = async (tenantId) => {
+    try {
+      setLoadingUsers(true);
+      const response = await userService.getUsers({ tenant: tenantId, limit: 1000 });
+      setTenantUsers(response?.users || []);
+      setShowUsersList(true);
+    } catch (err) {
+      console.error('Failed to load users:', err);
+      setTenantUsers([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Toast helper
+  const showToast = (msg, success = true) => {
+    setActionToast({ show: true, msg, success });
+    setTimeout(() => setActionToast({ show: false, msg: '', success: true }), 3000);
+  };
+
+  // Deactivate user (soft delete)
+  const handleDeactivateUser = async () => {
+    if (!deactivateReason.trim()) {
+      showToast('Please provide a reason', false);
+      return;
+    }
+    try {
+      await userService.saasDeactivateUser(deactivateUser._id, deactivateReason);
+      showToast('User deactivated successfully');
+      setDeactivateModal(false);
+      setDeactivateUser(null);
+      setDeactivateReason('');
+      loadTenantUsers(selectedTenant._id); // Reload users
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to deactivate user', false);
+    }
+  };
+
+  // Quick delete (deactivate with "Deleted by SAAS Admin" reason)
+  const handleQuickDelete = async (user) => {
+    if (!window.confirm(`Delete ${user.firstName} ${user.lastName}? This can be recovered later.`)) return;
+    try {
+      await userService.saasDeactivateUser(user._id, 'Deleted by SAAS Admin');
+      showToast('User deleted (can be recovered)');
+      loadTenantUsers(selectedTenant._id);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to delete user', false);
+    }
+  };
+
+  // Reactivate user
+  const handleReactivateUser = async (userId) => {
+    try {
+      await userService.saasReactivateUser(userId);
+      showToast('User reactivated successfully');
+      loadTenantUsers(selectedTenant._id); // Reload users
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to reactivate user', false);
+    }
+  };
+
+  // Permanent delete user
+  const handlePermanentDelete = async () => {
+    const fullName = `${deleteUser.firstName} ${deleteUser.lastName}`;
+    if (deleteConfirmName !== fullName) {
+      showToast('Name does not match', false);
+      return;
+    }
+    try {
+      await userService.saasPermanentDeleteUser(deleteUser._id);
+      showToast('User permanently deleted');
+      setDeleteModal(false);
+      setDeleteUser(null);
+      setDeleteConfirmName('');
+      loadTenantUsers(selectedTenant._id); // Reload users
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to delete user', false);
+    }
   };
 
   // Verify PIN
@@ -523,10 +619,14 @@ const Tenants = () => {
 `}</style>
             <Badge variant={getStatusVariant(status)}>{status}</Badge>
             {row.deletionRequest?.status === 'pending' && (
-              <span style={{ background: '#fef2f2', color: '#dc2626', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }}>🗑 DEL REQ</span>
+              <span style={{ background: '#fef2f2', color: '#dc2626', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }} title={row.deletionRequest.requestId || 'Deletion Request'}>
+                🗑 {row.deletionRequest.requestId || 'DEL REQ'}
+              </span>
             )}
             {row.deletionRequest?.status === 'approved' && (
-              <span style={{ background: '#fef2f2', color: '#991b1b', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }}>⏳ DELETING</span>
+              <span style={{ background: '#fef2f2', color: '#991b1b', fontSize: '10px', fontWeight: '700', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fecaca' }} title={row.deletionRequest.requestId || 'Deleting'}>
+                ⏳ {row.deletionRequest.requestId || 'DELETING'}
+              </span>
             )}
           </div>
         );
@@ -881,19 +981,94 @@ const Tenants = () => {
               {/* KPI row */}
               <div className="tKpiRow" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',borderBottom:'1px solid #e2e8f0',flexShrink:0}}>
                 {[
-                  {l:'Users',v:`${t.userCount||0}/${t.subscription?.maxUsers||'∞'}`},
+                  {l:'Users',v:`${t.userCount||0}/${t.subscription?.maxUsers||'∞'}`,clickable:true},
                   {l:'Plan',v:t.subscription?.planName||'Free'},
                   {l:'Billing',v:t.subscription?.billingCycle||'N/A'},
-                ].map(({l,v},i)=>(
-                  <div key={l} style={{padding:'7px 10px',textAlign:'center',borderRight:i<2?'1px solid #e2e8f0':'none',background:i%2===0?'#fff':'#f9fafb'}}>
-                    <div style={{fontSize:13,fontWeight:800,color:'#1e293b'}}>{v}</div>
-                    <div style={{fontSize:9,color:'#94a3b8',fontWeight:600,textTransform:'uppercase',marginTop:1}}>{l}</div>
+                ].map(({l,v,clickable},i)=>(
+                  <div key={l}
+                    onClick={clickable?()=>loadTenantUsers(t._id):undefined}
+                    style={{padding:'7px 10px',textAlign:'center',borderRight:i<2?'1px solid #e2e8f0':'none',background:i%2===0?'#fff':'#f9fafb',cursor:clickable?'pointer':'default',transition:'all 0.2s'}}
+                    onMouseEnter={clickable?e=>{e.currentTarget.style.background='#f0f9ff';e.currentTarget.style.borderColor='#3b82f6';}:undefined}
+                    onMouseLeave={clickable?e=>{e.currentTarget.style.background=i%2===0?'#fff':'#f9fafb';e.currentTarget.style.borderColor='#e2e8f0';}:undefined}
+                  >
+                    <div style={{fontSize:13,fontWeight:800,color:clickable&&showUsersList?'#3b82f6':'#1e293b'}}>{v}</div>
+                    <div style={{fontSize:9,color:clickable&&showUsersList?'#3b82f6':'#94a3b8',fontWeight:600,textTransform:'uppercase',marginTop:1}}>
+                      {clickable&&'👥 '}{l}
+                    </div>
                   </div>
                 ))}
               </div>
 
               {/* Scrollable sections */}
               <div style={{flex:1,overflowY:'auto'}}>
+                {/* USERS LIST */}
+                {showUsersList&&(
+                  <div style={{background:'#f8fafc',padding:'12px',borderBottom:'1px solid #e2e8f0'}}>
+                    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:10}}>
+                      <div style={{fontSize:12,fontWeight:800,color:'#0f172a',textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                        👥 Team Members ({tenantUsers.length})
+                      </div>
+                      <button onClick={()=>setShowUsersList(false)}
+                        style={{background:'rgba(0,0,0,0.05)',border:'none',color:'#64748b',width:20,height:20,borderRadius:4,cursor:'pointer',fontSize:12,display:'flex',alignItems:'center',justifyContent:'center'}}>×</button>
+                    </div>
+                    {loadingUsers?(
+                      <div style={{textAlign:'center',padding:20,color:'#94a3b8',fontSize:12}}>Loading...</div>
+                    ):tenantUsers.length===0?(
+                      <div style={{textAlign:'center',padding:20,color:'#94a3b8',fontSize:12}}>No users found</div>
+                    ):(
+                      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                        {tenantUsers.map(u=>(
+                          <div key={u._id} style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:6,padding:'8px 10px'}}>
+                            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:8,marginBottom:6}}>
+                              <div style={{flex:1,minWidth:0}}>
+                                <div style={{fontSize:11,fontWeight:700,color:'#0f172a',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {u.firstName} {u.lastName}
+                                </div>
+                                <div style={{fontSize:9,color:'#64748b',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
+                                  {u.email||u.loginName||'—'}
+                                </div>
+                              </div>
+                              <div style={{display:'flex',gap:4,alignItems:'center',flexShrink:0}}>
+                                <span style={{fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:3,background:u.userType==='TENANT_ADMIN'?'#dbeafe':'#f3f4f6',color:u.userType==='TENANT_ADMIN'?'#1e40af':'#374151'}}>
+                                  {u.userType?.replace('TENANT_','')}
+                                </span>
+                                <span style={{fontSize:8,fontWeight:700,padding:'2px 5px',borderRadius:3,background:u.isActive?'#dcfce7':'#fee2e2',color:u.isActive?'#166534':'#991b1b'}}>
+                                  {u.isActive?'●':'○'}
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{display:'flex',gap:4,justifyContent:'flex-end',flexWrap:'wrap'}}>
+                              {u.isActive?(
+                                <>
+                                  <button onClick={()=>{setDeactivateUser(u);setDeactivateModal(true);}}
+                                    style={{padding:'3px 8px',background:'linear-gradient(135deg,#f59e0b,#ea580c)',color:'#fff',border:'none',borderRadius:4,fontSize:8,fontWeight:700,cursor:'pointer'}}>
+                                    Deactivate
+                                  </button>
+                                  <button onClick={()=>handleQuickDelete(u)}
+                                    style={{padding:'3px 8px',background:'linear-gradient(135deg,#dc2626,#b91c1c)',color:'#fff',border:'none',borderRadius:4,fontSize:8,fontWeight:700,cursor:'pointer'}}>
+                                    Delete
+                                  </button>
+                                </>
+                              ):(
+                                <>
+                                  <button onClick={()=>handleReactivateUser(u._id)}
+                                    style={{padding:'3px 8px',background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',border:'none',borderRadius:4,fontSize:8,fontWeight:700,cursor:'pointer'}}>
+                                    Recover
+                                  </button>
+                                  <button onClick={()=>{setDeleteUser(u);setDeleteModal(true);}}
+                                    style={{padding:'3px 8px',background:'linear-gradient(135deg,#7f1d1d,#991b1b)',color:'#fff',border:'none',borderRadius:4,fontSize:8,fontWeight:700,cursor:'pointer'}}>
+                                    Permanent Delete
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <Sec label="Subscription" accent="#6366f1">
                   <FR l="Status"  v={st.toUpperCase()} />
                   <FR l="Expires" v={formatDate(t.subscription?.endDate)} />
@@ -1167,6 +1342,64 @@ const Tenants = () => {
                 <button onClick={()=>{setShowRejectModal(false);setRejectReason('');}} style={S.btnCancel}>Cancel</button>
                 <button onClick={()=>handleRejectDeletion(selectedTenant._id)} disabled={deletionActionLoading} style={{...S.btnSubmit,background:'#dc2626'}}>{deletionActionLoading?'Rejecting...':'Reject Request'}</button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Action Toast */}
+      {actionToast.show&&(
+        <div style={{position:'fixed',top:18,right:22,zIndex:9999,padding:'11px 16px',borderRadius:12,background:actionToast.success?'#f0fdf4':'#fff1f2',border:`1px solid ${actionToast.success?'#86efac':'#fca5a5'}`,color:actionToast.success?'#15803d':'#be123c',fontSize:13,fontWeight:600,boxShadow:'0 6px 24px rgba(0,0,0,0.1)'}}>
+          {actionToast.msg}
+        </div>
+      )}
+
+      {/* Deactivate Modal */}
+      {deactivateModal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:9998,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#fff',borderRadius:14,padding:24,width:'90%',maxWidth:460,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+            <h3 style={{fontSize:18,fontWeight:800,color:'#0f172a',marginBottom:12}}>Deactivate User</h3>
+            <p style={{fontSize:13,color:'#64748b',marginBottom:16}}>
+              Deactivating <b>{deactivateUser?.firstName} {deactivateUser?.lastName}</b>. Please provide a reason:
+            </p>
+            <textarea value={deactivateReason} onChange={e=>setDeactivateReason(e.target.value)} placeholder="Reason for deactivation..."
+              style={{width:'100%',minHeight:80,padding:'10px 12px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:13,resize:'vertical',outline:'none'}}/>
+            <div style={{display:'flex',gap:8,marginTop:16}}>
+              <button onClick={()=>{setDeactivateModal(false);setDeactivateUser(null);setDeactivateReason('');}}
+                style={{flex:1,padding:'10px',background:'#f1f5f9',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',color:'#475569'}}>
+                Cancel
+              </button>
+              <button onClick={handleDeactivateUser}
+                style={{flex:1,padding:'10px',background:'linear-gradient(135deg,#f97316,#ea580c)',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',color:'#fff'}}>
+                Deactivate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Modal */}
+      {deleteModal&&(
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',zIndex:9998,display:'flex',alignItems:'center',justifyContent:'center'}}>
+          <div style={{background:'#fff',borderRadius:14,padding:24,width:'90%',maxWidth:460,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+            <h3 style={{fontSize:18,fontWeight:800,color:'#dc2626',marginBottom:12}}>⚠️ Permanent Delete</h3>
+            <p style={{fontSize:13,color:'#64748b',marginBottom:12}}>
+              This action <b>CANNOT</b> be undone. This will permanently delete the user from the database.
+            </p>
+            <p style={{fontSize:13,color:'#0f172a',marginBottom:12}}>
+              Type <b>{deleteUser?.firstName} {deleteUser?.lastName}</b> to confirm:
+            </p>
+            <input type="text" value={deleteConfirmName} onChange={e=>setDeleteConfirmName(e.target.value)} placeholder="Type full name to confirm"
+              style={{width:'100%',padding:'10px 12px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:13,outline:'none'}}/>
+            <div style={{display:'flex',gap:8,marginTop:16}}>
+              <button onClick={()=>{setDeleteModal(false);setDeleteUser(null);setDeleteConfirmName('');}}
+                style={{flex:1,padding:'10px',background:'#f1f5f9',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:'pointer',color:'#475569'}}>
+                Cancel
+              </button>
+              <button onClick={handlePermanentDelete} disabled={deleteConfirmName!==`${deleteUser?.firstName} ${deleteUser?.lastName}`}
+                style={{flex:1,padding:'10px',background:deleteConfirmName===`${deleteUser?.firstName} ${deleteUser?.lastName}`?'linear-gradient(135deg,#dc2626,#b91c1c)':'#e2e8f0',border:'none',borderRadius:9,fontSize:13,fontWeight:700,cursor:deleteConfirmName===`${deleteUser?.firstName} ${deleteUser?.lastName}`?'pointer':'not-allowed',color:deleteConfirmName===`${deleteUser?.firstName} ${deleteUser?.lastName}`?'#fff':'#94a3b8'}}>
+                Delete Forever
+              </button>
             </div>
           </div>
         </div>

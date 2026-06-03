@@ -106,6 +106,26 @@ const login = async (req, res) => {
       return errorResponse(res, 401, 'Your organization account is suspended');
     }
 
+    // Check password expiry (90-day policy)
+    // Skip: SAAS users, Google OAuth users (no password)
+    const shouldCheckPasswordExpiry =
+      user.userType !== 'SAAS_OWNER' &&
+      user.userType !== 'SAAS_ADMIN' &&
+      user.authProvider !== 'google'; // Google users don't have passwords
+
+    if (shouldCheckPasswordExpiry) {
+      const passwordDate = user.passwordChangedAt || user.createdAt;
+      const daysSinceChange = Math.floor((Date.now() - passwordDate) / (1000 * 60 * 60 * 24));
+      const daysRemaining = 90 - daysSinceChange;
+
+      if (daysRemaining < 0) {
+        return errorResponse(res, 403, 'Your password has expired. Please reset it to continue.', {
+          code: 'PASSWORD_EXPIRED',
+          daysExpired: Math.abs(daysRemaining)
+        });
+      }
+    }
+
     // ============================================
     // 🔐 SAAS ADMIN WHITELIST CHECK (same as protect middleware)
     // ============================================
@@ -576,6 +596,8 @@ const resetPassword = async (req, res) => {
     }
 
     user.password = newPassword;
+    user.passwordChangedAt = Date.now();
+    user.passwordExpiryNotificationSent = []; // Reset notifications
     user.resetPasswordOTP = undefined;
     user.resetPasswordOTPExpire = undefined;
     user.resetPasswordOTPVerified = false;
@@ -641,6 +663,8 @@ const changePassword = async (req, res) => {
     }
 
     user.password = newPassword;
+    user.passwordChangedAt = Date.now();
+    user.passwordExpiryNotificationSent = []; // Reset notifications
     await user.save();
 
     try {

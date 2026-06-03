@@ -16,7 +16,7 @@ const Group = require('../models/Group');
 const Role = require('../models/Role');
 
 /**
- * Permanently deletes all data for tenants whose 45-day recovery window has expired.
+ * Permanently deletes all data for tenants whose 30-day recovery window has expired.
  * Runs daily at midnight.
  */
 const runDeletionCleanup = async () => {

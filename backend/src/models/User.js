@@ -65,6 +65,11 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  deactivationReason: { type: String },
+  deactivatedAt: { type: Date },
+  deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  reactivatedAt: { type: Date },
+  reactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   lastLogin: {
     type: Date
   },
@@ -227,6 +232,22 @@ const userSchema = new mongoose.Schema({
     accountNotifications:       { type: Boolean, default: true },
     invoiceNotifications:       { type: Boolean, default: true },
     emailNotifications:         { type: Boolean, default: false }
+  },
+  // Password Expiry Tracking (90 days policy)
+  passwordChangedAt: {
+    type: Date,
+    default: Date.now
+  },
+  passwordExpiryNotificationSent: [{
+    daysRemaining: { type: Number },
+    sentAt: { type: Date }
+  }],
+  // User Creation OTP (for tenant admin verification)
+  userCreationOTP: {
+    type: String
+  },
+  userCreationOTPExpire: {
+    type: Date
   }
 }, {
   timestamps: true

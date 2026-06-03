@@ -309,8 +309,9 @@ const tenantSchema = new mongoose.Schema({
     type: String
   },
 
-  // Deletion Request (professional 45-day soft-delete flow)
+  // Deletion Request (professional 30-day soft-delete flow)
   deletionRequest: {
+    requestId: { type: String, unique: true, sparse: true }, // DRQ-2026-0001
     status: {
       type: String,
       enum: ['none', 'pending', 'approved', 'rejected'],
@@ -324,7 +325,7 @@ const tenantSchema = new mongoose.Schema({
     rejectedAt: { type: Date },
     rejectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     rejectionReason: { type: String, trim: true },
-    permanentDeleteAt: { type: Date }  // approvedAt + 45 days
+    permanentDeleteAt: { type: Date }  // approvedAt + 30 days
   },
   
   // Branding

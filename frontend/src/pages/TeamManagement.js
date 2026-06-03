@@ -4,6 +4,7 @@ import { userService } from '../services/userService';
 import { roleService } from '../services/roleService';
 import { groupService } from '../services/groupService';
 import { authService } from '../services/authService';
+import api from '../services/api';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 const FEATURES = [
@@ -112,11 +113,12 @@ const TeamManagement = () => {
   const [dragging, setDragging]       = useState(false);
   const [dragStartX, setDragStartX]   = useState(0);
   const [dragStartW, setDragStartW]   = useState(380);
-  const [verifyModal, setVerifyModal] = useState({ open:false, pendingData:null });
-  const [verifyPwd, setVerifyPwd]     = useState('');
-  const [showVerifyPwd, setShowVerifyPwd] = useState(false);
+  const [otpModal, setOtpModal] = useState({ open: false, otp: '', error: '', pendingData: null, otpSent: false, sending: false });
   const [verifying, setVerifying]     = useState(false);
-  const [verifyError, setVerifyError] = useState('');
+
+  // SAAS Admin - Tenant selection
+  const [tenants, setTenants] = useState([]);
+  const [selectedTenant, setSelectedTenant] = useState(null);
 
   useEffect(() => {
     if (!dragging) return;
@@ -134,11 +136,39 @@ const TeamManagement = () => {
   const MP  = ALL.map(f=>({ feature:f, actions:['create','read','update'] }));
   const AP  = ALL.map(f=>({ feature:f, actions:['create','read','update','delete','manage'] }));
 
+  // Load tenant list for SAAS Admin
+  useEffect(() => {
+    if (user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN') {
+      const loadTenants = async () => {
+        try {
+          const response = await api.get('/tenants?limit=1000');
+          setTenants(response.data?.data?.tenants || []);
+        } catch (err) {
+          console.error('Failed to load tenants:', err);
+        }
+      };
+      loadTenants();
+    }
+  }, [user]);
+
+  // Auto-send OTP when modal opens
+  useEffect(() => {
+    if (otpModal.open && !otpModal.otpSent && !otpModal.sending) {
+      sendOTP();
+    }
+  }, [otpModal.open]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
+      // For SAAS Admin, add tenant filter if selected
+      const params = { limit: 100 };
+      if ((user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN') && selectedTenant) {
+        params.tenant = selectedTenant;
+      }
+
       const [ur,rr,gr] = await Promise.all([
-        userService.getUsers({limit:100}),
+        userService.getUsers(params),
         roleService.getRoles({limit:100}),
         groupService.getGroups({limit:100}),
       ]);
@@ -159,7 +189,7 @@ const TeamManagement = () => {
     } catch(e) { if(e?.isPermissionDenied) return; setError('Failed to load data'); }
     finally { setLoading(false); }
   },[]);
-  useEffect(()=>{ loadData(); },[loadData]);
+  useEffect(()=>{ loadData(); },[loadData, selectedTenant]);
 
   const showMsg = (m,err=false) => { err?setError(m):setSuccess(m); setTimeout(()=>{setError('');setSuccess('');},3000); };
   const closePanel = () => { setShowPanel(false);setEditingItem(null);setShowRoleDD(false);setShowGroupDD(false);setSubmitting(false);setUserStep(1);setSubStep(null); };
@@ -179,13 +209,10 @@ const TeamManagement = () => {
   const handleUserSubmit = async e => {
     e.preventDefault(); if(submitting) return;
 
-    // ALWAYS show verification modal when creating new user (email daala ho ya nahi)
-    // Tenant admin password verification required for all new user creation
+    // ALWAYS show OTP verification modal when creating new user
+    // Tenant admin email OTP verification required for all new user creation
     if (!editingItem) {
-      setVerifyModal({ open: true, pendingData: { ...userForm, tenant: user.tenant?._id } });
-      setVerifyPwd('');
-      setShowVerifyPwd(false);
-      setVerifyError('');
+      setOtpModal({ open: true, otp: '', error: '', pendingData: { ...userForm, tenant: user.tenant?._id }, otpSent: false, sending: false });
       return;
     }
 
@@ -203,6 +230,50 @@ const TeamManagement = () => {
   const handleDeleteUser  = async u => { if(!window.confirm(`Delete ${u.firstName}?`)) return; try{ await userService.deleteUser(u._id);  showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
   const handleDeleteRole  = async r => { if(!window.confirm(`Delete "${r.name}"?`)) return; try{ await roleService.deleteRole(r._id);   showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
   const handleDeleteGroup = async g => { if(!window.confirm(`Delete "${g.name}"?`)) return; try{ await groupService.deleteGroup(g._id); showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
+
+  // SAAS Admin - User Management Actions
+  const handleSaasDeactivateUser = async (u) => {
+    const reason = window.prompt(`Deactivate user "${u.firstName} ${u.lastName}"?\n\nEnter reason:`);
+    if (!reason) return;
+    try {
+      await userService.saasDeactivateUser(u._id, reason);
+      showMsg('User deactivated successfully');
+      loadData();
+      if (selectedUser?._id === u._id) setSelectedUser(null);
+    } catch (e) {
+      showMsg(e.response?.data?.message || 'Failed to deactivate user', true);
+    }
+  };
+
+  const handleSaasReactivateUser = async (u) => {
+    if (!window.confirm(`Reactivate user "${u.firstName} ${u.lastName}"?`)) return;
+    try {
+      await userService.saasReactivateUser(u._id);
+      showMsg('User reactivated successfully');
+      loadData();
+    } catch (e) {
+      showMsg(e.response?.data?.message || 'Failed to reactivate user', true);
+    }
+  };
+
+  const handleSaasPermanentDelete = async (u) => {
+    const confirmText = `${u.firstName} ${u.lastName}`;
+    const userInput = window.prompt(
+      `⚠️ PERMANENT DELETE\n\nThis will PERMANENTLY delete user "${confirmText}" from the database.\n\nType the user's full name to confirm:`
+    );
+    if (userInput !== confirmText) {
+      if (userInput !== null) showMsg('Name does not match. Deletion cancelled.', true);
+      return;
+    }
+    try {
+      await userService.saasPermanentDeleteUser(u._id);
+      showMsg('User permanently deleted');
+      loadData();
+      if (selectedUser?._id === u._id) setSelectedUser(null);
+    } catch (e) {
+      showMsg(e.response?.data?.message || 'Failed to delete user', true);
+    }
+  };
 
   const toggleActive = async (u) => {
     const action = u.isActive ? 'deactivate' : 'activate';
@@ -225,37 +296,44 @@ const TeamManagement = () => {
     finally{ setSubmitting(false); }
   };
 
-  const handleVerifyAndCreate = async e => {
-    e.preventDefault();
-    if(!verifyPwd){
-      setVerifyError('Please enter your password');
+  // Send OTP to tenant admin email
+  const sendOTP = async () => {
+    setOtpModal(prev => ({ ...prev, sending: true, error: '' }));
+    try {
+      await api.post('/users/send-creation-otp');
+      setOtpModal(prev => ({ ...prev, otpSent: true, sending: false }));
+      showMsg('OTP sent to your email');
+    } catch (err) {
+      setOtpModal(prev => ({ ...prev, error: err.response?.data?.message || 'Failed to send OTP', sending: false }));
+    }
+  };
+
+  // Verify OTP and create user
+  const verifyOTPAndCreate = async () => {
+    if (!otpModal.otp || otpModal.otp.length !== 6) {
+      setOtpModal(prev => ({ ...prev, error: 'Please enter 6-digit OTP' }));
       return;
     }
 
     setVerifying(true);
-    setVerifyError('');
+    setOtpModal(prev => ({ ...prev, error: '' }));
     try {
-      // Verify tenant admin password
-      await authService.verifyTenantAdminPassword(verifyPwd);
+      // Verify OTP
+      await api.post('/users/verify-creation-otp', { otp: otpModal.otp });
 
-      // If verification successful, create the user
-      const r = await userService.createUser(verifyModal.pendingData);
+      // Create user
+      const r = await userService.createUser(otpModal.pendingData);
       const uid = r.user?._id || r._id;
-      if(uid) await userService.assignGroups(uid, verifyModal.pendingData.groups || []);
+      if (uid) await userService.assignGroups(uid, otpModal.pendingData.groups || []);
 
       showMsg('User created successfully!');
-      setVerifyModal({ open: false, pendingData: null });
-      setVerifyPwd('');
-      setVerifyError('');
+      setOtpModal({ open: false, otp: '', error: '', pendingData: null, otpSent: false, sending: false });
       closePanel();
       loadData();
-    } catch(e) {
-      if(e?.isPermissionDenied) return;
-      // Show inline error message for wrong password
-      const errorMsg = e.message === 'Invalid password'
-        ? 'Incorrect password! Please try again.'
-        : (e.message || 'Verification failed. Please try again.');
-      setVerifyError(errorMsg);
+    } catch (e) {
+      if (e?.isPermissionDenied) return;
+      const errorMsg = e.response?.data?.message || e.message || 'Verification failed';
+      setOtpModal(prev => ({ ...prev, error: errorMsg }));
     } finally {
       setVerifying(false);
     }
@@ -490,6 +568,23 @@ const TeamManagement = () => {
         ))}
       </div>}
 
+      {/* SAAS ADMIN - TENANT SELECTOR */}
+      {(user.userType==='SAAS_OWNER'||user.userType==='SAAS_ADMIN')&&activeTab==='users'&&
+        <div style={{marginBottom:12,background:'linear-gradient(135deg,#fef3c7 0%,#fde68a 100%)',border:'1.5px solid #fbbf24',borderRadius:12,padding:'12px 16px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap'}}>
+            <span style={{fontSize:12,fontWeight:700,color:'#92400e'}}>🔍 Filter by Organization:</span>
+            <select
+              value={selectedTenant||''}
+              onChange={e=>setSelectedTenant(e.target.value||null)}
+              style={{padding:'7px 30px 7px 11px',border:'1.5px solid #d97706',borderRadius:8,fontSize:13,color:'#0f172a',background:'#fff',outline:'none',cursor:'pointer',fontWeight:600,appearance:'none',backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2392400e' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E\")",backgroundRepeat:'no-repeat',backgroundPosition:'right 10px center'}}
+            >
+              <option value="">All Organizations</option>
+              {tenants.map(t=><option key={t._id} value={t._id}>{t.organizationName}</option>)}
+            </select>
+          </div>
+        </div>
+      }
+
       {/* ADD BUTTON — left aligned below stats */}
       {activeTab!=='reports'&&<div className="xActBtns" style={{marginBottom:12,display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
         <button
@@ -603,14 +698,14 @@ const TeamManagement = () => {
                     <div>
                       <Label>Login Name{userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)&&<span style={{textTransform:'none',fontWeight:400,color:'#ef4444',marginLeft:6}}>— taken</span>}</Label>
                       <div style={{position:'relative'}}>
-                        <Inp style={{paddingRight:34,...(userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)?{borderColor:'#ef4444'}:{})}} value={userForm.loginName} onChange={e=>setUserForm({...userForm,loginName:e.target.value.toLowerCase().replace(/\s+/g,'')})} placeholder="john.doe" />
+                        <Inp autoComplete="off" style={{paddingRight:34,...(userForm.loginName&&users.some(u=>u.loginName===userForm.loginName&&u._id!==editingItem?._id)?{borderColor:'#ef4444'}:{})}} value={userForm.loginName} onChange={e=>setUserForm({...userForm,loginName:e.target.value.toLowerCase().replace(/\s+/g,'')})} placeholder="john.doe" />
                         <CopyBtn fkey="loginName" val={userForm.loginName} copied={copied} onCopy={copyVal} />
                       </div>
                     </div>
                     <div>
                       <Label>Password {editingItem?<span style={{textTransform:'none',fontWeight:400,color:'#94a3b8'}}>— leave blank</span>:'*'}</Label>
                       <div style={{position:'relative'}}>
-                        <Inp type={showPwd?'text':'password'} style={{paddingRight:56}} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} placeholder="6-16 characters" minLength={6} maxLength={16} />
+                        <Inp type={showPwd?'text':'password'} autoComplete="new-password" style={{paddingRight:56}} value={userForm.password} onChange={e=>setUserForm({...userForm,password:e.target.value})} placeholder="6-16 characters" minLength={6} maxLength={16} />
                         <div style={{position:'absolute',right:7,top:'50%',transform:'translateY(-50%)',display:'flex',gap:4,alignItems:'center'}}>
                           <CopyBtnInline fkey="password" val={userForm.password} copied={copied} onCopy={copyVal} />
                           <button type="button" onClick={()=>setShowPwd(p=>!p)} style={{background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
@@ -973,6 +1068,36 @@ const TeamManagement = () => {
                       {su.isActive ? '⏸ Deactivate User' : '▶ Activate User'}
                     </button>
                   )}
+
+                  {/* SAAS Admin Actions */}
+                  {(user.userType === 'SAAS_OWNER' || user.userType === 'SAAS_ADMIN') && (
+                    <div style={{marginTop:8,padding:'12px',background:'#fef2f2',borderRadius:10,border:'1px solid #fecaca'}}>
+                      <div style={{fontSize:11,fontWeight:700,color:'#991b1b',marginBottom:8}}>🔐 SAAS ADMIN ACTIONS</div>
+                      <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                        {su.isActive ? (
+                          <button onClick={()=>handleSaasDeactivateUser(su)} style={{
+                            padding:'6px 12px',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                            border:'1px solid #f59e0b',background:'#fffbeb',color:'#d97706'
+                          }}>
+                            🚫 SAAS Deactivate
+                          </button>
+                        ) : (
+                          <button onClick={()=>handleSaasReactivateUser(su)} style={{
+                            padding:'6px 12px',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                            border:'1px solid #10b981',background:'#f0fdf4',color:'#059669'
+                          }}>
+                            ✅ SAAS Reactivate
+                          </button>
+                        )}
+                        <button onClick={()=>handleSaasPermanentDelete(su)} style={{
+                          padding:'6px 12px',borderRadius:6,fontSize:11,fontWeight:700,cursor:'pointer',
+                          border:'1px solid #dc2626',background:'#fef2f2',color:'#dc2626'
+                        }}>
+                          🗑️ Permanent Delete
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1212,46 +1337,58 @@ const TeamManagement = () => {
       {/* ════════════════════════════════════════════
           TENANT ADMIN PASSWORD VERIFICATION MODAL
       ════════════════════════════════════════════ */}
-      {verifyModal.open&&(
+      {otpModal.open&&(
         <div style={{position:'fixed',inset:0,background:'rgba(7,4,20,0.7)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
           <div className="xModalIn" style={{background:'#fff',borderRadius:20,width:'100%',maxWidth:440,boxShadow:'0 30px 80px rgba(0,0,0,0.28)',overflow:'hidden'}}>
-            <div style={{padding:'14px 20px',background:'linear-gradient(135deg,#f59e0b,#d97706)',position:'relative',overflow:'hidden'}}>
+            <div style={{padding:'14px 20px',background:'linear-gradient(135deg,#4f46e5,#7c3aed)',position:'relative',overflow:'hidden'}}>
               <div style={{position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(255,255,255,0.2) 0%,transparent 70%)',pointerEvents:'none'}} />
-              <button onClick={()=>{setVerifyModal({open:false,pendingData:null});setVerifyPwd('');setVerifyError('');}} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+              <button onClick={()=>setOtpModal({open:false,otp:'',error:'',pendingData:null,otpSent:false,sending:false})} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
               <div style={{display:'flex',alignItems:'center',gap:11,position:'relative',zIndex:1}}>
-                <div style={{width:36,height:36,borderRadius:10,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>🔐</div>
+                <div style={{width:36,height:36,borderRadius:10,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📧</div>
                 <div>
-                  <div style={{fontSize:15,fontWeight:800,color:'#fff',lineHeight:1.25}}>Verify Your Password</div>
-                  <div style={{fontSize:11,color:'rgba(255,255,255,.7)',marginTop:2}}>Confirm tenant admin password to create user</div>
+                  <div style={{fontSize:15,fontWeight:800,color:'#fff',lineHeight:1.25}}>Verify OTP</div>
+                  <div style={{fontSize:11,color:'rgba(255,255,255,.7)',marginTop:2}}>Sent to {user?.email}</div>
                 </div>
               </div>
             </div>
             <div style={{padding:'24px 26px'}}>
-              <div style={{background:'#fffbeb',border:'1.5px solid #fde68a',borderRadius:12,padding:'12px 14px',marginBottom:18,display:'flex',gap:10}}>
+              <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:12,padding:'12px 14px',marginBottom:18,display:'flex',gap:10}}>
                 <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
-                <div style={{fontSize:12,color:'#92400e',lineHeight:1.5}}>
-                  <strong>Security Verification Required</strong><br/>
-                  For security, all new team users are validated using the tenant admin's email (<strong>{user?.email}</strong>). Please confirm your password to proceed with user creation.
+                <div style={{fontSize:12,color:'#1e40af',lineHeight:1.5}}>
+                  {otpModal.sending?<><strong>Sending OTP...</strong></>:otpModal.otpSent?<><strong>OTP Sent!</strong><br/>Check your email <strong>{user?.email}</strong> for the 6-digit code.</>:<strong>Preparing...</strong>}
                 </div>
               </div>
-              <form onSubmit={handleVerifyAndCreate}>
-                <div style={{marginBottom:20}}>
-                  <Label>Tenant Admin Password</Label>
-                  <div style={{position:'relative'}}>
-                    <Inp type={showVerifyPwd?'text':'password'} style={{paddingRight:40,borderColor:verifyError?'#ef4444':'#e2e8f0'}} value={verifyPwd} onChange={e=>{setVerifyPwd(e.target.value);setVerifyError('');}} placeholder="Enter your password" required autoFocus />
-                    <button type="button" onClick={()=>setShowVerifyPwd(v=>!v)} style={{position:'absolute',right:11,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:'#94a3b8',padding:0,display:'flex'}}>{showVerifyPwd?SVG_EYE_OFF:SVG_EYE_ON}</button>
-                  </div>
-                  {verifyError&&<div style={{marginTop:6,fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
-                    <span>⚠️</span> {verifyError}
-                  </div>}
-                </div>
-                <div style={{display:'flex',gap:10}}>
-                  <button type="button" onClick={()=>{setVerifyModal({open:false,pendingData:null});setVerifyPwd('');setVerifyError('');}} style={{flex:1,padding:'11px 0',border:'1.5px solid #e2e8f0',borderRadius:11,background:'#f8fafc',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
-                  <PriBtn type="submit" disabled={verifying} style={{flex:1,marginTop:0,background:verifying?'#cbd5e1':'linear-gradient(135deg,#f59e0b,#d97706)',boxShadow:verifying?'none':'0 4px 14px rgba(245,158,11,0.4)'}}>
-                    {verifying?'Verifying...':'Verify & Create User'}
-                  </PriBtn>
-                </div>
-              </form>
+              <div style={{marginBottom:20}}>
+                <Label>Enter 6-Digit OTP</Label>
+                <Inp
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={6}
+                  style={{borderColor:otpModal.error?'#ef4444':'#e2e8f0',fontSize:18,letterSpacing:8,textAlign:'center',fontFamily:'monospace',fontWeight:700}}
+                  value={otpModal.otp}
+                  onChange={e=>{
+                    const val = e.target.value.replace(/\D/g,'');
+                    setOtpModal(prev=>({...prev,otp:val,error:''}));
+                  }}
+                  placeholder="000000"
+                  disabled={!otpModal.otpSent}
+                  autoFocus={otpModal.otpSent}
+                />
+                {otpModal.error&&<div style={{marginTop:6,fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
+                  <span>⚠️</span> {otpModal.error}
+                </div>}
+                {otpModal.otpSent&&<div style={{marginTop:8,textAlign:'center'}}>
+                  <button type="button" onClick={sendOTP} disabled={otpModal.sending} style={{background:'none',border:'none',color:'#6366f1',fontSize:12,fontWeight:600,cursor:'pointer',textDecoration:'underline'}}>
+                    {otpModal.sending?'Sending...':'Resend OTP'}
+                  </button>
+                </div>}
+              </div>
+              <div style={{display:'flex',gap:10}}>
+                <button type="button" onClick={()=>setOtpModal({open:false,otp:'',error:'',pendingData:null,otpSent:false,sending:false})} style={{flex:1,padding:'11px 0',border:'1.5px solid #e2e8f0',borderRadius:11,background:'#f8fafc',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
+                <PriBtn onClick={verifyOTPAndCreate} disabled={verifying||!otpModal.otpSent||otpModal.otp.length!==6} style={{flex:1,marginTop:0,background:(verifying||!otpModal.otpSent||otpModal.otp.length!==6)?'#cbd5e1':'linear-gradient(135deg,#4f46e5,#7c3aed)',boxShadow:(verifying||!otpModal.otpSent)?'none':'0 4px 14px rgba(79,70,229,0.4)'}}>
+                  {verifying?'Verifying...':'Verify & Create User'}
+                </PriBtn>
+              </div>
             </div>
           </div>
         </div>

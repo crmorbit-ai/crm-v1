@@ -17,14 +17,20 @@ const bcrypt = require('bcryptjs');
  */
 const getUsers = async (req, res) => {
   try {
-    const { page = 1, limit = 10, search, userType, isActive } = req.query;
+    const { page = 1, limit = 10, search, userType, isActive, tenant } = req.query;
 
     // Build query
     let query = {};
 
-    // SAAS owners can see all users
+    // SAAS owners can see all users or filter by specific tenant
     // Tenant users can only see users in their tenant
-    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+    if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
+      // SAAS Admin can optionally filter by tenant
+      if (tenant) {
+        query.tenant = tenant;
+      }
+    } else {
+      // Regular tenant users only see their own tenant
       query.tenant = req.user.tenant;
 
       // Hierarchy-based filtering: users can only see users at or below their own level
@@ -778,6 +784,203 @@ const bulkCreateUsers = async (req, res) => {
   }
 };
 
+/**
+ * @desc    SAAS Admin - Deactivate a user
+ * @route   POST /api/users/:id/deactivate
+ * @access  Private (SAAS_OWNER/SAAS_ADMIN only)
+ */
+const deactivateUser = async (req, res) => {
+  try {
+    const { reason } = req.body;
+    const user = await User.findById(req.params.id).populate('tenant', 'organizationName');
+
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    if (user.isActive === false) {
+      return errorResponse(res, 400, 'User is already deactivated');
+    }
+
+    user.isActive = false;
+    user.deactivationReason = reason || 'Deactivated by SAAS Admin';
+    user.deactivatedAt = new Date();
+    user.deactivatedBy = req.user._id;
+
+    await user.save();
+
+    await logActivity(req, 'user.deactivated', 'User', user._id, {
+      reason,
+      userEmail: user.email,
+      tenant: user.tenant?.organizationName
+    });
+
+    successResponse(res, 200, 'User deactivated successfully', user);
+  } catch (error) {
+    console.error('Deactivate user error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    SAAS Admin - Reactivate a user
+ * @route   POST /api/users/:id/reactivate
+ * @access  Private (SAAS_OWNER/SAAS_ADMIN only)
+ */
+const reactivateUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).populate('tenant', 'organizationName');
+
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    if (user.isActive === true) {
+      return errorResponse(res, 400, 'User is already active');
+    }
+
+    user.isActive = true;
+    user.deactivationReason = null;
+    user.deactivatedAt = null;
+    user.deactivatedBy = null;
+    user.reactivatedAt = new Date();
+    user.reactivatedBy = req.user._id;
+
+    await user.save();
+
+    await logActivity(req, 'user.reactivated', 'User', user._id, {
+      userEmail: user.email,
+      tenant: user.tenant?.organizationName
+    });
+
+    successResponse(res, 200, 'User reactivated successfully', user);
+  } catch (error) {
+    console.error('Reactivate user error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    SAAS Admin - Permanently delete a user
+ * @route   DELETE /api/users/:id/permanent
+ * @access  Private (SAAS_OWNER/SAAS_ADMIN only)
+ */
+const permanentDeleteUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).populate('tenant', 'organizationName');
+
+    if (!user) {
+      return errorResponse(res, 404, 'User not found');
+    }
+
+    // Store info for logging before deletion
+    const userInfo = {
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      tenant: user.tenant?.organizationName,
+      userType: user.userType
+    };
+
+    await User.findByIdAndDelete(req.params.id);
+
+    await logActivity(req, 'user.permanently_deleted', 'User', req.params.id, userInfo);
+
+    successResponse(res, 200, 'User permanently deleted', { deletedUser: userInfo });
+  } catch (error) {
+    console.error('Permanent delete user error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Send OTP to tenant admin for user creation verification
+ * @route   POST /api/users/send-creation-otp
+ * @access  Private (Tenant Admin/Manager)
+ */
+const sendUserCreationOTP = async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const { sendMail } = require('../utils/emailService');
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+    const otpExpire = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+    // Save OTP to current user (tenant admin)
+    req.user.userCreationOTP = otpHash;
+    req.user.userCreationOTPExpire = otpExpire;
+    await req.user.save();
+
+    // Send OTP email
+    const html = `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;background:#f9fafb;border-radius:12px">
+        <h2 style="color:#0f172a;margin-bottom:8px">🔐 User Creation Verification</h2>
+        <p style="color:#64748b;margin-bottom:20px">Hi <strong>${req.user.firstName}</strong>,</p>
+        <p style="color:#64748b">A new team member is being added to your organization. Please verify this action with the OTP below:</p>
+        <div style="background:#fff;border:2px solid #4f46e5;border-radius:8px;padding:20px;text-align:center;margin:24px 0">
+          <div style="color:#64748b;font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Your OTP Code</div>
+          <div style="font-size:32px;font-weight:900;color:#4f46e5;letter-spacing:8px;font-family:monospace">${otp}</div>
+          <div style="color:#94a3b8;font-size:11px;margin-top:8px">Valid for 10 minutes</div>
+        </div>
+        <p style="color:#64748b;font-size:13px">If you didn't initiate this action, please ignore this email or contact support.</p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:20px">— Texora CRM Team</p>
+      </div>
+    `;
+
+    await sendMail({
+      to: req.user.email,
+      subject: '🔐 Verify Team Member Creation',
+      html,
+      fromNoreply: true
+    });
+
+    successResponse(res, 200, 'OTP sent to your email', { email: req.user.email });
+  } catch (error) {
+    console.error('Send user creation OTP error:', error);
+    errorResponse(res, 500, 'Failed to send OTP');
+  }
+};
+
+/**
+ * @desc    Verify OTP for user creation
+ * @route   POST /api/users/verify-creation-otp
+ * @access  Private (Tenant Admin/Manager)
+ */
+const verifyUserCreationOTP = async (req, res) => {
+  try {
+    const crypto = require('crypto');
+    const { otp } = req.body;
+
+    if (!otp) {
+      return errorResponse(res, 400, 'Please provide OTP');
+    }
+
+    const otpHash = crypto.createHash('sha256').update(otp).digest('hex');
+
+    // Check OTP
+    if (
+      !req.user.userCreationOTP ||
+      req.user.userCreationOTP !== otpHash ||
+      !req.user.userCreationOTPExpire ||
+      req.user.userCreationOTPExpire < Date.now()
+    ) {
+      return errorResponse(res, 400, 'Invalid or expired OTP');
+    }
+
+    // Clear OTP
+    req.user.userCreationOTP = undefined;
+    req.user.userCreationOTPExpire = undefined;
+    await req.user.save();
+
+    successResponse(res, 200, 'OTP verified successfully');
+  } catch (error) {
+    console.error('Verify user creation OTP error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getUsers,
   getUser,
@@ -787,5 +990,10 @@ module.exports = {
   deleteUser,
   assignRoles,
   assignGroups,
-  resetUserPassword
+  resetUserPassword,
+  deactivateUser,
+  reactivateUser,
+  permanentDeleteUser,
+  sendUserCreationOTP,
+  verifyUserCreationOTP
 };
