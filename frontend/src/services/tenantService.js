@@ -49,5 +49,10 @@ export const tenantService = {
   recoverTenant: async (id) => {
     const response = await api.post(`/tenants/${id}/recover`);
     return response.data.data || response.data;
+  },
+
+  bulkAssignManager: async (data) => {
+    const response = await api.post('/tenants/bulk-assign-manager', data);
+    return response.data.data || response.data;
   }
 };

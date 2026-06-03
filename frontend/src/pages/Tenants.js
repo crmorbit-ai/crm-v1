@@ -36,6 +36,7 @@ const Tenants = () => {
   const [checkedTenants, setCheckedTenants] = useState(new Set());
   const [bulkManagerId, setBulkManagerId] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [managerDropdown, setManagerDropdown] = useState(null); // 'header' when dropdown open
   const pageSize = 20;
   const { isMobile, isTablet } = useWindowSize();
 
@@ -81,12 +82,24 @@ const Tenants = () => {
   }, []);
 
   // Sync filter with URL params when navigating from another page
+  // Sync filter with URL params when navigating from another page
   useEffect(() => {
     const statusParam = searchParams.get('status');
     if (statusParam && statusParam !== filterStatus) {
       setFilterStatus(statusParam);
     }
   }, [searchParams]);
+
+  // Close manager dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (managerDropdown && !e.target.closest('button')) {
+        setManagerDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [managerDropdown]);
 
   const checkPinStatus = async () => {
     try {
@@ -764,36 +777,7 @@ const Tenants = () => {
       <div className="tSplitWrap" style={{display:'flex',flexDirection:isMobile?'column':'row',gap:12,minHeight:isMobile?'auto':400}}>
         {/* EXCEL TABLE SIDE */}
         <div className="tTableSide" style={{flex:(!isMobile&&selectedTenant&&isPinVerified)?'0 0 58%':'1',minWidth:0,display:'flex',flexDirection:'column',gap:0}}>
-          {/* Floating bulk-assign bar */}
-          {checkedTenants.size > 0 && !isManager && (
-            <div style={{background:'linear-gradient(135deg,#0f0c29,#1e1b4b)',borderRadius:'8px 8px 0 0',padding:'8px 12px',display:'flex',gap:8,alignItems:'center',flexWrap:'wrap',border:'1px solid rgba(99,102,241,0.4)',borderBottom:'none'}}>
-              <div style={{width:22,height:22,borderRadius:'50%',background:'#f59e0b',display:'flex',alignItems:'center',justifyContent:'center',fontSize:10,fontWeight:900,color:'#fff',flexShrink:0}}>{checkedTenants.size}</div>
-              <span style={{fontSize:12,fontWeight:700,color:'#fff'}}>tenant{checkedTenants.size!==1?'s':''} selected</span>
-              <span style={{fontSize:11,color:'rgba(255,255,255,0.4)'}}>→ Assign to manager:</span>
-              <select
-                value={bulkManagerId}
-                onChange={e=>setBulkManagerId(e.target.value)}
-                style={{flex:1,minWidth:160,padding:'5px 9px',border:'1px solid rgba(255,255,255,0.2)',borderRadius:6,fontSize:11,outline:'none',background:'rgba(255,255,255,0.1)',color:'#fff',fontWeight:600}}
-              >
-                <option value="" style={{color:'#374151'}}>— Select Manager —</option>
-                {managers.filter(m=>m.isActive).map(m=>(
-                  <option key={m._id} value={m._id} style={{color:'#374151'}}>{m.firstName} {m.lastName}</option>
-                ))}
-              </select>
-              <button
-                onClick={handleBulkAssign}
-                disabled={!bulkManagerId || assigningManager}
-                style={{background:bulkManagerId?'linear-gradient(135deg,#f59e0b,#f97316)':'rgba(255,255,255,0.1)',color:'#fff',border:'none',padding:'6px 14px',borderRadius:6,fontSize:11,fontWeight:700,cursor:bulkManagerId?'pointer':'not-allowed',whiteSpace:'nowrap',opacity:assigningManager?0.7:1}}
-              >
-                {assigningManager ? 'Assigning...' : '✅ Assign'}
-              </button>
-              <button
-                onClick={()=>{setCheckedTenants(new Set());setBulkManagerId('');}}
-                style={{background:'rgba(239,68,68,0.15)',color:'#fca5a5',border:'1px solid rgba(239,68,68,0.3)',padding:'5px 10px',borderRadius:6,fontSize:11,fontWeight:600,cursor:'pointer',whiteSpace:'nowrap'}}
-              >✕ Clear</button>
-              {managers.length===0&&<span style={{fontSize:10,color:'#fbbf24'}}>No managers yet — create one in SAAS Admins</span>}
-            </div>
-          )}
+          {/* Bulk assign bar removed - use Manager column dropdown instead */}
 
           {/* Toolbar */}
           <div style={{background:'#fff',borderRadius:checkedTenants.size>0&&!isManager?'0':'8px 8px 0 0',border:'1px solid #d1d5db',borderBottom:'none',padding:'8px 12px',display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
@@ -849,7 +833,114 @@ const Tenants = () => {
                     <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Plan</th>
                     <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Users</th>
                     <th className={`xTh${isMobile?' xHideM':''}`}>Created</th>
-                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Manager</th>
+                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center',position:'relative'}}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setManagerDropdown(managerDropdown === 'header' ? null : 'header');
+                        }}
+                        style={{
+                          background:'none',
+                          border:'none',
+                          color:'inherit',
+                          fontSize:'inherit',
+                          fontWeight:'inherit',
+                          cursor:'pointer',
+                          display:'inline-flex',
+                          alignItems:'center',
+                          gap:3,
+                          padding:0
+                        }}>
+                        Manager
+                        <span style={{fontSize:9}}>▾</span>
+                      </button>
+
+                      {managerDropdown === 'header' && (
+                        <div style={{
+                          position:'absolute',
+                          top:'calc(100% + 2px)',
+                          left:'50%',
+                          transform:'translateX(-50%)',
+                          background:'#fff',
+                          border:'1px solid #cbd5e1',
+                          borderRadius:6,
+                          boxShadow:'0 2px 8px rgba(0,0,0,0.12)',
+                          minWidth:180,
+                          maxHeight:200,
+                          overflowY:'auto',
+                          zIndex:9999
+                        }}>
+                          {managers.map(m => (
+                            <button
+                              key={m._id}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (checkedTenants.size === 0) {
+                                  alert('Please select tenants first using checkboxes');
+                                  return;
+                                }
+                                setAssigningManager(true);
+                                try {
+                                  await tenantService.bulkAssignManager({
+                                    tenantIds: Array.from(checkedTenants),
+                                    managerId: m._id
+                                  });
+                                  await loadTenants();
+                                  setCheckedTenants(new Set());
+                                  setManagerDropdown(null);
+                                  alert(`✅ Assigned ${m.firstName} to ${checkedTenants.size} tenant(s)`);
+                                } catch (err) {
+                                  alert(err.message || 'Failed to assign manager');
+                                } finally {
+                                  setAssigningManager(false);
+                                }
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}
+                              style={{
+                                width:'100%',
+                                padding:'8px 10px',
+                                border:'none',
+                                borderBottom:'1px solid #f1f5f9',
+                                background:'#fff',
+                                fontSize:11,
+                                color:'#334155',
+                                display:'flex',
+                                alignItems:'center',
+                                gap:6,
+                                whiteSpace:'nowrap',
+                                cursor:'pointer',
+                                textAlign:'left',
+                                transition:'background 0.15s'
+                              }}>
+                              <div style={{
+                                width:20,
+                                height:20,
+                                borderRadius:'50%',
+                                background:'linear-gradient(135deg,#6366f1,#8b5cf6)',
+                                color:'#fff',
+                                fontSize:8,
+                                fontWeight:700,
+                                display:'flex',
+                                alignItems:'center',
+                                justifyContent:'center',
+                                flexShrink:0
+                              }}>
+                                {m.firstName?.[0]}{m.lastName?.[0]}
+                              </div>
+                              <div style={{fontSize:10,fontWeight:600}}>
+                                {m.firstName} {m.lastName}
+                              </div>
+                            </button>
+                          ))}
+                          {managers.length === 0 && (
+                            <div style={{padding:'12px',textAlign:'center',color:'#94a3b8',fontSize:10}}>
+                              No managers
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </th>
                     <th className="xTh xPin" style={{textAlign:'center'}}>View</th>
                   </tr>
                 </thead>
