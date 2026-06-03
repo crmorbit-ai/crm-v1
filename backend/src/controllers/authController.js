@@ -106,8 +106,10 @@ const login = async (req, res) => {
       return errorResponse(res, 401, 'Your organization account is suspended');
     }
 
-    // Check password expiry (90-day policy)
+    // Check password expiry (90-day policy) - TEMPORARILY DISABLED
     // Skip: SAAS users, Google OAuth users (no password)
+    // TODO: Re-enable after fixing fluctuation issue
+    /*
     const shouldCheckPasswordExpiry =
       user.userType !== 'SAAS_OWNER' &&
       user.userType !== 'SAAS_ADMIN' &&
@@ -125,6 +127,7 @@ const login = async (req, res) => {
         });
       }
     }
+    */
 
     // ============================================
     // 🔐 SAAS ADMIN WHITELIST CHECK (same as protect middleware)
