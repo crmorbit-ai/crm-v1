@@ -8,9 +8,9 @@ const USER_CACHE_KEY = 'cached_user';
 const CACHE_EXPIRY_KEY = 'user_cache_expiry';
 const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-// Session timeout — 24 hours
-const SESSION_START_KEY = 'session_start';
-const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours in ms
+// Inactivity timeout — 1 hour
+const LAST_ACTIVITY_KEY = 'last_activity';
+const INACTIVITY_TIMEOUT = 60 * 60 * 1000; // 1 hour in ms
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
@@ -56,29 +56,55 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(CACHE_EXPIRY_KEY);
   };
 
+  // Update activity timestamp on user interaction
+  const updateActivity = () => {
+    if (token) {
+      sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    }
+  };
+
   useEffect(() => {
     if (token) {
-      // Check session expiry on load
-      const sessionStart = sessionStorage.getItem(SESSION_START_KEY);
-      if (sessionStart && Date.now() - parseInt(sessionStart) > SESSION_DURATION) {
+      // Check inactivity on load
+      const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+      if (lastActivity && Date.now() - parseInt(lastActivity) > INACTIVITY_TIMEOUT) {
         logout();
         return;
       }
+      // Set initial activity
+      updateActivity();
       loadUser();
     } else {
       setLoading(false);
     }
   }, [token]);
 
-  // Check session expiry every minute while app is open
+  // Track user activity (mouse, keyboard, touch)
+  useEffect(() => {
+    if (!token) return;
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => {
+      window.addEventListener(event, updateActivity);
+    });
+
+    return () => {
+      events.forEach(event => {
+        window.removeEventListener(event, updateActivity);
+      });
+    };
+  }, [token]);
+
+  // Check inactivity every minute
   useEffect(() => {
     if (!token) return;
     const interval = setInterval(() => {
-      const sessionStart = sessionStorage.getItem(SESSION_START_KEY);
-      if (sessionStart && Date.now() - parseInt(sessionStart) > SESSION_DURATION) {
+      const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
+      if (lastActivity && Date.now() - parseInt(lastActivity) > INACTIVITY_TIMEOUT) {
+        alert('Your session has expired due to inactivity. Please login again.');
         logout();
       }
-    }, 60 * 1000); // every 1 minute
+    }, 60 * 1000); // Check every 1 minute
     return () => clearInterval(interval);
   }, [token]);
 
@@ -103,7 +129,7 @@ export const AuthProvider = ({ children }) => {
     setToken(token);
     setUser(user);
     sessionStorage.setItem('token', token);
-    sessionStorage.setItem(SESSION_START_KEY, String(Date.now()));
+    sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     cacheUser(user); // Cache user for instant load
     return response.data;
   };
@@ -130,7 +156,7 @@ export const AuthProvider = ({ children }) => {
     setToken(token);
     setUser(user);
     sessionStorage.setItem('token', token);
-    sessionStorage.setItem(SESSION_START_KEY, String(Date.now()));
+    sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     return { token, user, requiresProfileCompletion };
   };
 
@@ -155,9 +181,9 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setToken(null);
     sessionStorage.removeItem('token');
-    sessionStorage.removeItem(SESSION_START_KEY);
+    sessionStorage.removeItem(LAST_ACTIVITY_KEY);
     localStorage.removeItem('token'); // Clean old localStorage tokens too
-    localStorage.removeItem(SESSION_START_KEY); // Clean old localStorage session
+    localStorage.removeItem('session_start'); // Clean old localStorage session
     clearUserCache();
   };
 
