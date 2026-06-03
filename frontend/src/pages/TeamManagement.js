@@ -536,7 +536,7 @@ const TeamManagement = () => {
         {/* tab pills */}
         <div className="xHeroTabs" style={{padding:'10px 20px 14px',position:'relative',zIndex:1,display:'flex',gap:6}}>
           {[{k:'users',l:'Members',c:users.length},{k:'roles',l:'Roles',c:roles.length},{k:'groups',l:'Groups',c:groups.length},{k:'reports',l:'📊 Reports',c:''}].map(t=>(
-            <button key={t.k} className={`xTabBtn${activeTab===t.k?' xActive':''}`} onClick={()=>setActiveTab(t.k)}
+            <button key={t.k} className={`xTabBtn${activeTab===t.k?' xActive':''}`} onClick={()=>{closePanel();setActiveTab(t.k);}}
               style={{padding:'7px 16px',borderRadius:9,border:'1px solid rgba(255,255,255,0.13)',background:'transparent',color:'rgba(255,255,255,0.55)',fontSize:12,fontWeight:700,display:'flex',alignItems:'center',gap:7}}>
               {t.l}
               <span style={{background:'rgba(255,255,255,0.12)',color:'rgba(255,255,255,0.8)',padding:'1px 7px',borderRadius:8,fontSize:10,fontWeight:800}}>{t.c}</span>
@@ -554,7 +554,7 @@ const TeamManagement = () => {
           {k:'roles',  ico:'🛡️', label:'Custom Roles', val:roles.length,  bg:'linear-gradient(135deg,#ecfeff 0%,#cffafe 100%)', numColor:'#0e7490', labelColor:'#06b6d4', iconBg:'linear-gradient(135deg,#22d3ee,#06b6d4)', border:'#a5f3fc'},
           {k:'groups', ico:'📂', label:'User Groups',  val:groups.length, bg:'linear-gradient(135deg,#fdf4ff 0%,#fae8ff 100%)', numColor:'#7e22ce', labelColor:'#a855f7', iconBg:'linear-gradient(135deg,#c084fc,#a855f7)', border:'#e9d5ff'},
         ].map(s=>(
-          <div key={s.k} className={`xStat${activeTab===s.k?' xActive':''}`} onClick={()=>setActiveTab(s.k)}
+          <div key={s.k} className={`xStat${activeTab===s.k?' xActive':''}`} onClick={()=>{closePanel();setActiveTab(s.k);}}
             style={{background:s.bg,border:`1.5px solid ${activeTab===s.k?s.border:'transparent'}`,borderRadius:14,padding:'14px 16px',position:'relative',overflow:'hidden',boxShadow:activeTab===s.k?'0 4px 18px rgba(0,0,0,0.08)':'0 1px 4px rgba(0,0,0,0.04)',transition:'all 0.2s'}}>
             <div style={{display:'flex',alignItems:'center',gap:12}}>
               <div style={{width:40,height:40,borderRadius:11,background:s.iconBg,display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,flexShrink:0,boxShadow:'0 3px 8px rgba(0,0,0,0.12)'}}>{s.ico}</div>

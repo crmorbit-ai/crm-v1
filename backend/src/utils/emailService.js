@@ -88,7 +88,7 @@ const sendMail = async (opts) => {
 const createTransporter = () => ({ verify: async () => {}, sendMail });
 
 // ─── Base branded template ─────────────────────────────────────────────────────
-const baseTemplate = ({ preheader = '', headerColor = '#0f1e2e', accentColor = '#1EB980', body }) => `
+const baseTemplate = ({ preheader = '', headerColor = '#1a365d', accentColor = '#2563eb', body }) => `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -98,69 +98,87 @@ const baseTemplate = ({ preheader = '', headerColor = '#0f1e2e', accentColor = '
   <title>Unified CRM</title>
   <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
   <style>
-    body,html{margin:0;padding:0;background:#f0f4f8;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;}
+    body,html{margin:0;padding:0;background:#f5f7fa;font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
     *{box-sizing:border-box;}
-    a{color:${accentColor};}
-    img{border:0;display:block;}
-    .email-body{background:#f0f4f8;padding:40px 16px;}
-    .email-card{max-width:600px;margin:0 auto;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.10);}
-    .email-header{background:${headerColor};padding:36px 40px 32px;text-align:center;}
-    .email-header-logo{display:inline-flex;align-items:center;gap:10px;margin-bottom:0;}
-    .email-header-dot{width:10px;height:10px;border-radius:50%;background:${accentColor};display:inline-block;}
-    .email-header-brand{font-size:22px;font-weight:800;color:#ffffff;letter-spacing:-0.5px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;}
-    .email-header-brand span{color:${accentColor};}
-    .email-header-divider{width:40px;height:2px;background:${accentColor};border-radius:2px;margin:16px auto 0;opacity:0.7;}
-    .email-content{padding:40px;}
-    .email-footer{background:#f8fafc;border-top:1px solid #e8edf2;padding:28px 40px;text-align:center;}
-    .email-footer p{margin:4px 0;font-size:12px;color:#94a3b8;line-height:1.6;}
-    .email-footer a{color:#94a3b8;text-decoration:underline;}
-    .btn{display:inline-block;padding:14px 32px;background:${accentColor};color:#ffffff !important;text-decoration:none;border-radius:8px;font-weight:700;font-size:15px;letter-spacing:0.2px;}
-    .btn-outline{display:inline-block;padding:13px 30px;background:transparent;color:${accentColor} !important;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;border:2px solid ${accentColor};}
-    .info-card{background:#f8fafc;border-radius:10px;border:1px solid #e8edf2;padding:20px 24px;margin:20px 0;}
-    .info-row{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid #e8edf2;font-size:14px;}
-    .info-row:last-child{border-bottom:none;padding-bottom:0;}
-    .info-label{color:#6b7280;font-weight:500;}
-    .info-value{color:#111827;font-weight:600;text-align:right;}
-    .alert-box{border-radius:8px;padding:16px 20px;margin:20px 0;font-size:14px;line-height:1.6;}
-    .alert-green{background:#f0fdf4;border-left:4px solid ${accentColor};color:#065f46;}
-    .alert-yellow{background:#fffbeb;border-left:4px solid #f59e0b;color:#92400e;}
-    .alert-red{background:#fef2f2;border-left:4px solid #ef4444;color:#991b1b;}
-    .otp-block{background:${headerColor};border-radius:12px;padding:28px;text-align:center;margin:24px 0;}
-    .otp-code{font-size:46px;font-weight:800;letter-spacing:14px;color:#ffffff;font-family:'Courier New',monospace;}
-    .divider{height:1px;background:#e8edf2;margin:24px 0;}
-    h1,h2,h3{margin:0 0 8px;color:#111827;}
-    p{margin:0 0 16px;color:#374151;font-size:15px;line-height:1.7;}
+    a{color:${accentColor};text-decoration:none;}
+    img{border:0;display:block;outline:none;text-decoration:none;}
+    table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0;}
+    .email-wrapper{width:100%;background:#f5f7fa;padding:40px 20px;}
+    .email-container{max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #e2e8f0;}
+    .email-header{background:linear-gradient(135deg,#1e3a8a 0%,#1e40af 100%);padding:32px 40px;text-align:center;border-bottom:3px solid #2563eb;}
+    .email-logo-container{display:inline-block;background:#ffffff;border-radius:6px;padding:12px 24px;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+    .email-logo-text{font-size:24px;font-weight:700;color:#1a365d;letter-spacing:-0.5px;margin:0;}
+    .email-logo-text span{color:#2563eb;}
+    .email-body{padding:48px 40px;}
+    .email-footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:32px 40px;text-align:center;}
+    .email-footer-company{font-size:14px;font-weight:600;color:#334155;margin:0 0 12px 0;}
+    .email-footer-links{font-size:13px;color:#64748b;margin:8px 0;}
+    .email-footer-links a{color:#64748b;text-decoration:none;margin:0 8px;}
+    .email-footer-links a:hover{color:#2563eb;}
+    .email-footer-copyright{font-size:12px;color:#94a3b8;margin:16px 0 0 0;line-height:1.6;}
+    .btn-primary{display:inline-block;padding:14px 28px;background:#2563eb;color:#ffffff !important;text-decoration:none;border-radius:6px;font-weight:600;font-size:15px;text-align:center;transition:background 0.2s;}
+    .btn-primary:hover{background:#1d4ed8;}
+    .btn-secondary{display:inline-block;padding:12px 24px;background:#f1f5f9;color:#334155 !important;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;border:1px solid #e2e8f0;}
+    .info-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:24px;margin:24px 0;}
+    .info-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e2e8f0;font-size:14px;}
+    .info-row:last-child{border-bottom:none;}
+    .info-label{color:#64748b;font-weight:500;}
+    .info-value{color:#1e293b;font-weight:600;}
+    .alert-info{background:#eff6ff;border-left:4px solid #2563eb;border-radius:6px;padding:16px 20px;margin:24px 0;font-size:14px;color:#1e40af;}
+    .alert-success{background:#f0fdf4;border-left:4px solid #10b981;border-radius:6px;padding:16px 20px;margin:24px 0;font-size:14px;color:#065f46;}
+    .alert-warning{background:#fffbeb;border-left:4px solid #f59e0b;border-radius:6px;padding:16px 20px;margin:24px 0;font-size:14px;color:#92400e;}
+    .alert-danger{background:#fef2f2;border-left:4px solid #ef4444;border-radius:6px;padding:16px 20px;margin:24px 0;font-size:14px;color:#991b1b;}
+    .otp-container{background:#f8fafc;border:3px solid #2563eb;border-radius:8px;padding:32px 24px;text-align:center;margin:28px 0;}
+    .otp-label{font-size:11px;font-weight:600;color:#64748b;letter-spacing:2px;text-transform:uppercase;margin:0 0 16px 0;}
+    .otp-code{font-size:48px;font-weight:800;letter-spacing:16px;color:#1e293b;font-family:'Courier New',Courier,monospace;margin:0;background:#ffffff;padding:16px 24px;border-radius:6px;display:inline-block;box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+    .divider{height:1px;background:#e2e8f0;margin:32px 0;}
+    h1{font-size:28px;font-weight:700;color:#1e293b;margin:0 0 16px 0;line-height:1.3;}
+    h2{font-size:22px;font-weight:600;color:#1e293b;margin:0 0 12px 0;line-height:1.4;}
+    h3{font-size:18px;font-weight:600;color:#334155;margin:0 0 8px 0;}
+    p{margin:0 0 16px;color:#475569;font-size:15px;line-height:1.7;}
     p:last-child{margin-bottom:0;}
-    @media(max-width:600px){
-      .email-content{padding:28px 24px;}
-      .email-header{padding:28px 24px;}
-      .email-footer{padding:20px 24px;}
-      .info-row{flex-direction:column;align-items:flex-start;gap:4px;}
+    strong{color:#1e293b;font-weight:600;}
+    .text-muted{color:#64748b;font-size:14px;}
+    .text-center{text-align:center;}
+    @media only screen and (max-width:600px){
+      .email-wrapper{padding:20px 12px;}
+      .email-header{padding:24px 20px;}
+      .email-body{padding:32px 24px;}
+      .email-footer{padding:24px 20px;}
+      .otp-code{font-size:36px;letter-spacing:8px;}
+      .info-row{flex-direction:column;gap:6px;}
       .info-value{text-align:left;}
+      h1{font-size:24px;}
+      h2{font-size:20px;}
     }
   </style>
 </head>
 <body>
-  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;color:#f0f4f8;">${preheader}</div>` : ''}
-  <div class="email-body">
-    <div class="email-card">
+  ${preheader ? `<div style="display:none;max-height:0;overflow:hidden;font-size:1px;line-height:1px;color:#f5f7fa;">${preheader}</div>` : ''}
+  <div class="email-wrapper">
+    <div class="email-container">
       <div class="email-header">
-        <div style="display:inline-block;background:#ffffff;border-radius:10px;padding:10px 20px;margin-bottom:16px;min-width:160px;text-align:center;">
+        <div class="email-logo-container">
           ${LOGO_CDN_URL
-            ? `<img src="${LOGO_CDN_URL}" alt="Unified CRM" width="150" style="display:block;width:150px;height:auto;border:0;margin:0 auto;" />`
-            : `<span style="font-size:20px;font-weight:800;color:#0f1e2e;font-family:Arial,sans-serif;letter-spacing:-0.5px;">Unified<span style="color:#1EB980;"> CRM</span></span>`
+            ? `<img src="${LOGO_CDN_URL}" alt="Unified CRM" width="160" style="display:block;width:160px;height:auto;margin:0 auto;" />`
+            : `<h1 class="email-logo-text">Unified<span> CRM</span></h1>`
           }
         </div>
-        <div class="email-header-divider"></div>
       </div>
-      <div class="email-content">
+      <div class="email-body">
         ${body}
       </div>
       <div class="email-footer">
-        <p><strong style="color:#374151;">Unified CRM</strong> &mdash; powered by Texora</p>
-        <p>no-reply@texora.ai &nbsp;&bull;&nbsp; <a href="${FRONTEND_URL}/help">Support</a> &nbsp;&bull;&nbsp; <a href="${FRONTEND_URL}">Website</a></p>
-        <p style="margin-top:12px;">&copy; ${YEAR} Texora Technologies. All rights reserved.</p>
-        <p>This is an automated email &mdash; please do not reply directly to this message.</p>
+        <p class="email-footer-company">Unified CRM — Powered by Texora Technologies</p>
+        <p class="email-footer-links">
+          <a href="${FRONTEND_URL}">Dashboard</a> |
+          <a href="${FRONTEND_URL}/help">Help Center</a> |
+          <a href="mailto:support@texora.ai">Contact Support</a>
+        </p>
+        <p class="email-footer-copyright">
+          &copy; ${YEAR} Texora Technologies Pvt Ltd. All rights reserved.<br/>
+          This is an automated message. Please do not reply to this email.
+        </p>
       </div>
     </div>
   </div>
@@ -180,9 +198,9 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
         <p>Use the OTP below to reset your Unified CRM password. This code is valid for <strong>3 minutes</strong>.</p>
         <div class="otp-block">
           <p style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">Your One-Time Password</p>
-          <div class="otp-code">${otp}</div>
+          <p class="otp-code">${otp}</div>
         </div>
-        <div class="alert-yellow">
+        <div class="alert-warning">
           <strong>Security notice:</strong> If you did not request a password reset, you can safely ignore this email. Your password will not change.
         </div>
       `
@@ -209,11 +227,11 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
           <p style="color:#6b7280;font-size:14px;margin-bottom:24px;">Almost there! Just one step to go.</p>
           <p>Hello <strong>${userName || 'there'}</strong>,</p>
           <p>Thanks for signing up for Unified CRM. Enter the code below to verify your email address and complete your registration.</p>
-          <div class="otp-block">
-            <p style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">Email Verification Code</p>
-            <div class="otp-code">${otp}</div>
+          <div class="otp-container">
+            <p class="otp-label">Email Verification Code</p>
+            <p class="otp-code">${otp}</div>
           </div>
-          <div class="alert-green">
+          <div class="alert-success">
             <strong>Code expires in 3 minutes.</strong> If you didn't create an account, you can safely ignore this email.
           </div>
           <p style="color:#6b7280;font-size:13px;">Once verified, you'll complete your profile and start using all CRM features.</p>
@@ -271,9 +289,9 @@ const sendWelcomeEmail = async (email, userName, organizationName) => {
             </div>
           </div>
           <div style="text-align:center;margin:32px 0;">
-            <a href="${FRONTEND_URL}/dashboard" class="btn">Go to Dashboard &rarr;</a>
+            <a href="${FRONTEND_URL}/dashboard" class="btn-primary">Go to Dashboard &rarr;</a>
           </div>
-          <div class="alert-green">
+          <div class="alert-success">
             <strong>Quick tip:</strong> Start by inviting your team members from Settings &rarr; Users. Need help? Visit our <a href="${FRONTEND_URL}/help" style="color:#065f46;">support center</a>.
           </div>
         `
@@ -318,9 +336,9 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
             <div class="info-row"><span class="info-label">Role</span><span class="info-value">${roles}</span></div>
           </div>
           <div style="text-align:center;margin:28px 0;">
-            <a href="${FRONTEND_URL}/login" class="btn">Sign In Now &rarr;</a>
+            <a href="${FRONTEND_URL}/login" class="btn-primary">Sign In Now &rarr;</a>
           </div>
-          <div class="alert-yellow">
+          <div class="alert-warning">
             <strong>Security:</strong> Please change your password immediately after your first login from Profile &rarr; Change Password.
           </div>
         `
@@ -363,9 +381,9 @@ const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, lead
             ${rows.map(([l,v]) => `<div class="info-row"><span class="info-label">${l}</span><span class="info-value">${v}</span></div>`).join('')}
           </div>
           <div style="text-align:center;margin:28px 0;">
-            <a href="${FRONTEND_URL}/leads/${leadDetails.id}" class="btn">View Lead &rarr;</a>
+            <a href="${FRONTEND_URL}/leads/${leadDetails.id}" class="btn-primary">View Lead &rarr;</a>
           </div>
-          <div class="alert-green">
+          <div class="alert-success">
             <strong>Next step:</strong> Review the lead, log a call or send an email, and update the status from your dashboard.
           </div>
         `
@@ -422,7 +440,7 @@ const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName, org
           </div>
           ${meeting.meetingLink ? `
           <div style="text-align:center;margin:28px 0;">
-            <a href="${meeting.meetingLink}" class="btn">Join Meeting &rarr;</a>
+            <a href="${meeting.meetingLink}" class="btn-primary">Join Meeting &rarr;</a>
           </div>
           <p style="text-align:center;color:#9ca3af;font-size:12px;word-break:break-all;">Or copy link: ${meeting.meetingLink}</p>
           ` : ''}
@@ -470,7 +488,7 @@ const sendMeetingReminder = async (meeting, attendeeEmails) => {
           </div>
           ${meeting.meetingLink ? `
           <div style="text-align:center;margin:28px 0;">
-            <a href="${meeting.meetingLink}" class="btn" style="background:#f59e0b;">Join Meeting &rarr;</a>
+            <a href="${meeting.meetingLink}" class="btn-primary" style="background:#f59e0b;">Join Meeting &rarr;</a>
           </div>
           ` : ''}
         `
@@ -506,7 +524,7 @@ const sendMeetingCancellation = async (meeting, attendeeEmails, reason = '') => 
             <div class="info-row"><span class="info-label">Status</span><span class="info-value" style="color:#ef4444;font-weight:700;">Cancelled</span></div>
           </div>
           ${reason ? `
-          <div class="alert-red">
+          <div class="alert-danger">
             <strong>Cancellation reason:</strong> ${reason}
           </div>
           ` : ''}
@@ -568,10 +586,10 @@ const sendPaymentSuccessEmail = async ({ email, userName, orgName, planName, amo
           <div class="info-row" style="border-top:2px solid #e8edf2;padding-top:16px;margin-top:8px;">
             <span class="info-label" style="font-size:16px;font-weight:700;color:#111827;">Amount Paid</span>
             <span class="info-value" style="font-size:20px;color:#1EB980;">₹${Number(amount||0).toLocaleString('en-IN')}</span>
-          </div>
+          </p>
         </div>
         <div style="text-align:center;margin:28px 0;">
-          <a href="${FRONTEND_URL}/subscription" class="btn">View Subscription &rarr;</a>
+          <a href="${FRONTEND_URL}/subscription" class="btn-primary">View Subscription &rarr;</a>
         </div>
         <p style="color:#6b7280;font-size:13px;">You can download your invoice from the <strong>Subscription &amp; Billing</strong> section in your dashboard.</p>
       `
@@ -603,7 +621,7 @@ const sendDeletionRequestNotification = async (saasAdminEmail, tenant, reason) =
         ${reason ? `<div class="info-row"><span class="info-label">Reason</span><span class="info-value">${reason}</span></div>` : ''}
       </div>
       <div style="text-align:center;margin:28px 0;">
-        <a href="${FRONTEND_URL}/saas/tenants" class="btn" style="background:#ef4444;">View in Admin Dashboard &rarr;</a>
+        <a href="${FRONTEND_URL}/saas/tenants" class="btn-primary" style="background:#ef4444;">View in Admin Dashboard &rarr;</a>
       </div>
       <p style="color:#6b7280;font-size:13px;">Please review and contact the organization admin before approving permanent deletion.</p>
     `
@@ -696,7 +714,7 @@ const sendAccountRecoveredEmail = async (tenantEmail, orgName, firstName) => {
         All leads, contacts, accounts, and team members have been restored. You can log in right now.
       </div>
       <div style="text-align:center;margin:28px 0;">
-        <a href="${FRONTEND_URL}/login" class="btn">Login to Your Account &rarr;</a>
+        <a href="${FRONTEND_URL}/login" class="btn-primary">Login to Your Account &rarr;</a>
       </div>
       <p style="color:#6b7280;font-size:13px;">Questions? Contact us at <a href="mailto:${process.env.SMTP_USER}">${process.env.SMTP_USER}</a>.</p>
     `
@@ -710,20 +728,20 @@ const sendPasswordExpiryWarning = async (userEmail, userName, daysRemaining) => 
   const html = baseTemplate({
     preheader: `Your password expires in ${daysRemaining} days. Change it now to keep your account secure.`,
     body: `
-      <h2 style="font-size:22px;margin-bottom:4px;">⏰ Password Expiry Warning</h2>
+      <h2 style="font-size:22px;margin-bottom:4px;">Password Expiry Warning</h2>
       <p>Hi <strong>${userName}</strong>,</p>
       <p>Your password will expire in <strong style="color:#dc2626;font-size:18px;">${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}</strong>.</p>
       <div class="alert-yellow">
-        <strong>🔐 Security Policy:</strong> Passwords must be changed every 90 days to keep your account secure.
+        <strong>Security Policy:</strong> Passwords must be changed every 90 days to keep your account secure.
       </div>
       <p>After expiry, you'll be required to change your password before accessing your account.</p>
       <div style="text-align:center;margin:28px 0;">
-        <a href="${FRONTEND_URL}/security" class="btn">Change Password Now &rarr;</a>
+        <a href="${FRONTEND_URL}/security" class="btn-primary">Change Password Now &rarr;</a>
       </div>
       <p style="color:#6b7280;font-size:13px;">Need help? Contact support at <a href="mailto:${process.env.SMTP_USER}">${process.env.SMTP_USER}</a>.</p>
     `
   });
-  await sendMail({ to: userEmail, subject: `🔐 Password Expires in ${daysRemaining} Days`, html, fromNoreply: true });
+  await sendMail({ to: userEmail, subject: `Password Expires in ${daysRemaining} Days - Unified CRM`, html, fromNoreply: true });
   return { success: true };
 };
 
@@ -732,19 +750,19 @@ const sendPasswordExpiredEmail = async (userEmail, userName) => {
   const html = baseTemplate({
     preheader: 'Your password has expired. Reset it now to access your account.',
     body: `
-      <h2 style="font-size:22px;margin-bottom:4px;">🔒 Password Expired</h2>
+      <h2 style="font-size:22px;margin-bottom:4px;">Password Expired</h2>
       <p>Hi <strong>${userName}</strong>,</p>
       <p>Your password has expired as per our 90-day security policy.</p>
       <div class="alert-red">
         You must reset your password before you can log in again.
       </div>
       <div style="text-align:center;margin:28px 0;">
-        <a href="${FRONTEND_URL}/forgot-password" class="btn">Reset Password Now &rarr;</a>
+        <a href="${FRONTEND_URL}/forgot-password" class="btn-primary">Reset Password Now &rarr;</a>
       </div>
       <p style="color:#6b7280;font-size:13px;">This is a security measure to protect your account. Thank you for understanding.</p>
     `
   });
-  await sendMail({ to: userEmail, subject: '🔒 Password Expired — Action Required', html, fromNoreply: true });
+  await sendMail({ to: userEmail, subject: 'Password Expired - Action Required - Unified CRM', html, fromNoreply: true });
   return { success: true };
 };
 

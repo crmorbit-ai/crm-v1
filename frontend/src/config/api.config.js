@@ -6,7 +6,7 @@ export const API_URL = `${API_BASE_URL}/api`;
 
 // Helper function to get headers with auth token
 export const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token'); // Support both (migration)
   return {
     'Content-Type': 'application/json',
     ...(token && { Authorization: `Bearer ${token}` })
@@ -26,6 +26,7 @@ export const apiFetch = async (endpoint, options = {}) => {
   });
 
   if (response.status === 401) {
+    sessionStorage.removeItem('token');
     localStorage.removeItem('token');
     window.location.href = '/login';
     throw new Error('Unauthorized');

@@ -24,8 +24,8 @@ export const AuthProvider = ({ children }) => {
   // Try to get cached user for instant display
   const getCachedUser = () => {
     try {
-      const cached = localStorage.getItem(USER_CACHE_KEY);
-      const expiry = localStorage.getItem(CACHE_EXPIRY_KEY);
+      const cached = sessionStorage.getItem(USER_CACHE_KEY);
+      const expiry = sessionStorage.getItem(CACHE_EXPIRY_KEY);
       if (cached && expiry && Date.now() < parseInt(expiry)) {
         return JSON.parse(cached);
       }
@@ -36,28 +36,30 @@ export const AuthProvider = ({ children }) => {
   };
 
   const [user, setUser] = useState(getCachedUser());
-  const [loading, setLoading] = useState(!getCachedUser() && !!localStorage.getItem('token'));
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [loading, setLoading] = useState(!getCachedUser() && !!sessionStorage.getItem('token'));
+  const [token, setToken] = useState(sessionStorage.getItem('token'));
 
   // Cache user data
   const cacheUser = (userData) => {
     try {
-      localStorage.setItem(USER_CACHE_KEY, JSON.stringify(userData));
-      localStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + CACHE_DURATION));
+      sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(userData));
+      sessionStorage.setItem(CACHE_EXPIRY_KEY, String(Date.now() + CACHE_DURATION));
     } catch (e) {
       console.error('Cache write error:', e);
     }
   };
 
   const clearUserCache = () => {
-    localStorage.removeItem(USER_CACHE_KEY);
+    sessionStorage.removeItem(USER_CACHE_KEY);
+    sessionStorage.removeItem(CACHE_EXPIRY_KEY);
+    localStorage.removeItem(USER_CACHE_KEY); // Clean old cache
     localStorage.removeItem(CACHE_EXPIRY_KEY);
   };
 
   useEffect(() => {
     if (token) {
       // Check session expiry on load
-      const sessionStart = localStorage.getItem(SESSION_START_KEY);
+      const sessionStart = sessionStorage.getItem(SESSION_START_KEY);
       if (sessionStart && Date.now() - parseInt(sessionStart) > SESSION_DURATION) {
         logout();
         return;
@@ -72,7 +74,7 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     if (!token) return;
     const interval = setInterval(() => {
-      const sessionStart = localStorage.getItem(SESSION_START_KEY);
+      const sessionStart = sessionStorage.getItem(SESSION_START_KEY);
       if (sessionStart && Date.now() - parseInt(sessionStart) > SESSION_DURATION) {
         logout();
       }
@@ -100,8 +102,8 @@ export const AuthProvider = ({ children }) => {
     const { token, user } = response.data;
     setToken(token);
     setUser(user);
-    localStorage.setItem('token', token);
-    localStorage.setItem(SESSION_START_KEY, String(Date.now()));
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem(SESSION_START_KEY, String(Date.now()));
     cacheUser(user); // Cache user for instant load
     return response.data;
   };
@@ -111,7 +113,7 @@ export const AuthProvider = ({ children }) => {
     const { token, user } = response.data;
     setToken(token);
     setUser(user);
-    localStorage.setItem('token', token);
+    sessionStorage.setItem('token', token);
     return response.data;
   };
 
@@ -127,8 +129,8 @@ export const AuthProvider = ({ children }) => {
     const { token, user, requiresProfileCompletion } = response.data;
     setToken(token);
     setUser(user);
-    localStorage.setItem('token', token);
-    localStorage.setItem(SESSION_START_KEY, String(Date.now()));
+    sessionStorage.setItem('token', token);
+    sessionStorage.setItem(SESSION_START_KEY, String(Date.now()));
     return { token, user, requiresProfileCompletion };
   };
 
@@ -152,8 +154,10 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     setToken(null);
-    localStorage.removeItem('token');
-    localStorage.removeItem(SESSION_START_KEY);
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem(SESSION_START_KEY);
+    localStorage.removeItem('token'); // Clean old localStorage tokens too
+    localStorage.removeItem(SESSION_START_KEY); // Clean old localStorage session
     clearUserCache();
   };
 
