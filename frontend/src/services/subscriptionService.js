@@ -4,7 +4,7 @@ import { API_URL as BASE_API_URL } from '../config/api.config';
 const API_URL = `${BASE_API_URL}/subscriptions`;
 
 const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
   return {
     headers: {
       'Authorization': `Bearer ${token}`,

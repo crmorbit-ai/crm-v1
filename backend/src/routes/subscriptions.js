@@ -32,14 +32,14 @@ const requireSaasAccess = (req, res, next) => {
 // Public routes
 router.get('/plans', getAllPlans);
 
-// Tenant routes (protected with permission check)
-router.get('/current', protect, requirePermission('subscription_management', 'read'), getCurrentSubscription);
-router.post('/upgrade', protect, requirePermission('subscription_management', 'manage'), upgradePlan);
-router.post('/create-order', protect, requirePermission('subscription_management', 'manage'), createPaymentOrder);
-router.post('/verify-payment', protect, requirePermission('subscription_management', 'manage'), verifySubscriptionPayment);
-router.post('/cancel', protect, requirePermission('subscription_management', 'manage'), cancelSubscription);
-router.get('/payment-history', protect, requirePermission('subscription_management', 'read'), getPaymentHistory);
-router.get('/receipt/:paymentId', protect, requirePermission('subscription_management', 'read'), downloadReceipt);
+// Tenant routes (protected - all tenant users can view/manage their subscription)
+router.get('/current', protect, getCurrentSubscription);
+router.post('/upgrade', protect, upgradePlan);
+router.post('/create-order', protect, createPaymentOrder);
+router.post('/verify-payment', protect, verifySubscriptionPayment);
+router.post('/cancel', protect, cancelSubscription);
+router.get('/payment-history', protect, getPaymentHistory);
+router.get('/receipt/:paymentId', protect, downloadReceipt);
 router.post('/refund', protect, requireSaasAccess, refundPayment);
 
 // SAAS Admin routes

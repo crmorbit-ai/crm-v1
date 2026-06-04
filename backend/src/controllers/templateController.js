@@ -26,6 +26,26 @@ const createTemplate = async (req, res) => {
     const { name, description, purpose, module, icon, color, defaultValues, dueDateOffset } = req.body;
     if (!name || !module) return errorResponse(res, 400, 'Name and module are required');
 
+    // Validate template name
+    const trimmedName = name.trim();
+
+    // Length validation
+    if (trimmedName.length > 75) {
+      return errorResponse(res, 400, 'Template name must not exceed 75 characters');
+    }
+
+    if (trimmedName.length < 3) {
+      return errorResponse(res, 400, 'Template name must be at least 3 characters');
+    }
+
+    // Content quality validation - at least 50% alphanumeric
+    const alphanumericCount = (trimmedName.match(/[a-zA-Z0-9]/g) || []).length;
+    const alphanumericRatio = alphanumericCount / trimmedName.length;
+
+    if (alphanumericRatio < 0.5) {
+      return errorResponse(res, 400, 'Template name must contain meaningful text, not just symbols');
+    }
+
     const template = await Template.create({
       tenant: req.user.tenant,
       name, description, purpose, module,
@@ -50,7 +70,32 @@ const updateTemplate = async (req, res) => {
     if (!template) return errorResponse(res, 404, 'Template not found');
 
     const { name, description, purpose, icon, color, defaultValues, dueDateOffset, isActive } = req.body;
-    if (name !== undefined) template.name = name;
+
+    // Validate name if being updated
+    if (name !== undefined) {
+      const trimmedName = name.trim();
+
+      // Length validation
+      if (trimmedName.length > 75) {
+        return errorResponse(res, 400, 'Template name must not exceed 75 characters');
+      }
+
+      if (trimmedName.length < 3) {
+        return errorResponse(res, 400, 'Template name must be at least 3 characters');
+      }
+
+      // Content quality validation - at least 50% alphanumeric
+      const alphanumericCount = (trimmedName.match(/[a-zA-Z0-9]/g) || []).length;
+      const alphanumericRatio = alphanumericCount / trimmedName.length;
+
+      if (alphanumericRatio < 0.5) {
+        return errorResponse(res, 400, 'Template name must contain meaningful text, not just symbols');
+      }
+
+      template.name = trimmedName;
+    } else if (name === undefined) {
+      // If name not in update, keep existing (no change needed)
+    }
     if (description !== undefined) template.description = description;
     if (purpose !== undefined) template.purpose = purpose;
     if (icon !== undefined) template.icon = icon;

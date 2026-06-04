@@ -236,17 +236,97 @@ export default function EmailTemplates() {
             <div style={{padding:16,display:'flex',flexDirection:'column',gap:14}}>
 
               <div>
-                <label style={lbl}>Template Name *</label>
-                <input value={form.name} onChange={e=>setForm(p=>({...p,name:e.target.value}))}
+                <label style={{...lbl, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <span>Template Name *</span>
+                  <span style={{fontSize:11, fontWeight:400, color: form.name.length > 75 ? '#dc2626' : '#94a3b8'}}>
+                    {form.name.length}/75
+                  </span>
+                </label>
+                <input
+                  value={form.name}
+                  onChange={e => {
+                    const val = e.target.value;
+                    // Character limit
+                    if (val.length > 75) return;
+                    setForm(p=>({...p,name:val}));
+                  }}
+                  onBlur={e => {
+                    const val = e.target.value.trim();
+                    // Validation on blur
+                    if (val.length > 0 && val.length < 3) {
+                      alert('⚠️ Template name must be at least 3 characters');
+                      return;
+                    }
+                    // Check if it's mostly symbols (less than 50% alphanumeric)
+                    const alphanumericCount = (val.match(/[a-zA-Z0-9]/g) || []).length;
+                    const alphanumericRatio = alphanumericCount / val.length;
+                    if (val.length > 0 && alphanumericRatio < 0.5) {
+                      alert('⚠️ Template name should contain meaningful text, not just symbols');
+                      setForm(p=>({...p,name:''}));
+                      return;
+                    }
+                    // Sanitize: trim
+                    setForm(p=>({...p,name:val}));
+                  }}
                   placeholder="e.g. Post-Demo Follow-up"
-                  style={inp}/>
+                  maxLength={75}
+                  style={{
+                    ...inp,
+                    borderColor: form.name.length > 75 ? '#dc2626' : (form.name.length > 0 && form.name.length < 3 ? '#f59e0b' : '#e2e8f0')
+                  }}
+                />
+                {form.name.length > 0 && form.name.length < 3 && (
+                  <div style={{fontSize:11, color:'#f59e0b', marginTop:4}}>
+                    ⚠️ Too short - add {3 - form.name.length} more characters
+                  </div>
+                )}
               </div>
 
               <div>
-                <label style={lbl}>Email Subject *</label>
-                <input value={form.subject} onChange={e=>setForm(p=>({...p,subject:e.target.value}))}
+                <label style={{...lbl, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <span>Email Subject *</span>
+                  <span style={{fontSize:11, fontWeight:400, color: form.subject.length > 150 ? '#dc2626' : '#94a3b8'}}>
+                    {form.subject.length}/150
+                  </span>
+                </label>
+                <input
+                  value={form.subject}
+                  onChange={e => {
+                    const val = e.target.value;
+                    // Character limit
+                    if (val.length > 150) return;
+                    setForm(p=>({...p,subject:val}));
+                  }}
+                  onBlur={e => {
+                    const val = e.target.value.trim();
+                    // Validation on blur
+                    if (val.length > 0 && val.length < 5) {
+                      alert('⚠️ Email subject must be at least 5 characters');
+                      return;
+                    }
+                    // Check if it's mostly symbols (less than 50% alphanumeric)
+                    const alphanumericCount = (val.match(/[a-zA-Z0-9]/g) || []).length;
+                    const alphanumericRatio = alphanumericCount / val.length;
+                    if (val.length > 0 && alphanumericRatio < 0.5) {
+                      alert('⚠️ Email subject should contain meaningful text, not just symbols');
+                      setForm(p=>({...p,subject:''}));
+                      return;
+                    }
+                    // Sanitize: trim
+                    setForm(p=>({...p,subject:val}));
+                  }}
                   placeholder="e.g. Following up on our demo"
-                  style={inp}/>
+                  maxLength={150}
+                  style={{
+                    ...inp,
+                    borderColor: form.subject.length > 150 ? '#dc2626' : (form.subject.length > 0 && form.subject.length < 5 ? '#f59e0b' : '#e2e8f0')
+                  }}
+                />
+                {form.subject.length > 0 && form.subject.length < 5 && (
+                  <div style={{fontSize:11, color:'#f59e0b', marginTop:4}}>
+                    ⚠️ Too short - add {5 - form.subject.length} more characters
+                  </div>
+                )}
               </div>
 
               <div>
@@ -382,10 +462,62 @@ export default function EmailTemplates() {
         {/* Right: cards */}
         <div>
           <div style={{display:'flex',gap:8,marginBottom:12,flexWrap:'wrap',alignItems:'center'}}>
-            <div style={{position:'relative',flex:1,minWidth:160}}>
-              <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color:'#94a3b8',fontSize:13}}>🔍</span>
-              <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search templates..."
-                style={{width:'100%',paddingLeft:32,padding:'9px 9px 9px 32px',fontSize:13,border:'1.5px solid #e2e8f0',borderRadius:9,outline:'none',boxSizing:'border-box',background:'#fff'}}/>
+            <div style={{position:'relative',flex:1,minWidth:160,display:'flex',alignItems:'center',gap:0}}>
+              <div style={{position:'relative',flex:1}}>
+                <span style={{position:'absolute',left:11,top:'50%',transform:'translateY(-50%)',color:'#94a3b8',fontSize:13}}>🔍</span>
+                <input
+                  value={search}
+                  onChange={e=>setSearch(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      // Search already reactive via filtered state, just blur to show it's processed
+                      e.target.blur();
+                    }
+                  }}
+                  placeholder="Search templates..."
+                  style={{
+                    width:'100%',
+                    paddingLeft:32,
+                    padding:'9px 40px 9px 32px',
+                    fontSize:13,
+                    border:'1.5px solid #e2e8f0',
+                    borderRadius:'9px 0 0 9px',
+                    outline:'none',
+                    boxSizing:'border-box',
+                    background:'#fff'
+                  }}
+                />
+              </div>
+              <button
+                onClick={() => {
+                  // Search is already reactive, just provide visual feedback
+                  if (search) {
+                    // Already searching via filtered state
+                    alert(`🔍 Searching for: "${search}"`);
+                  }
+                }}
+                style={{
+                  padding:'9px 16px',
+                  background:'linear-gradient(135deg,#1252e3,#0e42b8)',
+                  border:'1.5px solid #1252e3',
+                  borderLeft:'none',
+                  borderRadius:'0 9px 9px 0',
+                  color:'#fff',
+                  fontSize:14,
+                  fontWeight:600,
+                  cursor:'pointer',
+                  display:'flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  transition:'all 0.15s',
+                  height:37
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'linear-gradient(135deg,#0e42b8,#0a3699)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'linear-gradient(135deg,#1252e3,#0e42b8)'}
+                title="Search templates"
+              >
+                🔍
+              </button>
             </div>
             <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
               style={{padding:'9px 11px',fontSize:12,border:'1.5px solid #e2e8f0',borderRadius:9,outline:'none',background:'#fff',color:'#374151'}}>

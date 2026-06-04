@@ -217,6 +217,7 @@ export default function SocialMedia() {
         .s-btn { cursor:pointer;transition:all .15s;border:none;font-family:inherit; }
         .s-btn:hover { filter:brightness(0.93); transform:translateY(-1px); }
         .s-btn:active{ transform:translateY(0); }
+        .s-delete-btn:hover { background:#DC2626!important; color:#fff!important; border-color:#DC2626!important; }
         .s-card{ transition:box-shadow .2s,transform .2s; }
         .s-card:hover{ transform:translateY(-2px); box-shadow:0 10px 32px rgba(0,0,0,.09)!important; }
         .s-chip{ cursor:pointer;transition:all .15s;user-select:none; }
@@ -399,14 +400,40 @@ export default function SocialMedia() {
               <div>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
                   <div style={lbl}>Content *</div>
-                  <span style={{fontSize:11,fontWeight:700,color:overLimit?'#DC2626':post.content.length>minCharLimit*.85?'#D97706':'#94A3B8'}}>
-                    {post.content.length.toLocaleString()} / {minCharLimit.toLocaleString()}
-                  </span>
                 </div>
-                <textarea value={post.content} onChange={e=>setPost(p=>({...p,content:e.target.value}))}
-                  rows={8} placeholder="What would you like to share? Write an update, insight, or announcement..."
-                  style={{...inp,resize:'vertical',lineHeight:1.75,borderColor:overLimit?'#DC2626':'#E2E8F0'}}/>
-                {overLimit&&<div style={{fontSize:11,color:'#DC2626',marginTop:4,fontWeight:600}}>⚠️ Exceeds {post.platforms.includes('twitter')?'Twitter/X (280 chars)':'platform'} character limit</div>}
+                <textarea
+                  value={post.content}
+                  onChange={e=>setPost(p=>({...p,content:e.target.value}))}
+                  onBlur={e => {
+                    const val = e.target.value.trim();
+                    // Validation on blur
+                    if (val.length > 0 && val.length < 10) {
+                      alert('⚠️ Post content must be at least 10 characters');
+                      return;
+                    }
+                    // Check if it's mostly symbols (less than 40% alphanumeric)
+                    const alphanumericCount = (val.match(/[a-zA-Z0-9]/g) || []).length;
+                    const alphanumericRatio = alphanumericCount / val.length;
+                    if (val.length > 0 && alphanumericRatio < 0.4) {
+                      alert('⚠️ Post content must include readable text, not just symbols');
+                      setPost(p=>({...p,content:''}));
+                      return;
+                    }
+                  }}
+                  rows={8}
+                  placeholder="What would you like to share? Write an update, insight, or announcement..."
+                  style={{
+                    ...inp,
+                    resize:'vertical',
+                    lineHeight:1.75,
+                    borderColor: post.content.length > 0 && post.content.length < 10 ? '#F59E0B' : '#E2E8F0'
+                  }}
+                />
+                {post.content.length > 0 && post.content.length < 10 && (
+                  <div style={{fontSize:11,color:'#F59E0B',marginTop:4,fontWeight:600}}>
+                    ⚠️ Too short - add {10 - post.content.length} more characters
+                  </div>
+                )}
               </div>
 
               {/* Media Upload */}
@@ -461,7 +488,25 @@ export default function SocialMedia() {
               {/* Schedule */}
               <div>
                 <div style={lbl}>Schedule (leave empty to publish now)</div>
-                <input type="datetime-local" value={post.scheduledAt} onChange={e=>setPost(p=>({...p,scheduledAt:e.target.value}))} style={{...inp,marginTop:8,color:post.scheduledAt?'#0F172A':'#94A3B8'}}/>
+                <input
+                  type="datetime-local"
+                  value={post.scheduledAt}
+                  min={new Date().toISOString().slice(0, 16)}
+                  onChange={e => {
+                    const selectedDate = new Date(e.target.value);
+                    const now = new Date();
+
+                    // Check if selected date is in the past
+                    if (selectedDate < now) {
+                      alert('⚠️ Invalid Date: You cannot schedule a social post to publish in the past.');
+                      setPost(p=>({...p,scheduledAt:''}));
+                      return;
+                    }
+
+                    setPost(p=>({...p,scheduledAt:e.target.value}));
+                  }}
+                  style={{...inp,marginTop:8,color:post.scheduledAt?'#0F172A':'#94A3B8'}}
+                />
                 {post.scheduledAt&&<div style={{fontSize:11,color:'#D97706',marginTop:4,fontWeight:600}}>⏰ Will publish on {new Date(post.scheduledAt).toLocaleString()}</div>}
               </div>
 
@@ -630,7 +675,12 @@ export default function SocialMedia() {
                     </div>
                     <div style={{display:'flex',gap:6,flexShrink:0}}>
                       {p.status!=='published'&&<button onClick={()=>openEditPost(p)} className="s-btn" style={{padding:'7px 13px',fontSize:11,fontWeight:700,borderRadius:8,border:'1px solid #E2E8F0',background:'#F8FAFC',color:'#374151'}}>✏️ Edit</button>}
-                      <button onClick={()=>handleDeletePost(p._id)} className="s-btn" style={{padding:'7px 11px',fontSize:11,borderRadius:8,border:'1px solid #FEE2E2',background:'#FFF5F5',color:'#DC2626'}}>🗑️</button>
+                      <button onClick={()=>handleDeletePost(p._id)} className="s-btn s-delete-btn" title="Delete post" style={{padding:'8px 12px',fontSize:13,fontWeight:700,borderRadius:8,border:'1.5px solid #DC2626',background:'#FEF2F2',color:'#DC2626',display:'flex',alignItems:'center',gap:5,transition:'all .2s'}}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+                        </svg>
+                        Delete
+                      </button>
                     </div>
                   </div>
                 );

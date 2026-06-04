@@ -31,19 +31,11 @@ const allowedOrigins = [
 
 // CORS Configuration
 const corsConfig = {
-  origin: (origin, callback) => {
-    if (!origin ||
-        allowedOrigins.includes(origin) ||
-        origin.endsWith('.vercel.app') ||
-        origin.endsWith('.texora.ai')) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+  origin: true, // Allow all origins in development
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+  exposedHeaders: ['Authorization'],
   maxAge: 86400
 };
 

@@ -350,10 +350,69 @@ export default function TemplateManagement() {
             <div style={{ padding:'18px', overflowY:'auto', maxHeight:'72vh', display:'flex', flexDirection:'column', gap:'16px' }}>
               {/* Name */}
               <div>
-                <label style={labelStyle}>Template Name *</label>
-                <input value={form.name} onChange={e => setForm(p=>({...p, name:e.target.value}))}
+                <label style={labelStyle}>Template Name * <span style={{fontSize:11,color:'#94a3b8',fontWeight:400}}>(max 60 chars)</span></label>
+                <input
+                  value={form.name}
+                  maxLength={60}
+                  onChange={e => {
+                    const val = e.target.value;
+                    // Enforce 60 character limit
+                    if (val.length <= 60) {
+                      setForm(p=>({...p, name:val}));
+                    }
+                  }}
+                  onBlur={e => {
+                    const val = e.target.value.trim();
+                    if (val.length > 0) {
+                      // 1. Check if it's purely numeric
+                      if (/^\d+$/.test(val)) {
+                        alert('⚠️ Template name cannot be only numbers! Add descriptive text.');
+                        setForm(p=>({...p, name:''}));
+                        return;
+                      }
+
+                      // 2. Check if it's all symbols (less than 30% alphanumeric)
+                      const alphanumericCount = (val.match(/[a-zA-Z0-9]/g) || []).length;
+                      const alphanumericRatio = alphanumericCount / val.length;
+
+                      if (alphanumericRatio < 0.3) {
+                        alert('⚠️ Template name must contain letters or numbers, not just symbols!');
+                        setForm(p=>({...p, name:''}));
+                        return;
+                      }
+
+                      // 3. Require at least some letters (not just numbers + symbols)
+                      const letterCount = (val.match(/[a-zA-Z]/g) || []).length;
+                      if (letterCount < 2) {
+                        alert('⚠️ Template name must contain at least 2 letters for description!');
+                        setForm(p=>({...p, name:''}));
+                        return;
+                      }
+
+                      // 4. Check for invalid characters (only allow alphanumeric, spaces, hyphens, underscores)
+                      if (!/^[a-zA-Z0-9\s\-_]+$/.test(val)) {
+                        alert('⚠️ Template name can only contain letters, numbers, spaces, hyphens, and underscores!');
+                        setForm(p=>({...p, name:''}));
+                        return;
+                      }
+                    }
+                  }}
                   placeholder="e.g. Marketing Campaign Lead"
-                  style={{ ...inputStyle, borderColor: form.name ? cfg.color+'66' : '#e2e8f0' }} />
+                  style={{
+                    ...inputStyle,
+                    borderColor: form.name && form.name.trim().length > 0 && (form.name.match(/[a-zA-Z0-9]/g) || []).length / form.name.length < 0.3 ? '#F59E0B' : form.name ? cfg.color+'66' : '#e2e8f0'
+                  }}
+                />
+                {form.name && form.name.trim().length > 0 && (form.name.match(/[a-zA-Z0-9]/g) || []).length / form.name.length < 0.3 && (
+                  <div style={{fontSize:11,color:'#F59E0B',marginTop:4,fontWeight:600}}>
+                    ⚠️ Name should contain letters or numbers
+                  </div>
+                )}
+                {form.name && form.name.length >= 55 && (
+                  <div style={{fontSize:11,color:'#64748b',marginTop:4,fontWeight:500}}>
+                    {form.name.length}/60 characters
+                  </div>
+                )}
               </div>
 
               {/* Description */}
@@ -447,9 +506,35 @@ export default function TemplateManagement() {
                         placeholder="e.g. 3"
                         style={{ ...inputStyle, background:'#f8fafc' }} />
                     ) : (
-                      <input type="text" value={form.defaultValues[f.key] || ''} onChange={e => setFieldValue(f.key, e.target.value)}
+                      <input
+                        type="text"
+                        value={form.defaultValues[f.key] || ''}
+                        onChange={e => setFieldValue(f.key, e.target.value)}
+                        onBlur={e => {
+                          // Validate Task Title (subject) field
+                          if (f.key === 'subject' && activeModule === 'task') {
+                            const val = e.target.value.trim();
+                            if (val.length > 0) {
+                              // Check if it's purely numeric
+                              if (/^\d+$/.test(val)) {
+                                alert('⚠️ Task Title must contain descriptive text, not just numbers!');
+                                setFieldValue(f.key, '');
+                                return;
+                              }
+                              // Check alphanumeric ratio (at least 30% letters/numbers)
+                              const alphanumericCount = (val.match(/[a-zA-Z]/g) || []).length;
+                              const alphanumericRatio = alphanumericCount / val.length;
+                              if (alphanumericRatio < 0.3) {
+                                alert('⚠️ Task Title must contain descriptive text (letters required)!');
+                                setFieldValue(f.key, '');
+                                return;
+                              }
+                            }
+                          }
+                        }}
                         placeholder={`Default ${f.label.toLowerCase()}...`}
-                        style={{ ...inputStyle, background:'#f8fafc' }} />
+                        style={{ ...inputStyle, background:'#f8fafc' }}
+                      />
                     )}
                   </div>
                 ))}
@@ -570,9 +655,45 @@ export default function TemplateManagement() {
                           style={{ flex:1, padding:'8px', background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'8px', fontSize:'12px', fontWeight:'700', cursor:'pointer', color:'#374151' }}>
                           ✏️ Edit
                         </button>
-                        <button onClick={() => setDeleteId(t._id)} className="tm-action-btn"
-                          style={{ padding:'8px 12px', background:'#f8fafc', border:'1px solid #e2e8f0', borderRadius:'8px', fontSize:'12px', cursor:'pointer', color:'#94a3b8' }}>
-                          🗑️
+                        <button
+                          onClick={() => setDeleteId(t._id)}
+                          className="tm-action-btn"
+                          title="Delete template"
+                          style={{
+                            padding:'8px',
+                            width:'38px',
+                            height:'38px',
+                            background:'#fef2f2',
+                            border:'1.5px solid #fecaca',
+                            borderRadius:'8px',
+                            cursor:'pointer',
+                            display:'flex',
+                            alignItems:'center',
+                            justifyContent:'center',
+                            transition:'all 0.2s'
+                          }}
+                          onMouseEnter={e => {
+                            e.currentTarget.style.background = '#DC2626';
+                            e.currentTarget.style.borderColor = '#DC2626';
+                          }}
+                          onMouseLeave={e => {
+                            e.currentTarget.style.background = '#fef2f2';
+                            e.currentTarget.style.borderColor = '#fecaca';
+                          }}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#DC2626"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ flexShrink:0 }}
+                          >
+                            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6"/>
+                          </svg>
                         </button>
                       </div>
                     </div>

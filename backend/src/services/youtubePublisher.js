@@ -8,7 +8,7 @@
  * Attempting to "publish" a text post to YouTube is skipped gracefully.
  */
 
-exports.publishPost = async (_account, _content) => {
+exports.publishPost = async (_account, _content, _media = []) => {
   throw new Error(
     'YouTube text posting is not supported via API. ' +
     'Community Posts require 500+ subscribers and can only be posted from YouTube Studio.'

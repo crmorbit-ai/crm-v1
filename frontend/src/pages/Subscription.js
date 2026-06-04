@@ -172,23 +172,29 @@ const Subscription = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [subscriptionData, plansData, historyData] = await Promise.all([
-        subscriptionService.getCurrentSubscription(),
-        subscriptionService.getAllPlans(),
+
+      // Load plans first (always works - no auth needed)
+      const plansData = await subscriptionService.getAllPlans();
+      setPlans(plansData.data);
+
+      // Load subscription and history (may fail if not logged in)
+      const [subscriptionData, historyData] = await Promise.all([
+        subscriptionService.getCurrentSubscription().catch(() => ({ data: null })),
         subscriptionService.getPaymentHistory().catch(() => ({ data: [] })),
       ]);
+
       setPaymentHistory(historyData?.data || []);
 
-      console.log('📊 Subscription Page - Full Data:', subscriptionData.data);
-      console.log('📊 Usage Object:', subscriptionData.data?.usage);
-      console.log('👥 Users:', subscriptionData.data?.usage?.users);
-      console.log('📞 Leads:', subscriptionData.data?.usage?.leads);
-      console.log('📇 Contacts:', subscriptionData.data?.usage?.contacts);
-      console.log('💼 Deals:', subscriptionData.data?.usage?.deals);
-      console.log('💾 Storage:', subscriptionData.data?.usage?.storage);
-
-      setCurrentSubscription(subscriptionData.data);
-      setPlans(plansData.data);
+      if (subscriptionData.data) {
+        console.log('📊 Subscription Page - Full Data:', subscriptionData.data);
+        console.log('📊 Usage Object:', subscriptionData.data?.usage);
+        console.log('👥 Users:', subscriptionData.data?.usage?.users);
+        console.log('📞 Leads:', subscriptionData.data?.usage?.leads);
+        console.log('📇 Contacts:', subscriptionData.data?.usage?.contacts);
+        console.log('💼 Deals:', subscriptionData.data?.usage?.deals);
+        console.log('💾 Storage:', subscriptionData.data?.usage?.storage);
+        setCurrentSubscription(subscriptionData.data);
+      }
     } catch (error) {
       console.error('Failed to load subscription data:', error);
     } finally {
@@ -822,18 +828,20 @@ const Subscription = () => {
                   </div>
 
                   <div style={{ marginBottom: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'nowrap' }}>
                       <span style={{
                         fontSize: '36px',
                         fontWeight: '700',
-                        color: '#5db9de'
+                        color: '#5db9de',
+                        whiteSpace: 'nowrap'
                       }}>
                         ₹{price.toLocaleString()}
                       </span>
                       <span style={{
                         color: '#9ca3af',
-                        fontSize: '16px',
-                        fontWeight: '500'
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        whiteSpace: 'nowrap'
                       }}>
                         /{billingCycle === 'monthly' ? 'mo' : 'yr'}
                       </span>

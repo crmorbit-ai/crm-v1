@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import * as svc from '../services/roleTemplateService';
 
@@ -139,6 +140,9 @@ const abtn = { width:24, height:24, border:'1px solid #e2e8f0', background:'#f8f
 
 /* ── Main Page ──────────────────────────────────────────── */
 export default function RoleTemplateBuilder() {
+  const location = useLocation();
+  const isFirstMount = useRef(true);
+
   const [step, setStep]           = useState(0);
   const [roles, setRoles]         = useState([]);
   const [tplName, setTplName]     = useState('Default Hierarchy Template');
@@ -157,6 +161,29 @@ export default function RoleTemplateBuilder() {
       if (t) { setRoles(t.roles || []); setTplName(t.templateName || ''); }
     }).catch(() => {});
   }, []);
+
+  // Reset state when user navigates back to this page (location change)
+  useEffect(() => {
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      return;
+    }
+
+    // User navigated back to this page - reset everything
+    setStep(0);
+    setRoles([]);
+    setTplName('Default Hierarchy Template');
+    setPreview(null);
+    setGenResult(null);
+    setClear(false);
+    setToast('');
+
+    // Reload fresh template
+    svc.getTemplate().then(r => {
+      const t = r.data?.template;
+      if (t) { setRoles(t.roles || []); setTplName(t.templateName || ''); }
+    }).catch(() => {});
+  }, [location.pathname]);
 
   /* ── Role helpers ── */
   const addRole = () => setRoles(r => [...r, {

@@ -83,6 +83,32 @@ exports.createPost = async (req, res) => {
     if (!content?.trim()) return errorResponse(res, 400, 'Content is required');
     if (!platforms?.length) return errorResponse(res, 400, 'Select at least one platform');
 
+    // Validate content
+    const trimmedContent = content.trim();
+
+    // Length validation
+    if (trimmedContent.length < 10) {
+      return errorResponse(res, 400, 'Post content must be at least 10 characters');
+    }
+
+    // Content quality validation - at least 40% alphanumeric
+    const alphanumericCount = (trimmedContent.match(/[a-zA-Z0-9]/g) || []).length;
+    const alphanumericRatio = alphanumericCount / trimmedContent.length;
+
+    if (alphanumericRatio < 0.4) {
+      return errorResponse(res, 400, 'Post content must include readable text, not just symbols');
+    }
+
+    // Validate scheduled date if provided
+    if (scheduledAt) {
+      const scheduledDate = new Date(scheduledAt);
+      const now = new Date();
+
+      if (scheduledDate < now) {
+        return errorResponse(res, 400, 'Invalid Date: You cannot schedule a social post to publish in the past');
+      }
+    }
+
     const isPublishing = !scheduledAt;
     const status = scheduledAt ? 'scheduled' : 'published';
 
@@ -116,7 +142,7 @@ exports.createPost = async (req, res) => {
             continue;
           }
 
-          await publisher.publishPost(account, content);
+          await publisher.publishPost(account, content, media);
           console.log(`✅ [${platform}] Published successfully`);
         } catch (pubErr) {
           const detail = pubErr.response?.data ? JSON.stringify(pubErr.response.data) : pubErr.message;

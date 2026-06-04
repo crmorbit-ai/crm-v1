@@ -70,6 +70,28 @@ exports.create = async (req, res) => {
     const { title, description, purpose, category, content, format, icon, color } = req.body;
     if (!title) return errorResponse(res, 400, 'Title is required');
 
+    // Validate description
+    if (description) {
+      const trimmedDesc = description.trim();
+
+      // Length validation
+      if (trimmedDesc.length > 500) {
+        return errorResponse(res, 400, 'Description must not exceed 500 characters');
+      }
+
+      if (trimmedDesc.length > 0 && trimmedDesc.length < 10) {
+        return errorResponse(res, 400, 'Description must be at least 10 characters');
+      }
+
+      // Content quality validation - at least 30% alphanumeric
+      const alphanumericCount = (trimmedDesc.match(/[a-zA-Z0-9]/g) || []).length;
+      const alphanumericRatio = alphanumericCount / trimmedDesc.length;
+
+      if (alphanumericRatio < 0.3) {
+        return errorResponse(res, 400, 'Description must contain meaningful text, not just symbols');
+      }
+    }
+
     const doc = await DocumentTemplate.create({
       tenant: req.user.tenant,
       createdBy: req.user._id,
@@ -93,6 +115,30 @@ exports.update = async (req, res) => {
       tenant: req.user.tenant
     });
     if (!doc) return errorResponse(res, 404, 'Not found');
+
+    // Validate description if being updated
+    if (req.body.description !== undefined) {
+      const trimmedDesc = req.body.description.trim();
+
+      // Length validation
+      if (trimmedDesc.length > 500) {
+        return errorResponse(res, 400, 'Description must not exceed 500 characters');
+      }
+
+      if (trimmedDesc.length > 0 && trimmedDesc.length < 10) {
+        return errorResponse(res, 400, 'Description must be at least 10 characters');
+      }
+
+      // Content quality validation - at least 30% alphanumeric
+      if (trimmedDesc.length > 0) {
+        const alphanumericCount = (trimmedDesc.match(/[a-zA-Z0-9]/g) || []).length;
+        const alphanumericRatio = alphanumericCount / trimmedDesc.length;
+
+        if (alphanumericRatio < 0.3) {
+          return errorResponse(res, 400, 'Description must contain meaningful text, not just symbols');
+        }
+      }
+    }
 
     const fields = ['title','description','purpose','category','content','format','icon','color'];
     fields.forEach(f => { if (req.body[f] !== undefined) doc[f] = req.body[f]; });

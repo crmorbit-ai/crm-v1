@@ -61,7 +61,7 @@ const FRONTEND_URL = process.env.FRONTEND_URL || 'https://unified-crm.texora.ai'
 const YEAR = new Date().getFullYear();
 
 // ─── Send via SES ─────────────────────────────────────────────────────────────
-const sendViaSES = async (to, subject, html, fromAddress = FROM_ADDRESS) => {
+const sendViaSES = async (to, subject, html, fromAddress = FROM_ADDRESS, plainText = null) => {
   const command = new SendEmailCommand({
     Source: fromAddress,
     Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
@@ -69,7 +69,7 @@ const sendViaSES = async (to, subject, html, fromAddress = FROM_ADDRESS) => {
       Subject: { Data: subject, Charset: 'UTF-8' },
       Body: {
         Html: { Data: html, Charset: 'UTF-8' },
-        Text: { Data: html.replace(/<[^>]*>/g, ''), Charset: 'UTF-8' },
+        Text: { Data: plainText || html.replace(/<[^>]*>/g, ''), Charset: 'UTF-8' },
       },
     },
   });
@@ -81,7 +81,7 @@ const sendViaSES = async (to, subject, html, fromAddress = FROM_ADDRESS) => {
 const sendMail = async (opts) => {
   const toArr = Array.isArray(opts.to) ? opts.to : opts.to.split(/,\s*/);
   const fromAddress = opts.fromNoreply ? FROM_ADDRESS_NOREPLY : FROM_ADDRESS;
-  const messageId = await sendViaSES(toArr, opts.subject, opts.html, fromAddress);
+  const messageId = await sendViaSES(toArr, opts.subject, opts.html, fromAddress, opts.text || null);
   return { messageId };
 };
 
@@ -120,6 +120,7 @@ const baseTemplate = ({ preheader = '', headerColor = '#1a365d', accentColor = '
     .btn-primary:hover{background:#1d4ed8;}
     .btn-secondary{display:inline-block;padding:12px 24px;background:#f1f5f9;color:#334155 !important;text-decoration:none;border-radius:6px;font-weight:600;font-size:14px;border:1px solid #e2e8f0;}
     .info-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:24px;margin:24px 0;}
+    .info-card{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:24px;margin:24px 0;}
     .info-row{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid #e2e8f0;font-size:14px;}
     .info-row:last-child{border-bottom:none;}
     .info-label{color:#64748b;font-weight:500;}
@@ -189,6 +190,8 @@ const baseTemplate = ({ preheader = '', headerColor = '#1a365d', accentColor = '
 // ─── 1. Password Reset OTP ────────────────────────────────────────────────────
 const sendPasswordResetOTP = async (email, otp, userName) => {
   try {
+    const plainText = `Hi ${userName || 'there'},\n\nWe received a request to reset your Unified CRM password.\n\nYour one-time password is: ${otp}\n\nThis code is valid for 3 minutes.\n\nSecurity notice: If you did not request a password reset, you can safely ignore this email. Your password will not change.\n\nBest regards,\nUnified CRM Team\nTexora Technologies`;
+
     const html = baseTemplate({
       preheader: `Your password reset OTP: ${otp}. Valid for 3 minutes.`,
       body: `
@@ -196,16 +199,16 @@ const sendPasswordResetOTP = async (email, otp, userName) => {
         <p style="color:#6b7280;font-size:14px;margin-bottom:24px;">We received a request to reset your password.</p>
         <p>Hi <strong>${userName || 'there'}</strong>,</p>
         <p>Use the OTP below to reset your Unified CRM password. This code is valid for <strong>3 minutes</strong>.</p>
-        <div class="otp-block">
-          <p style="color:rgba(255,255,255,0.7);font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:12px;">Your One-Time Password</p>
-          <p class="otp-code">${otp}</div>
+        <div class="otp-container">
+          <p class="otp-label">Your One-Time Password</p>
+          <p class="otp-code">${otp}</p>
         </div>
         <div class="alert-warning">
           <strong>Security notice:</strong> If you did not request a password reset, you can safely ignore this email. Your password will not change.
         </div>
       `
     });
-    const messageId = await sendViaSES(email, 'Password Reset OTP — Unified CRM', html);
+    const messageId = await sendViaSES(email, 'Password Reset Code - Unified CRM', html, FROM_ADDRESS, plainText);
     return { success: true, messageId };
   } catch (error) {
     console.error('❌ OTP email error:', error.message);
@@ -219,7 +222,8 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
   try {
     const mailOptions = {
       to: email,
-      subject: 'Verify Your Email — Unified CRM',
+      subject: 'Verify Your Email Address - Unified CRM',
+      text: `Hello ${userName || 'there'},\n\nThanks for signing up for Unified CRM.\n\nYour email verification code is: ${otp}\n\nThis code expires in 3 minutes.\n\nIf you didn't create an account, you can safely ignore this email.\n\nBest regards,\nUnified CRM Team\nTexora Technologies`,
       html: baseTemplate({
         preheader: `Welcome! Your email verification code is ${otp}.`,
         body: `
@@ -229,7 +233,7 @@ const sendSignupVerificationOTP = async (email, otp, userName) => {
           <p>Thanks for signing up for Unified CRM. Enter the code below to verify your email address and complete your registration.</p>
           <div class="otp-container">
             <p class="otp-label">Email Verification Code</p>
-            <p class="otp-code">${otp}</div>
+            <p class="otp-code">${otp}</p>
           </div>
           <div class="alert-success">
             <strong>Code expires in 3 minutes.</strong> If you didn't create an account, you can safely ignore this email.
@@ -263,6 +267,7 @@ const sendWelcomeEmail = async (email, userName, organizationName) => {
     const mailOptions = {
       to: email,
       subject: `Welcome to Unified CRM, ${userName}!`,
+      text: `Hi ${userName},\n\nWelcome aboard! Your organization ${organizationName} is all set up and ready to go.\n\nYour Unified CRM account is live and ready to use. You can now:\n\n- Track leads through your full sales pipeline\n- Manage quotations, POs, and invoices\n- Invite your team and assign roles\n- Use AI-powered features for email drafting and lead scoring\n\nGet started: ${FRONTEND_URL}/dashboard\n\nNeed help? Visit our support center at ${FRONTEND_URL}/help\n\nBest regards,\nUnified CRM Team\nTexora Technologies`,
       html: baseTemplate({
         preheader: `Your CRM account for ${organizationName} is ready. Let's get started.`,
         body: `
@@ -322,6 +327,7 @@ const sendUserInvitationEmail = async ({ email, firstName, lastName, organizatio
     const mailOptions = {
       to: email,
       subject: `You've been invited to join ${organizationName} on Unified CRM`,
+      text: `Hi ${firstName} ${lastName},\n\nYou've been invited to join ${organizationName} on Unified CRM by ${invitedBy}.\n\nYour login credentials:\nEmail: ${email}\nTemporary Password: ${temporaryPassword}\nOrganization: ${organizationName}\nRole: ${roles}\n\nSign in now: ${FRONTEND_URL}/login\n\nSecurity: Please change your password immediately after your first login from Profile → Change Password.\n\nBest regards,\nUnified CRM Team\nTexora Technologies`,
       html: baseTemplate({
         preheader: `${invitedBy} has invited you to ${organizationName}. Your credentials are inside.`,
         body: `
@@ -569,6 +575,9 @@ const sendContactInquiryReply = async ({ toName, toEmail, subject, originalMessa
 const sendPaymentSuccessEmail = async ({ email, userName, orgName, planName, amount, billingCycle, invoiceNumber, startDate, endDate }) => {
   try {
     const fmt = (d) => new Date(d).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' });
+
+    const plainText = `Hi ${userName},\n\nPayment Successful! Your ${planName} plan is now active.\n\nInvoice Details:\nInvoice Number: ${invoiceNumber}\nOrganization: ${orgName}\nPlan: ${planName}\nBilling Cycle: ${billingCycle === 'yearly' ? 'Annual' : 'Monthly'}\nValid From: ${fmt(startDate)}\nValid Until: ${fmt(endDate)}\nAmount Paid: ₹${Number(amount||0).toLocaleString('en-IN')}\n\nView your subscription: ${FRONTEND_URL}/subscription\n\nYou can download your invoice from the Subscription & Billing section in your dashboard.\n\nThank you for subscribing to Unified CRM!\n\nBest regards,\nUnified CRM Team\nTexora Technologies`;
+
     const html = baseTemplate({
       preheader: `Payment confirmed! Your ${planName} plan is now active.`,
       body: `
@@ -586,7 +595,7 @@ const sendPaymentSuccessEmail = async ({ email, userName, orgName, planName, amo
           <div class="info-row" style="border-top:2px solid #e8edf2;padding-top:16px;margin-top:8px;">
             <span class="info-label" style="font-size:16px;font-weight:700;color:#111827;">Amount Paid</span>
             <span class="info-value" style="font-size:20px;color:#1EB980;">₹${Number(amount||0).toLocaleString('en-IN')}</span>
-          </p>
+          </div>
         </div>
         <div style="text-align:center;margin:28px 0;">
           <a href="${FRONTEND_URL}/subscription" class="btn-primary">View Subscription &rarr;</a>
@@ -594,7 +603,7 @@ const sendPaymentSuccessEmail = async ({ email, userName, orgName, planName, amo
         <p style="color:#6b7280;font-size:13px;">You can download your invoice from the <strong>Subscription &amp; Billing</strong> section in your dashboard.</p>
       `
     });
-    await sendViaSES(email, `Payment Confirmed — ${planName} Plan Activated`, html);
+    await sendViaSES(email, `Payment Confirmed - ${planName} Plan Activated`, html, FROM_ADDRESS, plainText);
     return { success: true };
   } catch (err) {
     console.error('sendPaymentSuccessEmail error:', err.message);
@@ -725,13 +734,15 @@ const sendAccountRecoveredEmail = async (tenantEmail, orgName, firstName) => {
 
 // Password Expiry Warning Email
 const sendPasswordExpiryWarning = async (userEmail, userName, daysRemaining) => {
+  const plainText = `Hi ${userName},\n\nYour password will expire in ${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}.\n\nSecurity Policy: Passwords must be changed every 90 days to keep your account secure.\n\nAfter expiry, you'll be required to change your password before accessing your account.\n\nChange password now: ${FRONTEND_URL}/security\n\nNeed help? Contact support at ${process.env.SMTP_USER}.\n\nBest regards,\nUnified CRM Team`;
+
   const html = baseTemplate({
     preheader: `Your password expires in ${daysRemaining} days. Change it now to keep your account secure.`,
     body: `
       <h2 style="font-size:22px;margin-bottom:4px;">Password Expiry Warning</h2>
       <p>Hi <strong>${userName}</strong>,</p>
       <p>Your password will expire in <strong style="color:#dc2626;font-size:18px;">${daysRemaining} ${daysRemaining === 1 ? 'day' : 'days'}</strong>.</p>
-      <div class="alert-yellow">
+      <div class="alert-warning">
         <strong>Security Policy:</strong> Passwords must be changed every 90 days to keep your account secure.
       </div>
       <p>After expiry, you'll be required to change your password before accessing your account.</p>
@@ -741,19 +752,21 @@ const sendPasswordExpiryWarning = async (userEmail, userName, daysRemaining) => 
       <p style="color:#6b7280;font-size:13px;">Need help? Contact support at <a href="mailto:${process.env.SMTP_USER}">${process.env.SMTP_USER}</a>.</p>
     `
   });
-  await sendMail({ to: userEmail, subject: `Password Expires in ${daysRemaining} Days - Unified CRM`, html, fromNoreply: true });
+  await sendMail({ to: userEmail, subject: `Password Expires in ${daysRemaining} Days - Unified CRM`, html, text: plainText, fromNoreply: true });
   return { success: true };
 };
 
 // Password Expired Email
 const sendPasswordExpiredEmail = async (userEmail, userName) => {
+  const plainText = `Hi ${userName},\n\nYour password has expired as per our 90-day security policy.\n\nYou must reset your password before you can log in again.\n\nReset password now: ${FRONTEND_URL}/forgot-password\n\nThis is a security measure to protect your account. Thank you for understanding.\n\nBest regards,\nUnified CRM Team`;
+
   const html = baseTemplate({
     preheader: 'Your password has expired. Reset it now to access your account.',
     body: `
       <h2 style="font-size:22px;margin-bottom:4px;">Password Expired</h2>
       <p>Hi <strong>${userName}</strong>,</p>
       <p>Your password has expired as per our 90-day security policy.</p>
-      <div class="alert-red">
+      <div class="alert-danger">
         You must reset your password before you can log in again.
       </div>
       <div style="text-align:center;margin:28px 0;">
@@ -762,7 +775,7 @@ const sendPasswordExpiredEmail = async (userEmail, userName) => {
       <p style="color:#6b7280;font-size:13px;">This is a security measure to protect your account. Thank you for understanding.</p>
     `
   });
-  await sendMail({ to: userEmail, subject: 'Password Expired - Action Required - Unified CRM', html, fromNoreply: true });
+  await sendMail({ to: userEmail, subject: 'Password Expired - Action Required - Unified CRM', html, text: plainText, fromNoreply: true });
   return { success: true };
 };
 

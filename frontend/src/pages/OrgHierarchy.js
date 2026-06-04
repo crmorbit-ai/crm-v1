@@ -184,8 +184,8 @@ const Row = ({ node, depth, all, onEdit, onDelete, onAddChild, onMove, isAdmin, 
   );
 };
 
-/* ── Search bar (local search + navigate) ───────────────────── */
-const SearchBar = ({ flat, expandPath, setHighlight }) => {
+/* ── Search bar (local search + navigate + filter tree) ──────── */
+const SearchBar = ({ flat, expandPath, setHighlight, onFilterChange }) => {
   const [q, setQ]   = useState('');
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
@@ -196,7 +196,8 @@ const SearchBar = ({ flat, expandPath, setHighlight }) => {
         return n.name?.toLowerCase().includes(s)
           || n.title?.toLowerCase().includes(s)
           || n.email?.toLowerCase().includes(s)
-          || n.department?.toLowerCase().includes(s);
+          || n.department?.toLowerCase().includes(s)
+          || n.type?.toLowerCase().includes(s);
       }).slice(0, 10)
     : [];
 
@@ -204,12 +205,25 @@ const SearchBar = ({ flat, expandPath, setHighlight }) => {
     expandPath(node._id);
     setHighlight(node._id);
     setQ('');
+    onFilterChange(''); // Clear tree filter when navigating
     setOpen(false);
     setTimeout(() => {
       const el = document.querySelector(`[data-node-id="${node._id}"]`);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 120);
     setTimeout(() => setHighlight(null), 2500);
+  };
+
+  const handleChange = (value) => {
+    setQ(value);
+    onFilterChange(value); // Update tree filter in real-time
+    setOpen(true);
+  };
+
+  const handleClear = () => {
+    setQ('');
+    onFilterChange(''); // Clear tree filter
+    setOpen(false);
   };
 
   // Close dropdown on outside click
@@ -220,17 +234,17 @@ const SearchBar = ({ flat, expandPath, setHighlight }) => {
   }, []);
 
   return (
-    <div ref={ref} style={{ position: 'relative', width: 260 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 9, padding: '7px 12px' }}>
-        <span style={{ fontSize: 13, color: '#94a3b8' }}>🔍</span>
+    <div ref={ref} style={{ position: 'relative', flex: '1 1 300px', minWidth: 200, maxWidth: 400 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: 9, padding: '8px 13px', transition: 'all .2s' }}>
+        <span style={{ fontSize: 14, color: '#94a3b8' }}>🔍</span>
         <input
           value={q}
-          onChange={e => { setQ(e.target.value); setOpen(true); }}
+          onChange={e => handleChange(e.target.value)}
           onFocus={() => setOpen(true)}
-          placeholder="Search by name, dept, email…"
-          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 12, background: 'transparent', color: '#374151' }}
+          placeholder="Search & filter nodes by name, dept, email, type…"
+          style={{ flex: 1, border: 'none', outline: 'none', fontSize: 13, background: 'transparent', color: '#374151', fontWeight: 500 }}
         />
-        {q && <button onClick={() => { setQ(''); setOpen(false); }} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 14, lineHeight: 1 }}>✕</button>}
+        {q && <button onClick={handleClear} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 16, lineHeight: 1, fontWeight: 700 }}>✕</button>}
       </div>
 
       {open && q.trim() && (
@@ -566,6 +580,7 @@ const OrgHierarchy = () => {
   const [moveModal, setMoveModal]           = useState(null);
   const [rebuildModal, setRebuildModal]     = useState(false);
   const [highlightId, setHighlightId]       = useState(null);
+  const [treeFilter, setTreeFilter]         = useState(''); // NEW: Tree filter state
 
   const showToast = msg => { setToast(msg); setTimeout(() => setToast(''), 2800); };
 
@@ -642,7 +657,19 @@ const OrgHierarchy = () => {
     catch (e) { showToast('Error: ' + (e.response?.data?.message || e.message)); }
   };
 
-  const roots = flat.filter(n => !n.parent);
+  // Filter tree based on search
+  const filteredFlat = treeFilter.trim()
+    ? flat.filter(n => {
+        const q = treeFilter.toLowerCase();
+        return n.name?.toLowerCase().includes(q)
+          || n.title?.toLowerCase().includes(q)
+          || n.email?.toLowerCase().includes(q)
+          || n.department?.toLowerCase().includes(q)
+          || n.type?.toLowerCase().includes(q);
+      })
+    : flat;
+
+  const roots = filteredFlat.filter(n => !n.parent);
 
   return (
     <DashboardLayout>
@@ -690,7 +717,8 @@ const OrgHierarchy = () => {
 
       {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, flexWrap: 'wrap', background: '#fff', borderRadius: 14, padding: '10px 14px', border: '1px solid #f1f5f9', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
-        <SearchBar flat={flat} expandPath={expandPath} setHighlight={setHighlightId} />
+        <SearchBar flat={flat} expandPath={expandPath} setHighlight={setHighlightId} onFilterChange={setTreeFilter} />
+
         <div style={{ display: 'flex', gap: 6, marginLeft: 'auto', flexWrap: 'wrap', alignItems: 'center' }}>
           {[
             { l: '⊞ Expand All',   fn: () => setExpanded(new Set(flat.map(n => n._id))) },
@@ -766,10 +794,23 @@ const OrgHierarchy = () => {
         </div>
       ) : (
         <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #eaecf4', padding: '12px 10px' }}>
-          {roots.length === 0
-            ? <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: '#94a3b8' }}>No root nodes found</div>
-            : roots.map(root => (
-              <Row key={root._id} node={root} depth={0} all={flat}
+          {treeFilter.trim() && filteredFlat.length === 0 ? (
+            <div style={{ padding: 60, textAlign: 'center' }}>
+              <div style={{ fontSize: 44, marginBottom: 12 }}>🔍</div>
+              <p style={{ fontSize: 14, fontWeight: 700, color: '#475569', margin: '0 0 6px' }}>No matching nodes found</p>
+              <p style={{ fontSize: 12, color: '#94a3b8', margin: '0 0 16px' }}>
+                No nodes match "<strong>{treeFilter}</strong>". Try a different search term.
+              </p>
+              <button onClick={() => setTreeFilter('')} style={{
+                padding: '10px 22px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', color: '#fff',
+                border: 'none', borderRadius: 9, fontSize: 13, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 12px rgba(99,102,241,.25)'
+              }}>Clear Filter</button>
+            </div>
+          ) : roots.length === 0 ? (
+            <div style={{ padding: 20, textAlign: 'center', fontSize: 12, color: '#94a3b8' }}>No root nodes found</div>
+          ) :
+            roots.map(root => (
+              <Row key={root._id} node={root} depth={0} all={filteredFlat}
                 onEdit={n => setFormModal({ mode: 'edit', node: n })}
                 onDelete={n => setDeleteModal(n)}
                 onAddChild={n => setFormModal({ mode: 'create', preParentId: n._id })}

@@ -25,9 +25,11 @@ export default function DocumentTemplates() {
   const [saving, setSaving]         = useState(false);
   const [deleteId, setDeleteId]     = useState(null);
   const [search, setSearch]         = useState('');
+  const [searchWarning, setSearchWarning] = useState('');
   const [filterCat, setFilterCat]   = useState('');
   const [shareModal, setShareModal] = useState(null); // template being shared
   const [shareLink, setShareLink]   = useState('');
+  const [titleError, setTitleError] = useState(''); // inline title validation error
   const [linkLoading, setLinkLoading] = useState(false);
   const [users, setUsers]           = useState([]);
   const [selectedUsers, setSelectedUsers] = useState([]);
@@ -63,20 +65,41 @@ export default function DocumentTemplates() {
     toastTimer.current = setTimeout(() => setToast(''), 3000);
   };
 
-  const openCreate = () => { setForm(emptyForm()); setEditingId(null); setShowForm(true); };
+  const openCreate = () => { setForm(emptyForm()); setEditingId(null); setShowForm(true); setTitleError(''); };
   const openEdit   = (t)  => {
     setForm({ title:t.title, description:t.description||'', purpose:t.purpose||'', category:t.category||'General',
               content:t.content||'', format:t.format||'word', icon:t.icon||'📄', color:t.color||'#2563eb' });
-    setEditingId(t._id); setShowForm(true);
+    setEditingId(t._id); setShowForm(true); setTitleError('');
   };
 
   const handleSave = async () => {
-    if (!form.title.trim()) return alert('Title is required');
+    if (!form.title.trim()) {
+      setTitleError('Title is required');
+      return;
+    }
+
+    // Validate title format
+    const val = form.title.trim();
+    if (/^\d+$/.test(val)) {
+      setTitleError('Title must contain descriptive alphabetic text, not just numbers');
+      return;
+    }
+    const letterCount = (val.match(/[a-zA-Z]/g) || []).length;
+    if (letterCount < 3) {
+      setTitleError('Title must contain at least 3 letters for a proper description');
+      return;
+    }
+    const letterRatio = letterCount / val.length;
+    if (letterRatio < 0.4) {
+      setTitleError('Title must contain descriptive text, not mostly symbols');
+      return;
+    }
+
     setSaving(true);
     try {
       if (editingId) await documentTemplateService.update(editingId, form);
       else           await documentTemplateService.create(form);
-      setShowForm(false); load();
+      setShowForm(false); setTitleError(''); load();
       showToast(editingId ? '✓ Template updated!' : '✓ Template created!');
     } catch { alert('Failed to save'); }
     finally { setSaving(false); }
@@ -243,8 +266,55 @@ export default function DocumentTemplates() {
         {/* Search */}
         <div style={{ position:'relative', flex:1, minWidth:'200px' }}>
           <span style={{ position:'absolute', left:'12px', top:'50%', transform:'translateY(-50%)', color:'#94a3b8', fontSize:'14px' }}>🔍</span>
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search document templates..."
-            style={{ width:'100%', paddingLeft:'34px', padding:'10px 10px 10px 34px', fontSize:'13px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', boxSizing:'border-box', background:'#fff' }} />
+          <input
+            value={search}
+            onChange={e => {
+              const val = e.target.value;
+
+              // Auto-sanitize: only allow letters, numbers, spaces, hyphens
+              const sanitized = val.replace(/[^a-zA-Z0-9\s\-]/g, '');
+
+              // Check if input had invalid characters
+              if (val !== sanitized && val.length > 0) {
+                setSearchWarning('Special characters removed from search');
+                setTimeout(() => setSearchWarning(''), 2000);
+              } else {
+                setSearchWarning('');
+              }
+
+              // Check if purely numeric or mostly symbols
+              if (sanitized.trim().length > 0) {
+                const trimmed = sanitized.trim();
+                if (/^\d+$/.test(trimmed)) {
+                  setSearchWarning('Search with numbers only may not find results');
+                }
+              }
+
+              setSearch(sanitized);
+            }}
+            placeholder="Search document templates..."
+            style={{ width:'100%', paddingLeft:'34px', padding:'10px 10px 10px 34px', fontSize:'13px', border:'1.5px solid #e2e8f0', borderRadius:'10px', outline:'none', boxSizing:'border-box', background:'#fff' }}
+          />
+          {searchWarning && (
+            <div style={{
+              position:'absolute',
+              top:'100%',
+              left:0,
+              marginTop:'4px',
+              fontSize:'11px',
+              color:'#f59e0b',
+              fontWeight:600,
+              background:'#fffbeb',
+              padding:'6px 10px',
+              borderRadius:'6px',
+              border:'1px solid #fcd34d',
+              whiteSpace:'nowrap',
+              zIndex:10,
+              boxShadow:'0 2px 8px rgba(245,158,11,0.15)'
+            }}>
+              ⚠️ {searchWarning}
+            </div>
+          )}
         </div>
         {/* Category filter */}
         <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
@@ -276,23 +346,114 @@ export default function DocumentTemplates() {
                 </div>
                 <div style={{ fontSize:'11px', color:'rgba(255,255,255,0.55)', paddingLeft:'38px' }}>Fill details and write your procedure content</div>
               </div>
-              <button onClick={() => setShowForm(false)} className="dt-btn"
+              <button onClick={() => { setShowForm(false); setTitleError(''); }} className="dt-btn"
                 style={{ background:'rgba(255,255,255,0.15)', border:'1px solid rgba(255,255,255,0.2)', borderRadius:'7px', color:'#fff', padding:'5px 9px', fontSize:'14px' }}>✕</button>
             </div>
 
             <div style={{ padding:'18px', overflowY:'auto', maxHeight:'76vh', display:'flex', flexDirection:'column', gap:'14px' }}>
               {/* Title */}
               <div>
-                <label style={lbl}>Title *</label>
-                <input value={form.title} onChange={e => setForm(p=>({...p,title:e.target.value}))} placeholder="e.g. How to Take a Lead"
-                  style={{ ...inp, borderColor: form.title ? '#1252e366' : '#e2e8f0' }} />
+                <label style={{...lbl, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <span>Title * <span style={{fontSize:11,color:'#94a3b8',fontWeight:400}}>(max 80 chars)</span></span>
+                  {form.title.length >= 70 && (
+                    <span style={{fontSize:11, fontWeight:400, color: form.title.length >= 80 ? '#dc2626' : '#94a3b8'}}>
+                      {form.title.length}/80
+                    </span>
+                  )}
+                </label>
+                <input
+                  value={form.title}
+                  maxLength={80}
+                  onChange={e => {
+                    const val = e.target.value;
+                    if (val.length <= 80) {
+                      setForm(p=>({...p,title:val}));
+                      // Clear error on typing
+                      setTitleError('');
+
+                      // Real-time validation
+                      const trimmed = val.trim();
+                      if (trimmed.length > 0) {
+                        // Check if purely numeric
+                        if (/^\d+$/.test(trimmed)) {
+                          setTitleError('Title must contain descriptive alphabetic text, not just numbers');
+                        }
+                        // Check letter requirement
+                        else {
+                          const letterCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+                          if (letterCount < 3) {
+                            setTitleError('Title must contain at least 3 letters for a proper description');
+                          }
+                          // Check letter ratio
+                          else {
+                            const letterRatio = letterCount / trimmed.length;
+                            if (letterRatio < 0.4) {
+                              setTitleError('Title must contain descriptive text, not mostly symbols');
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }}
+                  placeholder="e.g. How to Take a Lead"
+                  style={{ ...inp, borderColor: titleError ? '#dc2626' : (form.title ? '#1252e366' : '#e2e8f0') }}
+                />
+                {titleError && (
+                  <div style={{fontSize:11,color:'#dc2626',marginTop:6,fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
+                    <span>⚠️</span>
+                    <span>{titleError}</span>
+                  </div>
+                )}
               </div>
 
               {/* Description */}
               <div>
-                <label style={lbl}>Description</label>
-                <textarea value={form.description} onChange={e => setForm(p=>({...p,description:e.target.value}))} rows={2}
-                  placeholder="What is this document about?" style={{ ...inp, resize:'vertical' }} />
+                <label style={{...lbl, display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                  <span>Description</span>
+                  <span style={{fontSize:11, fontWeight:400, color: form.description.length > 500 ? '#dc2626' : '#94a3b8'}}>
+                    {form.description.length}/500
+                  </span>
+                </label>
+                <textarea
+                  value={form.description}
+                  onChange={e => {
+                    const val = e.target.value;
+                    // Character limit
+                    if (val.length > 500) return;
+                    setForm(p=>({...p,description:val}));
+                  }}
+                  onBlur={e => {
+                    const val = e.target.value.trim();
+                    // Validation on blur
+                    if (val.length > 0 && val.length < 10) {
+                      alert('⚠️ Description must be at least 10 characters');
+                      return;
+                    }
+                    // Check if it's mostly symbols (less than 30% alphanumeric)
+                    const alphanumericCount = (val.match(/[a-zA-Z0-9]/g) || []).length;
+                    const alphanumericRatio = alphanumericCount / val.length;
+                    if (val.length > 0 && alphanumericRatio < 0.3) {
+                      alert('⚠️ Description should contain meaningful text, not just symbols');
+                      setForm(p=>({...p,description:''}));
+                      return;
+                    }
+                    // Sanitize: trim extra spaces
+                    setForm(p=>({...p,description:val}));
+                  }}
+                  rows={4}
+                  maxLength={500}
+                  placeholder="Brief description about this document template (10-500 characters)"
+                  style={{
+                    ...inp,
+                    resize:'vertical',
+                    borderColor: form.description.length > 500 ? '#dc2626' : (form.description.length > 0 && form.description.length < 10 ? '#f59e0b' : '#d1d5db')
+                  }}
+                />
+                {form.description.length > 0 && form.description.length < 10 && (
+                  <div style={{fontSize:11, color:'#f59e0b', marginTop:4}}>
+                    ⚠️ Too short - add {10 - form.description.length} more characters
+                  </div>
+                )}
               </div>
 
               {/* Purpose */}
