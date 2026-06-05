@@ -12,7 +12,7 @@ const BulkUploadForm = ({ onClose, onSuccess }) => {
   const handleDownloadTemplate = async () => {
     try {
       const response = await fetch(`${API_URL}/leads/download-template`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       
       const blob = await response.blob();
@@ -92,7 +92,7 @@ const BulkUploadForm = ({ onClose, onSuccess }) => {
       const response = await fetch(`${API_URL}/leads/bulk-upload`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`
         },
         body: formData
       });

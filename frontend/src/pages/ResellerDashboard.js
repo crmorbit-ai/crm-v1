@@ -15,7 +15,7 @@ const ResellerDashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       if (!token) {
         navigate('/reseller/login');
         return;
