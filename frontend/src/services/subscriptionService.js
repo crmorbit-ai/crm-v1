@@ -126,7 +126,7 @@ export const getPaymentHistory = async () => {
 
 // Download receipt PDF
 export const downloadReceipt = async (paymentId) => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
   const response = await fetch(`${API_URL}/receipt/${paymentId}`, {
     headers: { Authorization: `Bearer ${token}` }
   });

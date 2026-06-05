@@ -34,7 +34,7 @@ const MeetingDetail = () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/meetings/${id}`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) {
@@ -61,7 +61,7 @@ const MeetingDetail = () => {
       const response = await fetch(`${API_URL}/meetings/${id}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)
@@ -82,7 +82,7 @@ const MeetingDetail = () => {
     try {
       const response = await fetch(`${API_URL}/meetings/${id}`, {
         method: 'DELETE',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       if (response.ok) {
         setSuccess('Meeting deleted!');

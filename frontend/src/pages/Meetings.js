@@ -58,7 +58,7 @@ const Meetings = () => {
       setLoadingEntities(true);
       const endpoint = formData.relatedTo.toLowerCase() + 's';
       const response = await fetch(`${API_URL}/${endpoint}?search=${entitySearch}&limit=10`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) setEntityResults(data.data[endpoint] || []);
@@ -77,7 +77,7 @@ const Meetings = () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/meetings?limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) setMeetings(data.data.meetings || []);
@@ -130,7 +130,7 @@ const Meetings = () => {
       }
       const response = await fetch(`${API_URL}/meetings`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(submitData)
       });
       const data = await response.json();

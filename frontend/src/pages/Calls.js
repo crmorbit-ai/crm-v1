@@ -54,7 +54,7 @@ const Calls = () => {
         default: endpoint = '/leads';
       }
       const response = await fetch(`${API_URL}${endpoint}?limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) {
@@ -84,7 +84,7 @@ const Calls = () => {
     try {
       setLoading(true);
       const response = await fetch(`${API_URL}/calls?limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) setCalls(data.data.calls || []);
@@ -103,7 +103,7 @@ const Calls = () => {
       const response = await fetch(`${API_URL}/calls`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(formData)

@@ -1226,7 +1226,7 @@ const Leads = () => {
   const loadDetailMeetings = async (leadId) => {
     try {
       const response = await fetch(`${API_URL}/meetings?relatedTo=Lead&relatedToId=${leadId}&limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) setDetailMeetings(data.data.meetings || []);
@@ -1236,7 +1236,7 @@ const Leads = () => {
   const loadDetailCalls = async (leadId) => {
     try {
       const response = await fetch(`${API_URL}/calls?relatedTo=Lead&relatedToId=${leadId}&limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) setDetailCalls(data.data.calls || []);
@@ -1341,7 +1341,7 @@ const Leads = () => {
       setError('');
       const response = await fetch(`${API_URL}/meetings`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...detailMeetingData, relatedTo: 'Lead', relatedToId: selectedLeadId })
       });
       const data = await response.json();
@@ -1370,7 +1370,7 @@ const Leads = () => {
       setError('');
       const response = await fetch(`${API_URL}/calls`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...detailCallData, relatedTo: 'Lead', relatedToId: selectedLeadId })
       });
       const data = await response.json();

@@ -5,7 +5,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import axios from 'axios';
 
 const BASE = (process.env.REACT_APP_API_URL || '').replace(/\/$/, '');
-const authH = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('token')}` } });
+const authH = () => ({ headers: { Authorization: `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` } });
 
 const api = {
   submit:          (d)    => axios.post(`${BASE}/api/feedback`, d, authH()).then(r=>r.data),

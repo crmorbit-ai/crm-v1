@@ -70,7 +70,7 @@ const Tenants = () => {
   const resetConfirmPinRefs = useRef([]);
 
   const getAuthHeader = () => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
     return token ? { Authorization: `Bearer ${token}` } : {};
   };
 

@@ -185,7 +185,7 @@ const LeadDetail = () => {
   const loadMeetings = async () => {
     try {
       const response = await fetch(`${API_URL}/meetings?relatedTo=Lead&relatedToId=${id}&limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) {
@@ -199,7 +199,7 @@ const LeadDetail = () => {
   const loadCalls = async () => {
     try {
       const response = await fetch(`${API_URL}/calls?relatedTo=Lead&relatedToId=${id}&limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) {
@@ -262,7 +262,7 @@ const LeadDetail = () => {
       const response = await fetch(`${API_URL}/meetings`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
@@ -294,7 +294,7 @@ const LeadDetail = () => {
       const response = await fetch(`${API_URL}/calls`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({

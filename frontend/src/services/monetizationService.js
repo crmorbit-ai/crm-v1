@@ -5,7 +5,7 @@ const API_URL = `${BASE_API_URL}/monetization`;
 
 const h = () => ({
   headers: {
-    Authorization: `Bearer ${localStorage.getItem('token')}`,
+    Authorization: `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
     'Content-Type': 'application/json',
   },
 });

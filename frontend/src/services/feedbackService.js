@@ -3,7 +3,7 @@ import axios from 'axios';
 const BASE = process.env.REACT_APP_API_URL || '';
 
 const auth = () => ({
-  headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+  headers: { Authorization: `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` },
 });
 
 export const submitFeedback = (data) =>

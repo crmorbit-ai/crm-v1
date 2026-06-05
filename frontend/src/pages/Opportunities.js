@@ -70,7 +70,7 @@ const Opportunities = () => {
   const loadAccounts = async () => {
     try {
       const res = await fetch(`${API_URL}/accounts?limit=200`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await res.json();
       if (data.success) setAccounts(data.data.accounts || []);
@@ -80,7 +80,7 @@ const Opportunities = () => {
   const loadUsers = async () => {
     try {
       const res = await fetch(`${API_URL}/users?limit=200`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await res.json();
       if (data.success) setUsers(data.data.users || data.data || []);
@@ -162,7 +162,7 @@ const Opportunities = () => {
 
       const res = await fetch(`${API_URL}/opportunities`, {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` },
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` },
         body: fd
       });
       const data = await res.json();
@@ -194,7 +194,7 @@ const Opportunities = () => {
   const loadOpportunities = async () => {
     try {
       const response = await fetch(`${API_URL}/opportunities?limit=100`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       const data = await response.json();
       if (data.success) setOpportunities(data.data.opportunities || []);
@@ -210,7 +210,7 @@ const Opportunities = () => {
       await fetch(`${API_URL}/opportunities/${oppId}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ stage: newStage })
@@ -223,7 +223,7 @@ const Opportunities = () => {
   const handleDownloadContract = async (oppId, fileName) => {
     try {
       const response = await fetch(`${API_URL}/opportunities/${oppId}/download-contract`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       if (!response.ok) throw new Error('Download failed');
       const blob = await response.blob();
@@ -245,7 +245,7 @@ const Opportunities = () => {
     setPreviewLoading(true);
     try {
       const response = await fetch(`${API_URL}/opportunities/${oppId}/download-contract`, {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
       if (!response.ok) throw new Error('Failed to load');
       const blob = await response.blob();

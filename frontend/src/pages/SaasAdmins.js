@@ -75,7 +75,7 @@ export default function SaasAdmins() {
   const [newPwd, setNewPwd]         = useState('');
   const [busy, setBusy]             = useState(false);
 
-  const auth = () => { const t = localStorage.getItem('token'); return t ? { Authorization: `Bearer ${t}` } : {}; };
+  const auth = () => { const t = sessionStorage.getItem('token') || localStorage.getItem('token'); return t ? { Authorization: `Bearer ${t}` } : {}; };
 
   useEffect(() => {
     (async () => {

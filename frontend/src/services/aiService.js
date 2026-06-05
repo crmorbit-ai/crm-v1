@@ -3,7 +3,7 @@ import { API_URL } from '../config/api.config';
 
 // Get auth token (use central config)
 const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
+  const token = sessionStorage.getItem('token') || localStorage.getItem('token');
   return token ? { Authorization: `Bearer ${token}` } : {};
 };
 

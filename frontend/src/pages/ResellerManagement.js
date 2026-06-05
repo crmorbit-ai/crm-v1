@@ -47,7 +47,7 @@ const ResellerManagement = () => {
 
   const fetchResellers = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       const res = await fetch(`${API_URL}/resellers`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.success) setAllResellers(data.data.resellers || []);
@@ -57,7 +57,7 @@ const ResellerManagement = () => {
 
   const fetchDetail = async (id) => {
     try {
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       const res = await fetch(`${API_URL}/resellers/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       if (data.success) setSelectedReseller(data.data);
@@ -72,7 +72,7 @@ const ResellerManagement = () => {
   const handleStatusUpdate = async () => {
     try {
       setActionLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       const res = await fetch(`${API_URL}/resellers/${selectedReseller.reseller._id}/status`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -86,7 +86,7 @@ const ResellerManagement = () => {
   const handleCommissionUpdate = async () => {
     try {
       setActionLoading(true);
-      const token = localStorage.getItem('token');
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
       const res = await fetch(`${API_URL}/resellers/${selectedReseller.reseller._id}/commission`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },

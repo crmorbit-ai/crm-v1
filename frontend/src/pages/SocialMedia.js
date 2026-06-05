@@ -137,7 +137,7 @@ export default function SocialMedia() {
   };
 
   const getAcc       = pl => accounts.find(a => a.platform === pl);
-  const handleConnect = pl => { const t = localStorage.getItem('token'); window.location.href = `${API_BASE_URL}/api/social/auth/${pl}?token=${t}`; };
+  const handleConnect = pl => { const t = sessionStorage.getItem('token') || localStorage.getItem('token'); window.location.href = `${API_BASE_URL}/api/social/auth/${pl}?token=${t}`; };
   const handleDisconnect = async pl => {
     if (!window.confirm(`Disconnect ${PLATFORMS[pl].label}?`)) return;
     try { await socialService.disconnectAccount(pl); loadAll(); showToast(`${PLATFORMS[pl].label} disconnected`); }

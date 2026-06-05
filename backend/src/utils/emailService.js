@@ -65,6 +65,7 @@ const sendViaSES = async (to, subject, html, fromAddress = FROM_ADDRESS, plainTe
   const command = new SendEmailCommand({
     Source: fromAddress,
     Destination: { ToAddresses: Array.isArray(to) ? to : [to] },
+    ReplyToAddresses: ['support@texora.ai'],
     Message: {
       Subject: { Data: subject, Charset: 'UTF-8' },
       Body: {
@@ -178,6 +179,7 @@ const baseTemplate = ({ preheader = '', headerColor = '#1a365d', accentColor = '
         </p>
         <p class="email-footer-copyright">
           &copy; ${YEAR} Texora Technologies Pvt Ltd. All rights reserved.<br/>
+          Texora Technologies, Bangalore, Karnataka, India<br/>
           This is an automated message. Please do not reply to this email.
         </p>
       </div>
