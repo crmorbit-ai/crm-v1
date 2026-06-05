@@ -108,8 +108,8 @@ const baseTemplate = ({ preheader = '', headerColor = '#1a365d', accentColor = '
     .email-container{max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #e2e8f0;}
     .email-header{background:linear-gradient(135deg,#1e3a8a 0%,#1e40af 100%);padding:32px 40px;text-align:center;border-bottom:3px solid #2563eb;}
     .email-logo-container{display:inline-block;background:#ffffff;border-radius:6px;padding:12px 24px;box-shadow:0 2px 4px rgba(0,0,0,0.1);}
-    .email-logo-text{font-size:24px;font-weight:700;color:#1a365d;letter-spacing:-0.5px;margin:0;}
-    .email-logo-text span{color:#2563eb;}
+    .email-logo-text{font-size:26px;font-weight:800;color:#0f172a;letter-spacing:0.5px;margin:0;text-transform:uppercase;}
+    .email-logo-text span{color:#2563eb;font-weight:900;}
     .email-body{padding:48px 40px;}
     .email-footer{background:#f8fafc;border-top:1px solid #e2e8f0;padding:32px 40px;text-align:center;}
     .email-footer-company{font-size:14px;font-weight:600;color:#334155;margin:0 0 12px 0;}
