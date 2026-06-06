@@ -32,7 +32,7 @@ const requireSaasAccess = (req, res, next) => {
 // Public routes
 router.get('/plans', getAllPlans);
 
-// Tenant routes (protected - all tenant users can view/manage their subscription)
+2// Tenant routes (protected - all tenant users can view/manage their subscription)
 router.get('/current', protect, getCurrentSubscription);
 router.post('/upgrade', protect, upgradePlan);
 router.post('/create-order', protect, createPaymentOrder);

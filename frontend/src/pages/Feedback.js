@@ -61,21 +61,41 @@ const SENT = {
 
 /* ─── Stat card CSS ─── */
 const STAT_CSS = `
-  .fbStat { cursor:pointer; border-radius:10px; padding:14px 18px; transition:transform 0.15s ease, box-shadow 0.15s ease; background:#fff; }
-  .fbStat:hover { transform:translateY(-2px); box-shadow:0 4px 16px rgba(0,0,0,0.1) !important; }
-  .fbStat:active { transform:translateY(0) scale(0.98); }
+  .fbStat { cursor:pointer; border-radius:12px; padding:12px 16px; transition:all 0.3s cubic-bezier(0.4,0,0.2,1); background:#fff; }
+  .fbStat:hover { transform:translateY(-4px) scale(1.02); box-shadow:0 10px 28px rgba(124,58,237,0.18) !important; }
+  .fbStat:active { transform:translateY(-1px) scale(1.01); transition:all 0.15s; }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+  }
 `;
 
-const GradStat = ({ label, value, color, active, onClick }) => (
-  <div className="fbStat" onClick={onClick}
-    style={{ border: active ? `2px solid ${color}` : '1.5px solid #e8edf2',
-      boxShadow: active ? `0 0 0 3px ${color}18, 0 2px 8px rgba(0,0,0,0.06)` : '0 1px 3px rgba(0,0,0,0.05)',
-      flex:'1 1 0', minWidth:100, background: active ? `${color}08` : '#fff' }}>
-    <div style={{ fontSize:26, fontWeight:800, color: active ? color : '#0f172a', lineHeight:1, marginBottom:5, fontVariantNumeric:'tabular-nums' }}>{value}</div>
-    <div style={{ fontSize:10, fontWeight:700, color: active ? color : '#94a3b8', textTransform:'uppercase', letterSpacing:'0.6px' }}>{label}</div>
-    {active && <div style={{ width:18, height:2, background:color, borderRadius:1, marginTop:6 }}/>}
-  </div>
-);
+const GradStat = ({ label, value, color, active, onClick }) => {
+  const getGradient = (c) => {
+    const gradients = {
+      '#6366f1': 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+      '#f59e0b': 'linear-gradient(135deg, #f59e0b 0%, #f97316 100%)',
+      '#10b981': 'linear-gradient(135deg, #10b981 0%, #14b8a6 100%)',
+      '#ef4444': 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)',
+    };
+    return gradients[c] || `linear-gradient(135deg, ${c} 0%, ${c} 100%)`;
+  };
+
+  return (
+    <div className="fbStat" onClick={onClick}
+      style={{ border: active ? `2px solid ${color}` : '1.5px solid #e8edf2',
+        boxShadow: active ? `0 0 0 4px ${color}20, 0 6px 20px ${color}40` : '0 3px 10px rgba(0,0,0,0.06)',
+        flex:'1 1 0', minWidth:95,
+        background: active ? `linear-gradient(135deg, ${color}20 0%, ${color}10 100%)` : 'linear-gradient(135deg, #ffffff 0%, #fefbff 100%)',
+        position:'relative', overflow:'hidden' }}>
+      {active && <div style={{ position:'absolute', top:0, left:0, right:0, height:3, background:getGradient(color) }}/>}
+      <div style={{ fontSize:26, fontWeight:900, color: active ? color : '#0f172a', lineHeight:1, marginBottom:5, fontVariantNumeric:'tabular-nums',
+        textShadow: active ? `0 2px 12px ${color}30` : 'none' }}>{value}</div>
+      <div style={{ fontSize:9, fontWeight:700, color: active ? color : '#94a3b8', textTransform:'uppercase', letterSpacing:'0.7px' }}>{label}</div>
+    </div>
+  );
+};
 
 const AVC=[['#6366f1','#8b5cf6'],['#10b981','#059669'],['#f59e0b','#d97706'],['#0ea5e9','#0284c7'],['#ec4899','#db2777'],['#14b8a6','#0d9488']];
 const avG = n => { const [a,b]=AVC[(n?.charCodeAt(0)||0)%AVC.length]; return `linear-gradient(135deg,${a},${b})`; };
@@ -91,42 +111,47 @@ const initials = (fn,ln) => `${(fn||'?').charAt(0)}${(ln||'').charAt(0)}`.toUppe
 
 /* ─── Shared Atoms ─── */
 const Badge = ({ label, color, bg, dot, size='sm' }) => (
-  <span style={{ display:'inline-flex', alignItems:'center', gap:4,
-    background:bg, color, border:`1px solid ${color}22`,
-    borderRadius:20, padding: size==='sm' ? '2px 9px' : '4px 12px',
-    fontSize: size==='sm' ? 11 : 12, fontWeight:600, whiteSpace:'nowrap', letterSpacing:0.2 }}>
-    {dot && <span style={{ width:5,height:5,borderRadius:'50%',background:dot,flexShrink:0 }}/>}
+  <span style={{ display:'inline-flex', alignItems:'center', gap:3,
+    background:bg, color, border:`1px solid ${color}30`,
+    borderRadius:20, padding: size==='sm' ? '2px 7px' : '4px 10px',
+    fontSize: size==='sm' ? 9 : 10, fontWeight:700, whiteSpace:'nowrap', letterSpacing:0.2,
+    boxShadow:`0 1px 3px ${color}15` }}>
+    {dot && <span style={{ width:4,height:4,borderRadius:'50%',background:dot,flexShrink:0,boxShadow:`0 0 4px ${dot}` }}/>}
     {label}
   </span>
 );
 
 const Avatar = ({ name, size=36, bg }) => (
-  <div style={{ width:size, height:size, borderRadius:size/3, flexShrink:0,
+  <div style={{ width:size, height:size, borderRadius:size/2.5, flexShrink:0,
     background: bg || avG(name), display:'flex', alignItems:'center', justifyContent:'center',
-    fontSize:size*0.38, fontWeight:700, color:'#fff', letterSpacing:0.5, userSelect:'none' }}>
-    {(name||'?').charAt(0).toUpperCase()}
+    fontSize:size*0.38, fontWeight:800, color:'#fff', letterSpacing:0.5, userSelect:'none',
+    boxShadow:'0 2px 8px rgba(0,0,0,0.15), inset 0 -2px 4px rgba(0,0,0,0.1)',
+    border:'3px solid #fff' }}>
+    {name?.split(' ').map(n=>n?.[0]).filter(Boolean).join('').slice(0,2).toUpperCase()||'?'}
   </div>
 );
 
 const Pill = ({ label, icon, selected, color, bg, onClick }) => (
   <button onClick={onClick}
-    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'8px 16px', borderRadius:10,
-      cursor:'pointer', fontSize:13, fontWeight: selected ? 700 : 500, transition:'all 0.15s',
+    style={{ display:'inline-flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:11,
+      cursor:'pointer', fontSize:13, fontWeight: selected ? 700 : 600, transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
       border: selected ? `2px solid ${color}` : '1.5px solid #e2e8f0',
-      background: selected ? bg : '#fff', color: selected ? color : '#64748b',
-      boxShadow: selected ? `0 0 0 3px ${color}18` : 'none',
+      background: selected ? `linear-gradient(135deg, ${bg} 0%, ${bg}dd 100%)` : 'linear-gradient(135deg, #fff 0%, #fafbfc 100%)',
+      color: selected ? color : '#64748b',
+      boxShadow: selected ? `0 0 0 4px ${color}15, 0 3px 8px ${color}20` : '0 2px 6px rgba(0,0,0,0.04)',
       outline:'none' }}>
-    {icon && <span style={{ fontSize:15 }}>{icon}</span>}
+    {icon && <span style={{ fontSize:16 }}>{icon}</span>}
     {label}
   </button>
 );
 
 const Chip = ({ label, icon, selected, color, bg, onClick }) => (
   <button onClick={onClick}
-    style={{ display:'inline-flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
-      cursor:'pointer', fontSize:12, fontWeight: selected ? 600 : 400, transition:'all 0.15s',
+    style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'7px 14px', borderRadius:9,
+      cursor:'pointer', fontSize:12, fontWeight: selected ? 700 : 600, transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)',
       border: selected ? `1.5px solid ${color}` : '1px solid #e2e8f0',
       background: selected ? bg : '#fafafa', color: selected ? color : '#94a3b8',
+      boxShadow: selected ? `0 2px 6px ${color}20` : 'none',
       outline:'none' }}>
     <span>{icon}</span>{label}
   </button>
@@ -134,46 +159,46 @@ const Chip = ({ label, icon, selected, color, bg, onClick }) => (
 
 const Textarea = ({ value, onChange, placeholder, rows=4, style={} }) => (
   <textarea value={value} onChange={onChange} rows={rows} placeholder={placeholder}
-    style={{ width:'100%', background:'#fff', border:'1.5px solid #e2e8f0',
-      borderRadius:10, padding:'11px 14px', color:'#0f172a', fontSize:14,
+    style={{ width:'100%', background:'linear-gradient(135deg, #ffffff 0%, #fafbfc 100%)', border:'1.5px solid #e2e8f0',
+      borderRadius:11, padding:'12px 16px', color:'#0f172a', fontSize:14,
       outline:'none', resize:'vertical', fontFamily:'inherit', boxSizing:'border-box',
-      lineHeight:1.6, transition:'border-color 0.15s, box-shadow 0.15s', ...style }}
-    onFocus={e=>{ e.target.style.borderColor='#7c3aed'; e.target.style.boxShadow='0 0 0 3px rgba(124,58,237,0.12)'; }}
-    onBlur={e=>{ e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'; }}/>
+      lineHeight:1.7, transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)', ...style }}
+    onFocus={e=>{ e.target.style.borderColor='#7c3aed'; e.target.style.boxShadow='0 0 0 4px rgba(124,58,237,0.12), 0 2px 8px rgba(0,0,0,0.04)'; e.target.style.background='#fff'; }}
+    onBlur={e=>{ e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'; e.target.style.background='linear-gradient(135deg, #ffffff 0%, #fafbfc 100%)'; }}/>
 );
 
 const Input = ({ value, onChange, placeholder, style={} }) => (
   <input value={value} onChange={onChange} placeholder={placeholder}
-    style={{ width:'100%', background:'#fff', border:'1.5px solid #e2e8f0',
-      borderRadius:10, padding:'11px 14px', color:'#0f172a', fontSize:14,
-      outline:'none', boxSizing:'border-box', transition:'border-color 0.15s, box-shadow 0.15s', ...style }}
-    onFocus={e=>{ e.target.style.borderColor='#7c3aed'; e.target.style.boxShadow='0 0 0 3px rgba(124,58,237,0.12)'; }}
-    onBlur={e=>{ e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'; }}/>
+    style={{ width:'100%', background:'linear-gradient(135deg, #ffffff 0%, #fafbfc 100%)', border:'1.5px solid #e2e8f0',
+      borderRadius:11, padding:'12px 16px', color:'#0f172a', fontSize:14,
+      outline:'none', boxSizing:'border-box', transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)', ...style }}
+    onFocus={e=>{ e.target.style.borderColor='#7c3aed'; e.target.style.boxShadow='0 0 0 4px rgba(124,58,237,0.12), 0 2px 8px rgba(0,0,0,0.04)'; e.target.style.background='#fff'; }}
+    onBlur={e=>{ e.target.style.borderColor='#e2e8f0'; e.target.style.boxShadow='none'; e.target.style.background='linear-gradient(135deg, #ffffff 0%, #fafbfc 100%)'; }}/>
 );
 
 const Btn = ({ children, onClick, disabled, variant='primary', size='md', fullWidth }) => {
   const v = {
-    primary: { bg:'linear-gradient(135deg,#7c3aed,#6d28d9)', color:'#fff', border:'none', shadow:'0 2px 8px rgba(124,58,237,0.35)' },
-    secondary:{ bg:'#f1f5f9', color:'#374151', border:'none', shadow:'none' },
-    outline:  { bg:'#fff', color:'#374151', border:'1.5px solid #e2e8f0', shadow:'none' },
-    danger:   { bg:'#fff', color:'#dc2626', border:'1.5px solid #fecaca', shadow:'none' },
+    primary: { bg:'linear-gradient(135deg,#7c3aed,#6d28d9)', color:'#fff', border:'none', shadow:'0 4px 12px rgba(124,58,237,0.4)' },
+    secondary:{ bg:'linear-gradient(135deg,#f1f5f9,#e2e8f0)', color:'#374151', border:'none', shadow:'0 2px 6px rgba(0,0,0,0.08)' },
+    outline:  { bg:'#fff', color:'#374151', border:'1.5px solid #e2e8f0', shadow:'0 2px 6px rgba(0,0,0,0.04)' },
+    danger:   { bg:'#fff', color:'#dc2626', border:'1.5px solid #fecaca', shadow:'0 2px 6px rgba(220,38,38,0.15)' },
     ghost:    { bg:'transparent', color:'#64748b', border:'none', shadow:'none' },
-    red:      { bg:'linear-gradient(135deg,#ef4444,#dc2626)', color:'#fff', border:'none', shadow:'0 2px 8px rgba(239,68,68,0.3)' },
-    green:    { bg:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', shadow:'0 2px 8px rgba(16,185,129,0.3)' },
+    red:      { bg:'linear-gradient(135deg,#ef4444,#dc2626)', color:'#fff', border:'none', shadow:'0 4px 12px rgba(239,68,68,0.35)' },
+    green:    { bg:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', border:'none', shadow:'0 4px 12px rgba(16,185,129,0.35)' },
   };
   const s = v[variant] || v.primary;
-  const pad = size==='sm' ? '7px 16px' : size==='lg' ? '12px 28px' : '9px 20px';
+  const pad = size==='sm' ? '8px 18px' : size==='lg' ? '13px 30px' : '10px 22px';
   const fz  = size==='sm' ? 12 : size==='lg' ? 15 : 13;
   return (
     <button onClick={onClick} disabled={disabled}
       style={{ background:s.bg, color:s.color, border:s.border||'none',
-        boxShadow:s.shadow, padding:pad, borderRadius:9, fontSize:fz, fontWeight:600,
+        boxShadow:s.shadow, padding:pad, borderRadius:10, fontSize:fz, fontWeight:700,
         cursor:disabled?'not-allowed':'pointer', opacity:disabled?0.5:1,
-        transition:'all 0.15s', whiteSpace:'nowrap', width:fullWidth?'100%':'auto',
-        display:'inline-flex', alignItems:'center', justifyContent:'center', gap:6,
-        outline:'none', letterSpacing:0.1 }}
-      onMouseEnter={e=> { if(!disabled) e.currentTarget.style.opacity='0.9'; }}
-      onMouseLeave={e=>{ if(!disabled) e.currentTarget.style.opacity='1'; }}>
+        transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)', whiteSpace:'nowrap', width:fullWidth?'100%':'auto',
+        display:'inline-flex', alignItems:'center', justifyContent:'center', gap:7,
+        outline:'none', letterSpacing:0.2 }}
+      onMouseEnter={e=> { if(!disabled) { e.currentTarget.style.transform='translateY(-1px)'; e.currentTarget.style.boxShadow=s.shadow.replace(/rgba\(([^)]+)\)/, (m,p)=>`rgba(${p.split(',').slice(0,3).join(',')},${parseFloat(p.split(',')[3]||0.4)*1.3})`); } }}
+      onMouseLeave={e=>{ if(!disabled) { e.currentTarget.style.transform='translateY(0)'; e.currentTarget.style.boxShadow=s.shadow; } }}>
       <style>{`
   /* ── RESPONSIVE ────────────────── */
   @media(max-width:768px){
@@ -197,8 +222,8 @@ const Btn = ({ children, onClick, disabled, variant='primary', size='md', fullWi
 
 const Card = ({ children, style={}, onClick }) => (
   <div onClick={onClick}
-    style={{ background:'#fff', borderRadius:14, border:'1px solid #e8edf2',
-      boxShadow:'0 1px 4px rgba(0,0,0,0.06)', ...style }}>
+    style={{ background:'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)', borderRadius:16, border:'2px solid #bbf7d0',
+      boxShadow:'0 4px 16px rgba(16,185,129,0.08), 0 0 1px rgba(16,185,129,0.06)', ...style }}>
     {children}
   </div>
 );
@@ -294,10 +319,10 @@ const InsightRow = ({ bySentiment={}, avgRatingByCategory=[] }) => {
 };
 
 const EmptyState = ({ icon, title, sub }) => (
-  <div style={{ textAlign:'center', padding:'64px 32px' }}>
-    <div style={{ fontSize:48, marginBottom:16, opacity:0.6 }}>{icon}</div>
-    <p style={{ fontSize:16, fontWeight:700, color:'#374151', margin:'0 0 6px' }}>{title}</p>
-    <p style={{ fontSize:13, color:'#94a3b8', margin:0 }}>{sub}</p>
+  <div style={{ textAlign:'center', padding:'80px 32px' }}>
+    <div style={{ fontSize:56, marginBottom:20, opacity:0.5, filter:'grayscale(0.3)' }}>{icon}</div>
+    <p style={{ fontSize:17, fontWeight:800, color:'#374151', margin:'0 0 8px', letterSpacing:-0.2 }}>{title}</p>
+    <p style={{ fontSize:14, color:'#94a3b8', margin:0, fontWeight:500 }}>{sub}</p>
   </div>
 );
 
@@ -607,6 +632,7 @@ const TenantUserView = () => {
    TIER 1 — TENANT ADMIN
 ═══════════════════════════════════════════════════════════ */
 const TenantAdminView = () => {
+  const { user } = useAuth();
   const [tab,         setTab]        = useState('inbox');
   const [list,        setList]       = useState([]);
   const [loading,     setLoading]    = useState(true);
@@ -617,10 +643,13 @@ const TenantAdminView = () => {
   const [escalReason, setEscalReason]= useState('');
   const [showEscal,   setShowEscal]  = useState(false);
   const [busy,        setBusy]       = useState(false);
-  const [filters,     setFilters]    = useState({search:'',tenantAdminStatus:'',type:'',category:''});
+  const [filters,     setFilters]    = useState({search:'',tenantAdminStatus:'',type:'',category:'',sentiment:''});
   const [cForm,       setCForm]      = useState({type:'',category:'other',title:'',description:'',rating:0});
   const [cSending,    setCsend]      = useState(false);
   const [cSent,       setCSent]      = useState(false);
+
+  // DEBUG: Log user info
+  console.log('👤 Current User:', { email: user?.email, tenant: user?.tenant, userType: user?.userType });
 
   const loadInbox = useCallback(async()=>{
     setLoading(true);
@@ -630,12 +659,19 @@ const TenantAdminView = () => {
       if(filters.tenantAdminStatus) p.tenantAdminStatus =filters.tenantAdminStatus;
       if(filters.type)              p.type              =filters.type;
       if(filters.category)          p.category          =filters.category;
+      if(filters.sentiment)         p.sentiment         =filters.sentiment;
       const d=await api.tenantInbox(p); setList(d.data||[]);
     }catch{} setLoading(false);
   },[filters]);
 
   const loadAnalytics = useCallback(async()=>{
-    try{ const d=await api.tenantAnalytics({days:30}); setAnalytics(d.data); }catch{}
+    try{
+      const d=await api.tenantAnalytics({days:90}); // Changed to 90 days to show older feedback
+      console.log('📊 Analytics Response:', d);
+      setAnalytics(d.data);
+    }catch(err){
+      console.error('❌ Analytics Error:', err);
+    }
   },[]);
 
   useEffect(()=>{ loadInbox(); },[loadInbox]);
@@ -657,7 +693,18 @@ const TenantAdminView = () => {
   };
   const doEscalate = async()=>{
     setBusy(true);
-    try{ const d=await api.escalate(selId,{reason:escalReason}); setDetail(p=>({...p,...d.data})); setList(l=>l.map(f=>f._id===selId?{...f,...d.data}:f)); setShowEscal(false); }catch{}
+    try{
+      console.log('🚀 Escalating feedback:', selId, {reason: escalReason});
+      const d=await api.escalate(selId,{reason:escalReason});
+      console.log('✅ Escalation response:', d);
+      setDetail(p=>({...p,...d.data}));
+      setList(l=>l.map(f=>f._id===selId?{...f,...d.data}:f));
+      setShowEscal(false);
+      alert('✅ Successfully escalated to SAAS admin!');
+    }catch(err){
+      console.error('❌ Escalation failed:', err);
+      alert('❌ Failed to escalate: ' + (err.response?.data?.message || err.message || 'Unknown error'));
+    }
     setBusy(false);
   };
   const doContactSaas = async() => {
@@ -673,87 +720,129 @@ const TenantAdminView = () => {
 
   const unread = list.filter(f=>f.tenantAdminStatus==='pending').length;
   const TABS = [
-    { id:'inbox',        label:'Inbox',        icon:'📥', badge: unread||null },
-    { id:'insights',     label:'Insights',      icon:'📊' },
-    { id:'contact_saas', label:'Contact SAAS',  icon:'📨' },
+    { id:'inbox',        label:'Inbox',           icon:'📥', badge: unread||null },
+    { id:'insights',     label:'Insights',        icon:'📊' },
+    { id:'contact_saas', label:'Submit Feedback', icon:'📨' },
   ];
 
   return (
     <DashboardLayout>
       <style>{STAT_CSS}</style>
-      <div style={{ height:'100vh', background:'#f8fafc', display:'flex', flexDirection:'column', overflow:'hidden',
+      <div style={{ height:'100vh', background:'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #d1fae5 100%)', display:'flex', overflow:'hidden',
         fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
 
-        {/* ── Header ── */}
-        <div style={{ background:'#fff', borderBottom:'1px solid #e8edf2', padding:'0 28px', flexShrink:0 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px 0 12px' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-              <div style={{ width:42,height:42,borderRadius:12,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',
-                display:'flex',alignItems:'center',justifyContent:'center',fontSize:20 }}>📬</div>
+        {/* ── Sidebar ── */}
+        <div style={{ width:220, flexShrink:0, background:'linear-gradient(180deg, #064e3b 0%, #065f46 50%, #14532d 100%)',
+          borderRight:'3px solid transparent',
+          backgroundImage:'linear-gradient(180deg, #064e3b 0%, #065f46 50%, #14532d 100%), linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          backgroundOrigin:'border-box', backgroundClip:'padding-box, border-box',
+          display:'flex', flexDirection:'column', boxShadow:'4px 0 20px rgba(16,185,129,0.25)' }}>
+
+          {/* Header */}
+          <div style={{ padding:'20px 16px', borderBottom:'2px solid rgba(16,185,129,0.3)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+              <div style={{ width:40,height:40,borderRadius:12,background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,
+                boxShadow:'0 4px 12px rgba(251,191,36,0.4), 0 0 0 3px rgba(251,191,36,0.2)' }}>📬</div>
               <div>
-                <h1 style={{ margin:'0 0 2px', fontSize:20, fontWeight:800, color:'#0f172a', letterSpacing:-0.3 }}>Feedback Inbox</h1>
-                <p style={{ margin:0, fontSize:13, color:'#64748b' }}>Manage and respond to your team's feedback</p>
+                <h1 style={{ margin:0, fontSize:17, fontWeight:900, color:'#ffffff', letterSpacing:-0.3, textShadow:'0 2px 8px rgba(0,0,0,0.3)' }}>Feedback</h1>
               </div>
             </div>
-            {/* KPI strip — clickable gradient cards */}
-            {analytics && (
-              <div style={{ display:'flex', gap:8 }}>
+            <p style={{ margin:0, fontSize:10, color:'#a7f3d0', fontWeight:600, lineHeight:1.4 }}>Manage team feedback</p>
+          </div>
+
+          {/* Tabs */}
+          <div style={{ flex:1, padding:'12px 8px', overflowY:'auto' }}>
+            {TABS.map((t, idx)=>{
+              const tabColors = [
+                { bg:'linear-gradient(135deg, #10b981 0%, #059669 100%)', glow:'#10b981' },
+                { bg:'linear-gradient(135deg, #14b8a6 0%, #0d9488 100%)', glow:'#14b8a6' },
+                { bg:'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', glow:'#22c55e' },
+              ];
+              const tc = tabColors[idx] || tabColors[0];
+              return (
+                <button key={t.id} onClick={()=>setTab(t.id)}
+                  style={{ width:'100%', display:'flex', alignItems:'center', gap:10, padding:'12px 14px', marginBottom:6,
+                    fontSize:12, fontWeight:700, cursor:'pointer', border:'none', borderRadius:12,
+                    outline:'none', transition:'all 0.25s cubic-bezier(0.4,0,0.2,1)', textAlign:'left',
+                    background: tab===t.id ? tc.bg : 'rgba(16,185,129,0.15)',
+                    color: tab===t.id ? '#ffffff' : '#a7f3d0',
+                    boxShadow: tab===t.id ? `0 4px 16px ${tc.glow}40, 0 0 0 2px ${tc.glow}30` : 'none',
+                    transform: tab===t.id ? 'translateX(4px)' : 'translateX(0)' }}
+                  onMouseEnter={e=>{ if(tab!==t.id) { e.currentTarget.style.background='rgba(16,185,129,0.25)'; e.currentTarget.style.color='#d1fae5'; e.currentTarget.style.transform='translateX(2px)'; } }}
+                  onMouseLeave={e=>{ if(tab!==t.id) { e.currentTarget.style.background='rgba(16,185,129,0.15)'; e.currentTarget.style.color='#a7f3d0'; e.currentTarget.style.transform='translateX(0)'; } }}>
+                  <span style={{ fontSize:18 }}>{t.icon}</span>
+                  <span style={{ flex:1 }}>{t.label}</span>
+                  {t.badge && (
+                    <span style={{ background:'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)', color:'#fff', borderRadius:20,
+                      padding:'3px 8px', fontSize:9, fontWeight:900, boxShadow:'0 2px 8px rgba(239,68,68,0.4), 0 0 0 2px rgba(239,68,68,0.2)',
+                      animation:'pulse 2s infinite' }}>{t.badge}</span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Footer decoration */}
+          <div style={{ padding:'16px', borderTop:'2px solid rgba(16,185,129,0.3)' }}>
+            <div style={{ background:'linear-gradient(135deg, rgba(16,185,129,0.2) 0%, rgba(5,150,105,0.2) 100%)',
+              borderRadius:10, padding:'10px 12px', border:'1px solid rgba(16,185,129,0.3)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+                <div style={{ width:6, height:6, borderRadius:'50%', background:'#22c55e', boxShadow:'0 0 8px #22c55e' }}/>
+                <span style={{ fontSize:10, color:'#a7f3d0', fontWeight:700 }}>System Active</span>
+              </div>
+              <p style={{ margin:0, fontSize:9, color:'#6ee7b7', lineHeight:1.3 }}>{list.length} items tracked</p>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Main Content ── */}
+        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+
+          {/* Stats Header */}
+          {analytics && (
+            <div style={{ background:'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)', borderBottom:'2px solid #bbf7d0',
+              padding:'16px 20px', flexShrink:0, boxShadow:'0 2px 8px rgba(16,185,129,0.08)' }}>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                 {[
-                  {k:'all',      l:'Total',    v:analytics.total,                 c:'#6366f1', f:()=>setFilters(p=>({...p,tenantAdminStatus:''})),           act:!filters.tenantAdminStatus},
-                  {k:'pending',  l:'Pending',  v:analytics.open,                  c:'#f59e0b', f:()=>setFilters(p=>({...p,tenantAdminStatus:'pending'})),     act:filters.tenantAdminStatus==='pending'},
-                  {k:'resolved', l:'Resolved', v:analytics.resolved,              c:'#10b981', f:()=>setFilters(p=>({...p,tenantAdminStatus:'resolved'})),    act:filters.tenantAdminStatus==='resolved'},
-                  {k:'escalated',l:'Escalated',v:analytics.escalated,             c:'#ef4444', f:()=>setFilters(p=>({...p,tenantAdminStatus:'escalated'})),   act:filters.tenantAdminStatus==='escalated'},
-                  {k:'positive', l:'Positive', v:`${analytics.positiveRate||0}%`, c:'#10b981', f:()=>{},                                                      act:false},
+                  {k:'all',      l:'Total',    v:analytics.total||0,                 c:'#6366f1', f:()=>setFilters(p=>({...p,tenantAdminStatus:'',sentiment:''})),           act:!filters.tenantAdminStatus&&!filters.sentiment},
+                  {k:'pending',  l:'Pending',  v:analytics.open||0,                  c:'#f59e0b', f:()=>setFilters(p=>({...p,tenantAdminStatus:'pending',sentiment:''})),     act:filters.tenantAdminStatus==='pending'},
+                  {k:'resolved', l:'Resolved', v:analytics.resolved||0,              c:'#10b981', f:()=>setFilters(p=>({...p,tenantAdminStatus:'resolved',sentiment:''})),    act:filters.tenantAdminStatus==='resolved'},
+                  {k:'escalated',l:'Escalated',v:analytics.escalated||0,             c:'#ef4444', f:()=>setFilters(p=>({...p,tenantAdminStatus:'escalated',sentiment:''})),   act:filters.tenantAdminStatus==='escalated'},
+                  {k:'positive', l:'Positive', v:`${analytics.positiveRate||0}%`,    c:'#10b981', f:()=>setFilters(p=>({...p,sentiment:'positive',tenantAdminStatus:''})),    act:filters.sentiment==='positive'},
                 ].map(s=>(
                   <GradStat key={s.k} label={s.l} value={s.v} color={s.c} active={s.act} onClick={s.f}/>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* Tab nav */}
-          <div style={{ display:'flex', gap:0, marginTop:16 }}>
-            {TABS.map(t=>(
-              <button key={t.id} onClick={()=>setTab(t.id)}
-                style={{ display:'flex', alignItems:'center', gap:6, padding:'12px 20px',
-                  fontSize:13, fontWeight:600, cursor:'pointer', background:'transparent', border:'none',
-                  outline:'none', color: tab===t.id ? '#7c3aed' : '#64748b',
-                  borderBottom: tab===t.id ? '2px solid #7c3aed' : '2px solid transparent',
-                  marginBottom:-2, transition:'all 0.15s', whiteSpace:'nowrap' }}>
-                <span>{t.icon}</span>{t.label}
-                {t.badge && (
-                  <span style={{ background:'#ef4444', color:'#fff', borderRadius:20, padding:'1px 7px', fontSize:10, fontWeight:800 }}>{t.badge}</span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
+            </div>
+          )}
 
         {/* ── INBOX TAB ── */}
         {tab==='inbox' && (
           <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
 
             {/* List pane */}
-            <div style={{ width: selId ? 380 : 460, flexShrink:0, borderRight:'1px solid #e8edf2',
-              display:'flex', flexDirection:'column', background:'#fff', transition:'width 0.3s cubic-bezier(.4,0,.2,1)' }}>
+            <div style={{ width: selId ? '40%' : '100%', flexShrink:0, borderRight: selId ? '2px solid #bbf7d0' : 'none',
+              display:'flex', flexDirection:'column', background:'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
+              transition:'all 0.3s cubic-bezier(.4,0,.2,1)', boxShadow: selId ? '2px 0 8px rgba(16,185,129,0.06)' : 'none' }}>
 
               {/* Filters */}
-              <div style={{ padding:'12px 16px', borderBottom:'1px solid #f1f5f9', background:'#fafbfc' }}>
-                <div style={{ position:'relative', marginBottom:8 }}>
-                  <span style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', fontSize:14, color:'#94a3b8' }}>🔍</span>
+              <div style={{ padding:'10px 14px', borderBottom:'2px solid #bbf7d0', background:'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #d1fae5 100%)' }}>
+                <div style={{ position:'relative', marginBottom:6 }}>
+                  <span style={{ position:'absolute', left:10, top:'50%', transform:'translateY(-50%)', fontSize:13, color:'#94a3b8' }}>🔍</span>
                   <input value={filters.search} onChange={e=>setFilters(f=>({...f,search:e.target.value}))}
                     placeholder="Search feedback…"
-                    style={{ width:'100%', background:'#fff', border:'1.5px solid #e8edf2', borderRadius:9,
-                      padding:'9px 12px 9px 36px', color:'#374151', fontSize:13, outline:'none', boxSizing:'border-box',
-                      transition:'border-color 0.15s' }}
-                    onFocus={e=>e.target.style.borderColor='#7c3aed'}
-                    onBlur={e=>e.target.style.borderColor='#e8edf2'}/>
+                    style={{ width:'100%', background:'linear-gradient(135deg, #fff 0%, #fafbfc 100%)', border:'1.5px solid #e8edf2', borderRadius:8,
+                      padding:'7px 10px 7px 32px', color:'#374151', fontSize:12, outline:'none', boxSizing:'border-box',
+                      transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)', fontWeight:500 }}
+                    onFocus={e=>{ e.target.style.borderColor='#7c3aed'; e.target.style.boxShadow='0 0 0 3px rgba(124,58,237,0.1)'; e.target.style.background='#fff'; }}
+                    onBlur={e=>{ e.target.style.borderColor='#e8edf2'; e.target.style.boxShadow='none'; e.target.style.background='linear-gradient(135deg, #fff 0%, #fafbfc 100%)'; }}/>
                 </div>
-                <div style={{ display:'flex', gap:6 }}>
+                <div style={{ display:'flex', gap:5 }}>
                   {[{k:'tenantAdminStatus',opts:Object.keys(TSTATUS),pl:'Status'},{k:'type',opts:Object.keys(TYPE),pl:'Type'}].map(f=>(
                     <select key={f.k} value={filters[f.k]} onChange={e=>setFilters(fv=>({...fv,[f.k]:e.target.value}))}
-                      style={{ flex:1, background:'#fff', border:'1.5px solid #e8edf2', borderRadius:8,
-                        padding:'7px 10px', color:'#374151', fontSize:12, outline:'none', cursor:'pointer' }}>
+                      style={{ flex:1, background:'linear-gradient(135deg, #fff 0%, #fafbfc 100%)', border:'1.5px solid #e8edf2', borderRadius:7,
+                        padding:'6px 8px', color:'#374151', fontSize:11, outline:'none', cursor:'pointer', fontWeight:600 }}>
                       <option value="">{f.pl}</option>
                       {f.opts.map(o=><option key={o} value={o}>{o.replace(/_/g,' ')}</option>)}
                     </select>
@@ -762,8 +851,8 @@ const TenantAdminView = () => {
               </div>
 
               {/* Count */}
-              <div style={{ padding:'8px 16px', borderBottom:'1px solid #f1f5f9', background:'#fafbfc' }}>
-                <span style={{ fontSize:12, color:'#94a3b8', fontWeight:600 }}>{list.length} item{list.length!==1?'s':''}</span>
+              <div style={{ padding:'8px 14px', borderBottom:'2px solid #bbf7d0', background:'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' }}>
+                <span style={{ fontSize:11, color:'#065f46', fontWeight:800, letterSpacing:0.3 }}>📋 {list.length} item{list.length!==1?'s':''}</span>
               </div>
 
               {/* Items */}
@@ -779,27 +868,31 @@ const TenantAdminView = () => {
                   const isPending=fb.tenantAdminStatus==='pending';
                   return (
                     <div key={fb._id} onClick={()=>selectItem(fb._id)}
-                      style={{ padding:'14px 16px', borderBottom:'1px solid #f8fafc', cursor:'pointer',
-                        transition:'background 0.12s', background: isActive ? '#faf5ff' : '#fff',
-                        borderLeft:`3px solid ${isActive?'#7c3aed':fb.escalatedToSaas?'#ef4444':isPending?'#3b82f6':'transparent'}` }}
-                      onMouseEnter={e=>{ if(!isActive) e.currentTarget.style.background='#fafafa'; }}
-                      onMouseLeave={e=>{ if(!isActive) e.currentTarget.style.background='#fff'; }}>
-                      <div style={{ display:'flex', alignItems:'flex-start', gap:11 }}>
-                        <Avatar name={uN} size={36}/>
+                      style={{ padding:'12px 14px', borderBottom:'1px solid #d1fae5', cursor:'pointer',
+                        transition:'all 0.25s cubic-bezier(0.4,0,0.2,1)',
+                        background: isActive ? 'linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)' : 'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)',
+                        borderLeft:`4px solid ${isActive?'#10b981':fb.escalatedToSaas?'#ef4444':isPending?'#059669':'transparent'}`,
+                        boxShadow: isActive ? '0 3px 12px rgba(16,185,129,0.2), inset 0 0 0 1px rgba(16,185,129,0.15)' : 'none',
+                        margin: isActive ? '3px 0' : '0',
+                        borderRadius: isActive ? '0 10px 10px 0' : '0' }}
+                      onMouseEnter={e=>{ if(!isActive) { e.currentTarget.style.background='linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)'; e.currentTarget.style.paddingLeft='18px'; e.currentTarget.style.boxShadow='0 2px 8px rgba(16,185,129,0.1)'; } }}
+                      onMouseLeave={e=>{ if(!isActive) { e.currentTarget.style.background='linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)'; e.currentTarget.style.paddingLeft='14px'; e.currentTarget.style.boxShadow='none'; } }}>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:9 }}>
+                        <Avatar name={uN} size={32}/>
                         <div style={{ flex:1, minWidth:0 }}>
-                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:4 }}>
-                            <span style={{ fontSize:12, fontWeight:700, color:'#374151' }}>{uN}</span>
-                            <span style={{ fontSize:10, color:'#94a3b8', flexShrink:0, marginLeft:6 }}>{ago(fb.createdAt)}</span>
+                          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:3 }}>
+                            <span style={{ fontSize:11, fontWeight:700, color:'#374151' }}>{uN}</span>
+                            <span style={{ fontSize:9, color:'#94a3b8', flexShrink:0, marginLeft:4 }}>{ago(fb.createdAt)}</span>
                           </div>
-                          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:6 }}>
-                            <span style={{ fontSize:13 }}>{TYPE[fb.type]?.icon}</span>
-                            <span style={{ fontSize:13, fontWeight:600, color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:5 }}>
+                            <span style={{ fontSize:12 }}>{TYPE[fb.type]?.icon}</span>
+                            <span style={{ fontSize:12, fontWeight:600, color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                               {fb.title}
                             </span>
                             {isPending&&!fb.tenantAdminReply&&
-                              <span style={{ width:7,height:7,borderRadius:'50%',background:'#3b82f6',flexShrink:0,display:'inline-block' }}/>}
+                              <span style={{ width:6,height:6,borderRadius:'50%',background:'#3b82f6',flexShrink:0,display:'inline-block' }}/>}
                           </div>
-                          <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
+                          <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
                             <Badge label={ts.label} color={ts.color} bg={ts.bg} dot={ts.dot}/>
                             <Badge label={CAT[fb.category]?.label||'Other'} color={CAT[fb.category]?.color||'#64748b'} bg={CAT[fb.category]?.bg||'#f8fafc'}/>
                             {fb.escalatedToSaas && <Badge label="↑ SAAS" color="#dc2626" bg="#fef2f2"/>}
@@ -813,19 +906,20 @@ const TenantAdminView = () => {
               </div>
             </div>
 
-            {/* Detail pane */}
-            {selId && detail ? (
-              <div style={{ flex:1, overflowY:'auto', background:'#f8fafc', display:'flex', flexDirection:'column' }}>
+            {/* Detail pane - only show when item selected */}
+            {selId && detail && (
+              <div style={{ flex:1, overflowY:'auto', background:'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #d1fae5 100%)', display:'flex', flexDirection:'column' }}>
 
                 {/* Detail header */}
-                <div style={{ background:'#fff', borderBottom:'1px solid #e8edf2', padding:'18px 26px', flexShrink:0 }}>
+                <div style={{ background:'linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%)', borderBottom:'2px solid #bbf7d0',
+                  padding:'20px 28px', flexShrink:0, boxShadow:'0 2px 8px rgba(16,185,129,0.08)' }}>
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                    <div style={{ flex:1, marginRight:16 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-                        <span style={{ fontSize:20 }}>{TYPE[detail.type]?.icon}</span>
-                        <h2 style={{ margin:0, fontSize:17, fontWeight:800, color:'#0f172a' }}>{detail.title}</h2>
+                    <div style={{ flex:1, marginRight:18 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+                        <span style={{ fontSize:22 }}>{TYPE[detail.type]?.icon}</span>
+                        <h2 style={{ margin:0, fontSize:18, fontWeight:800, color:'#0f172a', letterSpacing:-0.3 }}>{detail.title}</h2>
                       </div>
-                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                      <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
                         <Badge label={TYPE[detail.type]?.label}    color={TYPE[detail.type]?.color}    bg={TYPE[detail.type]?.bg}/>
                         <Badge label={CAT[detail.category]?.label} color={CAT[detail.category]?.color} bg={CAT[detail.category]?.bg}/>
                         <Badge label={`${SENT[detail.sentiment]?.icon} ${SENT[detail.sentiment]?.label}`} color={SENT[detail.sentiment]?.color} bg={SENT[detail.sentiment]?.bg}/>
@@ -833,61 +927,66 @@ const TenantAdminView = () => {
                       </div>
                     </div>
                     <button onClick={()=>{setSelId(null);setDetail(null);}}
-                      style={{ width:32,height:32,borderRadius:8,background:'#f1f5f9',border:'none',cursor:'pointer',
-                        fontSize:16,color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
+                      style={{ width:36,height:36,borderRadius:10,background:'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)',border:'1px solid #e2e8f0',cursor:'pointer',
+                        fontSize:17,color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center',
+                        transition:'all 0.2s', boxShadow:'0 2px 6px rgba(0,0,0,0.06)' }}
+                      onMouseEnter={e=>{ e.currentTarget.style.background='linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'; e.currentTarget.style.color='#fff'; }}
+                      onMouseLeave={e=>{ e.currentTarget.style.background='linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'; e.currentTarget.style.color='#64748b'; }}>✕</button>
                   </div>
                 </div>
 
-                <div style={{ padding:'22px 26px', flex:1 }}>
+                <div style={{ padding:'24px 28px', flex:1 }}>
                   {/* Submitter card */}
-                  <Card style={{ padding:'14px 18px', marginBottom:18, display:'flex', alignItems:'center', gap:12 }}>
-                    <Avatar name={detail.submittedBy?.firstName} size={40}/>
+                  <Card style={{ padding:'16px 20px', marginBottom:20, display:'flex', alignItems:'center', gap:14 }}>
+                    <Avatar name={detail.submittedBy?.firstName} size={44}/>
                     <div style={{ flex:1 }}>
-                      <p style={{ margin:'0 0 3px', fontSize:13, fontWeight:700, color:'#0f172a' }}>
+                      <p style={{ margin:'0 0 4px', fontSize:14, fontWeight:800, color:'#0f172a', letterSpacing:-0.2 }}>
                         {[detail.submittedBy?.firstName,detail.submittedBy?.lastName].filter(Boolean).join(' ')||'User'}
                       </p>
-                      <p style={{ margin:0, fontSize:12, color:'#64748b' }}>{detail.submittedBy?.email} · {fmt(detail.createdAt)}</p>
+                      <p style={{ margin:0, fontSize:12, color:'#64748b', fontWeight:500 }}>{detail.submittedBy?.email} · {fmt(detail.createdAt)}</p>
                     </div>
                     {detail.rating>0 && (
-                      <div style={{ textAlign:'center' }}>
-                        <div style={{ fontSize:16 }}>{'⭐'.repeat(detail.rating)}</div>
-                        <div style={{ fontSize:11, color:'#d97706', fontWeight:600, marginTop:2 }}>{['','Poor','Fair','Good','Very Good','Excellent'][detail.rating]}</div>
+                      <div style={{ textAlign:'center', padding:'8px 12px', background:'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                        borderRadius:10, border:'1px solid #fde68a' }}>
+                        <div style={{ fontSize:17, marginBottom:2 }}>{'⭐'.repeat(detail.rating)}</div>
+                        <div style={{ fontSize:10, color:'#d97706', fontWeight:700, textTransform:'uppercase', letterSpacing:0.5 }}>{['','Poor','Fair','Good','Very Good','Excellent'][detail.rating]}</div>
                       </div>
                     )}
                   </Card>
 
                   {/* Message */}
-                  <Card style={{ padding:'16px 20px', marginBottom:18 }}>
-                    <p style={{ margin:'0 0 10px', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1 }}>User's Message</p>
-                    <p style={{ margin:0, fontSize:14, color:'#374151', lineHeight:1.85 }}>{detail.description}</p>
+                  <Card style={{ padding:'18px 22px', marginBottom:20 }}>
+                    <p style={{ margin:'0 0 12px', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1.2 }}>User's Message</p>
+                    <p style={{ margin:0, fontSize:14, color:'#374151', lineHeight:1.9, fontWeight:500 }}>{detail.description}</p>
                   </Card>
 
                   {/* SAAS reply (read only) */}
                   {detail.adminReply && (
-                    <div style={{ background:'linear-gradient(135deg,#f5f3ff,#ede9fe)', border:'1px solid #ddd6fe',
-                      borderRadius:12, padding:'16px 20px', marginBottom:18 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-                        <div style={{ width:28,height:28,borderRadius:8,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',
-                          display:'flex',alignItems:'center',justifyContent:'center',fontSize:13,color:'#fff',fontWeight:700 }}>S</div>
-                        <span style={{ fontSize:12, fontWeight:700, color:'#6d28d9' }}>SAAS Admin Reply</span>
-                        <span style={{ fontSize:11, color:'#94a3b8' }}>· {ago(detail.repliedAt)}</span>
+                    <div style={{ background:'linear-gradient(135deg,#f5f3ff,#ede9fe)', border:'2px solid #ddd6fe',
+                      borderRadius:14, padding:'18px 22px', marginBottom:20, boxShadow:'0 2px 8px rgba(124,58,237,0.08)' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:12 }}>
+                        <div style={{ width:32,height:32,borderRadius:10,background:'linear-gradient(135deg,#7c3aed,#6d28d9)',
+                          display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:'#fff',fontWeight:800,
+                          boxShadow:'0 2px 6px rgba(124,58,237,0.3)' }}>S</div>
+                        <span style={{ fontSize:13, fontWeight:800, color:'#6d28d9', letterSpacing:-0.2 }}>SAAS Admin Reply</span>
+                        <span style={{ fontSize:11, color:'#94a3b8', fontWeight:600 }}>· {ago(detail.repliedAt)}</span>
                       </div>
-                      <p style={{ margin:0, fontSize:13, color:'#374151', lineHeight:1.7 }}>{detail.adminReply}</p>
+                      <p style={{ margin:0, fontSize:14, color:'#374151', lineHeight:1.8, fontWeight:500 }}>{detail.adminReply}</p>
                     </div>
                   )}
 
                   {/* Status update */}
-                  <div style={{ marginBottom:18 }}>
-                    <p style={{ margin:'0 0 10px', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1 }}>Update Status</p>
-                    <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                  <div style={{ marginBottom:20 }}>
+                    <p style={{ margin:'0 0 12px', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1.2 }}>Update Status</p>
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
                       {Object.entries(TSTATUS).filter(([k])=>k!=='escalated').map(([k,m])=>(
                         <button key={k} onClick={()=>doStatus(k)}
-                          style={{ padding:'7px 16px', borderRadius:8, fontSize:12, fontWeight:600, cursor:'pointer',
-                            transition:'all 0.15s', outline:'none',
-                            border: detail.tenantAdminStatus===k ? `1.5px solid ${m.color}` : '1.5px solid #e2e8f0',
-                            background: detail.tenantAdminStatus===k ? m.bg : '#fff',
+                          style={{ padding:'9px 18px', borderRadius:10, fontSize:12, fontWeight:700, cursor:'pointer',
+                            transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)', outline:'none',
+                            border: detail.tenantAdminStatus===k ? `2px solid ${m.color}` : '1.5px solid #e2e8f0',
+                            background: detail.tenantAdminStatus===k ? `linear-gradient(135deg, ${m.bg} 0%, ${m.bg}dd 100%)` : 'linear-gradient(135deg, #fff 0%, #fafbfc 100%)',
                             color: detail.tenantAdminStatus===k ? m.color : '#64748b',
-                            boxShadow: detail.tenantAdminStatus===k ? `0 0 0 3px ${m.dot}22` : 'none' }}>
+                            boxShadow: detail.tenantAdminStatus===k ? `0 0 0 4px ${m.dot}18, 0 3px 8px ${m.dot}20` : '0 2px 6px rgba(0,0,0,0.04)' }}>
                           {detail.tenantAdminStatus===k && '● '}{m.label}
                         </button>
                       ))}
@@ -952,34 +1051,33 @@ const TenantAdminView = () => {
                   )}
                 </div>
               </div>
-            ) : selId ? (
-              <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#f8fafc' }}>
-                <p style={{ color:'#94a3b8', fontSize:14 }}>⏳ Loading…</p>
-              </div>
-            ) : (
-              <div style={{ flex:1, display:'flex', alignItems:'center', justifyContent:'center', background:'#f8fafc' }}>
-                <div style={{ textAlign:'center' }}>
-                  <div style={{ fontSize:48, marginBottom:16, opacity:0.3 }}>👈</div>
-                  <p style={{ fontSize:15, fontWeight:600, color:'#94a3b8', margin:'0 0 6px' }}>Select a feedback item</p>
-                  <p style={{ fontSize:13, color:'#cbd5e1', margin:0 }}>Click any item on the left to view details</p>
-                </div>
-              </div>
             )}
           </div>
         )}
 
         {/* ── INSIGHTS TAB ── */}
         {tab==='insights' && analytics && (
-          <div style={{ flex:1, overflowY:'auto', padding:'28px 32px', background:'#f8fafc' }}>
-            <div style={{ display:'flex', gap:8, marginBottom:28, flexWrap:'wrap' }}>
-              <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:''})); }}/>
-              <GradStat label="Pending"   value={analytics.open}                  color="#f59e0b" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'pending'})); }}/>
-              <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'resolved'})); }}/>
-              <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'escalated'})); }}/>
-              <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false} onClick={()=>{}}/>
+          <div style={{ flex:1, overflowY:'auto', padding:'36px 40px', background:'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 30%, #d1fae5 60%, #a7f3d0 100%)' }}>
+            <div style={{ display:'flex', gap:10, marginBottom:32, flexWrap:'wrap' }}>
+              <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'',sentiment:''})); }}/>
+              <GradStat label="Pending"   value={analytics.open}                  color="#f59e0b" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'pending',sentiment:''})); }}/>
+              <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'resolved',sentiment:''})); }}/>
+              <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,tenantAdminStatus:'escalated',sentiment:''})); }}/>
+              <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,sentiment:'positive',tenantAdminStatus:''})); }}/>
             </div>
-            <h2 style={{ margin:'0 0 6px', fontSize:18, fontWeight:800, color:'#0f172a', letterSpacing:-0.3 }}>Business Intelligence</h2>
-            <p style={{ margin:'0 0 22px', fontSize:13, color:'#64748b' }}>What your users are saying — last 30 days</p>
+            <div style={{ marginBottom:10, background:'linear-gradient(135deg, #ffffff 0%, #fefbff 100%)', padding:'24px 28px',
+              borderRadius:16, border:'2px solid #e0e7ff', boxShadow:'0 4px 16px rgba(124,58,237,0.08)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:8 }}>
+                <div style={{ width:48, height:48, borderRadius:14, background:'linear-gradient(135deg, #7c3aed 0%, #6366f1 100%)',
+                  display:'flex', alignItems:'center', justifyContent:'center', fontSize:24, boxShadow:'0 4px 12px rgba(124,58,237,0.3)' }}>📊</div>
+                <div>
+                  <h2 style={{ margin:'0 0 4px', fontSize:22, fontWeight:900, color:'#0f172a', letterSpacing:-0.5 }}>Business Intelligence</h2>
+                  <p style={{ margin:'0', fontSize:14, color:'#64748b', fontWeight:600 }}>What your users are saying — last 90 days</p>
+                </div>
+              </div>
+            </div>
+            <div style={{ height:32 }}/>
+
             <div style={{ marginBottom:24 }}>
               <InsightRow bySentiment={analytics.bySentiment} avgRatingByCategory={analytics.avgRatingByCategory}/>
             </div>
@@ -1001,17 +1099,19 @@ const TenantAdminView = () => {
 
         {/* ── CONTACT SAAS TAB ── */}
         {tab==='contact_saas' && (
-          <div style={{ flex:1, overflowY:'auto', padding:'28px 32px', background:'#f8fafc' }}>
-            <div style={{ maxWidth:700, margin:'0 auto' }}>
+          <div style={{ flex:1, overflowY:'auto', padding:'20px 24px', background:'linear-gradient(135deg, #f0fdf4 0%, #dcfce7 50%, #d1fae5 100%)' }}>
+            <div style={{ width:'100%' }}>
 
               {/* Banner */}
-              <div style={{ background:'linear-gradient(135deg,#eff6ff,#e0e7ff)', border:'1px solid #c7d2fe',
-                borderRadius:14, padding:'20px 24px', marginBottom:28, display:'flex', gap:16, alignItems:'flex-start' }}>
-                <div style={{ width:44,height:44,borderRadius:12,background:'linear-gradient(135deg,#6366f1,#4f46e5)',
-                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:22,flexShrink:0 }}>📨</div>
+              <div style={{ background:'linear-gradient(135deg,#eff6ff,#e0e7ff)', border:'2px solid #c7d2fe',
+                borderRadius:12, padding:'14px 18px', marginBottom:18, display:'flex', gap:12, alignItems:'flex-start',
+                boxShadow:'0 3px 12px rgba(99,102,241,0.12)' }}>
+                <div style={{ width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#6366f1,#4f46e5)',
+                  display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0,
+                  boxShadow:'0 3px 10px rgba(99,102,241,0.3)' }}>📨</div>
                 <div>
-                  <p style={{ margin:'0 0 4px', fontSize:15, fontWeight:800, color:'#3730a3' }}>Direct Message to SAAS Team</p>
-                  <p style={{ margin:0, fontSize:13, color:'#4f46e5', lineHeight:1.6 }}>
+                  <p style={{ margin:'0 0 4px', fontSize:13, fontWeight:800, color:'#3730a3', letterSpacing:-0.2 }}>Direct Message to SAAS Team</p>
+                  <p style={{ margin:0, fontSize:11, color:'#4f46e5', lineHeight:1.6, fontWeight:500 }}>
                     Report platform issues, billing queries, or feature requests directly to SAAS.
                     This goes <strong>straight to their inbox</strong> — bypassing the user feedback flow.
                   </p>
@@ -1019,24 +1119,26 @@ const TenantAdminView = () => {
               </div>
 
               {cSent && (
-                <div style={{ background:'linear-gradient(135deg,#ecfdf5,#d1fae5)', border:'1px solid #6ee7b7',
-                  borderRadius:14, padding:'18px 22px', marginBottom:24, display:'flex', alignItems:'center', gap:14 }}>
-                  <div style={{ width:40,height:40,borderRadius:12,background:'linear-gradient(135deg,#10b981,#059669)',
-                    display:'flex',alignItems:'center',justifyContent:'center',fontSize:20,flexShrink:0 }}>✓</div>
+                <div style={{ background:'linear-gradient(135deg,#ecfdf5,#d1fae5)', border:'2px solid #6ee7b7',
+                  borderRadius:12, padding:'14px 18px', marginBottom:18, display:'flex', alignItems:'center', gap:12,
+                  boxShadow:'0 3px 12px rgba(16,185,129,0.15)' }}>
+                  <div style={{ width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#10b981,#059669)',
+                    display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0,
+                    boxShadow:'0 3px 10px rgba(16,185,129,0.3)' }}>✓</div>
                   <div>
-                    <p style={{ margin:'0 0 2px', fontSize:14, fontWeight:700, color:'#065f46' }}>Message sent to SAAS team!</p>
-                    <p style={{ margin:0, fontSize:13, color:'#047857' }}>They will review and respond to you shortly.</p>
+                    <p style={{ margin:'0 0 3px', fontSize:13, fontWeight:800, color:'#065f46', letterSpacing:-0.2 }}>Message sent to SAAS team!</p>
+                    <p style={{ margin:0, fontSize:11, color:'#047857', fontWeight:500 }}>They will review and respond to you shortly.</p>
                   </div>
                 </div>
               )}
 
-              <Card style={{ padding:32 }}>
+              <Card style={{ padding:20 }}>
                 {/* Type */}
-                <div style={{ marginBottom:24 }}>
-                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1, marginBottom:14 }}>
+                <div style={{ marginBottom:16 }}>
+                  <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:10 }}>
                     Message Type <span style={{ color:'#ef4444' }}>*</span>
                   </label>
-                  <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                  <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                     {Object.entries(TYPE).map(([k,m])=>(
                       <Pill key={k} label={m.label} icon={m.icon} selected={cForm.type===k}
                         color={m.color} bg={m.bg} onClick={()=>setCForm(f=>({...f,type:k}))}/>
@@ -1045,11 +1147,11 @@ const TenantAdminView = () => {
                 </div>
                 <Divider/>
                 {/* Category */}
-                <div style={{ marginTop:22, marginBottom:24 }}>
-                  <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1, marginBottom:12 }}>
+                <div style={{ marginTop:14, marginBottom:16 }}>
+                  <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:8 }}>
                     Area
                   </label>
-                  <div style={{ display:'flex', gap:7, flexWrap:'wrap' }}>
+                  <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>
                     {Object.entries(CAT).map(([k,m])=>(
                       <Chip key={k} label={m.label} icon={m.icon} selected={cForm.category===k}
                         color={m.color} bg={m.bg} onClick={()=>setCForm(f=>({...f,category:k}))}/>
@@ -1057,47 +1159,50 @@ const TenantAdminView = () => {
                   </div>
                 </div>
                 <Divider/>
-                <div style={{ marginTop:22 }}>
-                  <div style={{ marginBottom:16 }}>
-                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
+                <div style={{ marginTop:14 }}>
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:6 }}>
                       Subject <span style={{ color:'#ef4444' }}>*</span>
                     </label>
                     <Input value={cForm.title} onChange={e=>setCForm(f=>({...f,title:e.target.value}))}
                       placeholder="Brief subject of your message"/>
                   </div>
-                  <div style={{ marginBottom:20 }}>
-                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1, marginBottom:8 }}>
+                  <div style={{ marginBottom:14 }}>
+                    <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:6 }}>
                       Message <span style={{ color:'#ef4444' }}>*</span>
                     </label>
                     <Textarea value={cForm.description} onChange={e=>setCForm(f=>({...f,description:e.target.value}))}
-                      rows={6} placeholder="Describe the issue, request, or concern in detail…"/>
+                      rows={5} placeholder="Describe the issue, request, or concern in detail…"/>
                   </div>
                   {/* Rating */}
-                  <div style={{ marginBottom:28, padding:'16px 18px', background:'#fafafa', borderRadius:12, border:'1px solid #f1f5f9' }}>
-                    <label style={{ display:'block', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1, marginBottom:12 }}>
+                  <div style={{ marginBottom:16, padding:'12px 14px', background:'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)', borderRadius:10, border:'1.5px solid #e8edf2',
+                    boxShadow:'0 2px 6px rgba(0,0,0,0.04)' }}>
+                    <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:10 }}>
                       Platform Rating <span style={{ color:'#94a3b8', fontWeight:400, textTransform:'none' }}>(optional)</span>
                     </label>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
                       {[1,2,3,4,5].map(r=>(
                         <button key={r} onClick={()=>setCForm(f=>({...f,rating:r===f.rating?0:r}))}
-                          style={{ width:44,height:44,borderRadius:10,fontSize:22,cursor:'pointer',
+                          style={{ width:36,height:36,borderRadius:9,fontSize:18,cursor:'pointer',
                             border: cForm.rating>=r ? '2px solid #f59e0b' : '1.5px solid #e2e8f0',
-                            background: cForm.rating>=r ? '#fffbeb' : '#fff', transition:'all 0.15s', outline:'none',
-                            transform: cForm.rating>=r ? 'scale(1.08)' : 'scale(1)' }}>⭐</button>
+                            background: cForm.rating>=r ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' : 'linear-gradient(135deg, #fff 0%, #fafbfc 100%)',
+                            transition:'all 0.25s cubic-bezier(0.4,0,0.2,1)', outline:'none',
+                            transform: cForm.rating>=r ? 'scale(1.05)' : 'scale(1)',
+                            boxShadow: cForm.rating>=r ? '0 3px 10px rgba(245,158,11,0.25)' : '0 2px 6px rgba(0,0,0,0.04)' }}>⭐</button>
                       ))}
                       {cForm.rating>0 && (
-                        <span style={{ marginLeft:8, fontSize:14, color:'#d97706', fontWeight:700 }}>
+                        <span style={{ marginLeft:6, fontSize:12, color:'#d97706', fontWeight:800, letterSpacing:-0.2 }}>
                           {['','Poor','Fair','Good','Very Good','Excellent'][cForm.rating]}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div style={{ display:'flex', alignItems:'center', gap:14, paddingTop:20, borderTop:'1.5px solid #f1f5f9' }}>
-                    <Btn onClick={doContactSaas} disabled={cSending||!cForm.type||!cForm.title.trim()||!cForm.description.trim()} size="lg">
+                  <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:14, borderTop:'1.5px solid #f1f5f9' }}>
+                    <Btn onClick={doContactSaas} disabled={cSending||!cForm.type||!cForm.title.trim()||!cForm.description.trim()} size="md">
                       {cSending ? '⏳ Sending…' : '📨 Send to SAAS →'}
                     </Btn>
                     {(!cForm.type||!cForm.title.trim()||!cForm.description.trim()) && (
-                      <span style={{ fontSize:12, color:'#cbd5e1', fontStyle:'italic' }}>
+                      <span style={{ fontSize:10, color:'#cbd5e1', fontStyle:'italic' }}>
                         {!cForm.type ? 'Select message type first' : !cForm.title.trim() ? 'Add a subject' : 'Add your message'}
                       </span>
                     )}
@@ -1108,6 +1213,7 @@ const TenantAdminView = () => {
           </div>
         )}
 
+        </div>
       </div>
     </DashboardLayout>
   );

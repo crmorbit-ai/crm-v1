@@ -173,6 +173,15 @@ exports.getTenantAnalytics = async (req, res, next) => {
     const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
     const match  = { tenant: req.user.tenant, createdAt: { $gte: cutoff } };
 
+    // DEBUG: Log query and user info
+    console.log('🔍 Analytics Query:', {
+      userTenant: req.user.tenant,
+      userEmail: req.user.email,
+      matchFilter: match,
+      totalFeedbackInDB: await Feedback.countDocuments({}),
+      feedbackForThisTenant: await Feedback.countDocuments({ tenant: req.user.tenant })
+    });
+
     const [total, byType, byCategory, bySentiment, byStatus, dailyTrend, avgRatings] = await Promise.all([
       Feedback.countDocuments(match),
       Feedback.aggregate([{ $match: match }, { $group: { _id: '$type',      count: { $sum: 1 } } }]),

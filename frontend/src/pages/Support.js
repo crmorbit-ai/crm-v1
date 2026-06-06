@@ -15,34 +15,118 @@ const Support = () => {
   const [success, setSuccess] = useState('');
 
   const [filters, setFilters] = useState({ status: '', priority: '', category: '', search: '' });
+  const [searchInput, setSearchInput] = useState('');
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
 
   const [newTicket, setNewTicket] = useState({
     summary: '', description: '', category: 'Other', priority: 'Medium'
   });
+  const [descError, setDescError] = useState('');
+  const [summaryError, setSummaryError] = useState('');
 
   const CATEGORIES = ['Lead Management','Account Management','Contact Management','Data Center','Email/SMS Issues','Product Purchase','User Management','Performance Issue','Bug Report','Feature Request','Other'];
 
-  useEffect(() => { loadTickets(); }, [filters, pagination.page]);
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput }));
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
-  const loadTickets = async () => {
+  useEffect(() => {
+    const isSilent = filters.search !== '' || filters.status !== '' || filters.priority !== '' || filters.category !== '';
+    loadTickets(isSilent);
+  }, [filters, pagination.page]);
+
+  const loadTickets = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const response = await supportService.getAllTickets({ ...filters, page: pagination.page, limit: pagination.limit });
       setTickets(response.data?.tickets || []);
       setPagination(prev => ({ ...prev, ...(response.data?.pagination || {}) }));
     } catch (err) {
       if (!err?.isPermissionDenied) setError('Failed to load tickets');
-    } finally { setLoading(false); }
+    } finally { if (!silent) setLoading(false); }
   };
 
   const handleCreateTicket = async (e) => {
     e.preventDefault();
+
+    // Validate summary
+    const trimmedSummary = newTicket.summary.trim();
+    if (trimmedSummary.length < 5) {
+      setSummaryError('Summary too short - minimum 5 characters');
+      return;
+    }
+    if (trimmedSummary.length > 150) {
+      setSummaryError('Summary too long - maximum 150 characters');
+      return;
+    }
+
+    // Check summary has meaningful text (not just symbols/numbers)
+    const summaryLetters = (trimmedSummary.match(/[a-zA-Z]/g) || []).length;
+    if (summaryLetters < 3) {
+      setSummaryError('Summary must contain at least 3 letters');
+      return;
+    }
+
+    const summaryAlphanumeric = (trimmedSummary.match(/[a-zA-Z0-9]/g) || []).length;
+    const summaryRatio = summaryAlphanumeric / trimmedSummary.length;
+    if (summaryRatio < 0.5) {
+      setSummaryError('Summary must contain readable text, not just symbols');
+      return;
+    }
+
+    // Validate description
+    const trimmedDesc = newTicket.description.trim();
+    if (trimmedDesc.length < 20) {
+      setDescError('Description too short - minimum 20 characters');
+      return;
+    }
+
+    const letterCount = (trimmedDesc.match(/[a-zA-Z]/g) || []).length;
+    if (letterCount < 10) {
+      setDescError('Description must contain at least 10 letters');
+      return;
+    }
+
+    if (/^\d+$/.test(trimmedDesc)) {
+      setDescError('Description cannot be only numbers - explain the issue');
+      return;
+    }
+
+    // Check for meaningful text - must have good letter ratio
+    const alphanumericCount = (trimmedDesc.match(/[a-zA-Z0-9]/g) || []).length;
+    const alphanumericRatio = alphanumericCount / trimmedDesc.length;
+    if (alphanumericRatio < 0.5) {
+      setDescError('Description must contain readable text, not just symbols');
+      return;
+    }
+
+    // Additional check: prevent gibberish like repeated characters
+    const uniqueChars = new Set(trimmedDesc.toLowerCase().replace(/\s/g, '')).size;
+    if (uniqueChars < 8) {
+      setDescError('Description seems invalid - use varied, meaningful words');
+      return;
+    }
+
+    // Check for excessive numbers (prevent things like "12345678901234567890...")
+    const digitCount = (trimmedDesc.match(/\d/g) || []).length;
+    const digitRatio = digitCount / trimmedDesc.length;
+    if (digitRatio > 0.4) {
+      setDescError('Description has too many numbers - explain the issue in words');
+      return;
+    }
+
     try {
       await supportService.createTicket(newTicket);
       setSuccess('Ticket created!');
       setShowCreateForm(false);
       setNewTicket({ summary: '', description: '', category: 'Other', priority: 'Medium' });
+      setDescError('');
+      setSummaryError('');
       loadTickets();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -122,14 +206,7 @@ const Support = () => {
   const tdStyle = { padding: '11px 14px', borderBottom: '1px solid #f8fafc', verticalAlign: 'middle' };
   const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' };
 
-  if (loading) return (
-    <DashboardLayout title="Support Center">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: '12px' }}>
-        <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid #e2e8f0', borderTopColor: '#f97316', animation: 'spin 0.8s linear infinite' }} />
-        <span style={{ color: '#94a3b8', fontSize: '14px' }}>Loading Tickets...</span>
-      </div>
-    </DashboardLayout>
-  );
+  // Removed full-page loading - now shows inline spinner instead
 
   const mobileCSS = `
     @media(max-width:768px){
@@ -185,10 +262,14 @@ const Support = () => {
             </button>
             <div style={{ flex: '1', minWidth: '180px', position: 'relative' }}>
               <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', opacity: 0.45 }}>🔍</span>
-              <input type="text" placeholder="Search tickets..." value={filters.search}
-                onChange={e => setFilters({ ...filters, search: e.target.value })}
-                onKeyDown={e => e.key === 'Enter' && loadTickets()}
-                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', boxSizing: 'border-box', outline: 'none' }} />
+              <input
+                type="text"
+                placeholder="Search tickets..."
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', boxSizing: 'border-box', outline: 'none' }}
+              />
             </div>
             <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
               style={{ padding: '7px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', cursor: 'pointer', color: '#374151' }}>
@@ -233,12 +314,38 @@ const Support = () => {
               <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
                 <form onSubmit={handleCreateTicket}>
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Summary *</label>
-                    <input type="text" value={newTicket.summary} onChange={e => setNewTicket({ ...newTicket, summary: e.target.value })} required
-                      placeholder="Brief summary of the issue"
-                      style={inputStyle}
-                      onFocus={e => e.target.style.borderColor = '#f97316'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Summary *</label>
+                      <span style={{ fontSize: '10px', color: newTicket.summary.length > 150 ? '#ef4444' : '#94a3b8', fontWeight: '600' }}>
+                        {newTicket.summary.length}/150
+                      </span>
+                    </div>
+                    <input type="text"
+                      value={newTicket.summary}
+                      maxLength={150}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewTicket({ ...newTicket, summary: val });
+                        setSummaryError('');
+
+                        const trimmed = val.trim();
+                        if (trimmed.length > 0 && trimmed.length < 5) {
+                          setSummaryError('Summary too short - minimum 5 characters');
+                        } else if (val.length > 150) {
+                          setSummaryError('Summary too long - maximum 150 characters');
+                        }
+                      }}
+                      required
+                      placeholder="Brief summary of the issue (max 150 characters)"
+                      style={{ ...inputStyle, borderColor: summaryError ? '#ef4444' : '#e2e8f0' }}
+                      onFocus={e => e.target.style.borderColor = summaryError ? '#ef4444' : '#f97316'}
+                      onBlur={e => e.target.style.borderColor = summaryError ? '#ef4444' : '#e2e8f0'} />
+                    {summaryError && (
+                      <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>⚠️</span>
+                        <span>{summaryError}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
@@ -263,11 +370,64 @@ const Support = () => {
 
                   <div style={{ marginBottom: '16px' }}>
                     <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Description *</label>
-                    <textarea value={newTicket.description} onChange={e => setNewTicket({ ...newTicket, description: e.target.value })} rows="6" required
+                    <textarea
+                      value={newTicket.description}
+                      maxLength={500}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setNewTicket({ ...newTicket, description: val });
+                        setDescError('');
+
+                        const trimmed = val.trim();
+                        if (trimmed.length > 0) {
+                          // Check if only numbers
+                          if (/^\d+$/.test(trimmed)) {
+                            setDescError('Description cannot be only numbers - explain the issue');
+                          }
+                          // Check if mostly symbols (less than 50% alphanumeric)
+                          else {
+                            const alphanumericCount = (trimmed.match(/[a-zA-Z0-9]/g) || []).length;
+                            const alphanumericRatio = alphanumericCount / trimmed.length;
+
+                            if (alphanumericRatio < 0.5) {
+                              setDescError('Description must contain readable text, not just symbols');
+                            }
+                            // Check for excessive numbers
+                            else {
+                              const digitCount = (trimmed.match(/\d/g) || []).length;
+                              const digitRatio = digitCount / trimmed.length;
+
+                              if (digitRatio > 0.4) {
+                                setDescError('Description has too many numbers - explain in words');
+                              }
+                              // Check for minimum letters
+                              else {
+                                const letterCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+                                if (letterCount < 10) {
+                                  setDescError('Description must contain at least 10 letters');
+                                }
+                                // Check minimum length
+                                else if (trimmed.length < 20) {
+                                  setDescError('Description too short - minimum 20 characters');
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }}
+                      rows="6"
+                      required
                       placeholder="Detailed description of the issue..."
-                      style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5' }}
-                      onFocus={e => e.target.style.borderColor = '#f97316'}
-                      onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                      style={{ ...inputStyle, resize: 'vertical', lineHeight: '1.5', borderColor: descError ? '#ef4444' : '#e2e8f0' }}
+                      onFocus={e => e.target.style.borderColor = descError ? '#ef4444' : '#f97316'}
+                      onBlur={e => e.target.style.borderColor = descError ? '#ef4444' : '#e2e8f0'}
+                    />
+                    {descError && (
+                      <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>⚠️</span>
+                        <span>{descError}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
@@ -276,7 +436,17 @@ const Support = () => {
                       Cancel
                     </button>
                     <button type="submit"
-                      style={{ flex: 2, padding: '10px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#9a3412 0%,#f97316 100%)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 2px 8px rgba(249,115,22,0.3)' }}>
+                      disabled={summaryError || descError || !newTicket.summary.trim() || !newTicket.description.trim()}
+                      style={{ flex: 2, padding: '10px', borderRadius: '8px', border: 'none',
+                        background: (summaryError || descError || !newTicket.summary.trim() || !newTicket.description.trim())
+                          ? 'linear-gradient(135deg,#cbd5e1 0%,#94a3b8 100%)'
+                          : 'linear-gradient(135deg,#9a3412 0%,#f97316 100%)',
+                        color: 'white', fontSize: '13px', fontWeight: '700',
+                        cursor: (summaryError || descError || !newTicket.summary.trim() || !newTicket.description.trim()) ? 'not-allowed' : 'pointer',
+                        boxShadow: (summaryError || descError || !newTicket.summary.trim() || !newTicket.description.trim())
+                          ? 'none'
+                          : '0 2px 8px rgba(249,115,22,0.3)',
+                        opacity: (summaryError || descError || !newTicket.summary.trim() || !newTicket.description.trim()) ? 0.6 : 1 }}>
                       🎫 Create Ticket
                     </button>
                   </div>
@@ -357,7 +527,12 @@ const Support = () => {
             ) : (
               /* Tickets Table */
               <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-                {tickets.length === 0 ? (
+                {loading && tickets.length === 0 ? (
+                  <div style={{ padding: '60px 20px', textAlign: 'center' }}>
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', border: '3px solid #e2e8f0', borderTopColor: '#f97316', animation: 'spin 0.8s linear infinite', margin: '0 auto 12px' }} />
+                    <div style={{ fontSize: '13px', color: '#94a3b8' }}>Loading Tickets...</div>
+                  </div>
+                ) : tickets.length === 0 ? (
                   <div style={{ padding: '60px 20px', textAlign: 'center' }}>
                     <div style={{ fontSize: '42px', marginBottom: '10px' }}>🎫</div>
                     <div style={{ fontSize: '15px', fontWeight: '700', color: '#374151', marginBottom: '4px' }}>No tickets found</div>

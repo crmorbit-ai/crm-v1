@@ -364,12 +364,12 @@ const ActivityLogs = () => {
               <table className="crm-table">
                 <thead>
                   <tr>
-                    <th>Date/Time</th>
-                    <th>User</th>
-                    <th>Action</th>
-                    <th>Resource</th>
-                    <th>IP Address</th>
-                    <th>Details</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Date/Time</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>User</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Action</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Resource</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>IP Address</th>
+                    <th style={{ whiteSpace: 'nowrap' }}>Details</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -378,7 +378,7 @@ const ActivityLogs = () => {
                       <td style={{ whiteSpace: 'nowrap' }}>
                         {formatDate(log.createdAt)}
                       </td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                         <div style={{ fontWeight: '500' }}>
                           {log.user ? `${log.user.firstName} ${log.user.lastName}` : 'System'}
                         </div>
@@ -389,18 +389,18 @@ const ActivityLogs = () => {
                         )}
                       </td>
                       <td>
-                        <span className={getActionBadgeClass(log.action)}>
+                        <span className={getActionBadgeClass(log.action)} style={{ whiteSpace: 'nowrap' }}>
                           {log.action}
                         </span>
                       </td>
-                      <td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
                     {log.resourceType ? (
                 <div style={{ fontWeight: '500', color: '#374151' }}>
                          {log.resourceType}
                            </div>
                          ) : '-'}
                            </td>
-                      <td style={{ fontSize: '13px', fontFamily: 'monospace', color: '#666' }}>
+                      <td style={{ fontSize: '13px', fontFamily: 'monospace', color: '#666', whiteSpace: 'nowrap' }}>
                         {log.ipAddress || '-'}
                       </td>
                       <td style={{ maxWidth: '450px', minWidth: '350px', padding: '12px' }}>

@@ -47,6 +47,7 @@ const Products = () => {
 
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [filters, setFilters] = useState({ search: '', category: '', isActive: 'true' });
+  const [searchInput, setSearchInput] = useState('');
   const [stats, setStats] = useState({ total: 0, active: 0, lowStock: 0, categories: 0 });
 
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -55,6 +56,8 @@ const Products = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const [formData, setFormData] = useState({ name: '', articleNumber: '', category: '', price: '', stock: '', description: '', imageUrl: '', isActive: true });
+  const [nameError, setNameError] = useState('');
+  const [skuError, setSkuError] = useState('');
 
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
@@ -64,7 +67,26 @@ const Products = () => {
   const [disabledStdFields, setDisabledStdFields] = useState([]);
   const [togglingField, setTogglingField] = useState(null);
 
-  useEffect(() => { loadProducts(); loadCategories(); loadCustomFields(); }, [pagination.page, filters]);
+  // Load categories and custom fields only once on mount
+  useEffect(() => {
+    loadCategories();
+    loadCustomFields();
+  }, []);
+
+  // Load products when filters or page changes
+  useEffect(() => {
+    const isSilent = filters.search !== '' || filters.category !== '';
+    loadProducts(isSilent);
+  }, [pagination.page, filters]);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setFilters(prev => ({ ...prev, search: searchInput }));
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -82,9 +104,9 @@ const Products = () => {
     } catch (err) { console.error('Load categories error:', err); }
   };
 
-  const loadProducts = async () => {
+  const loadProducts = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError('');
       const response = await productItemService.getAllProducts(filters, pagination.page, pagination.limit);
       if (response?.success && response.data) {
@@ -102,7 +124,7 @@ const Products = () => {
       }
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to load products');
-    } finally { setLoading(false); }
+    } finally { if (!silent) setLoading(false); }
   };
 
   const loadCustomFields = async () => {
@@ -159,6 +181,48 @@ const Products = () => {
 
   const handleCreateProduct = async (e) => {
     e.preventDefault();
+
+    // Validate product name
+    const name = formData.name.trim();
+    if (name) {
+      if (/^\d+$/.test(name)) {
+        setNameError('Product name cannot be only numbers - add descriptive text');
+        return;
+      }
+      const letterCount = (name.match(/[a-zA-Z]/g) || []).length;
+      if (letterCount < 2) {
+        setNameError('Product name must contain at least 2 letters');
+        return;
+      }
+      const letterRatio = letterCount / name.length;
+      if (letterRatio < 0.3) {
+        setNameError('Product name must be descriptive, not mostly numbers');
+        return;
+      }
+    }
+
+    // Validate SKU
+    const sku = formData.articleNumber.trim();
+    if (sku) {
+      if (sku.length < 3) {
+        setSkuError('SKU must be at least 3 characters');
+        return;
+      }
+      if (!/^[A-Z0-9\-_]+$/.test(sku)) {
+        setSkuError('SKU must contain only uppercase letters, numbers, hyphens, underscores');
+        return;
+      }
+      if (/^\d+$/.test(sku)) {
+        setSkuError('SKU cannot be only numbers - add letters for proper format');
+        return;
+      }
+      const skuLetterCount = (sku.match(/[A-Z]/g) || []).length;
+      if (skuLetterCount < 1) {
+        setSkuError('SKU must contain at least 1 letter');
+        return;
+      }
+    }
+
     try {
       setError('');
       const customFields = {};
@@ -233,6 +297,8 @@ const Products = () => {
     setFieldValues({});
     setFieldErrors({});
     setEditingProduct(null);
+    setNameError('');
+    setSkuError('');
   };
 
   const handleChange = (e) => {
@@ -242,8 +308,12 @@ const Products = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-    setPagination(prev => ({ ...prev, page: 1 }));
+    if (name === 'search') {
+      setSearchInput(value);
+    } else {
+      setFilters(prev => ({ ...prev, [name]: value }));
+      setPagination(prev => ({ ...prev, page: 1 }));
+    }
   };
 
   const handleDividerDrag = (e) => {
@@ -271,12 +341,105 @@ const Products = () => {
     const iStyle = { width: '100%', padding: '8px 10px', fontSize: '13px', borderRadius: '8px', border: '1.5px solid #e2e8f0', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' };
     switch (field.fieldName) {
       case 'name':
-        return <div key="name"><label style={lStyle}>Product Name {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label><input type="text" name="name" value={formData.name} onChange={handleChange} required style={iStyle} onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /></div>;
+        return (
+          <div key="name">
+            <label style={{...lStyle, display:'flex', justifyContent:'space-between', alignItems:'center', minHeight:'18px', marginBottom:'6px'}}>
+              <span>Product Name {field.required && <span style={{ color: '#ef4444' }}>*</span>}</span>
+              <span style={{fontSize:11, fontWeight:400, color:'#94a3b8'}}>(max 100 chars)</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
+              maxLength={100}
+              onChange={(e) => {
+                handleChange(e);
+                setNameError('');
+
+                const val = e.target.value.trim();
+                if (val.length > 0) {
+                  if (/^\d+$/.test(val)) {
+                    setNameError('Product name cannot be only numbers - add descriptive text');
+                  } else {
+                    const letterCount = (val.match(/[a-zA-Z]/g) || []).length;
+                    if (letterCount < 2) {
+                      setNameError('Product name must contain at least 2 letters');
+                    } else {
+                      const letterRatio = letterCount / val.length;
+                      if (letterRatio < 0.3) {
+                        setNameError('Product name must be descriptive, not mostly numbers');
+                      }
+                    }
+                  }
+                }
+              }}
+              required
+              style={{...iStyle, borderColor: nameError ? '#ef4444' : '#e2e8f0'}}
+              onFocus={e => e.target.style.borderColor = nameError ? '#ef4444' : '#6366f1'}
+              onBlur={e => e.target.style.borderColor = nameError ? '#ef4444' : '#e2e8f0'}
+            />
+            <div style={{minHeight:'20px',marginTop:'4px'}}>
+              {nameError && (
+                <div style={{fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
+                  <span>⚠️</span>
+                  <span>{nameError}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
       case 'articleNumber':
-        return <div key="articleNumber"><label style={lStyle}>SKU {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label><input type="text" name="articleNumber" value={formData.articleNumber} onChange={handleChange} required style={iStyle} onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /></div>;
+        return (
+          <div key="articleNumber">
+            <label style={{...lStyle, display:'flex', justifyContent:'space-between', alignItems:'center', minHeight:'18px', marginBottom:'6px'}}>
+              <span>SKU / Article Number {field.required && <span style={{ color: '#ef4444' }}>*</span>}</span>
+              <span style={{fontSize:11, fontWeight:400, color:'#94a3b8'}}>(8-20 alphanumeric)</span>
+            </label>
+            <input
+              type="text"
+              name="articleNumber"
+              value={formData.articleNumber}
+              maxLength={20}
+              onChange={(e) => {
+                const val = e.target.value.toUpperCase();
+                handleChange({...e, target: {...e.target, value: val}});
+                setSkuError('');
+
+                const trimmed = val.trim();
+                if (trimmed.length > 0) {
+                  if (trimmed.length < 3) {
+                    setSkuError('SKU must be at least 3 characters');
+                  } else if (!/^[A-Z0-9\-_]+$/.test(trimmed)) {
+                    setSkuError('SKU must contain only uppercase letters, numbers, hyphens, underscores');
+                  } else if (/^\d+$/.test(trimmed)) {
+                    setSkuError('SKU cannot be only numbers - add letters for proper format');
+                  } else {
+                    const letterCount = (trimmed.match(/[A-Z]/g) || []).length;
+                    if (letterCount < 1) {
+                      setSkuError('SKU must contain at least 1 letter');
+                    }
+                  }
+                }
+              }}
+              required
+              style={{...iStyle, borderColor: skuError ? '#ef4444' : '#e2e8f0', textTransform: 'uppercase'}}
+              onFocus={e => e.target.style.borderColor = skuError ? '#ef4444' : '#6366f1'}
+              onBlur={e => e.target.style.borderColor = skuError ? '#ef4444' : '#e2e8f0'}
+              placeholder="e.g., LAP-001, PHONE2024"
+            />
+            <div style={{minHeight:'20px',marginTop:'4px'}}>
+              {skuError && (
+                <div style={{fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
+                  <span>⚠️</span>
+                  <span>{skuError}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        );
       case 'category':
         return (
-          <div key="category">
+          <div key="category" style={{gridColumn: showCreateCategoryForm ? 'span 2' : 'auto'}}>
       <style>{`
   /* ── RESPONSIVE ────────────────── */
   @media(max-width:768px){
@@ -292,20 +455,34 @@ const Products = () => {
   @media(max-width:480px){
     .products-grid4,.products-grid3,.products-grid2{grid-template-columns:1fr!important;}
   }
-`}</style><label style={lStyle}>Category {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
-            <div style={{ display: 'flex', gap: '4px' }}>
+`}</style><label style={{...lStyle, minHeight:'18px', marginBottom:'6px'}}>Category {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label>
+            <div style={{ display: 'flex', gap: '4px', marginBottom: showCreateCategoryForm ? '8px' : '0' }}>
               <select name="category" value={formData.category} onChange={handleChange} required style={{ ...iStyle, flex: 1, cursor: 'pointer' }}>
                 <option value="">Select Category</option>
                 {categories.map(cat => <option key={cat._id} value={cat.name}>{cat.name}</option>)}
               </select>
-              {canManageCategories && <button type="button" onClick={() => setShowCreateCategoryForm(true)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: '14px', fontWeight: '700', color: '#6366f1' }}>+</button>}
+              {canManageCategories && <button type="button" onClick={() => setShowCreateCategoryForm(!showCreateCategoryForm)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: showCreateCategoryForm ? '#6366f1' : '#f8fafc', color: showCreateCategoryForm ? 'white' : '#6366f1', cursor: 'pointer', fontSize: '14px', fontWeight: '700', transition: 'all 0.2s' }}>{showCreateCategoryForm ? '✕' : '+'}</button>}
             </div>
+            {showCreateCategoryForm && (
+              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px', border: '1.5px solid #e2e8f0', marginBottom: '4px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>🏷️ Add New Category</div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Category name..." autoFocus
+                    style={{ flex: 1, padding: '7px 9px', borderRadius: '6px', border: '1.5px solid #e2e8f0', fontSize: '12px', outline: 'none' }}
+                    onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'}
+                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory(); } }} />
+                  <button type="button" onClick={handleCreateCategory}
+                    style={{ padding: '7px 12px', borderRadius: '6px', border: 'none', background: '#6366f1', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Add</button>
+                </div>
+              </div>
+            )}
+            <div style={{minHeight:'20px',marginTop:'4px'}}></div>
           </div>
         );
       case 'price':
-        return <div key="price"><label style={lStyle}>Price {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label><input type="number" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" style={iStyle} onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /></div>;
+        return <div key="price"><label style={{...lStyle, minHeight:'18px', marginBottom:'6px'}}>Price {field.required && <span style={{ color: '#ef4444' }}>*</span>}</label><input type="number" name="price" value={formData.price} onChange={handleChange} required min="0" step="0.01" style={iStyle} onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /><div style={{minHeight:'20px',marginTop:'4px'}}></div></div>;
       case 'stock':
-        return <div key="stock"><label style={lStyle}>Stock Qty</label><input type="number" name="stock" value={formData.stock} onChange={handleChange} min="0" style={iStyle} onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /></div>;
+        return <div key="stock"><label style={{...lStyle, minHeight:'18px', marginBottom:'6px'}}>Stock Qty</label><input type="number" name="stock" value={formData.stock} onChange={handleChange} min="0" style={iStyle} onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /><div style={{minHeight:'20px',marginTop:'4px'}}></div></div>;
       case 'imageUrl':
         return <div key="imageUrl" style={{ gridColumn: 'span 2' }}><label style={lStyle}>Image URL</label><input type="url" name="imageUrl" value={formData.imageUrl} onChange={handleChange} style={iStyle} placeholder="https://..." onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} /></div>;
       case 'isActive':
@@ -386,8 +563,15 @@ const Products = () => {
             </button>
             <div style={{ flex: '1', minWidth: '160px', position: 'relative' }}>
               <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', opacity: 0.45 }}>🔍</span>
-              <input type="text" name="search" placeholder="Search products..." value={filters.search} onChange={handleFilterChange}
-                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', boxSizing: 'border-box', outline: 'none' }} />
+              <input
+                type="text"
+                name="search"
+                placeholder="Search products..."
+                value={searchInput}
+                onChange={handleFilterChange}
+                onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault(); }}
+                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', boxSizing: 'border-box', outline: 'none' }}
+              />
             </div>
             <select name="category" value={filters.category} onChange={handleFilterChange}
               style={{ padding: '7px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', cursor: 'pointer', color: '#374151' }}>
@@ -469,20 +653,6 @@ const Products = () => {
                   })}
 
                   {/* Category quick-add */}
-                  {showCreateCategoryForm && (
-                    <div style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0', marginBottom: '14px' }}>
-                      <div style={{ fontSize: '11px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>🏷️ Add New Category</div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Category name..."
-                          style={{ flex: 1, padding: '8px 10px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', outline: 'none' }}
-                          onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'} />
-                        <button type="button" onClick={handleCreateCategory}
-                          style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#6366f1', color: 'white', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Add</button>
-                        <button type="button" onClick={() => { setShowCreateCategoryForm(false); setNewCategoryName(''); }}
-                          style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: 'white', fontSize: '12px', cursor: 'pointer', color: '#64748b' }}>✕</button>
-                      </div>
-                    </div>
-                  )}
 
                   <div style={{ display: 'flex', gap: '8px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
                     <button type="button" onClick={() => { setShowCreateForm(false); resetForm(); }}

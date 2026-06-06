@@ -163,13 +163,13 @@ const TABS = [
   {key:'aging',     label:'Stock Aging',  icon:'🕐'},
 ];
 
-const STAT_CARDS = (s, filt, setFilt, setTab) => [
-  {label:'Total Products',  val:fmtNum(s?.totalProducts),    grad:'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)', act:filt==='',       f:()=>setFilt('')},
-  {label:'Stock Value',     val:fmtShort(s?.totalStockValue),grad:'linear-gradient(135deg,#10b981 0%,#16a34a 50%,#84cc16 100%)', act:false,           f:null, sub:'at cost'},
-  {label:'Committed',       val:fmtNum(s?.totalCommitted),   grad:'linear-gradient(135deg,#f59e0b 0%,#f97316 50%,#ef4444 100%)', act:false,           f:null, sub:'in quotations'},
-  {label:'Low Stock',       val:fmtNum(s?.lowStockCount),    grad:'linear-gradient(135deg,#f97316 0%,#ef4444 50%,#dc2626 100%)', act:filt==='low',    f:()=>{setFilt('low');setTab('stock');}},
-  {label:'Out of Stock',    val:fmtNum(s?.outOfStockCount),  grad:'linear-gradient(135deg,#ec4899 0%,#dc2626 50%,#9f1239 100%)', act:filt==='out',    f:()=>{setFilt('out');setTab('stock');}},
-  {label:'Pending POs',     val:fmtNum(s?.pendingPOCount),   grad:'linear-gradient(135deg,#0ea5e9 0%,#6366f1 50%,#8b5cf6 100%)', act:false,          f:null},
+const STAT_CARDS = (s, filt, setFilt, setTab, tab) => [
+  {label:'Total Products',  val:fmtNum(s?.totalProducts),    grad:'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)', act:filt==='',           f:()=>setFilt('')},
+  {label:'Stock Value',     val:fmtShort(s?.totalStockValue),grad:'linear-gradient(135deg,#10b981 0%,#16a34a 50%,#84cc16 100%)', act:tab==='valuation', f:()=>setTab('valuation'), sub:'at cost'},
+  {label:'Committed',       val:fmtNum(s?.totalCommitted),   grad:'linear-gradient(135deg,#f59e0b 0%,#f97316 50%,#ef4444 100%)', act:filt==='committed', f:()=>{setFilt('committed');setTab('stock');}, sub:'in quotations'},
+  {label:'Low Stock',       val:fmtNum(s?.lowStockCount),    grad:'linear-gradient(135deg,#f97316 0%,#ef4444 50%,#dc2626 100%)', act:filt==='low',      f:()=>{setFilt('low');setTab('stock');}},
+  {label:'Out of Stock',    val:fmtNum(s?.outOfStockCount),  grad:'linear-gradient(135deg,#ec4899 0%,#dc2626 50%,#9f1239 100%)', act:filt==='out',      f:()=>{setFilt('out');setTab('stock');}},
+  {label:'Pending POs',     val:fmtNum(s?.pendingPOCount),   grad:'linear-gradient(135deg,#0ea5e9 0%,#6366f1 50%,#8b5cf6 100%)', act:tab==='pos',       f:()=>setTab('pos')},
 ];
 
 const TX_CFG = {
@@ -441,6 +441,7 @@ export default function Inventory() {
           <select value={filt} onChange={e=>setFilt(e.target.value)} style={{padding:'5px 9px',border:'1px solid #d1d5db',borderRadius:5,fontSize:11,outline:'none',background:'#f9fafb',fontWeight:600,color:'#374151'}}>
             <option value="">All Stock</option>
             <option value="ok">In Stock</option>
+            <option value="committed">Has Committed Stock</option>
             <option value="low">Low Stock</option>
             <option value="out">Out of Stock</option>
           </select>
@@ -871,7 +872,7 @@ export default function Inventory() {
 
       {/* Stat cards */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,marginBottom:10}}>
-        {STAT_CARDS(dashboard?.summary||summary, filt, setFilt, setTab).map((s,i)=>(
+        {STAT_CARDS(dashboard?.summary||summary, filt, setFilt, setTab, tab).map((s,i)=>(
           <div key={i} onClick={s.f||undefined} className="sStat"
             style={{background:s.grad,boxShadow:s.act?'0 4px 18px rgba(0,0,0,0.3)':'0 2px 8px rgba(0,0,0,0.15)',outline:s.act?'2px solid rgba(255,255,255,0.5)':'none',outlineOffset:3,cursor:s.f?'pointer':'default'}}>
             <div style={{fontSize:22,fontWeight:900,color:'#fff',lineHeight:1,marginBottom:4,textShadow:'0 1px 3px rgba(0,0,0,0.2)'}}>{s.val}</div>

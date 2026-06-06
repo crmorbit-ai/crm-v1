@@ -88,7 +88,8 @@ const AuditLogs = () => {
         fontWeight: '600',
         textTransform: 'uppercase',
         background: style.bg,
-        color: style.color
+        color: style.color,
+        whiteSpace: 'nowrap'
       }}>
       <style>{`
   /* ── RESPONSIVE ────────────────── */
@@ -209,7 +210,7 @@ const AuditLogs = () => {
                         }}>
                           {log.user?.firstName?.[0]}{log.user?.lastName?.[0]}
                         </div>
-                        <div>
+                        <div style={{ whiteSpace: 'nowrap' }}>
                           <div style={{ fontWeight: '600', fontSize: '13px' }}>
                             {log.user?.firstName} {log.user?.lastName}
                           </div>
@@ -220,7 +221,7 @@ const AuditLogs = () => {
                       </div>
                     </td>
                     <td style={tdStyle}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
                         <span style={{ fontSize: '18px' }}>{getResourceIcon(log.resourceType)}</span>
                         <div>
                           <div style={{ fontWeight: '500', fontSize: '12px', textTransform: 'capitalize' }}>
@@ -296,11 +297,13 @@ const thStyle = {
   fontSize: '11px',
   fontWeight: '600',
   color: '#64748b',
-  textTransform: 'uppercase'
+  textTransform: 'uppercase',
+  whiteSpace: 'nowrap'
 };
 
 const tdStyle = {
-  padding: '12px 16px'
+  padding: '12px 16px',
+  whiteSpace: 'nowrap'
 };
 
 const paginationBtnStyle = {
