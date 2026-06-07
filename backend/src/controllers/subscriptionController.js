@@ -2,6 +2,7 @@ const SubscriptionPlan = require('../models/SubscriptionPlan');
 const Tenant           = require('../models/Tenant');
 const Payment          = require('../models/Payment');
 const PlanHistory      = require('../models/PlanHistory');
+const Invoice          = require('../models/Invoice');
 const { successResponse, errorResponse } = require('../utils/response');
 const { createSubscriptionOrder, verifyPaymentSignature, fetchPayment, createRefund } = require('../services/razorpayService');
 const { sendPaymentSuccessEmail } = require('../utils/emailService');
@@ -711,6 +712,87 @@ const refundPayment = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Generate invoice for tenant subscription (SAAS Admin)
+ * @route   POST /api/subscriptions/:tenantId/generate-invoice
+ * @access  SAAS Admin only
+ */
+const generateTenantInvoice = async (req, res) => {
+  try {
+    const { tenantId } = req.params;
+
+    // Find tenant with subscription details
+    const tenant = await Tenant.findById(tenantId).populate('subscription.plan');
+    if (!tenant) {
+      return errorResponse(res, 404, 'Tenant not found');
+    }
+
+    if (!tenant.subscription) {
+      return errorResponse(res, 400, 'Tenant has no subscription information');
+    }
+
+    const sub = tenant.subscription;
+    const planName = sub.planName || (sub.plan?.name) || 'Free';
+    const planPrice = sub.amount || (sub.plan?.price) || 0;
+
+    // Check if invoice created in last 2 minutes (prevent duplicates from retries)
+    const recentInvoice = await Invoice.findOne({
+      tenant: tenantId,
+      createdAt: { $gte: new Date(Date.now() - 2 * 60 * 1000) }
+    }).sort({ createdAt: -1 });
+
+    if (recentInvoice) {
+      console.log(`⚠️ Recent invoice ${recentInvoice.invoiceNumber} exists for tenant ${tenant.organizationName}, returning existing`);
+      return successResponse(res, 200, 'Invoice already generated', { invoice: recentInvoice });
+    }
+
+    // Generate unique invoice number with timestamp
+    const invoiceCount = await Invoice.countDocuments({});
+    const timestamp = Date.now().toString().slice(-4);
+    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoiceCount + 1).padStart(5, '0')}-${timestamp}`;
+
+    // Calculate due date (30 days or subscription end date)
+    const dueDate = sub.endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+    // Create invoice with proper schema
+    const invoice = new Invoice({
+      tenant: tenantId,
+      invoiceNumber,
+      customerName: tenant.organizationName,
+      customerEmail: tenant.contactEmail,
+      customerPhone: tenant.contactPhone || '',
+      title: `${planName} Plan - ${new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}`,
+      items: [{
+        productName: `${planName} Plan Subscription`,
+        description: `Subscription billing cycle: ${sub.billingCycle || 'monthly'}`,
+        quantity: 1,
+        unitPrice: planPrice,
+        discount: 0,
+        tax: 0,
+        total: planPrice
+      }],
+      subtotal: planPrice,
+      tax: 0,
+      discount: 0,
+      totalAmount: planPrice,
+      paidAmount: 0,
+      status: planPrice === 0 ? 'paid' : 'draft', // Free plans = paid, others = draft
+      dueDate: dueDate,
+      notes: `Subscription plan: ${planName}. Billing: ${sub.billingCycle || 'monthly'}`,
+      createdBy: req.user.id
+    });
+
+    await invoice.save();
+
+    console.log(`✅ Invoice ${invoiceNumber} generated for tenant ${tenant.organizationName} by ${req.user.email}`);
+
+    return successResponse(res, 201, 'Invoice generated successfully', { invoice });
+  } catch (error) {
+    console.error('generateTenantInvoice error:', error);
+    return errorResponse(res, 500, 'Failed to generate invoice', error.message);
+  }
+};
+
 module.exports = {
   getAllPlans,
   getCurrentSubscription,
@@ -724,5 +806,6 @@ module.exports = {
   cancelSubscription,
   getAllSubscriptions,
   updateTenantSubscription,
-  updatePlan
+  updatePlan,
+  generateTenantInvoice
 };

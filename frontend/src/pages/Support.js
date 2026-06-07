@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import supportService from '../services/supportService';
 import '../styles/crm.css';
@@ -25,6 +25,27 @@ const Support = () => {
   const [summaryError, setSummaryError] = useState('');
 
   const CATEGORIES = ['Lead Management','Account Management','Contact Management','Data Center','Email/SMS Issues','Product Purchase','User Management','Performance Issue','Bug Report','Feature Request','Other'];
+
+  // Memoize search input handler to prevent re-renders
+  const handleSearchChange = useCallback((e) => {
+    setSearchInput(e.target.value);
+  }, []);
+
+  // Memoize filter handlers to prevent page refresh
+  const handleStatusChange = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFilters(prev => ({ ...prev, status: e.target.value }));
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, []);
+
+  const handlePriorityChange = useCallback((e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setFilters(prev => ({ ...prev, priority: e.target.value }));
+    setPagination(prev => ({ ...prev, page: 1 }));
+  }, []);
+
 
   // Debounce search input
   useEffect(() => {
@@ -261,17 +282,21 @@ const Support = () => {
               + Create Ticket
             </button>
             <div style={{ flex: '1', minWidth: '180px', position: 'relative' }}>
-              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', opacity: 0.45 }}>🔍</span>
+              <span style={{ position: 'absolute', left: '10px', top: '50%', transform: 'translateY(-50%)', fontSize: '13px', opacity: 0.45, pointerEvents: 'none', zIndex: 1 }}>🔍</span>
               <input
+                key="ticket-search-input"
                 type="text"
                 placeholder="Search tickets..."
                 value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
+                onChange={handleSearchChange}
                 onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
-                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', boxSizing: 'border-box', outline: 'none' }}
+                autoComplete="off"
+                style={{ width: '100%', padding: '7px 10px 7px 30px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', boxSizing: 'border-box', outline: 'none', position: 'relative', zIndex: 2 }}
               />
             </div>
-            <select value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}
+            <select
+              value={filters.status}
+              onChange={handleStatusChange}
               style={{ padding: '7px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', cursor: 'pointer', color: '#374151' }}>
               <option value="">All Status</option>
               <option value="Open">Open</option>
@@ -280,7 +305,9 @@ const Support = () => {
               <option value="Resolved">Resolved</option>
               <option value="Closed">Closed</option>
             </select>
-            <select value={filters.priority} onChange={e => setFilters({ ...filters, priority: e.target.value })}
+            <select
+              value={filters.priority}
+              onChange={handlePriorityChange}
               style={{ padding: '7px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', background: '#f8fafc', cursor: 'pointer', color: '#374151' }}>
               <option value="">All Priority</option>
               <option value="Low">Low</option>
@@ -329,10 +356,27 @@ const Support = () => {
                         setSummaryError('');
 
                         const trimmed = val.trim();
+
+                        // Length checks
                         if (trimmed.length > 0 && trimmed.length < 5) {
                           setSummaryError('Summary too short - minimum 5 characters');
                         } else if (val.length > 150) {
                           setSummaryError('Summary too long - maximum 150 characters');
+                        }
+                        // Letter count check - must have at least 3 letters
+                        else if (trimmed.length > 0) {
+                          const letterCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+                          if (letterCount < 3) {
+                            setSummaryError('Summary must contain at least 3 letters');
+                          }
+                          // Alphanumeric ratio check - at least 50% readable characters
+                          else {
+                            const alphanumericCount = (trimmed.match(/[a-zA-Z0-9]/g) || []).length;
+                            const alphanumericRatio = alphanumericCount / trimmed.length;
+                            if (alphanumericRatio < 0.5) {
+                              setSummaryError('Summary must contain readable text, not just symbols');
+                            }
+                          }
                         }
                       }}
                       required

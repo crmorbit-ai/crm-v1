@@ -8,26 +8,56 @@ import api from '../services/api';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 const FEATURES = [
-  { slug: 'user_management',           name: 'Users',                 category: 'Access' },
-  { slug: 'role_management',           name: 'Roles',                 category: 'Access' },
-  { slug: 'group_management',          name: 'Groups',                category: 'Access' },
+  // Access Management
+  { slug: 'user_management',           name: 'Team Management (Users, Roles, Groups)', category: 'Access Management' },
+  { slug: 'org_chart',                 name: 'Org Chart',             category: 'Access Management' },
+  { slug: 'org_hierarchy',             name: 'Org Hierarchy',         category: 'Access Management' },
+  { slug: 'role_template',             name: 'Role Template',         category: 'Access Management' },
+  { slug: 'audit_logs',                name: 'Audit Logs',            category: 'Access Management' },
+
+  // CRM
+  { slug: 'data_center',               name: 'Customers',             category: 'CRM' },
   { slug: 'lead_management',           name: 'Leads',                 category: 'CRM' },
   { slug: 'contact_management',        name: 'Contacts',              category: 'CRM' },
   { slug: 'account_management',        name: 'Accounts',              category: 'CRM' },
   { slug: 'opportunity_management',    name: 'Opportunities',         category: 'CRM' },
-  { slug: 'data_center',               name: 'Customers',             category: 'CRM' },
-  { slug: 'quotation_management',      name: 'Quotations',            category: 'Sales' },
-  { slug: 'invoice_management',        name: 'Invoices',              category: 'Sales' },
-  { slug: 'purchase_order_management', name: 'Purchase Orders',       category: 'Sales' },
-  { slug: 'rfi_management',            name: 'RFI',                   category: 'Sales' },
-  { slug: 'product_management',        name: 'Products',              category: 'Product' },
+
+  // Tasks
   { slug: 'task_management',           name: 'Tasks',                 category: 'Tasks' },
   { slug: 'meeting_management',        name: 'Meetings',              category: 'Tasks' },
   { slug: 'call_management',           name: 'Calls',                 category: 'Tasks' },
   { slug: 'email_management',          name: 'Emails',                category: 'Tasks' },
-  { slug: 'subscription_management',   name: 'Subscription & Billing',category: 'Account' },
-  { slug: 'field_management',          name: 'Manage Fields',         category: 'Customization' },
-  { slug: 'audit_logs',                name: 'Audit Logs',            category: 'Data' },
+
+  // Sales & Finance
+  { slug: 'rfi_management',            name: 'RFI',                   category: 'Sales & Finance' },
+  { slug: 'quotation_management',      name: 'Quotations',            category: 'Sales & Finance' },
+  { slug: 'purchase_order_management', name: 'Purchase Orders',       category: 'Sales & Finance' },
+  { slug: 'invoice_management',        name: 'Invoices',              category: 'Sales & Finance' },
+
+  // Product
+  { slug: 'product_management',        name: 'Products',              category: 'Product' },
+  { slug: 'inventory_management',      name: 'Inventory',             category: 'Product' },
+  { slug: 'product_marketplace',       name: 'Product Marketplace',   category: 'Product' },
+
+  // Automation
+  { slug: 'templates',                 name: 'Templates',             category: 'Automation' },
+  { slug: 'document_templates',        name: 'Document Templates',    category: 'Automation' },
+  { slug: 'email_templates',           name: 'Email Templates',       category: 'Automation' },
+  { slug: 'social_media',              name: 'Social Media',          category: 'Automation' },
+
+  // Account
+  { slug: 'subscription_management',   name: 'Subscription & Billing',category: 'Account Management' },
+
+  // System
+  { slug: 'notifications',             name: 'Notifications',         category: 'System' },
+  { slug: 'notification_settings',     name: 'Notification Settings', category: 'System' },
+
+  // Support
+  { slug: 'support_tickets',           name: 'My Tickets',            category: 'Support' },
+  { slug: 'feedback',                  name: 'Feedback',              category: 'Support' },
+
+  // Customization
+  { slug: 'field_management',          name: 'Custom Fields',         category: 'Customization' },
 ];
 const ACTIONS = ['create', 'read', 'update', 'delete', 'manage', 'import', 'export'];
 
@@ -379,29 +409,63 @@ const TeamManagement = () => {
 
   /* ─ copy helper (state lives here, passed as props to outside components) ─ */
 
-  const PermTable = ({hasP,toggleP}) => (
-    <div style={{border:'1.5px solid #e2e8f0',borderRadius:10,overflow:'hidden',maxHeight:260,overflowY:'auto'}}>
-      <table style={{width:'100%',borderCollapse:'collapse',fontSize:11}}>
-        <thead><tr style={{background:'#f8fafc',position:'sticky',top:0}}>
-          <th style={{textAlign:'left',padding:'7px 10px',fontWeight:700,color:'#64748b',fontSize:10,textTransform:'uppercase',borderBottom:'1px solid #e2e8f0'}}>Module</th>
-          {ACTIONS.map(a=><th key={a} title={a} style={{padding:'7px 4px',fontWeight:700,color:'#64748b',fontSize:10,borderBottom:'1px solid #e2e8f0'}}>{a[0].toUpperCase()}</th>)}
-        </tr></thead>
+  // Get unique categories from FEATURES
+  const categories = [...new Set(FEATURES.map(f => f.category))];
+
+  // Memoized row component to prevent unnecessary re-renders
+  const PermRow = React.memo(({feature, hasP, toggleP}) => (
+    <tr style={{borderTop:'1px solid #f8fafc'}}>
+      <td style={{padding:'5px 10px 5px 18px',fontWeight:500,color:'#374151'}}>{feature.name}</td>
+      {ACTIONS.map(a=>(
+        <td key={a} style={{padding:'4px 4px',textAlign:'center'}}>
+          <input
+            type="checkbox"
+            tabIndex="-1"
+            style={{cursor:'pointer',width:13,height:13,accentColor:'#4f46e5',margin:0,pointerEvents:'auto'}}
+            checked={hasP(feature.slug,a)}
+            onChange={(e)=>{e.target.blur();toggleP(feature.slug,a);}}
+          />
+        </td>
+      ))}
+    </tr>
+  ));
+
+  const PermTable = ({hasP,toggleP}) => {
+    const scrollContainerRef = React.useRef(null);
+
+    return (
+      <div
+        ref={scrollContainerRef}
+        style={{
+          border:'1.5px solid #e2e8f0',
+          borderRadius:10,
+          overflow:'hidden',
+          height:'60vh',
+          overflowY:'auto',
+          overflowX:'hidden',
+          position:'relative'
+        }}>
+        <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,tableLayout:'fixed'}}>
+          <thead><tr style={{background:'#f8fafc',position:'sticky',top:0,zIndex:10}}>
+            <th style={{textAlign:'left',padding:'7px 10px',fontWeight:700,color:'#64748b',fontSize:10,textTransform:'uppercase',borderBottom:'1px solid #e2e8f0',width:'60%'}}>Module</th>
+            {ACTIONS.map(a=><th key={a} title={a} style={{padding:'7px 4px',fontWeight:700,color:'#64748b',fontSize:10,borderBottom:'1px solid #e2e8f0',width:`${40/ACTIONS.length}%`}}>{a[0].toUpperCase()}</th>)}
+          </tr></thead>
         <tbody>
-          {['Access','CRM','Sales','Product','Tasks','Account','Customization','Data'].map(cat=>(
+          {categories.map(cat=>(
             <React.Fragment key={cat}>
-              <tr><td colSpan={ACTIONS.length+1} style={{padding:'5px 10px',background:'#f1f5f9',fontWeight:800,fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>{cat}</td></tr>
+              <tr style={{position:'sticky',top:32,zIndex:5,background:'#f1f5f9'}}>
+                <td colSpan={ACTIONS.length+1} style={{padding:'5px 10px',fontWeight:800,fontSize:9,color:'#475569',textTransform:'uppercase',letterSpacing:'0.7px'}}>{cat}</td>
+              </tr>
               {FEATURES.filter(f=>f.category===cat).map(f=>(
-                <tr key={f.slug} style={{borderTop:'1px solid #f8fafc'}}>
-                  <td style={{padding:'5px 10px 5px 18px',fontWeight:500,color:'#374151'}}>{f.name}</td>
-                  {ACTIONS.map(a=><td key={a} style={{padding:'4px 4px',textAlign:'center'}}><input type="checkbox" style={{cursor:'pointer',width:13,height:13,accentColor:'#4f46e5'}} checked={hasP(f.slug,a)} onChange={()=>toggleP(f.slug,a)} /></td>)}
-                </tr>
+                <PermRow key={f.slug} feature={f} hasP={hasP} toggleP={toggleP} />
               ))}
             </React.Fragment>
           ))}
         </tbody>
       </table>
     </div>
-  );
+    );
+  };
 
   /* ─── inline dropdown helper ────────────────────────────────── */
   const DDSelect = ({value,onChange,items,placeholder,open,onToggle,tagBg,tagColor,tagBorder}) => (

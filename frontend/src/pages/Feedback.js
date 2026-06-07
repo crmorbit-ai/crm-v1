@@ -334,6 +334,8 @@ const TenantUserView = () => {
   const [form,   setForm]   = useState({ type:'', category:'other', title:'', description:'', rating:0 });
   const [sending,setSending]= useState(false);
   const [sent,   setSent]   = useState(false);
+  const [descError, setDescError] = useState('');
+  const [titleError, setTitleError] = useState('');
   const [history,setHistory]= useState([]);
   const [hLoad,  setHLoad]  = useState(false);
   const [selId,  setSelId]  = useState(null);
@@ -353,17 +355,72 @@ const TenantUserView = () => {
   };
 
   const handleSubmit = async() => {
-    if(!form.type||!form.title.trim()||!form.description.trim()) return;
+    // Clear previous errors
+    setTitleError('');
+    setDescError('');
+
+    // Basic checks
+    if(!form.type) {
+      alert('Please select a feedback type');
+      return;
+    }
+    if(!form.title.trim()) {
+      setTitleError('Title is required');
+      return;
+    }
+    if(!form.description.trim()) {
+      setDescError('Description is required');
+      return;
+    }
+
+    // Title validation
+    const trimmedTitle = form.title.trim();
+    if (trimmedTitle.length < 5) {
+      setTitleError('Title too short - minimum 5 characters');
+      return;
+    }
+    const titleLetters = (trimmedTitle.match(/[a-zA-Z]/g) || []).length;
+    if (titleLetters < 3) {
+      setTitleError('Title must contain at least 3 letters');
+      return;
+    }
+    const titleAlphanumeric = (trimmedTitle.match(/[a-zA-Z0-9]/g) || []).length;
+    const titleRatio = titleAlphanumeric / trimmedTitle.length;
+    if (titleRatio < 0.5) {
+      setTitleError('Title must contain readable text, not just symbols');
+      return;
+    }
+
+    // Description validation
+    const trimmedDesc = form.description.trim();
+    if (trimmedDesc.length < 20) {
+      setDescError('Description too short - minimum 20 characters');
+      return;
+    }
+    const descLetters = (trimmedDesc.match(/[a-zA-Z]/g) || []).length;
+    if (descLetters < 10) {
+      setDescError('Description must contain at least 10 letters');
+      return;
+    }
+    const descAlphanumeric = (trimmedDesc.match(/[a-zA-Z0-9]/g) || []).length;
+    const descRatio = descAlphanumeric / trimmedDesc.length;
+    if (descRatio < 0.5) {
+      setDescError('Please enter a meaningful feedback description using letters and numbers');
+      return;
+    }
+
+    // All validations passed - submit
     setSending(true);
     try{
       await api.submit({...form, rating:form.rating||undefined});
       setSent(true); setForm({type:'',category:'other',title:'',description:'',rating:0});
+      setDescError(''); setTitleError('');
       setTimeout(()=>setSent(false),5000);
     }catch{}
     setSending(false);
   };
 
-  const canSubmit = form.type && form.title.trim() && form.description.trim();
+  const canSubmit = form.type && form.title.trim() && form.description.trim() && !titleError && !descError;
   const stats = { total:history.length, open:history.filter(h=>!['resolved','closed'].includes(h.status)).length, replied:history.filter(h=>h.tenantAdminReply).length };
   const ratingLabel = ['','Poor','Fair','Good','Very Good','Excellent'];
 
@@ -464,16 +521,77 @@ const TenantUserView = () => {
                     <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>
                       Title <span style={{ color:'#ef4444' }}>*</span>
                     </label>
-                    <Input value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}
-                      placeholder="Give your feedback a clear, descriptive title"/>
+                    <Input
+                      value={form.title}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForm(f => ({ ...f, title: val }));
+                        setTitleError('');
+
+                        const trimmed = val.trim();
+                        if (trimmed.length > 0 && trimmed.length < 5) {
+                          setTitleError('Title too short - minimum 5 characters');
+                        } else if (trimmed.length > 0) {
+                          const letterCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+                          if (letterCount < 3) {
+                            setTitleError('Title must contain at least 3 letters');
+                          } else {
+                            const alphanumericCount = (trimmed.match(/[a-zA-Z0-9]/g) || []).length;
+                            const alphanumericRatio = alphanumericCount / trimmed.length;
+                            if (alphanumericRatio < 0.5) {
+                              setTitleError('Title must contain readable text, not just symbols');
+                            }
+                          }
+                        }
+                      }}
+                      placeholder="Give your feedback a clear, descriptive title"
+                      style={{ borderColor: titleError ? '#ef4444' : '#e2e8f0' }}
+                    />
+                    {titleError && (
+                      <div style={{ fontSize: 11, color: '#ef4444', marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>⚠️</span>
+                        <span>{titleError}</span>
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ marginBottom:20 }}>
                     <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>
                       Description <span style={{ color:'#ef4444' }}>*</span>
                     </label>
-                    <Textarea value={form.description} onChange={e=>setForm(f=>({...f,description:e.target.value}))}
-                      rows={5} placeholder="Tell us as much as you can — the more context, the better we can help you."/>
+                    <Textarea
+                      value={form.description}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setForm(f => ({ ...f, description: val }));
+                        setDescError('');
+
+                        const trimmed = val.trim();
+                        if (trimmed.length > 0 && trimmed.length < 20) {
+                          setDescError('Description too short - minimum 20 characters');
+                        } else if (trimmed.length > 0) {
+                          const letterCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
+                          if (letterCount < 10) {
+                            setDescError('Description must contain at least 10 letters');
+                          } else {
+                            const alphanumericCount = (trimmed.match(/[a-zA-Z0-9]/g) || []).length;
+                            const alphanumericRatio = alphanumericCount / trimmed.length;
+                            if (alphanumericRatio < 0.5) {
+                              setDescError('Please enter a meaningful feedback description using letters and numbers');
+                            }
+                          }
+                        }
+                      }}
+                      rows={5}
+                      placeholder="Tell us as much as you can — the more context, the better we can help you."
+                      style={{ borderColor: descError ? '#ef4444' : '#e2e8f0' }}
+                    />
+                    {descError && (
+                      <div style={{ fontSize: 11, color: '#ef4444', marginTop: 6, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <span>⚠️</span>
+                        <span>{descError}</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Rating */}
@@ -647,6 +765,8 @@ const TenantAdminView = () => {
   const [cForm,       setCForm]      = useState({type:'',category:'other',title:'',description:'',rating:0});
   const [cSending,    setCsend]      = useState(false);
   const [cSent,       setCSent]      = useState(false);
+  const [cDescError,  setCDescError] = useState('');
+  const [cTitleError, setCTitleError]= useState('');
 
   // DEBUG: Log user info
   console.log('👤 Current User:', { email: user?.email, tenant: user?.tenant, userType: user?.userType });
@@ -708,11 +828,41 @@ const TenantAdminView = () => {
     setBusy(false);
   };
   const doContactSaas = async() => {
-    if(!cForm.type||!cForm.title.trim()||!cForm.description.trim()) return;
+    // Clear previous errors
+    setCTitleError('');
+    setCDescError('');
+
+    // Basic checks
+    if(!cForm.type||!cForm.title.trim()||!cForm.description.trim()) {
+      if(!cForm.type) alert('Please select a feedback type');
+      if(!cForm.title.trim()) setCTitleError('Title is required');
+      if(!cForm.description.trim()) setCDescError('Description is required');
+      return;
+    }
+
+    // Title validation
+    const trimmedTitle = cForm.title.trim();
+    if (trimmedTitle.length < 5) { setCTitleError('Title too short - minimum 5 characters'); return; }
+    const titleLetters = (trimmedTitle.match(/[a-zA-Z]/g) || []).length;
+    if (titleLetters < 3) { setCTitleError('Title must contain at least 3 letters'); return; }
+    const titleAlphanumeric = (trimmedTitle.match(/[a-zA-Z0-9]/g) || []).length;
+    const titleRatio = titleAlphanumeric / trimmedTitle.length;
+    if (titleRatio < 0.5) { setCTitleError('Title must contain readable text, not just symbols'); return; }
+
+    // Description validation
+    const trimmedDesc = cForm.description.trim();
+    if (trimmedDesc.length < 20) { setCDescError('Description too short - minimum 20 characters'); return; }
+    const descLetters = (trimmedDesc.match(/[a-zA-Z]/g) || []).length;
+    if (descLetters < 10) { setCDescError('Description must contain at least 10 letters'); return; }
+    const descAlphanumeric = (trimmedDesc.match(/[a-zA-Z0-9]/g) || []).length;
+    const descRatio = descAlphanumeric / trimmedDesc.length;
+    if (descRatio < 0.5) { setCDescError('Please enter a meaningful feedback description using letters and numbers'); return; }
+
     setCsend(true);
     try{
       await api.submit({...cForm, rating:cForm.rating||undefined, directToSaas:true});
       setCSent(true); setCForm({type:'',category:'other',title:'',description:'',rating:0});
+      setCDescError(''); setCTitleError('');
       setTimeout(()=>setCSent(false),5000);
     }catch{}
     setCsend(false);
@@ -1164,15 +1314,24 @@ const TenantAdminView = () => {
                     <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:6 }}>
                       Subject <span style={{ color:'#ef4444' }}>*</span>
                     </label>
-                    <Input value={cForm.title} onChange={e=>setCForm(f=>({...f,title:e.target.value}))}
-                      placeholder="Brief subject of your message"/>
+                    <Input
+                      value={cForm.title}
+                      onChange={e=>{const v=e.target.value; setCForm(f=>({...f,title:v})); setCTitleError(''); const t=v.trim(); if(t.length>0&&t.length<5){setCTitleError('Title too short - minimum 5 characters')}else if(t.length>0){const l=(t.match(/[a-zA-Z]/g)||[]).length; if(l<3){setCTitleError('Title must contain at least 3 letters')}else{const a=(t.match(/[a-zA-Z0-9]/g)||[]).length; if(a/t.length<0.5){setCTitleError('Title must contain readable text, not just symbols')}}}}}
+                      placeholder="Brief subject of your message"
+                      style={{borderColor:cTitleError?'#ef4444':'#e2e8f0'}}/>
+                    {cTitleError && <div style={{fontSize:10,color:'#ef4444',marginTop:4,fontWeight:600}}>⚠️ {cTitleError}</div>}
                   </div>
                   <div style={{ marginBottom:14 }}>
                     <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:6 }}>
                       Message <span style={{ color:'#ef4444' }}>*</span>
                     </label>
-                    <Textarea value={cForm.description} onChange={e=>setCForm(f=>({...f,description:e.target.value}))}
-                      rows={5} placeholder="Describe the issue, request, or concern in detail…"/>
+                    <Textarea
+                      value={cForm.description}
+                      onChange={e=>{const v=e.target.value; setCForm(f=>({...f,description:v})); setCDescError(''); const t=v.trim(); if(t.length>0&&t.length<20){setCDescError('Description too short - minimum 20 characters')}else if(t.length>0){const l=(t.match(/[a-zA-Z]/g)||[]).length; if(l<10){setCDescError('Description must contain at least 10 letters')}else{const a=(t.match(/[a-zA-Z0-9]/g)||[]).length; if(a/t.length<0.5){setCDescError('Please enter a meaningful feedback description using letters and numbers')}}}}}
+                      rows={5}
+                      placeholder="Describe the issue, request, or concern in detail…"
+                      style={{borderColor:cDescError?'#ef4444':'#e2e8f0'}}/>
+                    {cDescError && <div style={{fontSize:10,color:'#ef4444',marginTop:4,fontWeight:600}}>⚠️ {cDescError}</div>}
                   </div>
                   {/* Rating */}
                   <div style={{ marginBottom:16, padding:'12px 14px', background:'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)', borderRadius:10, border:'1.5px solid #e8edf2',

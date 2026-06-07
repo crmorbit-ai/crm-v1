@@ -182,6 +182,7 @@ export const AuthProvider = ({ children }) => {
     setToken(null);
     sessionStorage.removeItem('token');
     sessionStorage.removeItem(LAST_ACTIVITY_KEY);
+    sessionStorage.removeItem('welcomePromptShown'); // Clear welcome prompt flag on logout
     localStorage.removeItem('token'); // Clean old localStorage tokens too
     localStorage.removeItem('session_start'); // Clean old localStorage session
     clearUserCache();

@@ -89,8 +89,13 @@ export default function Notifications() {
       fetchUnreadCount();
       setBusyId(null);
     }
+
+    // Navigate to entity - for now just go to list page (detail pages not implemented)
     const base = n.entityType ? ENTITY_ROUTES[n.entityType] : null;
-    if (base && n.entityId) navigate(`${base}/${n.entityId}`);
+    if (base) {
+      // Navigate to list page instead of detail (since detail routes don't exist)
+      navigate(base);
+    }
   };
 
   const markAll = async () => {
@@ -103,7 +108,17 @@ export default function Notifications() {
     e.stopPropagation();
     setBusyId(id);
     await notificationService.deleteNotification(id);
+
+    // Remove from list
     setNotifs(p => p.filter(n => n._id !== id));
+
+    // Update pagination counts
+    setPag(p => ({
+      ...p,
+      total: Math.max(0, (p.total || 0) - 1)
+    }));
+
+    // Update header badge count
     fetchUnreadCount();
     setBusyId(null);
   };

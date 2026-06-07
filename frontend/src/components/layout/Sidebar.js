@@ -250,8 +250,15 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
             ) : (
               <>
                 {/* Tenant User Navigation */}
-                {/* Dashboard - always visible */}
-                <NavItem to="/dashboard" label="Dashboard" />
+                {/* Dashboard - only show if user has at least one permission */}
+                {(hasPermission('lead_management', 'read') ||
+                  hasPermission('contact_management', 'read') ||
+                  hasPermission('account_management', 'read') ||
+                  hasPermission('task_management', 'read') ||
+                  hasPermission('product_management', 'read') ||
+                  hasPermission('user_management', 'read')) && (
+                  <NavItem to="/dashboard" label="Dashboard" />
+                )}
 
                 <div className="my-3 border-t sidebar-divider" />
 
@@ -297,25 +304,33 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                 </NavSection>
 
                 {/* Automation */}
-                <NavSection title="Automation" section="automation" permissions={['user_management']}>
-                  <NavItem to="/templates" label="Templates" permission="user_management" />
-                  <NavItem to="/document-templates" label="Document Templates" permission="user_management" />
-                  <NavItem to="/email-templates" label="Email Templates" permission="user_management" />
-                  <NavItem to="/social-media" label="Social Media" permission="user_management" />
+                <NavSection title="Automation" section="automation" permissions={['user_management', 'templates', 'document_templates', 'email_templates', 'social_media']}>
+                  <NavItem to="/templates" label="Templates" permission="templates" />
+                  <NavItem to="/document-templates" label="Document Templates" permission="document_templates" />
+                  <NavItem to="/email-templates" label="Email Templates" permission="email_templates" />
+                  <NavItem to="/social-media" label="Social Media" permission="social_media" />
                 </NavSection>
 
                 <div className="my-3 border-t sidebar-divider" />
 
                 {/* Access Management */}
-                <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'audit_logs']}>
+                <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'audit_logs', 'role_template', 'org_chart', 'org_hierarchy']}>
                   <NavItem to="/users" label="Users" permission="user_management" />
-                  <NavItem to="/org-chart" label="Org Chart" permission="user_management" />
-                  <NavItem to="/org-hierarchy" label="Org Hierarchy" permission="user_management" />
-                  <NavItem to="/role-template" label="Role Template" permission="user_management" />
-                  <NavItem to="/notifications" label="Notifications" />
-                  <NavItem to="/notification-settings" label="Notification Settings" />
+                  <NavItem to="/org-chart" label="Org Chart" permission="org_chart" />
+                  <NavItem to="/org-hierarchy" label="Org Hierarchy" permission="org_hierarchy" />
+                  <NavItem to="/role-template" label="Role Template" permission="role_template" />
                   <NavItem to="/activity-logs" label="Audit Logs" permission="audit_logs" />
                 </NavSection>
+
+                {/* Notifications - only for users with management permissions */}
+                {(hasPermission('user_management', 'read') ||
+                  hasPermission('lead_management', 'read') ||
+                  hasPermission('task_management', 'read')) && (
+                  <NavSection title="Notifications" section="notifications">
+                    <NavItem to="/notifications" label="Notifications" />
+                    <NavItem to="/notification-settings" label="Notification Settings" />
+                  </NavSection>
+                )}
 
                 {/* Sales Monetization — only if plan has feature */}
                 {hasMonetization && (
@@ -324,11 +339,16 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   </NavSection>
                 )}
 
-                {/* Support - always visible */}
-                <NavSection title="Support" section="support">
-                  <NavItem to="/support" label="My Tickets" />
-                  <NavItem to="/feedback" label={isTenantAdmin ? "Feedback Inbox" : "Feedback"} />
-                </NavSection>
+                {/* Support - only for users with management permissions or tenant admin */}
+                {(isTenantAdmin ||
+                  hasPermission('user_management', 'read') ||
+                  hasPermission('lead_management', 'read') ||
+                  hasPermission('task_management', 'read')) && (
+                  <NavSection title="Support" section="support">
+                    <NavItem to="/support" label="My Tickets" />
+                    <NavItem to="/feedback" label={isTenantAdmin ? "Feedback Inbox" : "Feedback"} />
+                  </NavSection>
+                )}
 
               </>
             )}

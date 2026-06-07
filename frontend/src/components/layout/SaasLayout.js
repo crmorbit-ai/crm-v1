@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { tenantService } from '../../services/tenantService';
 import notificationService from '../../services/notificationService';
+import WelcomePrompt from '../WelcomePrompt';
 
 // Hook to detect screen size
 const useWindowSize = () => {
@@ -30,6 +31,24 @@ const SaasLayout = ({ children, title }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [pendingDeletions, setPendingDeletions] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Show welcome prompt only once per session (on first mount with user)
+  const [hasCheckedWelcome, setHasCheckedWelcome] = useState(false);
+
+  useEffect(() => {
+    // Check if welcome prompt should be shown
+    if (user && !hasCheckedWelcome) {
+      setHasCheckedWelcome(true); // Mark as checked to prevent re-runs
+
+      const shownThisSession = sessionStorage.getItem('welcomePromptShown');
+
+      if (!shownThisSession) {
+        console.log('✅ SAAS Layout - Showing welcome prompt - first time this session');
+        setTimeout(() => setShowWelcome(true), 800);
+      }
+    }
+  }, [user, hasCheckedWelcome]);
 
   useEffect(() => {
     const fetchUnread = async () => {
@@ -86,6 +105,11 @@ const SaasLayout = ({ children, title }) => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+      {/* Welcome Prompt */}
+      {showWelcome && user && (
+        <WelcomePrompt user={user} onClose={() => setShowWelcome(false)} />
+      )}
+
       {/* Header */}
       <header style={{
         background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',

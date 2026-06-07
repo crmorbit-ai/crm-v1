@@ -682,7 +682,8 @@ const Tenants = () => {
         .xTh { position:sticky; top:0; z-index:2; background:#1e293b; border:1px solid #334155; padding:7px 10px; font-size:10px; font-weight:700; color:#94a3b8; text-align:left; white-space:nowrap; user-select:none; letter-spacing:.5px; text-transform:uppercase; }
         .xTd { border:1px solid #e2e6eb; padding:0 10px; font-size:12px; color:#1e293b; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:38px; vertical-align:middle; }
         .xRow { cursor:pointer; }
-        .xRow:hover .xTd { background:#eff6ff !important; }
+        .xRow:hover .xTd:not(.xBadge) { background:#eff6ff !important; }
+        .xBadge { position:relative; z-index:1; }
         .xRow.xSel .xTd { background:#e0e7ff !important; border-color:#c7d2fe !important; }
         .xNum { position:sticky; left:0; z-index:1; background:#f8fafc !important; border:1px solid #d1d5db !important; padding:0 8px; font-size:10px; color:#94a3b8; text-align:center; width:32px; min-width:32px; font-weight:600; }
         .xRow.xSel .xNum { background:#e0e7ff !important; }
@@ -812,7 +813,7 @@ const Tenants = () => {
                   <col style={{width:'9%'}} />
                   <col style={{width:'10%'}} />
                   <col style={{width:'10%'}} />
-                  <col style={{width:64}} />
+                  <col style={{width:90}} />
                 </colgroup>}
                 <thead>
                   <tr>
@@ -981,17 +982,17 @@ const Tenants = () => {
                           </div>
                         </td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontFamily:'monospace',fontSize:10,color:'#6366f1',fontWeight:600,letterSpacing:'0.3px'}}>{t.organizationId||'—'}</td>
-                        <td className="xTd" style={{background:isSelected?null:statusCell.bg,color:statusCell.color,fontWeight:statusCell.fw,fontSize:10,textAlign:'center',textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                        <td className="xTd xBadge" style={{background:isSelected?null:statusCell.bg,color:statusCell.color,fontWeight:statusCell.fw,fontSize:10,textAlign:'center',textTransform:'uppercase',letterSpacing:'0.5px'}}>
                           {status}
                           {t.deletionRequest?.status==='pending'&&<div style={{fontSize:9,marginTop:1,color:isSelected?'#dc2626':'#dc2626',fontWeight:700}}>DEL REQ</div>}
                         </td>
-                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:isSelected?null:({Enterprise:'#f59e0b',Professional:'#8b5cf6',Basic:'#3b82f6',Free:'#64748b'}[t.subscription?.planName]||'#3b82f6'),color:'#fff',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
+                        <td className={`xTd xBadge${isMobile?' xHideM':''}`} style={{background:isSelected?null:({Enterprise:'#f59e0b',Professional:'#8b5cf6',Basic:'#3b82f6',Free:'#64748b'}[t.subscription?.planName]||'#3b82f6'),color:'#fff',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center',fontSize:11,fontWeight:700,color:'#374151'}}>{t.userCount||0}<span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>/{t.subscription?.maxUsers||'∞'}</span></td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontSize:11,color:'#6b7280'}}>{formatDate(t.createdAt)}</td>
                         <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center'}}>
                           {t.assignedManager ? (
                             <span title={`${t.assignedManager.firstName} ${t.assignedManager.lastName}`}
-                              style={{display:'inline-flex',alignItems:'center',gap:4,background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:20,padding:'2px 7px',fontSize:9,fontWeight:700,color:'#6d28d9',maxWidth:80,overflow:'hidden'}}>
+                              style={{display:'inline-flex',alignItems:'center',gap:4,background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:20,padding:'2px 7px',fontSize:9,fontWeight:700,color:'#6d28d9',maxWidth:120,overflow:'hidden'}}>
                               <span>👤</span>
                               <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{t.assignedManager.firstName}</span>
                             </span>
@@ -1001,7 +1002,7 @@ const Tenants = () => {
                         </td>
                         <td className="xTd xPin" style={{background:rowBg||undefined,textAlign:'center'}}>
                           <button onClick={e=>{e.stopPropagation();handleTenantClick(t);}}
-                            style={{background:isPinVerified?'linear-gradient(135deg,#6366f1,#4f46e5)':'linear-gradient(135deg,#475569,#334155)',color:'#fff',border:'none',padding:'5px 10px',borderRadius:5,fontSize:10,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4,whiteSpace:'nowrap'}}>
+                            style={{background:isPinVerified?'linear-gradient(135deg,#6366f1,#4f46e5)':'linear-gradient(135deg,#475569,#334155)',backgroundSize:'100% 100%',color:'#fff',border:'none',padding:'5px 12px',borderRadius:5,fontSize:10,fontWeight:700,cursor:'pointer',display:'inline-flex',alignItems:'center',gap:4,whiteSpace:'nowrap',minWidth:60}}>
                             {isPinVerified?<><span>👁</span><span>View</span></>:<><span>🔒</span><span>PIN</span></>}
                           </button>
                         </td>

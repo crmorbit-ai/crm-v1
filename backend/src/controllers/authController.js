@@ -176,12 +176,16 @@ const login = async (req, res) => {
         logo: user.tenant.logo,
         isActive: user.tenant.isActive
       } : null,
-      roles: user.roles ? user.roles.map(r => ({
-        _id: r._id,
-        name: r.name,
-        slug: r.slug,
-        permissions: r.permissions
-      })) : []
+      roles: user.roles ? user.roles.map(r => {
+        console.log(`🔍 LOGIN - Role: ${r.name}, Permissions count: ${r.permissions?.length || 0}`);
+        r.permissions?.forEach(p => console.log(`   - ${p.feature}: [${p.actions?.join(', ')}]`));
+        return {
+          _id: r._id,
+          name: r.name,
+          slug: r.slug,
+          permissions: r.permissions
+        };
+      }) : []
     };
 
     // Log activity

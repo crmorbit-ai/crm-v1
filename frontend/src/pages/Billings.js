@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { subscriptionService } from '../services/subscriptionService';
 import SaasLayout, { useWindowSize } from '../components/layout/SaasLayout';
+import { API_URL, getAuthHeaders } from '../config/api.config';
 
 /* ── utils ── */
 const fmt = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}) : '—';
@@ -119,9 +120,63 @@ const Billings = () => {
     finally { setActionLoading(false); }
   };
 
+  const handleGenerateInvoice = async (billing) => {
+    try {
+      setActionLoading(true);
+
+      // Step 1: Generate invoice in backend
+      const response = await fetch(`${API_URL}/subscriptions/${billing._id}/generate-invoice`, {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to generate invoice');
+      }
+
+      const result = await response.json();
+      console.log('Invoice generation response:', result);
+
+      // Response structure: { success: true, data: { invoice: {...} } }
+      const invoice = result.data?.invoice || result.data;
+
+      if (!invoice || !invoice._id) {
+        console.error('Invalid response structure:', result);
+        throw new Error('Invoice creation failed - invalid response');
+      }
+
+      // Step 2: Download PDF
+      const pdfResponse = await fetch(`${API_URL}/invoices/${invoice._id}/download-pdf`, {
+        headers: getAuthHeaders()
+      });
+
+      if (!pdfResponse.ok) {
+        throw new Error('Failed to download invoice PDF');
+      }
+
+      const blob = await pdfResponse.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${invoice.invoiceNumber}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+
+      alert(`Invoice ${invoice.invoiceNumber} generated and downloaded successfully!`);
+    } catch(e) {
+      console.error('Invoice generation error:', e);
+      alert(e.message || 'Failed to generate invoice');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   useEffect(()=>{ load(); },[]);
 
-  const load=async()=>{
+  const load=async(showNotification = false)=>{
     try{
       setLoading(true);
       const res=await subscriptionService.getAllSubscriptions({});
@@ -132,8 +187,56 @@ const Billings = () => {
         const active=subs.filter(t=>t.subscription?.status==='active').length;
         const totalPaid=subs.reduce((s,t)=>s+(t.subscription?.totalPaid||0),0);
         setStats({ mrr, arr:mrr*12, active, pending:subs.length-active, avg:subs.length?Math.round(mrr/subs.length):0, totalPaid });
+        if(showNotification) {
+          alert('✅ Billing data synced successfully!');
+        }
       }
-    }catch(e){console.error(e);}finally{setLoading(false);}
+    }catch(e){
+      console.error(e);
+      if(showNotification) {
+        alert('❌ Failed to sync billing data');
+      }
+    }finally{setLoading(false);}
+  };
+
+  const handleExport = () => {
+    try {
+      // Prepare CSV data
+      const headers = ['Organization', 'Organization ID', 'Plan', 'Amount', 'Billing Cycle', 'Status', 'Start Date', 'End Date', 'Total Paid'];
+      const rows = billings.map(b => [
+        b.organizationName || '',
+        b.organizationId || '',
+        b.subscription?.planName || 'Free',
+        b.subscription?.amount || 0,
+        b.subscription?.billingCycle || 'monthly',
+        b.subscription?.status || 'trial',
+        b.subscription?.startDate ? new Date(b.subscription.startDate).toLocaleDateString('en-IN') : '',
+        b.subscription?.endDate ? new Date(b.subscription.endDate).toLocaleDateString('en-IN') : '',
+        b.subscription?.totalPaid || 0
+      ]);
+
+      // Create CSV content
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `billing-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      alert('✅ Billing data exported successfully!');
+    } catch (e) {
+      console.error('Export error:', e);
+      alert('❌ Failed to export billing data');
+    }
   };
 
   /* plan breakdown for sidebar */
@@ -246,7 +349,8 @@ const Billings = () => {
         .bTh{position:sticky;top:0;z-index:2;background:#1e293b;border:1px solid #334155;padding:7px 10px;font-size:10px;font-weight:700;color:#94a3b8;text-align:left;white-space:nowrap;user-select:none;letter-spacing:.5px;text-transform:uppercase;}
         .bTd{border:1px solid #e2e6eb;padding:0 10px;font-size:12px;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;height:40px;vertical-align:middle;}
         .bTr{cursor:pointer;}
-        .bTr:hover .bTd{background:#eff6ff!important;}
+        .bTr:hover .bTd:not(.bBadge){background:#eff6ff!important;}
+        .bBadge{position:relative;z-index:1;}
         .bTr.bSel .bTd{background:#e0e7ff!important;border-color:#c7d2fe!important;}
         .bNum{position:sticky;left:0;z-index:1;background:#f8fafc!important;border:1px solid #d1d5db!important;padding:0 8px;font-size:10px;color:#94a3b8;text-align:center;width:32px;min-width:32px;font-weight:600;}
         .bTr.bSel .bNum{background:#e0e7ff!important;}
@@ -280,8 +384,10 @@ const Billings = () => {
           </h1>
         </div>
         <div style={{display:'flex',gap:10}}>
-          <button onClick={load} style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,color:'#475569',fontSize:12,padding:'9px 18px',cursor:'pointer',fontWeight:600}}>↺ Sync</button>
-          <button style={{background:'linear-gradient(135deg,#10b981,#059669)',border:'none',borderRadius:10,color:'#fff',fontSize:12,padding:'9px 18px',cursor:'pointer',fontWeight:700,boxShadow:'0 4px 18px rgba(16,185,129,0.4)'}}>⬇ Export</button>
+          <button onClick={()=>load(true)} disabled={loading} style={{background:'#fff',border:'1px solid #e2e8f0',borderRadius:10,color:'#475569',fontSize:12,padding:'9px 18px',cursor:loading?'not-allowed':'pointer',fontWeight:600,opacity:loading?0.6:1}}>
+            {loading ? '⏳ Syncing...' : '↺ Sync'}
+          </button>
+          <button onClick={handleExport} disabled={billings.length===0} style={{background:billings.length===0?'#94a3b8':'linear-gradient(135deg,#10b981,#059669)',border:'none',borderRadius:10,color:'#fff',fontSize:12,padding:'9px 18px',cursor:billings.length===0?'not-allowed':'pointer',fontWeight:700,boxShadow:billings.length===0?'none':'0 4px 18px rgba(16,185,129,0.4)',opacity:billings.length===0?0.5:1}}>⬇ Export</button>
         </div>
       </div>
 
@@ -501,7 +607,7 @@ const Billings = () => {
                           </div>
                         </td>
                         {/* plan */}
-                        <td className="bTd" style={{background:isSel?null:planC(row.subscription?.planName),color:'#fff',fontWeight:700,fontSize:11,textAlign:'center'}}>
+                        <td className="bTd bBadge" style={{background:isSel?null:planC(row.subscription?.planName),color:'#fff',fontWeight:700,fontSize:11,textAlign:'center'}}>
                           {row.subscription?.planName||'Free'}
                           <div style={{fontSize:9,color:'rgba(255,255,255,0.75)',fontWeight:500,marginTop:1}}>/{row.subscription?.billingCycle||'mo'}</div>
                         </td>
@@ -511,7 +617,7 @@ const Billings = () => {
                           <div style={{fontSize:9,color:'#9ca3af'}}>{fmtM((row.subscription?.amount||0)*12)}/yr</div>
                         </td>
                         {/* status */}
-                        <td className="bTd" style={{background:isSel?null:statusStyle.bg,color:statusStyle.color,fontWeight:700,fontSize:10,textAlign:'center',textTransform:'uppercase',letterSpacing:'0.5px'}}>
+                        <td className="bTd bBadge" style={{background:isSel?null:statusStyle.bg,color:statusStyle.color,fontWeight:700,fontSize:10,textAlign:'center',textTransform:'uppercase',letterSpacing:'0.5px'}}>
                           {st.label}
                         </td>
                         {/* expiry */}
@@ -636,8 +742,8 @@ const Billings = () => {
                     onClick={()=>{ const plan=window.prompt('New plan name (Basic/Professional/Enterprise):',b.subscription?.planName||''); if(plan) handleAction({planName:plan}); }}
                     style={{background:'rgba(99,102,241,0.13)',border:'1px solid rgba(99,102,241,0.3)',color:'#a78bfa',opacity:actionLoading?0.5:1}}>✎ Edit</button>
                   <button className="bActBtn" disabled={actionLoading}
-                    onClick={()=>window.open(`/invoice/${b._id}`,'_blank')}
-                    style={{background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',color:'#fbbf24',opacity:actionLoading?0.5:1}}>⬇ Invoice</button>
+                    onClick={()=>handleGenerateInvoice(b)}
+                    style={{background:'rgba(245,158,11,0.1)',border:'1px solid rgba(245,158,11,0.3)',color:'#fbbf24',opacity:actionLoading?0.5:1}}>📄 Generate Invoice</button>
                   <button className="bActBtn" disabled={actionLoading}
                     onClick={()=>{ if(window.confirm(`${st.label==='Suspended'?'Activate':'Suspend'} ${b.organizationName}?`)) handleAction({status:st.label==='Suspended'?'active':'suspended'}); }}
                     style={{background:'rgba(239,68,68,0.1)',border:'1px solid rgba(239,68,68,0.3)',color:'#fb7185',opacity:actionLoading?0.5:1}}>{st.label==='Suspended'?'▶ Activate':'⏸ Suspend'}</button>

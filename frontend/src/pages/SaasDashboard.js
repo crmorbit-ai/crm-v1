@@ -169,7 +169,7 @@ const SaasDashboard = () => {
     {l:'Subscriptions',ico:'📋',g:'linear-gradient(135deg,#10b981,#059669)', to:'/saas/subscriptions', sub:`${active} active`},
     {l:'Billing',     ico:'💳', g:'linear-gradient(135deg,#f59e0b,#f97316)', to:'/saas/billings',      sub:fmtM(mrr)+'/mo'},
     {l:'Resellers',   ico:'🤝', g:'linear-gradient(135deg,#0ea5e9,#6366f1)', to:'/saas/resellers',     sub:'Partner network'},
-    {l:'Support',     ico:'🎧', g:'linear-gradient(135deg,#ec4899,#8b5cf6)', to:'/saas/support',       sub:'Tickets & issues'},
+    {l:'Support',     ico:'🎧', g:'linear-gradient(135deg,#ec4899,#8b5cf6)', to:'/support-admin',       sub:'Tickets & issues'},
     {l:'Admins',      ico:'🛡', g:'linear-gradient(135deg,#14b8a6,#0ea5e9)', to:'/saas/admins',        sub:'Access control'},
   ];
 

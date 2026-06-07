@@ -13,7 +13,8 @@ const {
   cancelSubscription,
   getAllSubscriptions,
   updateTenantSubscription,
-  updatePlan
+  updatePlan,
+  generateTenantInvoice
 } = require('../controllers/subscriptionController');
 const { protect } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
@@ -32,7 +33,7 @@ const requireSaasAccess = (req, res, next) => {
 // Public routes
 router.get('/plans', getAllPlans);
 
-2// Tenant routes (protected - all tenant users can view/manage their subscription)
+// Tenant routes (protected - all tenant users can view/manage their subscription)
 router.get('/current', protect, getCurrentSubscription);
 router.post('/upgrade', protect, upgradePlan);
 router.post('/create-order', protect, createPaymentOrder);
@@ -47,5 +48,6 @@ router.get('/all', protect, requireSaasAccess, getAllSubscriptions);
 router.get('/all-payments', protect, requireSaasAccess, getAllPayments);
 router.put('/plans/:planId', protect, requireSaasAccess, updatePlan);
 router.put('/:tenantId', protect, requireSaasAccess, updateTenantSubscription);
+router.post('/:tenantId/generate-invoice', protect, requireSaasAccess, generateTenantInvoice);
 
 module.exports = router;

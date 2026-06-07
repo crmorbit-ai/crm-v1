@@ -274,10 +274,13 @@ exports.sendInvoice = async (req, res) => {
 
 exports.downloadInvoicePDF = async (req, res) => {
   try {
-    const invoice = await Invoice.findOne({
-      _id: req.params.id,
-      tenant: req.user.tenant
-    }).populate('createdBy', 'firstName lastName email');
+    // Build query - SAAS admins can access all invoices, tenants only their own
+    const query = { _id: req.params.id };
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      query.tenant = req.user.tenant;
+    }
+
+    const invoice = await Invoice.findOne(query).populate('createdBy', 'firstName lastName email');
 
     if (!invoice) {
       return res.status(404).json({
@@ -287,7 +290,7 @@ exports.downloadInvoicePDF = async (req, res) => {
     }
 
     const Tenant = require('../models/Tenant');
-    const tenant = await Tenant.findById(req.user.tenant);
+    const tenant = await Tenant.findById(invoice.tenant || req.user.tenant);
 
     const { generateInvoicePDF } = require('../services/pdfService');
     const pdfResult = await generateInvoicePDF(invoice, tenant);

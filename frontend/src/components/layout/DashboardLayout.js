@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import PasswordExpiryBanner from '../PasswordExpiryBanner';
+import WelcomePrompt from '../WelcomePrompt';
 import { cn } from '../../lib/utils';
 
 // Map backend feature slugs → readable names
@@ -60,6 +61,36 @@ const DashboardLayout = ({ children, title, actionButton }) => {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [sidebarOpen, setSidebarOpen] = useState(true); // desktop: open by default
   const [permissionToast, setPermissionToast] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    // Load user info from sessionStorage (cached_user is used by AuthContext)
+    const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+    const userStr = sessionStorage.getItem('cached_user') || localStorage.getItem('cached_user');
+
+    console.log('🔍 DashboardLayout checking:', { token: !!token, userStr: !!userStr });
+
+    if (token && userStr) {
+      try {
+        const userData = JSON.parse(userStr);
+        console.log('👤 User data loaded:', userData);
+        setUser(userData);
+
+        // Check if welcome should be shown (not shown in current session)
+        const shownThisSession = sessionStorage.getItem('welcomePromptShown');
+
+        if (!shownThisSession) {
+          console.log('✅ Showing welcome prompt - first time this session');
+          setTimeout(() => setShowWelcome(true), 800);
+        }
+      } catch (err) {
+        console.error('Error parsing user:', err);
+      }
+    } else {
+      console.log('❌ No token or user found');
+    }
+  }, []); // Empty dependency - only run once on mount
 
   useEffect(() => {
     const handleResize = () => {
@@ -93,6 +124,11 @@ const DashboardLayout = ({ children, title, actionButton }) => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Welcome Prompt */}
+      {showWelcome && user && (
+        <WelcomePrompt user={user} onClose={() => setShowWelcome(false)} />
+      )}
+
       {/* Password Expiry Warning Banner */}
       <PasswordExpiryBanner />
 

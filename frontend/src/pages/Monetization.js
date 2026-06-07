@@ -57,7 +57,8 @@ const CSS = `
 .mRow:hover td{background:#eff6ff!important;}
 .mRow:hover .mSticky{background:#eff6ff!important;}
 .mTabBtn{transition:all 0.15s ease;border:none;cursor:pointer;font-weight:700;letter-spacing:0.2px;}
-.mTabBtn:hover{background:rgba(255,255,255,0.12)!important;}
+.mTabBtn:hover:not(.active){background:rgba(99,102,241,0.08)!important;color:#4f46e5!important;transform:translateY(-1px);}
+.mTabBtn.active{background:#fff!important;color:#1e293b!important;border:1px solid #e2e8f0!important;box-shadow:0 2px 8px rgba(0,0,0,0.1)!important;}
 .mDlBtn:hover{background:#f1f5f9!important;border-color:#cbd5e1!important;}
 .mCardHover{transition:box-shadow 0.2s,transform 0.2s;}
 .mCardHover:hover{box-shadow:0 8px 24px rgba(0,0,0,0.1)!important;transform:translateY(-1px);}
@@ -245,8 +246,8 @@ const TabOverview = ({d,onTabChange}) => {
   const pe = Object.entries(d.planBreakdown||{});
   const tot = pe.reduce((s,[,v])=>s+v,0);
   const GRADS = [
-    {l:'MRR',          v:fmtM(d.mrr),         icon:'₹', g:'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)',  g2:'linear-gradient(135deg,#4f46e5,#7c3aed,#0891b2)'},
-    {l:'ARR',          v:fmtM(d.arr),          icon:'📈',g:'linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%)',               g2:'linear-gradient(135deg,#0284c7,#4f46e5)'},
+    {l:'MRR',          v:fmtM(d.mrr),         icon:'₹', g:'linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)',  g2:'linear-gradient(135deg,#4f46e5,#7c3aed,#0891b2)', onClick:()=>go('revenue')},
+    {l:'ARR',          v:fmtM(d.arr),          icon:'📈',g:'linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%)',               g2:'linear-gradient(135deg,#0284c7,#4f46e5)', onClick:()=>go('revenue')},
     {l:'Active',       v:d.activeTenants,      icon:'✓', g:'linear-gradient(135deg,#10b981 0%,#059669 50%,#16a34a 100%)',  g2:'linear-gradient(135deg,#059669,#047857)', onClick:()=>go('health')},
     {l:'Churn Rate',   v:pct(d.churnRate),     icon:'↻', g:'linear-gradient(135deg,#ef4444 0%,#dc2626 50%,#b91c1c 100%)',  g2:'linear-gradient(135deg,#dc2626,#b91c1c)', onClick:()=>go('churn')},
     {l:'Trials',       v:d.trialTenants,       icon:'⚗', g:'linear-gradient(135deg,#f59e0b 0%,#f97316 50%,#ef4444 100%)',  g2:'linear-gradient(135deg,#d97706,#ea580c)', onClick:()=>go('churn')},
@@ -548,7 +549,19 @@ const TabChurn = ({d}) => {
 const TabUpsell = ({d}) => {
   const refUpsell    = React.useRef(null);
   const refCrosssell = React.useRef(null);
-  const scrollTo = ref => ref.current?.scrollIntoView({behavior:'smooth',block:'start'});
+  const scrollTo = ref => {
+    if (ref.current) {
+      ref.current.scrollIntoView({behavior:'smooth',block:'start'});
+      // Highlight effect for visibility
+      ref.current.style.transition = 'all 0.3s ease';
+      ref.current.style.transform = 'scale(1.01)';
+      ref.current.style.boxShadow = '0 8px 24px rgba(99,102,241,0.3)';
+      setTimeout(() => {
+        ref.current.style.transform = 'scale(1)';
+        ref.current.style.boxShadow = 'none';
+      }, 600);
+    }
+  };
   if(!d) return <Spin/>;
   const {upsellCandidates=[],crossSellOpps=[],summary={}}=d;
   return (
@@ -561,7 +574,7 @@ const TabUpsell = ({d}) => {
         <div style={{position:'relative',zIndex:1,display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:10}}>
           <GradKPI label="Upsell Candidates"  value={summary.upsellCount||0}    icon="▲" grad="linear-gradient(135deg,#6366f1 0%,#8b5cf6 50%,#06b6d4 100%)" onClick={()=>scrollTo(refUpsell)}/>
           <GradKPI label="Cross-sell Opps"    value={summary.crossSellCount||0} icon="⇌" grad="linear-gradient(135deg,#0ea5e9 0%,#6366f1 100%)"               onClick={()=>scrollTo(refCrosssell)}/>
-          <GradKPI label="Potential MRR Gain" value={fmtM(summary.potentialMRR||0)} icon="₹" grad="linear-gradient(135deg,#10b981 0%,#059669 50%,#16a34a 100%)"/>
+          <GradKPI label="Potential MRR Gain" value={fmtM(summary.potentialMRR||0)} icon="₹" grad="linear-gradient(135deg,#10b981 0%,#059669 50%,#16a34a 100%)" onClick={()=>scrollTo(refUpsell)}/>
         </div>
       </div>
 
@@ -987,11 +1000,12 @@ export default function Monetization(){
           const isActive=tab===t.id;
           const showBadge=t.id==='upsell'&&criticalCount>0;
           return(
-            <button key={t.id} className="mTabBtn" onClick={()=>setTab(t.id)} style={{
+            <button key={t.id} className={`mTabBtn${isActive?' active':''}`} onClick={()=>setTab(t.id)} style={{
               position:'relative',padding:'8px 16px',borderRadius:9,fontSize:12,fontWeight:700,
-              background:isActive?`linear-gradient(135deg,#1e1b4b,#312e81)`:'transparent',
-              color:isActive?'#fff':'#64748b',
-              boxShadow:isActive?'0 2px 12px rgba(30,27,75,0.4)':'none',
+              background:isActive?'#fff':'transparent',
+              color:isActive?'#1e293b':'#64748b',
+              boxShadow:isActive?'0 2px 8px rgba(0,0,0,0.1)':'none',
+              border:isActive?'1px solid #e2e8f0':'1px solid transparent',
             }}>
               {isActive&&<div style={{position:'absolute',top:0,left:'20%',right:'20%',height:1,background:`linear-gradient(90deg,transparent,${t.color},transparent)`}}/>}
               {t.label}
