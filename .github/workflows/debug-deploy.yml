@@ -1,0 +1,52 @@
+name: Debug Deploy
+
+on:
+  workflow_dispatch:  # Manual trigger only
+
+jobs:
+  debug:
+    runs-on: self-hosted
+
+    steps:
+      - name: Check Docker Status
+        run: |
+          echo "=== Docker Version ==="
+          docker --version || echo "Docker not found"
+
+          echo -e "\n=== Docker Service Status ==="
+          systemctl status docker || service docker status || echo "Cannot check Docker service"
+
+          echo -e "\n=== Docker Info ==="
+          docker info || echo "Docker daemon not accessible"
+
+      - name: Check Disk Space
+        run: |
+          echo "=== Disk Space ==="
+          df -h
+
+          echo -e "\n=== Docker Disk Usage ==="
+          docker system df || echo "Cannot check Docker disk usage"
+
+      - name: Check Docker Permissions
+        run: |
+          echo "=== Current User ==="
+          whoami
+
+          echo -e "\n=== Docker Group Membership ==="
+          groups
+
+          echo -e "\n=== Docker Socket Permissions ==="
+          ls -la /var/run/docker.sock || echo "Docker socket not found"
+
+      - name: Test Docker Build
+        run: |
+          echo "=== Testing Simple Docker Build ==="
+          echo 'FROM alpine:latest' > /tmp/test.Dockerfile
+          echo 'RUN echo "test"' >> /tmp/test.Dockerfile
+          docker build -f /tmp/test.Dockerfile /tmp || echo "Docker build failed"
+
+      - name: Check Network
+        run: |
+          echo "=== Network Connectivity ==="
+          ping -c 3 registry.npmjs.org || echo "Cannot reach npm registry"
+          ping -c 3 registry-1.docker.io || echo "Cannot reach Docker Hub"
