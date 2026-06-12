@@ -917,6 +917,7 @@ const convertLead = async (req, res) => {
     }
 
     // Mark lead as converted
+    lead.leadStatus = 'Converted';
     lead.isConverted = true;
     lead.convertedDate = new Date();
     lead.lastModifiedBy = req.user._id;

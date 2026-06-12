@@ -72,4 +72,40 @@ router.post('/change-password', protect, changePassword);
 // Verify Tenant Admin Password (used when creating user without email)
 router.post('/verify-tenant-admin-password', protect, verifyTenantAdminPassword);
 
+// Profile Picture Upload
+router.post('/profile-picture', protect, upload.single('profilePicture'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const cloudinary = require('../config/cloudinary');
+    const User = require('../models/User');
+
+    // Upload to Cloudinary
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        { folder: 'profile_pictures', transformation: [{ width: 200, height: 200, crop: 'fill' }] },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end(req.file.buffer);
+    });
+
+    // Update user profile picture
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { profilePicture: result.secure_url },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    res.json({ success: true, message: 'Profile picture updated', data: { profilePicture: result.secure_url }, user });
+  } catch (error) {
+    console.error('Profile picture upload error:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload profile picture', error: error.message });
+  }
+});
+
 module.exports = router;

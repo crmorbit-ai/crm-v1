@@ -19,6 +19,15 @@ const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
+  // Debug: Check if lastLogin exists
+  React.useEffect(() => {
+    if (user) {
+      console.log('Header user object:', user);
+      console.log('Has lastLogin?', !!user.lastLogin);
+      console.log('lastLogin value:', user.lastLogin);
+    }
+  }, [user]);
+
   const getInitials = () => {
     if (!user) return '??';
     const firstInitial = user.firstName ? user.firstName[0] : '';
@@ -52,8 +61,28 @@ const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
           <div className="flex-shrink-0">{actionButton}</div>
         )}
 
+        {/* Last Login - First */}
+        {user?.lastLogin && !isMobile && (
+          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-xs">
+            <span>🕐</span>
+            <div className="flex flex-col">
+              <span className="text-muted-foreground">Last Login</span>
+              <span className="font-medium text-foreground">
+                {new Date(user.lastLogin).toLocaleString('en-IN', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                })}
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Notification - Second */}
         <NotificationBell />
 
+        {/* Profile - Third */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="flex items-center gap-2 px-2">

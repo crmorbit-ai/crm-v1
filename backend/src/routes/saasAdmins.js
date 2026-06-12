@@ -18,7 +18,8 @@ const {
   verifyViewingPin,
   changeViewingPin,
   forgotViewingPin,
-  resetViewingPin
+  resetViewingPin,
+  getOverallActivity
 } = require('../controllers/saasAdminController');
 
 // All routes require SAAS access
@@ -46,6 +47,7 @@ const requirePrimaryOwner = (req, res, next) => {
 // Routes accessible by all SAAS admins
 router.get('/me', getMyProfile);
 router.get('/managers', getManagers);
+router.get('/overall-activity', getOverallActivity);
 router.post('/set-viewing-credentials', setViewingCredentials);
 router.post('/verify-viewing-credentials', verifyViewingCredentials);
 router.post('/forgot-viewing-credentials', forgotViewingCredentials);

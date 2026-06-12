@@ -1,7 +1,13 @@
+const mongoose    = require('mongoose');
 const Tenant      = require('../models/Tenant');
 const User        = require('../models/User');
 const Subscription = require('../models/Subscription');
 const PlanHistory = require('../models/PlanHistory');
+const ActivityLog = require('../models/ActivityLog');
+const Lead        = require('../models/Lead');
+const Account     = require('../models/Account');
+const Contact     = require('../models/Contact');
+const Opportunity = require('../models/Opportunity');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const {
@@ -751,6 +757,160 @@ const forceReactivateUsers = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get tenant activity tracking (Login/Logout, Feature Usage, Counts)
+ * @route   GET /api/tenants/:id/activity
+ * @access  Private (SAAS Admin only)
+ */
+const getTenantActivity = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { days = 30 } = req.query;
+
+    const tenant = await Tenant.findById(id);
+    if (!tenant) {
+      return errorResponse(res, 404, 'Tenant not found');
+    }
+
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+
+    // 1. Login/Logout Count (separate query for accurate count)
+    const loginCount = await ActivityLog.countDocuments({
+      tenant: id,
+      action: 'login.success',
+      createdAt: { $gte: daysAgo }
+    });
+
+    const logoutCount = await ActivityLog.countDocuments({
+      tenant: id,
+      action: 'logout',
+      createdAt: { $gte: daysAgo }
+    });
+
+    // 2. Recent Login/Logout Activity (for display - limited to 100)
+    const loginActivity = await ActivityLog.find({
+      tenant: id,
+      action: { $in: ['login.success', 'logout'] },
+      createdAt: { $gte: daysAgo }
+    })
+    .populate('user', 'firstName lastName email')
+    .sort({ createdAt: -1 })
+    .limit(100)
+    .lean();
+
+    console.log(`[getTenantActivity] Tenant: ${id}, Days: ${days}, Logins: ${loginCount}, Logouts: ${logoutCount}, Recent activities: ${loginActivity.length}`);
+
+    // 3. Feature Usage Summary
+    const featureUsage = await ActivityLog.aggregate([
+      {
+        $match: {
+          tenant: new mongoose.Types.ObjectId(id),
+          createdAt: { $gte: daysAgo },
+          action: {
+            $in: [
+              'lead.created', 'lead.updated', 'lead.converted',
+              'account.created', 'account.updated',
+              'contact.created', 'contact.updated',
+              'opportunity.created', 'opportunity.updated',
+              'task.created', 'meeting.created', 'call.created'
+            ]
+          }
+        }
+      },
+      {
+        $group: {
+          _id: '$action',
+          count: { $sum: 1 },
+          lastUsed: { $max: '$createdAt' }
+        }
+      }
+    ]);
+
+    // 4. Current Data Counts
+    const [leadsCount, accountsCount, contactsCount, opportunitiesCount] = await Promise.all([
+      Lead.countDocuments({ tenant: id }),
+      Account.countDocuments({ tenant: id }),
+      Contact.countDocuments({ tenant: id }),
+      Opportunity.countDocuments({ tenant: id })
+    ]);
+
+    // 5. Converted Leads Count
+    const convertedLeadsCount = await Lead.countDocuments({
+      tenant: id,
+      leadStatus: 'Converted'
+    });
+
+    // 6. Active Users Count
+    const activeUsersCount = await User.countDocuments({
+      tenant: id,
+      isActive: true
+    });
+
+    // 7. Recent Activities (grouped by feature)
+    const featureStats = {
+      leads: {
+        total: leadsCount,
+        convertedTotal: convertedLeadsCount,  // Total converted (all time)
+        created: featureUsage.find(f => f._id === 'lead.created')?.count || 0,
+        updated: featureUsage.find(f => f._id === 'lead.updated')?.count || 0,
+        convertedInPeriod: featureUsage.find(f => f._id === 'lead.converted')?.count || 0
+      },
+      accounts: {
+        total: accountsCount,
+        created: featureUsage.find(f => f._id === 'account.created')?.count || 0,
+        updated: featureUsage.find(f => f._id === 'account.updated')?.count || 0
+      },
+      contacts: {
+        total: contactsCount,
+        created: featureUsage.find(f => f._id === 'contact.created')?.count || 0,
+        updated: featureUsage.find(f => f._id === 'contact.updated')?.count || 0
+      },
+      opportunities: {
+        total: opportunitiesCount,
+        created: featureUsage.find(f => f._id === 'opportunity.created')?.count || 0,
+        updated: featureUsage.find(f => f._id === 'opportunity.updated')?.count || 0
+      },
+      tasks: {
+        created: featureUsage.find(f => f._id === 'task.created')?.count || 0
+      },
+      meetings: {
+        created: featureUsage.find(f => f._id === 'meeting.created')?.count || 0
+      },
+      calls: {
+        created: featureUsage.find(f => f._id === 'call.created')?.count || 0
+      }
+    };
+
+    // 8. Login Stats
+    const loginStats = {
+      totalLogins: loginCount,  // Use accurate count, not limited array length
+      totalLogouts: logoutCount,
+      lastLogin: loginActivity.find(a => a.action === 'login.success')?.createdAt || null,
+      activeUsers: activeUsersCount
+    };
+
+    console.log(`[getTenantActivity] Login Stats:`, loginStats);
+    console.log(`[getTenantActivity] Feature Stats (Leads):`, featureStats.leads);
+
+    successResponse(res, {
+      tenant: {
+        id: tenant._id,
+        name: tenant.organizationName,
+        email: tenant.email
+      },
+      period: { days: parseInt(days), from: daysAgo },
+      loginStats,
+      featureStats,
+      recentLoginActivity: loginActivity.slice(0, 20) // Last 20 logins/logouts
+    });
+
+  } catch (error) {
+    console.error('Get tenant activity error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getTenants,
   getTenant,
@@ -765,5 +925,6 @@ module.exports = {
   recoverTenant,
   assignManager,
   bulkAssignManager,
-  forceReactivateUsers
+  forceReactivateUsers,
+  getTenantActivity
 };

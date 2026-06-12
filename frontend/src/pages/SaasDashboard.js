@@ -83,11 +83,47 @@ const SaasDashboard = () => {
   const [loading, setLoading]         = useState(true);
   const [now]                         = useState(new Date());
   const [myTenants, setMyTenants]     = useState([]);
+  const [uploadingPic, setUploadingPic] = useState(false);
   const navigate                      = useNavigate();
   const { isMobile, isTablet }        = useWindowSize();
-  const { user }                      = useAuth();
+  const { user, loadUser }            = useAuth();
 
   const isManager = user?.saasRole === 'Manager';
+
+  const handleProfilePicUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select an image file');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('profilePicture', file);
+
+    setUploadingPic(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:5000'}/api/auth/profile-picture`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+
+      if (response.ok) {
+        await loadUser();
+        alert('Profile picture updated successfully!');
+      } else {
+        alert('Failed to upload profile picture');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      alert('Error uploading profile picture');
+    } finally {
+      setUploadingPic(false);
+    }
+  };
 
   useEffect(()=>{ load(); },[]);
 
@@ -155,6 +191,7 @@ const SaasDashboard = () => {
   const churnRisk  = billings.filter(b=>{ const d=dLeft(b.subscription?.endDate); return d!==null&&d>=0&&d<14; });
   const overdue    = billings.filter(b=>{ const d=dLeft(b.subscription?.endDate); return d!==null&&d<0; });
   const activeRate = total?Math.round((active/total)*100):0;
+  const hr         = now.getHours();
 
   const PLAN_DATA=[
     {l:'Enterprise',v:byPlan.enterprise||0, g:'linear-gradient(135deg,#f59e0b,#f97316)', rev:billings.filter(b=>b.subscription?.planName==='Enterprise').reduce((s,b)=>s+(b.subscription?.amount||0),0)},
@@ -325,6 +362,7 @@ const SaasDashboard = () => {
         @keyframes dFloat{0%,100%{transform:translateY(0px) rotate(0deg)}33%{transform:translateY(-6px) rotate(1deg)}66%{transform:translateY(3px) rotate(-1deg)}}
         @keyframes dPing{0%{transform:scale(1);opacity:1}100%{transform:scale(2.5);opacity:0}}
         @keyframes dTicker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+        @keyframes gradient{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
         .dKpi{cursor:pointer;transition:all 0.18s ease;border-radius:14px;padding:14px 12px;position:relative;overflow:hidden;}
         .dKpi:hover{transform:translateY(-3px);filter:brightness(1.12);box-shadow:0 10px 28px rgba(0,0,0,0.22)!important;}
         .dNav{cursor:pointer;transition:all 0.18s ease;border-radius:12px;padding:13px;display:flex;align-items:center;gap:10px;}
@@ -340,6 +378,83 @@ const SaasDashboard = () => {
           .dBottomGrid{grid-template-columns:1fr !important;}
         }
       `}</style>
+
+      {/* ══ WELCOME BANNER ══ */}
+      <div style={{position:'relative',borderRadius:16,overflow:'hidden',marginBottom:16,padding:'28px 32px',background:'linear-gradient(135deg,#0F172A 0%,#1E293B 50%,#1E3A5F 100%)',boxShadow:'0 10px 40px rgba(15,23,42,0.5)',border:'1px solid rgba(255,255,255,0.1)'}}>
+        {/* Animated orbs */}
+        <div style={{position:'absolute',top:-80,right:'15%',width:300,height:300,background:'radial-gradient(circle,rgba(99,102,241,0.15),transparent 70%)',animation:'dO 12s ease-in-out infinite',pointerEvents:'none'}}/>
+        <div style={{position:'absolute',bottom:-60,left:'20%',width:240,height:240,background:'radial-gradient(circle,rgba(16,185,129,0.1),transparent 70%)',animation:'dO2 14s ease-in-out infinite',pointerEvents:'none'}}/>
+        {/* Grid overlay */}
+        <div style={{position:'absolute',inset:0,backgroundImage:'linear-gradient(rgba(255,255,255,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.02) 1px,transparent 1px)',backgroundSize:'40px 40px',pointerEvents:'none'}}/>
+
+        <div style={{position:'relative',display:'flex',justifyContent:'space-between',alignItems:'center',flexWrap:'wrap',gap:'20px'}}>
+          <div style={{display:'flex',alignItems:'center',gap:'16px'}}>
+            <div style={{position:'relative',cursor:'pointer'}} title="Click to upload profile picture">
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleProfilePicUpload}
+                style={{display:'none'}}
+                id="saas-profile-pic-upload"
+              />
+              <label htmlFor="saas-profile-pic-upload" style={{cursor:'pointer',display:'block'}}>
+                <div style={{
+                  width:64,height:64,borderRadius:16,
+                  background:user?.profilePicture?'transparent':'linear-gradient(135deg,#6366F1,#8B5CF6)',
+                  display:'flex',alignItems:'center',justifyContent:'center',
+                  fontSize:28,fontWeight:900,color:'white',
+                  boxShadow:'0 10px 30px rgba(99,102,241,0.6)',
+                  border:'3px solid rgba(255,255,255,0.2)',
+                  overflow:'hidden',
+                  position:'relative',
+                  transition:'all 0.3s'
+                }}
+                onMouseEnter={(e)=>{e.currentTarget.style.opacity='0.8';e.currentTarget.style.transform='scale(1.05)';}}
+                onMouseLeave={(e)=>{e.currentTarget.style.opacity='1';e.currentTarget.style.transform='scale(1)';}}>
+                  {uploadingPic ? (
+                    <div style={{fontSize:14,color:'white'}}>...</div>
+                  ) : user?.profilePicture ? (
+                    <img
+                      src={user.profilePicture.startsWith('http') ? user.profilePicture : `${process.env.REACT_APP_API_URL || 'http://localhost:5000'}${user.profilePicture}`}
+                      alt={user?.firstName || 'Profile'}
+                      style={{width:'100%',height:'100%',objectFit:'cover'}}
+                    />
+                  ) : (
+                    <span>{user?.firstName?.charAt(0)?.toUpperCase()||'S'}{user?.lastName?.charAt(0)?.toUpperCase()||'A'}</span>
+                  )}
+                  <div style={{position:'absolute',bottom:0,left:0,right:0,background:'rgba(0,0,0,0.6)',color:'white',fontSize:9,padding:'3px',textAlign:'center',opacity:0,transition:'opacity 0.3s'}}
+                    onMouseEnter={(e)=>{e.currentTarget.style.opacity='1';}}
+                    onMouseLeave={(e)=>{e.currentTarget.style.opacity='0';}}>
+                    📷 Upload
+                  </div>
+                </div>
+              </label>
+            </div>
+            <div>
+              <h1 style={{margin:0,fontSize:32,fontWeight:900,letterSpacing:'-0.8px',marginBottom:6}}>
+                <span style={{color:'white',textShadow:'0 2px 10px rgba(0,0,0,0.5)'}}>
+                  {hr<12?'Good Morning':hr<17?'Good Afternoon':'Good Evening'},{' '}
+                </span>
+                <span style={{background:'linear-gradient(90deg,#60a5fa,#a78bfa,#34d399)',backgroundSize:'200% auto',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',animation:'gradient 3s linear infinite',display:'inline-block',textShadow:'none'}}>
+                  {user?.firstName||'Admin'}
+                </span>
+                <span style={{color:'white',textShadow:'0 2px 10px rgba(0,0,0,0.5)'}}>! 👋</span>
+              </h1>
+              <p style={{margin:0,fontSize:14,color:'rgba(255,255,255,.75)',fontWeight:600}}>
+                📅 {now.toLocaleDateString('en-IN',{weekday:'long',day:'numeric',month:'long',year:'numeric'})}
+              </p>
+              <p style={{margin:'6px 0 0',fontSize:13,color:'rgba(255,255,255,.6)',fontWeight:500}}>
+                🚀 Managing {total} organizations · {active} active subscriptions · {fmtM(mrr)}/mo revenue
+              </p>
+            </div>
+          </div>
+          <button onClick={load} style={{background:'rgba(99,102,241,0.2)',border:'2px solid rgba(99,102,241,0.4)',borderRadius:10,color:'white',fontSize:13,padding:'10px 20px',cursor:'pointer',fontWeight:700,transition:'all 0.2s',backdropFilter:'blur(10px)'}}
+            onMouseEnter={e=>{e.currentTarget.style.background='rgba(99,102,241,0.3)';e.currentTarget.style.transform='translateY(-2px)';}}
+            onMouseLeave={e=>{e.currentTarget.style.background='rgba(99,102,241,0.2)';e.currentTarget.style.transform='translateY(0)';}}>
+            ↻ Refresh Data
+          </button>
+        </div>
+      </div>
 
       {/* ══ HERO STRIP ══ */}
       <div style={{position:'relative',borderRadius:16,overflow:'hidden',marginBottom:16,border:'1px solid rgba(255,255,255,0.08)'}}>
@@ -386,7 +501,6 @@ const SaasDashboard = () => {
               <span style={{background:'linear-gradient(90deg,#a78bfa,#34d399)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent',animation:'dFloat 4s ease-in-out infinite',display:'inline-block'}}>Center</span>
             </div>
             <div style={{fontSize:10,color:'rgba(255,255,255,0.25)',fontFamily:'monospace'}}>{total} tenants · {new Date().toLocaleDateString('en-IN',{day:'numeric',month:'short'})}</div>
-            <button onClick={load} style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.1)',borderRadius:6,color:'rgba(255,255,255,0.5)',fontSize:10,padding:'5px 10px',cursor:'pointer',fontWeight:600,width:'fit-content',marginTop:2}}>↺ Sync</button>
           </div>
 
           {/* Metrics — compact */}

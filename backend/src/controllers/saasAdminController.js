@@ -1,4 +1,7 @@
+const mongoose = require('mongoose');
 const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
+const Tenant = require('../models/Tenant');
 const crypto = require('crypto');
 const { sendMail } = require('../utils/emailService');
 const { successResponse, errorResponse } = require('../utils/response');
@@ -656,6 +659,182 @@ const getManagers = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Get overall activity summary across all tenants
+ * @route   GET /api/saas-admins/overall-activity
+ * @access  Private (SAAS Admin)
+ */
+const getOverallActivity = async (req, res) => {
+  try {
+    const { days = 7 } = req.query;
+    const daysAgo = new Date();
+    daysAgo.setDate(daysAgo.getDate() - parseInt(days));
+
+    // Get all active tenants
+    const tenants = await Tenant.find({ isActive: true }).select('_id organizationName').lean();
+    const tenantIds = tenants.map(t => t._id);
+
+    // Aggregate activity by tenant
+    const activityByTenant = await ActivityLog.aggregate([
+      {
+        $match: {
+          tenant: { $in: tenantIds },
+          createdAt: { $gte: daysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            tenant: '$tenant',
+            action: '$action'
+          },
+          count: { $sum: 1 },
+          lastActivity: { $max: '$createdAt' }
+        }
+      },
+      {
+        $group: {
+          _id: '$_id.tenant',
+          totalActions: { $sum: '$count' },
+          actions: {
+            $push: {
+              action: '$_id.action',
+              count: '$count'
+            }
+          },
+          lastActivity: { $max: '$lastActivity' }
+        }
+      },
+      {
+        $sort: { totalActions: -1 }
+      }
+    ]);
+
+    // Login activity summary
+    const loginStats = await ActivityLog.aggregate([
+      {
+        $match: {
+          tenant: { $in: tenantIds },
+          action: { $in: ['login.success', 'logout'] },
+          createdAt: { $gte: daysAgo }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            tenant: '$tenant',
+            action: '$action'
+          },
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $group: {
+          _id: '$_id.tenant',
+          logins: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.action', 'login.success'] }, '$count', 0]
+            }
+          },
+          logouts: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.action', 'logout'] }, '$count', 0]
+            }
+          }
+        }
+      }
+    ]);
+
+    // Merge data
+    const tenantMap = {};
+    tenants.forEach(t => {
+      tenantMap[t._id.toString()] = {
+        _id: t._id,
+        name: t.organizationName,
+        totalActions: 0,
+        logins: 0,
+        logouts: 0,
+        actions: {},
+        lastActivity: null
+      };
+    });
+
+    activityByTenant.forEach(item => {
+      const tid = item._id.toString();
+      if (tenantMap[tid]) {
+        tenantMap[tid].totalActions = item.totalActions;
+        tenantMap[tid].lastActivity = item.lastActivity;
+        item.actions.forEach(a => {
+          tenantMap[tid].actions[a.action] = a.count;
+        });
+      }
+    });
+
+    loginStats.forEach(item => {
+      const tid = item._id.toString();
+      if (tenantMap[tid]) {
+        tenantMap[tid].logins = item.logins;
+        tenantMap[tid].logouts = item.logouts;
+      }
+    });
+
+    // Get full tenant details
+    const fullTenantDetails = await Tenant.find({
+      _id: { $in: tenants.map(t => t._id) }
+    }).select('organizationName organizationId email isActive isSuspended').lean();
+
+    const tenantDetailsMap = {};
+    fullTenantDetails.forEach(t => {
+      tenantDetailsMap[t._id.toString()] = t;
+    });
+
+    const result = Object.values(tenantMap)
+      .filter(t => t.totalActions > 0)
+      .sort((a, b) => b.totalActions - a.totalActions)
+      .map(t => {
+        const details = tenantDetailsMap[t._id.toString()] || {};
+        const actionBreakdown = Object.entries(t.actions).map(([action, count]) => ({
+          action,
+          count
+        })).sort((a, b) => b.count - a.count);
+
+        return {
+          _id: t._id,
+          organizationName: details.organizationName || 'Unknown',
+          organizationId: details.organizationId || 'N/A',
+          email: details.email || 'N/A',
+          isActive: details.isActive !== undefined ? details.isActive : true,
+          isSuspended: details.isSuspended || false,
+          loginCount: t.logins || 0,
+          logoutCount: t.logouts || 0,
+          totalActions: t.totalActions || 0,
+          lastActivity: t.lastActivity,
+          leadsCreated: t.actions['lead.created'] || 0,
+          leadsConverted: t.actions['lead.converted'] || 0,
+          accountsCreated: t.actions['account.created'] || 0,
+          contactsCreated: t.actions['contact.created'] || 0,
+          opportunitiesCreated: t.actions['opportunity.created'] || 0,
+          actionBreakdown: actionBreakdown
+        };
+      });
+
+    // Summary stats
+    const summary = {
+      totalTenants: tenants.length,
+      activeTenants: result.length,
+      totalLogins: result.reduce((sum, t) => sum + t.loginCount, 0),
+      totalActions: result.reduce((sum, t) => sum + t.totalActions, 0),
+      avgActionsPerTenant: result.length > 0 ? Math.round(result.reduce((sum, t) => sum + t.totalActions, 0) / result.length) : 0
+    };
+
+    successResponse(res, { summary, tenantBreakdown: result });
+
+  } catch (error) {
+    console.error('Get overall activity error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getAllSaasAdmins,
   getManagers,
@@ -673,5 +852,6 @@ module.exports = {
   verifyViewingPin,
   changeViewingPin,
   forgotViewingPin,
-  resetViewingPin
+  resetViewingPin,
+  getOverallActivity
 };

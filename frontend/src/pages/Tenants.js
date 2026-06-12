@@ -1071,21 +1071,22 @@ const Tenants = () => {
               </div>
 
               {/* KPI row */}
-              <div className="tKpiRow" style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',borderBottom:'1px solid #e2e8f0',flexShrink:0}}>
+              <div className="tKpiRow" style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',borderBottom:'1px solid #e2e8f0',flexShrink:0}}>
                 {[
-                  {l:'Users',v:`${t.userCount||0}/${t.subscription?.maxUsers||'∞'}`,clickable:true},
+                  {l:'Users',v:`${t.userCount||0}/${t.subscription?.maxUsers||'∞'}`,clickable:true,action:'users'},
+                  {l:'Activity',v:'📊',clickable:true,action:'activity'},
                   {l:'Plan',v:t.subscription?.planName||'Free'},
                   {l:'Billing',v:t.subscription?.billingCycle||'N/A'},
-                ].map(({l,v,clickable},i)=>(
+                ].map(({l,v,clickable,action},i)=>(
                   <div key={l}
-                    onClick={clickable?()=>loadTenantUsers(t._id):undefined}
-                    style={{padding:'7px 10px',textAlign:'center',borderRight:i<2?'1px solid #e2e8f0':'none',background:i%2===0?'#fff':'#f9fafb',cursor:clickable?'pointer':'default',transition:'all 0.2s'}}
+                    onClick={clickable ? (action==='activity' ? ()=>navigate(`/saas/tenants/${t._id}/activity`) : ()=>loadTenantUsers(t._id)) : undefined}
+                    style={{padding:'7px 10px',textAlign:'center',borderRight:i<3?'1px solid #e2e8f0':'none',background:i%2===0?'#fff':'#f9fafb',cursor:clickable?'pointer':'default',transition:'all 0.2s'}}
                     onMouseEnter={clickable?e=>{e.currentTarget.style.background='#f0f9ff';e.currentTarget.style.borderColor='#3b82f6';}:undefined}
                     onMouseLeave={clickable?e=>{e.currentTarget.style.background=i%2===0?'#fff':'#f9fafb';e.currentTarget.style.borderColor='#e2e8f0';}:undefined}
                   >
-                    <div style={{fontSize:13,fontWeight:800,color:clickable&&showUsersList?'#3b82f6':'#1e293b'}}>{v}</div>
-                    <div style={{fontSize:9,color:clickable&&showUsersList?'#3b82f6':'#94a3b8',fontWeight:600,textTransform:'uppercase',marginTop:1}}>
-                      {clickable&&'👥 '}{l}
+                    <div style={{fontSize:13,fontWeight:800,color:clickable?'#3b82f6':'#1e293b'}}>{v}</div>
+                    <div style={{fontSize:9,color:clickable?'#3b82f6':'#94a3b8',fontWeight:600,textTransform:'uppercase',marginTop:1}}>
+                      {action==='users'&&'👥 '}{l}
                     </div>
                   </div>
                 ))}

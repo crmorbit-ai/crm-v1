@@ -83,6 +83,7 @@ const SaasLayout = ({ children, title }) => {
   const allNavItems = [
     { path: '/saas/dashboard', label: 'Dashboard', icon: '📊' },
     { path: '/saas/tenants', label: 'Tenants', icon: '🏢' },
+    { path: '/saas/activity-monitor', label: 'Activity Monitor', icon: '📈' },
     { path: '/saas/notifications', label: 'Notifications', icon: '🔔', badge: pendingDeletions },
     { path: '/saas/subscriptions', label: 'Subscriptions', icon: '💳' },
     { path: '/saas/plans', label: 'Plans', icon: '📋' },

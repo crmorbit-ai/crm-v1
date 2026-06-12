@@ -14,7 +14,8 @@ const {
   recoverTenant,
   assignManager,
   bulkAssignManager,
-  forceReactivateUsers
+  forceReactivateUsers,
+  getTenantActivity
 } = require('../controllers/tenantController');
 const { protect, requireSaasAccess, requireTenant } = require('../middleware/auth');
 
@@ -29,6 +30,7 @@ router.use(requireSaasAccess);
 router.get('/', getTenants);
 router.get('/stats/overview', getTenantStats);
 router.get('/:id', getTenant);
+router.get('/:id/activity', getTenantActivity);  // NEW - Tenant activity tracking
 router.put('/:id', updateTenant);
 router.post('/:id/suspend', suspendTenant);
 router.post('/:id/activate', activateTenant);
