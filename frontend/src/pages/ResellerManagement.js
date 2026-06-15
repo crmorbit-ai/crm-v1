@@ -159,8 +159,17 @@ const ResellerManagement = () => {
           <p style={{margin:'3px 0 0',fontSize:12,color:'#64748b'}}>{stats.total} partners · {stats.approved} active · {stats.pending} pending approval</p>
         </div>
         {stats.pending > 0 && (
-          <button onClick={() => handleStatusFilter('pending')}
-            style={{background:'linear-gradient(135deg,#f59e0b,#f97316)',color:'#fff',border:'none',padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,boxShadow:'0 2px 10px rgba(245,158,11,0.35)'}}>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleStatusFilter('pending');
+            }}
+            style={{background:'linear-gradient(135deg,#f59e0b,#f97316)',color:'#fff',border:'none',padding:'8px 16px',borderRadius:8,fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',gap:6,boxShadow:'0 2px 10px rgba(245,158,11,0.35)',transition:'transform 0.1s',userSelect:'none'}}
+            onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.97)'}
+            onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
+            onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
+          >
             ⏳ {stats.pending} Pending Review
           </button>
         )}
