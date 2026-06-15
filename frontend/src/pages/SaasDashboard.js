@@ -369,10 +369,16 @@ const SaasDashboard = () => {
         .dNav:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,0.15)!important;}
         .dAlertRow{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:9px;margin-bottom:6px;cursor:pointer;transition:background 0.12s;}
         .dAlertRow:hover{background:#fef9ec;}
-        .dHeroMetric{flex:1;padding:14px 18px;position:relative;overflow:hidden;min-width:0;transition:background 0.2s;}
+        .dHeroMetric{flex:1;padding:14px 18px;position:relative;overflow:hidden;min-width:180px;transition:background 0.2s;}
         .dHeroMetric:hover{background:rgba(255,255,255,0.03)!important;}
         @media(max-width:768px){
-          .dHeroMetric{border-left:none !important;border-top:1px solid rgba(255,255,255,0.05);}
+          .dHeroMetric{
+            border-left:none !important;
+            border-top:1px solid rgba(255,255,255,0.05);
+            flex:1 1 100%;
+            min-width:auto;
+            padding:12px 14px;
+          }
           .dNavGrid{grid-template-columns:1fr 1fr !important;}
           .dMainGrid{grid-template-columns:1fr !important;}
           .dBottomGrid{grid-template-columns:1fr !important;}

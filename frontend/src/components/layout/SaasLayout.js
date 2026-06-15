@@ -32,9 +32,18 @@ const SaasLayout = ({ children, title }) => {
   const [pendingDeletions, setPendingDeletions] = useState(0);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(45);
+  const headerRef = React.useRef(null);
 
   // Show welcome prompt only once per session (on first mount with user)
   const [hasCheckedWelcome, setHasCheckedWelcome] = useState(false);
+
+  // Calculate header height dynamically
+  useEffect(() => {
+    if (headerRef.current) {
+      setHeaderHeight(headerRef.current.offsetHeight);
+    }
+  }, [isMobile]);
 
   useEffect(() => {
     // Check if welcome prompt should be shown
@@ -81,20 +90,20 @@ const SaasLayout = ({ children, title }) => {
   const isManager = user?.saasRole === 'Manager';
 
   const allNavItems = [
-    { path: '/saas/dashboard', label: 'Dashboard', icon: '📊' },
-    { path: '/saas/tenants', label: 'Tenants', icon: '🏢' },
-    { path: '/saas/activity-monitor', label: 'Activity Monitor', icon: '📈' },
-    { path: '/saas/notifications', label: 'Notifications', icon: '🔔', badge: pendingDeletions },
-    { path: '/saas/subscriptions', label: 'Subscriptions', icon: '💳' },
-    { path: '/saas/plans', label: 'Plans', icon: '📋' },
-    { path: '/saas/monetization', label: 'Monetization', icon: '📈' },
-    { path: '/saas/billings', label: 'Billings', icon: '💰' },
-    { path: '/saas/refunds',  label: 'Refunds',  icon: '↩️' },
-    { path: '/saas/resellers', label: 'Resellers', icon: '🤝' },
-    { path: '/saas/admins', label: 'Admins', icon: '👥' },
-    { path: '/support-admin',  label: 'Support',  icon: '🎧' },
-    { path: '/saas/feedback',  label: 'Feedback', icon: '💬' },
-    { path: '/saas/contact-inquiries', label: 'Contact Inquiries', icon: '📩' },
+    { path: '/saas/dashboard', label: 'Dashboard' },
+    { path: '/saas/tenants', label: 'Tenants' },
+    { path: '/saas/activity-monitor', label: 'Activity Monitor' },
+    { path: '/saas/notifications', label: 'Notifications', badge: pendingDeletions },
+    { path: '/saas/subscriptions', label: 'Subscriptions' },
+    { path: '/saas/plans', label: 'Plans' },
+    { path: '/saas/monetization', label: 'Monetization' },
+    { path: '/saas/billings', label: 'Billings' },
+    { path: '/saas/refunds',  label: 'Refunds' },
+    { path: '/saas/resellers', label: 'Resellers' },
+    { path: '/saas/admins', label: 'Admins' },
+    { path: '/support-admin',  label: 'Support' },
+    { path: '/saas/feedback',  label: 'Feedback' },
+    { path: '/saas/contact-inquiries', label: 'Contact Inquiries' },
   ];
 
   // Managers can only see Dashboard and Tenants
@@ -106,13 +115,48 @@ const SaasLayout = ({ children, title }) => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
+      {/* Global Styles */}
+      <style>{`
+        /* Webkit scrollbar styling */
+        nav::-webkit-scrollbar {
+          height: 6px;
+        }
+        nav::-webkit-scrollbar-track {
+          background: #f1f5f9;
+        }
+        nav::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 3px;
+        }
+        nav::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+
+        /* Smooth scroll behavior */
+        nav {
+          scroll-behavior: smooth;
+        }
+
+        /* Mobile menu animation */
+        @keyframes slideDown {
+          from { opacity: 0; transform: translateY(-10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Pulse animation for badges */
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+      `}</style>
+
       {/* Welcome Prompt */}
       {showWelcome && user && (
         <WelcomePrompt user={user} onClose={() => setShowWelcome(false)} />
       )}
 
       {/* Header */}
-      <header style={{
+      <header ref={headerRef} style={{
         background: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
         padding: isMobile ? '10px 12px' : '10px 20px',
         display: 'flex',
@@ -189,17 +233,22 @@ const SaasLayout = ({ children, title }) => {
       {isMobile && menuOpen && (
         <div style={{
           position: 'fixed',
-          top: '45px',
+          top: 0,
           left: 0,
           right: 0,
           bottom: 0,
           background: 'rgba(0,0,0,0.5)',
-          zIndex: 99
+          zIndex: 99,
+          paddingTop: `${headerHeight}px`
         }} onClick={() => setMenuOpen(false)}>
           <nav style={{
             background: '#fff',
             borderBottom: '1px solid #e2e8f0',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            maxHeight: `calc(100vh - ${headerHeight}px)`,
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch',
+            animation: 'slideDown 0.2s ease-out'
           }} onClick={e => e.stopPropagation()}>
             {navItems.map((item) => (
               <Link
@@ -216,10 +265,16 @@ const SaasLayout = ({ children, title }) => {
                   color: isActive(item.path) ? '#fff' : '#64748b',
                   textDecoration: 'none',
                   background: isActive(item.path) ? '#3b82f6' : 'transparent',
-                  borderBottom: '1px solid #f1f5f9'
+                  borderBottom: '1px solid #f1f5f9',
+                  transition: 'all 0.2s'
+                }}
+                onTouchStart={(e) => {
+                  if (!isActive(item.path)) e.currentTarget.style.background = '#f8fafc';
+                }}
+                onTouchEnd={(e) => {
+                  if (!isActive(item.path)) e.currentTarget.style.background = 'transparent';
                 }}
               >
-                <span>{item.icon}</span>
                 {item.label}
                 {item.badge > 0 && (
                   <span style={{
@@ -231,7 +286,8 @@ const SaasLayout = ({ children, title }) => {
                     borderRadius: '10px',
                     minWidth: '18px',
                     textAlign: 'center',
-                    lineHeight: '16px'
+                    lineHeight: '16px',
+                    marginLeft: 'auto'
                   }}>{item.badge}</span>
                 )}
               </Link>
@@ -245,18 +301,25 @@ const SaasLayout = ({ children, title }) => {
         <nav style={{
           background: '#fff',
           borderBottom: '1px solid #e2e8f0',
-          padding: '0 20px',
+          padding: '0',
           overflowX: 'auto',
-          WebkitOverflowScrolling: 'touch'
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'thin',
+          scrollbarColor: '#cbd5e1 #f1f5f9'
         }}>
-          <div style={{ display: 'flex', gap: '2px', minWidth: 'max-content' }}>
+          <div style={{
+            display: 'flex',
+            gap: '2px',
+            minWidth: 'max-content',
+            padding: '0 20px'
+          }}>
             {navItems.map((item) => (
               <Link
                 key={item.path}
                 to={item.path}
                 style={{
-                  padding: isTablet ? '10px 12px' : '10px 14px',
-                  fontSize: '12px',
+                  padding: isTablet ? '10px 10px' : '10px 14px',
+                  fontSize: isTablet ? '11px' : '12px',
                   fontWeight: isActive(item.path) ? '600' : '500',
                   color: isActive(item.path) ? '#3b82f6' : '#64748b',
                   textDecoration: 'none',
@@ -264,7 +327,20 @@ const SaasLayout = ({ children, title }) => {
                   whiteSpace: 'nowrap',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '6px'
+                  gap: '5px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive(item.path)) {
+                    e.currentTarget.style.color = '#3b82f6';
+                    e.currentTarget.style.background = '#f8fafc';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive(item.path)) {
+                    e.currentTarget.style.color = '#64748b';
+                    e.currentTarget.style.background = 'transparent';
+                  }
                 }}
               >
                 {item.label}

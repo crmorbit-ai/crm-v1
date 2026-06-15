@@ -317,7 +317,7 @@ const getTicketStats = async (req, res) => {
       }
     ]);
 
-    return successResponse(res, {
+    const result = {
       byStatus: stats[0].byStatus.reduce((acc, item) => {
         acc[item._id] = item.count;
         return acc;
@@ -331,7 +331,9 @@ const getTicketStats = async (req, res) => {
         return acc;
       }, {}),
       overall: stats[0].overall[0] || { total: 0, avgResponseTime: 0, avgResolutionTime: 0 }
-    });
+    };
+
+    return successResponse(res, 200, 'Statistics fetched successfully', result);
   } catch (error) {
     console.error('Error fetching ticket stats:', error);
     return errorResponse(res, 'Error fetching statistics', 500);
@@ -361,10 +363,16 @@ const deleteTicket = async (req, res) => {
     ticket.closedAt = new Date();
     await ticket.save();
 
-    return successResponse(res, null, 'Ticket closed successfully');
+    // Log activity
+    await logActivity(req, 'support.ticket_closed', 'SupportTicket', ticket._id, {
+      ticketNumber: ticket.ticketNumber,
+      closedBy: req.user._id
+    });
+
+    return successResponse(res, 200, 'Ticket closed successfully', null);
   } catch (error) {
     console.error('Error deleting ticket:', error);
-    return errorResponse(res, 'Error deleting ticket', 500);
+    return errorResponse(res, error.message || 'Error deleting ticket', 500);
   }
 };
 

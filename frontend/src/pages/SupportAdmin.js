@@ -34,6 +34,7 @@ const SupportAdmin = () => {
   const [pagination,setPagination]   = useState({page:1,limit:20,total:0,pages:0});
   const [sending,setSending]         = useState(false);
   const [panelWidth,setPanelWidth]   = useState(62);
+  const [toast,setToast]             = useState({show:false,type:'',message:''});
   const msgEnd   = useRef(null);
   const panelRef = useRef(null);
   const dragging = useRef(false);
@@ -64,21 +65,24 @@ const SupportAdmin = () => {
     document.addEventListener('mouseup',up);
   },[panelWidth]);
 
+  const loadStats = async()=>{ try{const r=await supportService.getStats();setStats(r.data||{});}catch(e){console.error(e);} };
+
   const loadTickets = useCallback(async()=>{
     try{ setLoading(true); const r=await supportService.getAllTickets({...filters,page:pagination.page,limit:pagination.limit}); setTickets(r.data?.tickets||[]); setPagination(r.data?.pagination||pagination); }
     catch(e){console.error(e);} finally{setLoading(false);}
   },[filters,pagination.page,pagination.limit]);
 
-  const loadStats = useCallback(async()=>{ try{const r=await supportService.getStats();setStats(r.data||{});}catch(e){console.error(e);} },[]);
-
-  useEffect(()=>{loadTickets();loadStats();},[filters,pagination.page,loadTickets,loadStats]);
+  useEffect(()=>{loadTickets();loadStats();},[filters,pagination.page,loadTickets]);
   useEffect(()=>{ msgEnd.current?.scrollIntoView({behavior:'smooth'}); },[selectedTicket?.messages]);
 
-  const loadDetail = async id=>{ try{const r=await supportService.getTicket(id);setSelected(r.data||r);}catch(e){console.error(e);} };
-  const handleUpdateStatus = async s=>{ if(!selectedTicket)return; try{await supportService.updateStatus(selectedTicket._id,s);loadDetail(selectedTicket._id);loadTickets();loadStats();}catch(e){if(e?.isPermissionDenied)return;alert('Error');} };
-  const handleAssign = async()=>{ if(!selectedTicket)return; try{await supportService.assignTicket(selectedTicket._id);loadDetail(selectedTicket._id);loadTickets();}catch(e){if(e?.isPermissionDenied)return;alert('Error');} };
-  const handleSend = async e=>{ e.preventDefault(); if(!newMessage.trim()||!selectedTicket)return; try{setSending(true);await supportService.addMessage(selectedTicket._id,newMessage,isInternal);setNewMessage('');setIsInternal(false);loadDetail(selectedTicket._id);}catch(e){if(e?.isPermissionDenied)return;alert('Error');}finally{setSending(false);} };
-  const handleDelete = async id=>{ if(!window.confirm('Force close this ticket?'))return; try{await supportService.deleteTicket(id);setSelected(null);loadTickets();loadStats();}catch(e){if(e?.isPermissionDenied)return;alert('Error');} };
+  const loadDetail = async id=>{ try{const r=await supportService.getTicket(id);setSelected(r.data||r);}catch(e){console.error(e);showToast(getErrorMessage(e),'error');} };
+  const handleUpdateStatus = async s=>{ if(!selectedTicket)return; try{await supportService.updateStatus(selectedTicket._id,s);loadDetail(selectedTicket._id);loadTickets();loadStats();showToast(`Ticket status updated to ${s}`);}catch(e){if(e?.isPermissionDenied)return;console.error('Status update error:',e);showToast(getErrorMessage(e),'error');} };
+  const handleAssign = async()=>{ if(!selectedTicket)return; try{await supportService.assignTicket(selectedTicket._id);loadDetail(selectedTicket._id);loadTickets();showToast('Ticket assigned successfully');}catch(e){if(e?.isPermissionDenied)return;console.error('Assign error:',e);showToast(getErrorMessage(e),'error');} };
+  const handleSend = async e=>{ e.preventDefault(); if(!newMessage.trim()||!selectedTicket)return; try{setSending(true);await supportService.addMessage(selectedTicket._id,newMessage,isInternal);setNewMessage('');setIsInternal(false);loadDetail(selectedTicket._id);showToast('Message sent successfully');}catch(e){if(e?.isPermissionDenied)return;console.error('Send message error:',e);showToast(getErrorMessage(e),'error');}finally{setSending(false);} };
+  const handleDelete = async id=>{ if(!window.confirm('Force close this ticket?'))return; try{await supportService.deleteTicket(id);setSelected(null);loadTickets();loadStats();showToast('Ticket closed successfully');}catch(e){if(e?.isPermissionDenied)return;console.error('Force close error:',e);showToast(getErrorMessage(e),'error');} };
+
+  const showToast = (message, type='success')=>{ setToast({show:true,type,message}); setTimeout(()=>setToast({show:false,type:'',message:''}),4000); };
+  const getErrorMessage = e => e?.response?.data?.message || e?.message || 'An error occurred. Please try again.';
 
   const sc = {total:stats.overall?.total||0, open:stats.byStatus?.Open||0, inProgress:stats.byStatus?.['In Progress']||0, resolved:stats.byStatus?.Resolved||0, waiting:stats.byStatus?.['Waiting for Customer']||0};
   const setF = v=>{ setFilters(f=>({...f,status:v})); setPagination(p=>({...p,page:1})); };
@@ -326,14 +330,19 @@ const SupportAdmin = () => {
                 onChange={e=>setFilters(f=>({...f,search:e.target.value}))}
                 style={{width:'100%',padding:'8px 10px 8px 34px',border:'1px solid #e2e8f0',borderRadius:9,fontSize:12,background:'#f8fafc',boxSizing:'border-box'}}/>
             </div>
-            <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center'}}>
-              {['','Open','In Progress','Waiting for Customer','Resolved','Closed'].map(v=>(
-                <button key={v} className={`fPill${filters.status===v?' on':''}`} onClick={()=>setF(v)} style={{fontSize:10,padding:'4px 10px'}}>
-                  {v||'All'}
-                </button>
-              ))}
+            <div style={{display:'flex',gap:5,alignItems:'center',justifyContent:'space-between',flexWrap:isMobile?'wrap':'nowrap'}}>
+              <div style={{display:'flex',gap:5,flexWrap:'wrap',alignItems:'center',flex:1}}>
+                {['','Open','In Progress','Waiting for Customer','Resolved','Closed'].map(v=>(
+                  <button key={v} className={`fPill${filters.status===v?' on':''}`} onClick={()=>setF(v)} style={{fontSize:10,padding:'4px 10px'}}>
+                    {v||'All'}
+                  </button>
+                ))}
+              </div>
               <select value={filters.priority} onChange={e=>setFilters(f=>({...f,priority:e.target.value}))}
-                style={{padding:'4px 8px',border:'1px solid #e2e8f0',borderRadius:8,fontSize:11,background:'#f8fafc',color:'#374151',fontWeight:600,marginLeft:'auto'}}>
+                style={{padding:'5px 10px',border:'1.5px solid #e2e8f0',borderRadius:9,fontSize:11,background:'#fff',color:'#374151',fontWeight:600,cursor:'pointer',minWidth:120,flexShrink:0,transition:'all 0.15s',boxShadow:'0 1px 3px rgba(0,0,0,0.04)'}}
+                onFocus={(e)=>e.target.style.borderColor='#6366f1'}
+                onBlur={(e)=>e.target.style.borderColor='#e2e8f0'}
+              >
                 <option value="">All Priority</option>
                 <option value="Critical">Critical</option>
                 <option value="High">High</option>
@@ -436,6 +445,20 @@ const SupportAdmin = () => {
           )}
         </div>
       </div>
+
+      {/* ══ TOAST NOTIFICATION ══ */}
+      {toast.show&&(
+        <div style={{position:'fixed',bottom:24,right:24,zIndex:9999,animation:'fadeUp 0.3s ease',maxWidth:400}}>
+          <div style={{background:toast.type==='error'?'linear-gradient(135deg,#ef4444,#dc2626)':'linear-gradient(135deg,#10b981,#059669)',color:'#fff',padding:'14px 18px',borderRadius:12,boxShadow:'0 8px 32px rgba(0,0,0,0.25)',display:'flex',alignItems:'center',gap:12,border:'1px solid rgba(255,255,255,0.2)'}}>
+            <div style={{fontSize:20,flexShrink:0}}>{toast.type==='error'?'❌':'✅'}</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:13,fontWeight:700,marginBottom:2}}>{toast.type==='error'?'Error':'Success'}</div>
+              <div style={{fontSize:12,opacity:0.95,lineHeight:1.4}}>{toast.message}</div>
+            </div>
+            <button onClick={()=>setToast({show:false,type:'',message:''})} style={{background:'rgba(255,255,255,0.2)',border:'none',color:'#fff',width:24,height:24,borderRadius:6,cursor:'pointer',fontSize:14,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>✕</button>
+          </div>
+        </div>
+      )}
     </SaasLayout>
   );
 };

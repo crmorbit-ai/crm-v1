@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, TrendingUp, Users, Search, RefreshCw, Eye, Download } from 'lucide-react';
-import SaasLayout from '../components/layout/SaasLayout';
+import SaasLayout, { useWindowSize } from '../components/layout/SaasLayout';
 
 const SaasActivityMonitor = () => {
   const navigate = useNavigate();
+  const { isMobile, isTablet } = useWindowSize();
   const [tenants, setTenants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -259,15 +260,15 @@ const SaasActivityMonitor = () => {
         </div>
 
         {/* Activity Overview Section with Stats - Compact */}
-        <div style={{background:'white',borderRadius:'12px',padding:'20px',marginBottom:'18px',boxShadow:'0 2px 8px rgba(0,0,0,0.08)'}}>
-          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'16px'}}>
-            <h2 style={{fontSize:'16px',fontWeight:'700',color:'#0f172a',margin:0,letterSpacing:'-0.3px'}}>
-              Activity Overview (Last {overviewDays} days)
+        <div style={{background:'white',borderRadius:'12px',padding:isMobile?'14px':'20px',marginBottom:'18px',boxShadow:'0 2px 8px rgba(0,0,0,0.08)'}}>
+          <div style={{display:'flex',alignItems:isMobile?'flex-start':'center',justifyContent:'space-between',marginBottom:'16px',flexDirection:isMobile?'column':'row',gap:isMobile?'10px':0}}>
+            <h2 style={{fontSize:isMobile?'14px':'16px',fontWeight:'700',color:'#0f172a',margin:0,letterSpacing:'-0.3px'}}>
+              Activity Overview{!isMobile&&` (Last ${overviewDays} days)`}
             </h2>
             <select
               value={overviewDays}
               onChange={(e) => setOverviewDays(e.target.value)}
-              style={{padding:'6px 10px',borderRadius:'6px',border:'1px solid #e2e8f0',fontSize:'12px',fontWeight:'500',color:'#475569'}}
+              style={{padding:'6px 10px',borderRadius:'6px',border:'1px solid #e2e8f0',fontSize:'12px',fontWeight:'500',color:'#475569',width:isMobile?'100%':'auto'}}
             >
               <option value="7">Last 7 days</option>
               <option value="30">Last 30 days</option>
@@ -280,7 +281,7 @@ const SaasActivityMonitor = () => {
           ) : overallActivity.summary ? (
             <>
             {/* Stats Cards - Tenant Page Style */}
-            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))',gap:'16px',marginBottom:'0'}}>
+            <div style={{display:'grid',gridTemplateColumns:isMobile?'1fr':'repeat(auto-fit, minmax(200px, 1fr))',gap:isMobile?'12px':'16px',marginBottom:'0'}}>
 
               {/* Active Tenants */}
               <div
@@ -396,13 +397,13 @@ const SaasActivityMonitor = () => {
         </div>
 
         {/* Two Column Layout - Detail Panel (Left) + Content (Right) */}
-        <div style={{display:'flex',gap:'24px'}}>
+        <div style={{display:'flex',gap:isMobile?'12px':'24px',flexDirection:isMobile?'column':'row'}}>
           {/* STATS WILL BE REMOVED FROM HERE AFTER COPYING TO TOP */}
           {/* Activity Detail Panel - Left Side (Conditionally Rendered) */}
           {selectedTenant && (
-          <div style={{flex:'0 0 480px',background:'white',borderRadius:'16px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:'calc(100vh - 112px)',position:'sticky',top:'24px'}}>
+          <div style={{flex:isMobile?'1':'0 0 480px',background:'white',borderRadius:'16px',boxShadow:'0 4px 12px rgba(0,0,0,0.1)',overflow:'hidden',display:'flex',flexDirection:'column',maxHeight:isMobile?'auto':'calc(100vh - 112px)',position:isMobile?'static':'sticky',top:'24px'}}>
             {/* Header */}
-            <div style={{background:'linear-gradient(135deg,#0F172A,#1E293B)',padding:'20px',borderBottom:'1px solid rgba(255,255,255,0.1)'}}>
+            <div style={{background:'linear-gradient(135deg,#0F172A,#1E293B)',padding:isMobile?'14px':'20px',borderBottom:'1px solid rgba(255,255,255,0.1)'}}>
               <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:'12px'}}>
                 <div style={{display:'flex',alignItems:'center',gap:'12px',flex:1,minWidth:0}}>
                   <div style={{width:'40px',height:'40px',borderRadius:'8px',background:'linear-gradient(135deg,#6366F1,#8B5CF6)',display:'flex',alignItems:'center',justifyContent:'center',color:'white',fontSize:'18px',fontWeight:'700',flexShrink:0}}>
@@ -666,13 +667,13 @@ const SaasActivityMonitor = () => {
                         </div>
                       </div>
                     </div>
-                    <div style={{display:'flex',gap:'8px',alignItems:'center',flexShrink:0}}>
-                      {(tenant.leadsCreated || tenant.actions?.['lead.created'] || 0) > 0 && (
+                    <div style={{display:'flex',gap:'8px',alignItems:'center',flexShrink:0,flexWrap:isMobile?'wrap':'nowrap'}}>
+                      {!isMobile && (tenant.leadsCreated || tenant.actions?.['lead.created'] || 0) > 0 && (
                         <span style={{fontSize:'10px',padding:'3px 8px',borderRadius:'6px',background:'#DBEAFE',color:'#1E40AF',fontWeight:'600'}}>
                           📊 {tenant.leadsCreated || tenant.actions?.['lead.created']}
                         </span>
                       )}
-                      {(tenant.accountsCreated || tenant.actions?.['account.created'] || 0) > 0 && (
+                      {!isMobile && (tenant.accountsCreated || tenant.actions?.['account.created'] || 0) > 0 && (
                         <span style={{fontSize:'10px',padding:'3px 8px',borderRadius:'6px',background:'#D1FAE5',color:'#065F46',fontWeight:'600'}}>
                           🏢 {tenant.accountsCreated || tenant.actions?.['account.created']}
                         </span>

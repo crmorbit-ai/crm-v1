@@ -1392,8 +1392,15 @@ const SaasAdminView = () => {
   const [reply,     setReply]     = useState('');
   const [note,      setNote]      = useState('');
   const [busy,      setBusy]      = useState(false);
-  const [filters,   setFilters]   = useState({search:'',status:'',type:'',category:'',escalatedOnly:false});
+  const [filters,   setFilters]   = useState({search:'',status:'',type:'',category:'',escalatedOnly:false,sentiment:''});
   const [days,      setDays]      = useState(30);
+  const [isMobile,  setIsMobile]  = useState(window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const loadList = useCallback(async()=>{
     setLoading(true);
@@ -1404,6 +1411,7 @@ const SaasAdminView = () => {
       if(filters.type)          p.type          =filters.type;
       if(filters.category)      p.category      =filters.category;
       if(filters.escalatedOnly) p.escalatedOnly ='true';
+      if(filters.sentiment)     p.sentiment     =filters.sentiment;
       const d=await api.all(p); setList(d.data||[]);
     }catch{} setLoading(false);
   },[filters]);
@@ -1440,35 +1448,46 @@ const SaasAdminView = () => {
         fontFamily:'-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif' }}>
 
         {/* ── Header ── */}
-        <div style={{ background:'#fff', borderBottom:'1px solid #e8edf2', padding:'0 28px', flexShrink:0 }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'20px 0 0' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-              <div style={{ width:42,height:42,borderRadius:12,background:'linear-gradient(135deg,#ef4444,#dc2626)',
-                display:'flex',alignItems:'center',justifyContent:'center',fontSize:20 }}>🎯</div>
-              <div>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <h1 style={{ margin:0, fontSize:20, fontWeight:800, color:'#0f172a', letterSpacing:-0.3 }}>Feedback Intelligence</h1>
-                  {escalCount>0 && (
-                    <span style={{ background:'linear-gradient(135deg,#ef4444,#dc2626)', color:'#fff',
-                      borderRadius:20, padding:'3px 12px', fontSize:12, fontWeight:700,
-                      boxShadow:'0 2px 8px rgba(239,68,68,0.35)' }}>
-                      ↑ {escalCount} escalated
-                    </span>
-                  )}
+        <div style={{ background:'#fff', borderBottom:'1px solid #e8edf2', padding:isMobile?'0 12px':'0 28px', flexShrink:0 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:isMobile?'flex-start':'center', padding:isMobile?'12px 0 0':'20px 0 0', flexDirection:isMobile?'column':'row', gap:isMobile?12:0 }}>
+            <div style={{ display:'flex', alignItems:isMobile?'flex-start':'center', gap:isMobile?10:14, width:isMobile?'100%':'auto', flexDirection:isMobile?'row':'row', flexWrap:isMobile?'nowrap':'nowrap' }}>
+              <div style={{ width:isMobile?36:42,height:isMobile?36:42,borderRadius:12,background:'linear-gradient(135deg,#ef4444,#dc2626)',
+                display:'flex',alignItems:'center',justifyContent:'center',fontSize:isMobile?18:20,flexShrink:0 }}>🎯</div>
+              <div style={{ flex:1, minWidth:isMobile?0:200, overflow:isMobile?'visible':'visible' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap', marginBottom:4 }}>
+                  <h1 style={{ margin:0, fontSize:isMobile?15:20, fontWeight:800, color:'#0f172a', letterSpacing:-0.3, whiteSpace:isMobile?'normal':'nowrap', wordBreak:isMobile?'break-word':'normal', lineHeight:1.3 }}>
+                    Feedback Intelligence
+                  </h1>
                 </div>
-                <p style={{ margin:0, fontSize:13, color:'#64748b' }}>Global feedback across all tenants</p>
+                {escalCount>0 && (
+                  <span style={{
+                    background:'linear-gradient(135deg,#ef4444,#dc2626)',
+                    color:'#fff',
+                    borderRadius:20,
+                    padding:'3px 10px',
+                    fontSize:isMobile?10:12,
+                    fontWeight:700,
+                    boxShadow:'0 2px 8px rgba(239,68,68,0.35)',
+                    display:'inline-block',
+                    whiteSpace:'nowrap',
+                    marginBottom:isMobile?4:0
+                  }}>
+                    ↑ {escalCount} escalated
+                  </span>
+                )}
+                <p style={{ margin:0, fontSize:isMobile?11:13, color:'#64748b', marginTop:isMobile?2:0 }}>Global feedback across all tenants</p>
               </div>
             </div>
 
             {/* KPI strip — clickable gradient cards */}
             {analytics && (
-              <div style={{ display:'flex', gap:8 }}>
-                <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={!filters.escalatedOnly&&!filters.status} onClick={()=>setFilters(p=>({...p,escalatedOnly:false,status:''}))}/>
-                <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={filters.escalatedOnly}                    onClick={()=>setFilters(p=>({...p,escalatedOnly:!p.escalatedOnly,status:''}))}/>
-                <GradStat label="Open"      value={analytics.open}                  color="#f59e0b" active={filters.status==='new'}                   onClick={()=>setFilters(p=>({...p,status:p.status==='new'?'':'new',escalatedOnly:false}))}/>
-                <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={filters.status==='resolved'}              onClick={()=>setFilters(p=>({...p,status:p.status==='resolved'?'':'resolved',escalatedOnly:false}))}/>
-                <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false}                                   onClick={()=>{}}/>
-                <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} color="#ef4444" active={false}                                   onClick={()=>{}}/>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', overflowX:'auto', WebkitOverflowScrolling:'touch' }}>
+                <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={!filters.escalatedOnly&&!filters.status&&!filters.sentiment} onClick={()=>setFilters(p=>({...p,escalatedOnly:false,status:'',sentiment:''}))}/>
+                <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={filters.escalatedOnly}                    onClick={()=>setFilters(p=>({...p,escalatedOnly:!p.escalatedOnly,status:'',sentiment:''}))}/>
+                <GradStat label="Open"      value={analytics.open}                  color="#f59e0b" active={filters.status==='new'}                   onClick={()=>setFilters(p=>({...p,status:p.status==='new'?'':'new',escalatedOnly:false,sentiment:''}))}/>
+                <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={filters.status==='resolved'}              onClick={()=>setFilters(p=>({...p,status:p.status==='resolved'?'':'resolved',escalatedOnly:false,sentiment:''}))}/>
+                <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={filters.sentiment==='positive'}           onClick={()=>setFilters(p=>({...p,sentiment:p.sentiment==='positive'?'':'positive',status:'',escalatedOnly:false}))}/>
+                <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} color="#ef4444" active={filters.sentiment==='negative'}           onClick={()=>setFilters(p=>({...p,sentiment:p.sentiment==='negative'?'':'negative',status:'',escalatedOnly:false}))}/>
               </div>
             )}
           </div>
@@ -1490,11 +1509,19 @@ const SaasAdminView = () => {
 
         {/* ── INBOX ── */}
         {tab==='inbox' && (
-          <div style={{ flex:1, display:'flex', overflow:'hidden' }}>
+          <div style={{ flex:1, display:'flex', overflow:isMobile?'visible':'hidden', flexDirection:isMobile?'column':'row' }}>
 
             {/* List */}
-            <div style={{ width: selId ? 400 : 480, flexShrink:0, borderRight:'1px solid #e8edf2',
-              display:'flex', flexDirection:'column', background:'#fff', transition:'width 0.3s cubic-bezier(.4,0,.2,1)' }}>
+            {(!isMobile || !selId) && (
+            <div style={{
+              width: isMobile ? '100%' : (selId ? 400 : 480),
+              flexShrink:0,
+              borderRight:isMobile?'none':'1px solid #e8edf2',
+              display:'flex',
+              flexDirection:'column',
+              background:'#fff',
+              transition:'width 0.3s cubic-bezier(.4,0,.2,1)'
+            }}>
 
               {/* Filters */}
               <div style={{ padding:'12px 14px', borderBottom:'1px solid #f1f5f9', background:'#fafbfc' }}>
@@ -1575,10 +1602,19 @@ const SaasAdminView = () => {
                 })}
               </div>
             </div>
+            )}
 
             {/* Detail */}
             {selId && detail ? (
-              <div style={{ flex:1, overflowY:'auto', background:'#f8fafc', display:'flex', flexDirection:'column' }}>
+              <div style={{
+                flex:1,
+                overflowY:'auto',
+                background:'#f8fafc',
+                display:'flex',
+                flexDirection:'column',
+                width:isMobile?'100%':'auto',
+                minHeight:isMobile?'100vh':'auto'
+              }}>
 
                 {/* Escalation banner */}
                 {detail.escalatedToSaas && (
@@ -1596,12 +1632,33 @@ const SaasAdminView = () => {
                 )}
 
                 {/* Detail header */}
-                <div style={{ background:'#fff', borderBottom:'1px solid #e8edf2', padding:'18px 26px', flexShrink:0 }}>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
-                    <div style={{ flex:1, marginRight:16 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                <div style={{ background:'#fff', borderBottom:'1px solid #e8edf2', padding:isMobile?'14px 16px':'18px 26px', flexShrink:0 }}>
+                  {/* Mobile back button */}
+                  {isMobile && (
+                    <button
+                      onClick={()=>{setSelId(null);setDetail(null);}}
+                      style={{
+                        display:'flex',
+                        alignItems:'center',
+                        gap:8,
+                        background:'transparent',
+                        border:'none',
+                        padding:'8px 0',
+                        marginBottom:12,
+                        cursor:'pointer',
+                        fontSize:14,
+                        fontWeight:600,
+                        color:'#6366f1'
+                      }}
+                    >
+                      ← Back to list
+                    </button>
+                  )}
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', flexWrap:isMobile?'wrap':'nowrap' }}>
+                    <div style={{ flex:1, marginRight:isMobile?0:16, width:isMobile?'100%':'auto' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10, flexWrap:'wrap' }}>
                         <span style={{ fontSize:20 }}>{TYPE[detail.type]?.icon}</span>
-                        <h2 style={{ margin:0, fontSize:17, fontWeight:800, color:'#0f172a' }}>{detail.title}</h2>
+                        <h2 style={{ margin:0, fontSize:isMobile?15:17, fontWeight:800, color:'#0f172a', flex:1, minWidth:0, wordBreak:'break-word' }}>{detail.title}</h2>
                       </div>
                       <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
                         <Badge label={TYPE[detail.type]?.label}    color={TYPE[detail.type]?.color}    bg={TYPE[detail.type]?.bg}/>
@@ -1610,13 +1667,20 @@ const SaasAdminView = () => {
                         <Badge label={GSTATUS[detail.status]?.label} color={GSTATUS[detail.status]?.color} bg={GSTATUS[detail.status]?.bg}/>
                       </div>
                     </div>
-                    <div style={{ display:'flex', gap:6 }}>
-                      <Btn onClick={()=>doDelete(selId)} variant="danger" size="sm">🗑 Delete</Btn>
-                      <button onClick={()=>{setSelId(null);setDetail(null);}}
-                        style={{ width:32,height:32,borderRadius:8,background:'#f1f5f9',border:'none',cursor:'pointer',
-                          fontSize:16,color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
-                    </div>
+                    {!isMobile && (
+                      <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                        <Btn onClick={()=>doDelete(selId)} variant="danger" size="sm">🗑 Delete</Btn>
+                        <button onClick={()=>{setSelId(null);setDetail(null);}}
+                          style={{ width:32,height:32,borderRadius:8,background:'#f1f5f9',border:'none',cursor:'pointer',
+                            fontSize:16,color:'#64748b',display:'flex',alignItems:'center',justifyContent:'center' }}>✕</button>
+                      </div>
+                    )}
                   </div>
+                  {isMobile && (
+                    <div style={{ display:'flex', gap:6, marginTop:12 }}>
+                      <Btn onClick={()=>doDelete(selId)} variant="danger" size="sm" fullWidth>🗑 Delete</Btn>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ padding:'22px 26px' }}>
@@ -1781,12 +1845,12 @@ const SaasAdminView = () => {
             ) : analytics && (
               <>
                 <div style={{ display:'flex', gap:8, marginBottom:28, flexWrap:'wrap' }}>
-                  <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:false,status:''})); }}/>
-                  <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:true,status:''})); }}/>
-                  <GradStat label="Open"      value={analytics.open}                  color="#f59e0b" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'new',escalatedOnly:false})); }}/>
-                  <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'resolved',escalatedOnly:false})); }}/>
-                  <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false} onClick={()=>{}}/>
-                  <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} color="#ef4444" active={false} onClick={()=>{}}/>
+                  <GradStat label="Total"     value={analytics.total}                 color="#6366f1" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:false,status:'',sentiment:''})); }}/>
+                  <GradStat label="Escalated" value={analytics.escalated}             color="#ef4444" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,escalatedOnly:true,status:'',sentiment:''})); }}/>
+                  <GradStat label="Open"      value={analytics.open}                  color="#f59e0b" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'new',escalatedOnly:false,sentiment:''})); }}/>
+                  <GradStat label="Resolved"  value={analytics.resolved}              color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,status:'resolved',escalatedOnly:false,sentiment:''})); }}/>
+                  <GradStat label="Positive"  value={`${analytics.positiveRate||0}%`} color="#10b981" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,sentiment:'positive',status:'',escalatedOnly:false})); }}/>
+                  <GradStat label="Negative"  value={`${analytics.negativeRate||0}%`} color="#ef4444" active={false} onClick={()=>{ setTab('inbox'); setFilters(p=>({...p,sentiment:'negative',status:'',escalatedOnly:false})); }}/>
                 </div>
 
                 <h2 style={{ margin:'0 0 6px', fontSize:18, fontWeight:800, color:'#0f172a', letterSpacing:-0.3 }}>Business Intelligence</h2>

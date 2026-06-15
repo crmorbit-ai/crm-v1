@@ -698,14 +698,33 @@ const Tenants = () => {
         .sStat { cursor:pointer; border-radius:8px; padding:10px 14px; transition:transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease; }
         .sStat:hover { transform:translateY(-3px) scale(1.03); filter:brightness(1.15); box-shadow:0 8px 24px rgba(0,0,0,0.28) !important; }
         .sStat:active { transform:translateY(0) scale(0.98); }
+        /* Webkit scrollbar for table container */
+        div[style*="overflowX"]::-webkit-scrollbar {
+          height: 8px;
+        }
+        div[style*="overflowX"]::-webkit-scrollbar-track {
+          background: #f1f5f9;
+          border-radius: 4px;
+        }
+        div[style*="overflowX"]::-webkit-scrollbar-thumb {
+          background: #cbd5e1;
+          border-radius: 4px;
+        }
+        div[style*="overflowX"]::-webkit-scrollbar-thumb:hover {
+          background: #94a3b8;
+        }
+
         @media (max-width:768px) {
-          .xHideM { display:none !important; }
           .xFullM { width:100% !important; }
           .tSplitWrap { flex-direction:column !important; }
           .tDetailPanel { flex:1 1 100% !important; order:0 !important; max-height:none !important; width:100% !important; }
           .tTableSide { flex:1 1 100% !important; }
           .tAssignGrid { grid-template-columns:1fr !important; }
           .tKpiRow { grid-template-columns:1fr 1fr !important; }
+          /* Mobile table improvements */
+          .xTh, .xTd { font-size: 10px !important; padding: 6px 4px !important; }
+          .xTh { white-space: nowrap; }
+          table { font-size: 10px; }
         }
       `}</style>
 
@@ -797,24 +816,55 @@ const Tenants = () => {
             <span style={{marginLeft:'auto',fontSize:10,color:'#94a3b8',fontWeight:600,whiteSpace:'nowrap'}}>{filteredTenants.length} records</span>
           </div>
 
+          {/* Mobile scroll hint */}
+          {isMobile && (
+            <div style={{
+              background:'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)',
+              border:'1px solid #bfdbfe',
+              borderTop:'none',
+              borderRadius:'0',
+              padding:'6px 12px',
+              fontSize:10,
+              color:'#1e40af',
+              fontWeight:600,
+              textAlign:'center',
+              display:'flex',
+              alignItems:'center',
+              justifyContent:'center',
+              gap:6
+            }}>
+              <span>👉</span>
+              <span>Swipe left to see all columns</span>
+              <span>👈</span>
+            </div>
+          )}
+
           {/* Excel Grid */}
-          <div style={{overflowX:'auto',borderRadius:'0 0 8px 8px',border:'1px solid #d1d5db',background:'#fff'}}>
+          <div style={{
+            overflowX:'auto',
+            borderRadius:'0 0 8px 8px',
+            border:'1px solid #d1d5db',
+            background:'#fff',
+            WebkitOverflowScrolling:'touch',
+            scrollbarWidth:'thin',
+            scrollbarColor:'#cbd5e1 #f1f5f9'
+          }}>
             {loading?(
               <div style={{padding:40,textAlign:'center',color:'#94a3b8',fontSize:13}}>Loading tenants...</div>
             ):(
-              <table style={{width:'100%',borderCollapse:'collapse',tableLayout:isMobile?'auto':'fixed',minWidth:isMobile?'auto':600}}>
-                {!isMobile&&<colgroup>
-                  {!isManager&&<col style={{width:34}} />}
-                  <col style={{width:30}} />
-                  <col style={{width:'26%'}} />
-                  <col style={{width:'12%'}} />
-                  <col style={{width:'9%'}} />
-                  <col style={{width:'9%'}} />
-                  <col style={{width:'9%'}} />
-                  <col style={{width:'10%'}} />
-                  <col style={{width:'10%'}} />
-                  <col style={{width:90}} />
-                </colgroup>}
+              <table style={{width:'100%',borderCollapse:'collapse',tableLayout:'fixed',minWidth:isMobile?900:1000}}>
+                <colgroup>
+                  {!isManager&&<col style={{width:isMobile?30:34}} />}
+                  <col style={{width:isMobile?25:30}} />
+                  <col style={{width:isMobile?160:260}} />
+                  <col style={{width:isMobile?90:120}} />
+                  <col style={{width:isMobile?70:90}} />
+                  <col style={{width:isMobile?80:90}} />
+                  <col style={{width:isMobile?70:90}} />
+                  <col style={{width:isMobile?80:100}} />
+                  <col style={{width:isMobile?100:120}} />
+                  <col style={{width:isMobile?70:90}} />
+                </colgroup>
                 <thead>
                   <tr>
                     {!isManager&&(
@@ -829,12 +879,12 @@ const Tenants = () => {
                     )}
                     <th className="xTh xNum">#</th>
                     <th className="xTh">Company</th>
-                    <th className={`xTh${isMobile?' xHideM':''}`}>Org ID</th>
+                    <th className={`xTh${isMobile?' ':''}`}>Org ID</th>
                     <th className="xTh" style={{textAlign:'center'}}>Status</th>
-                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Plan</th>
-                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center'}}>Users</th>
-                    <th className={`xTh${isMobile?' xHideM':''}`}>Created</th>
-                    <th className={`xTh${isMobile?' xHideM':''}`} style={{textAlign:'center',position:'relative'}}>
+                    <th className={`xTh${isMobile?' ':''}`} style={{textAlign:'center'}}>Plan</th>
+                    <th className={`xTh${isMobile?' ':''}`} style={{textAlign:'center'}}>Users</th>
+                    <th className={`xTh${isMobile?' ':''}`}>Created</th>
+                    <th className={`xTh${isMobile?' ':''}`} style={{textAlign:'center',position:'relative'}}>
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -981,15 +1031,15 @@ const Tenants = () => {
                             </div>
                           </div>
                         </td>
-                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontFamily:'monospace',fontSize:10,color:'#6366f1',fontWeight:600,letterSpacing:'0.3px'}}>{t.organizationId||'—'}</td>
+                        <td className={`xTd${isMobile?' ':''}`} style={{background:rowBg||undefined,fontFamily:'monospace',fontSize:10,color:'#6366f1',fontWeight:600,letterSpacing:'0.3px'}}>{t.organizationId||'—'}</td>
                         <td className="xTd xBadge" style={{background:isSelected?null:statusCell.bg,color:statusCell.color,fontWeight:statusCell.fw,fontSize:10,textAlign:'center',textTransform:'uppercase',letterSpacing:'0.5px'}}>
                           {status}
                           {t.deletionRequest?.status==='pending'&&<div style={{fontSize:9,marginTop:1,color:isSelected?'#dc2626':'#dc2626',fontWeight:700}}>DEL REQ</div>}
                         </td>
-                        <td className={`xTd xBadge${isMobile?' xHideM':''}`} style={{background:isSelected?null:({Enterprise:'#f59e0b',Professional:'#8b5cf6',Basic:'#3b82f6',Free:'#64748b'}[t.subscription?.planName]||'#3b82f6'),color:'#fff',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
-                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center',fontSize:11,fontWeight:700,color:'#374151'}}>{t.userCount||0}<span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>/{t.subscription?.maxUsers||'∞'}</span></td>
-                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,fontSize:11,color:'#6b7280'}}>{formatDate(t.createdAt)}</td>
-                        <td className={`xTd${isMobile?' xHideM':''}`} style={{background:rowBg||undefined,textAlign:'center'}}>
+                        <td className={`xTd xBadge${isMobile?' ':''}`} style={{background:isSelected?null:({Enterprise:'#f59e0b',Professional:'#8b5cf6',Basic:'#3b82f6',Free:'#64748b'}[t.subscription?.planName]||'#3b82f6'),color:'#fff',fontWeight:700,fontSize:10,textAlign:'center'}}>{t.subscription?.planName||'Free'}</td>
+                        <td className={`xTd${isMobile?' ':''}`} style={{background:rowBg||undefined,textAlign:'center',fontSize:11,fontWeight:700,color:'#374151'}}>{t.userCount||0}<span style={{fontSize:10,color:'#9ca3af',fontWeight:400}}>/{t.subscription?.maxUsers||'∞'}</span></td>
+                        <td className={`xTd${isMobile?' ':''}`} style={{background:rowBg||undefined,fontSize:11,color:'#6b7280'}}>{formatDate(t.createdAt)}</td>
+                        <td className={`xTd${isMobile?' ':''}`} style={{background:rowBg||undefined,textAlign:'center'}}>
                           {t.assignedManager ? (
                             <span title={`${t.assignedManager.firstName} ${t.assignedManager.lastName}`}
                               style={{display:'inline-flex',alignItems:'center',gap:4,background:'#f5f3ff',border:'1px solid #ddd6fe',borderRadius:20,padding:'2px 7px',fontSize:9,fontWeight:700,color:'#6d28d9',maxWidth:120,overflow:'hidden'}}>
