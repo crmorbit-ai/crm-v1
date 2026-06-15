@@ -57,7 +57,7 @@ const sesClient = new SESClient({
 
 const FROM_ADDRESS = `"${process.env.SES_FROM_NAME || 'Unified CRM'}" <${process.env.SES_FROM_EMAIL || 'no-reply@texora.ai'}>`;
 const FROM_ADDRESS_NOREPLY = `"${process.env.SES_FROM_NAME || 'Unified CRM'}" <no-reply@texora.ai>`;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://unified-crm.texora.ai';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://unifiedcrm.texora.ai';
 const YEAR = new Date().getFullYear();
 
 // ─── Send via SES ─────────────────────────────────────────────────────────────
