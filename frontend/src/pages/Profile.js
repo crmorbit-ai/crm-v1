@@ -6,7 +6,7 @@ import profileService from '../services/profileService';
 import notificationService from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../config/api.config';
-import { getStates, getCities } from '../data/locationData';
+import { getCountries, getStates, getCities, getCountryByName, getStateByName } from '../data/locationData';
 import '../styles/crm.css';
 
 // Responsive CSS for Profile page
@@ -750,69 +750,11 @@ const Profile = () => {
                     <label style={styles.label}>Country</label>
                     <select name="headquarters.country" value={isEditing ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditing} style={{ ...styles.select, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
                       <option value="">Select Country...</option>
-                      <option value="Afghanistan">Afghanistan</option>
-                      <option value="Albania">🇦🇱 Albania</option>
-                      <option value="Algeria">🇩🇿 Algeria</option>
-                      <option value="Argentina">🇦🇷 Argentina</option>
-                      <option value="Australia">🇦🇺 Australia</option>
-                      <option value="Austria">🇦🇹 Austria</option>
-                      <option value="Bahrain">🇧🇭 Bahrain</option>
-                      <option value="Bangladesh">🇧🇩 Bangladesh</option>
-                      <option value="Belgium">🇧🇪 Belgium</option>
-                      <option value="Brazil">🇧🇷 Brazil</option>
-                      <option value="Canada">🇨🇦 Canada</option>
-                      <option value="Chile">🇨🇱 Chile</option>
-                      <option value="China">🇨🇳 China</option>
-                      <option value="Colombia">🇨🇴 Colombia</option>
-                      <option value="Denmark">🇩🇰 Denmark</option>
-                      <option value="Egypt">🇪🇬 Egypt</option>
-                      <option value="Finland">🇫🇮 Finland</option>
-                      <option value="France">🇫🇷 France</option>
-                      <option value="Germany">🇩🇪 Germany</option>
-                      <option value="Greece">🇬🇷 Greece</option>
-                      <option value="Hong Kong">🇭🇰 Hong Kong</option>
-                      <option value="India">🇮🇳 India</option>
-                      <option value="Indonesia">🇮🇩 Indonesia</option>
-                      <option value="Iran">🇮🇷 Iran</option>
-                      <option value="Iraq">🇮🇶 Iraq</option>
-                      <option value="Ireland">🇮🇪 Ireland</option>
-                      <option value="Israel">🇮🇱 Israel</option>
-                      <option value="Italy">🇮🇹 Italy</option>
-                      <option value="Japan">🇯🇵 Japan</option>
-                      <option value="Jordan">🇯🇴 Jordan</option>
-                      <option value="Kenya">🇰🇪 Kenya</option>
-                      <option value="Kuwait">🇰🇼 Kuwait</option>
-                      <option value="Malaysia">🇲🇾 Malaysia</option>
-                      <option value="Mexico">🇲🇽 Mexico</option>
-                      <option value="Nepal">🇳🇵 Nepal</option>
-                      <option value="Netherlands">🇳🇱 Netherlands</option>
-                      <option value="New Zealand">🇳🇿 New Zealand</option>
-                      <option value="Nigeria">🇳🇬 Nigeria</option>
-                      <option value="Norway">🇳🇴 Norway</option>
-                      <option value="Oman">🇴🇲 Oman</option>
-                      <option value="Pakistan">🇵🇰 Pakistan</option>
-                      <option value="Philippines">🇵🇭 Philippines</option>
-                      <option value="Poland">🇵🇱 Poland</option>
-                      <option value="Portugal">🇵🇹 Portugal</option>
-                      <option value="Qatar">🇶🇦 Qatar</option>
-                      <option value="Russia">🇷🇺 Russia</option>
-                      <option value="Saudi Arabia">🇸🇦 Saudi Arabia</option>
-                      <option value="Singapore">🇸🇬 Singapore</option>
-                      <option value="South Africa">🇿🇦 South Africa</option>
-                      <option value="South Korea">🇰🇷 South Korea</option>
-                      <option value="Spain">🇪🇸 Spain</option>
-                      <option value="Sri Lanka">🇱🇰 Sri Lanka</option>
-                      <option value="Sweden">🇸🇪 Sweden</option>
-                      <option value="Switzerland">🇨🇭 Switzerland</option>
-                      <option value="Taiwan">🇹🇼 Taiwan</option>
-                      <option value="Thailand">🇹🇭 Thailand</option>
-                      <option value="Turkey">🇹🇷 Turkey</option>
-                      <option value="UAE">🇦🇪 UAE</option>
-                      <option value="Ukraine">🇺🇦 Ukraine</option>
-                      <option value="United Kingdom">🇬🇧 United Kingdom</option>
-                      <option value="United States">🇺🇸 United States</option>
-                      <option value="Vietnam">🇻🇳 Vietnam</option>
-                      <option value="Other">🌐 Other</option>
+                      {getCountries().map(country => (
+                        <option key={country.isoCode} value={country.isoCode}>
+                          {country.name}
+                        </option>
+                      ))}
                     </select>
                   </div>
                   <div style={styles.formGroup}>
@@ -826,7 +768,7 @@ const Profile = () => {
                           <select name="headquarters.state" value={isEditing ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditing} style={{ ...styles.select, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
                             <option value="">Select State...</option>
                             {states.map(state => (
-                              <option key={state} value={state}>{state}</option>
+                              <option key={state.isoCode} value={state.isoCode}>{state.name}</option>
                             ))}
                           </select>
                         );
@@ -847,7 +789,7 @@ const Profile = () => {
                           <select name="headquarters.city" value={isEditing ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditing} style={{ ...styles.select, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
                             <option value="">Select City...</option>
                             {cities.map(city => (
-                              <option key={city} value={city}>{city}</option>
+                              <option key={city.name} value={city.name}>{city.name}</option>
                             ))}
                           </select>
                         );

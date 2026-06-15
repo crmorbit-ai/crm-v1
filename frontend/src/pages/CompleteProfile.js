@@ -9,7 +9,7 @@ const CompleteProfile = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     organizationName: '', slug: '', businessType: 'B2B', industry: '',
-    numberOfEmployees: '', street: '', city: '', state: '', country: 'India', zipCode: '',
+    numberOfEmployees: '', street: '', city: '', state: '', country: 'IN', zipCode: '',
     logo: null, primaryColor: '#2a5298', timezone: '', dateFormat: '', currency: ''
   });
 
