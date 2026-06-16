@@ -33,8 +33,16 @@ export const authService = {
     const formData = new FormData();
 
     Object.keys(profileData).forEach(key => {
-      if (profileData[key] !== null && profileData[key] !== undefined && profileData[key] !== '') {
-        formData.append(key, profileData[key]);
+      const value = profileData[key];
+
+      // Handle File objects separately (logo)
+      if (value instanceof File) {
+        formData.append(key, value);
+        console.log(`📎 Appending file: ${key} (${value.name}, ${value.size} bytes)`);
+      }
+      // Handle other non-empty values
+      else if (value !== null && value !== undefined && value !== '') {
+        formData.append(key, value);
       }
     });
 

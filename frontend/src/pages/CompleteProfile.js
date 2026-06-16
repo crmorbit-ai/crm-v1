@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getCountries, getStates, getCities } from '../data/locationData';
 
 const CompleteProfile = () => {
   const navigate = useNavigate();
@@ -35,67 +36,10 @@ const CompleteProfile = () => {
     'Legal Services', 'Media & Entertainment', 'Construction', 'Agriculture', 'Other'
   ];
 
-  const indianStates = [
-    'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh', 'Goa', 'Gujarat',
-    'Haryana', 'Himachal Pradesh', 'Jharkhand', 'Karnataka', 'Kerala', 'Madhya Pradesh',
-    'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Punjab',
-    'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh',
-    'Uttarakhand', 'West Bengal', 'Delhi', 'Jammu & Kashmir', 'Ladakh'
-  ];
-
-  const countries = ['India', 'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France', 'Singapore', 'UAE', 'Saudi Arabia', 'Japan', 'Other'];
-
-  const majorCities = {
-    'Maharashtra': ['Mumbai', 'Pune', 'Nagpur', 'Thane', 'Nashik', 'Aurangabad', 'Solapur', 'Kolhapur', 'Navi Mumbai', 'Amravati'],
-    'Karnataka': ['Bangalore', 'Mysore', 'Mangalore', 'Hubli', 'Belgaum', 'Davangere', 'Bellary', 'Bijapur', 'Tumkur', 'Shimoga'],
-    'Tamil Nadu': ['Chennai', 'Coimbatore', 'Madurai', 'Salem', 'Tiruchirappalli', 'Tirunelveli', 'Vellore', 'Erode', 'Thoothukudi', 'Hosur'],
-    'Delhi': ['New Delhi', 'North Delhi', 'South Delhi', 'East Delhi', 'West Delhi', 'Dwarka', 'Rohini', 'Janakpuri', 'Laxmi Nagar'],
-    'Gujarat': ['Ahmedabad', 'Surat', 'Vadodara', 'Rajkot', 'Gandhinagar', 'Bhavnagar', 'Jamnagar', 'Junagadh', 'Anand', 'Bharuch'],
-    'Telangana': ['Hyderabad', 'Warangal', 'Nizamabad', 'Karimnagar', 'Khammam', 'Ramagundam', 'Mahbubnagar', 'Secunderabad'],
-    'West Bengal': ['Kolkata', 'Howrah', 'Durgapur', 'Siliguri', 'Asansol', 'Bardhaman', 'Malda', 'Haldia', 'Kharagpur'],
-    'Uttar Pradesh': ['Lucknow', 'Noida', 'Ghaziabad', 'Kanpur', 'Agra', 'Varanasi', 'Meerut', 'Allahabad', 'Bareilly', 'Aligarh', 'Mathura'],
-    'Rajasthan': ['Jaipur', 'Jodhpur', 'Udaipur', 'Kota', 'Ajmer', 'Bikaner', 'Alwar', 'Bharatpur', 'Sikar', 'Pali'],
-    'Kerala': ['Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur', 'Kollam', 'Palakkad', 'Alappuzha', 'Kannur', 'Kottayam'],
-    'Punjab': ['Chandigarh', 'Ludhiana', 'Amritsar', 'Jalandhar', 'Patiala', 'Bathinda', 'Mohali', 'Pathankot', 'Hoshiarpur'],
-    'Haryana': ['Gurugram', 'Faridabad', 'Panipat', 'Ambala', 'Rohtak', 'Hisar', 'Karnal', 'Sonipat', 'Panchkula', 'Yamunanagar'],
-    'Madhya Pradesh': ['Bhopal', 'Indore', 'Gwalior', 'Jabalpur', 'Ujjain', 'Sagar', 'Dewas', 'Satna', 'Ratlam', 'Rewa'],
-    'Andhra Pradesh': ['Visakhapatnam', 'Vijayawada', 'Guntur', 'Nellore', 'Kurnool', 'Tirupati', 'Rajahmundry', 'Kakinada', 'Kadapa', 'Anantapur'],
-    'Bihar': ['Patna', 'Gaya', 'Bhagalpur', 'Muzaffarpur', 'Darbhanga', 'Purnia', 'Bihar Sharif', 'Arrah', 'Begusarai', 'Katihar'],
-    'Odisha': ['Bhubaneswar', 'Cuttack', 'Rourkela', 'Brahmapur', 'Sambalpur', 'Puri', 'Balasore', 'Bhadrak', 'Baripada'],
-    'Jharkhand': ['Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro', 'Deoghar', 'Phusro', 'Hazaribagh', 'Giridih', 'Ramgarh'],
-    'Chhattisgarh': ['Raipur', 'Bhilai', 'Korba', 'Bilaspur', 'Durg', 'Rajnandgaon', 'Jagdalpur', 'Ambikapur', 'Raigarh'],
-    'Assam': ['Guwahati', 'Silchar', 'Dibrugarh', 'Jorhat', 'Nagaon', 'Tinsukia', 'Tezpur', 'Bongaigaon', 'Dhubri'],
-    'Uttarakhand': ['Dehradun', 'Haridwar', 'Roorkee', 'Haldwani', 'Rudrapur', 'Kashipur', 'Rishikesh', 'Nainital', 'Mussoorie'],
-    'Himachal Pradesh': ['Shimla', 'Dharamshala', 'Solan', 'Mandi', 'Palampur', 'Baddi', 'Nahan', 'Kullu', 'Manali'],
-    'Goa': ['Panaji', 'Margao', 'Vasco da Gama', 'Mapusa', 'Ponda', 'Bicholim', 'Curchorem', 'Valpoi'],
-    'Jammu & Kashmir': ['Srinagar', 'Jammu', 'Anantnag', 'Sopore', 'Baramulla', 'Kathua', 'Udhampur', 'Punch'],
-    'Ladakh': ['Leh', 'Kargil', 'Diskit', 'Padum'],
-    'Arunachal Pradesh': ['Itanagar', 'Naharlagun', 'Pasighat', 'Tezpur', 'Bomdila', 'Ziro', 'Along'],
-    'Manipur': ['Imphal', 'Thoubal', 'Bishnupur', 'Churachandpur', 'Kakching'],
-    'Meghalaya': ['Shillong', 'Tura', 'Jowai', 'Nongstoin', 'Williamnagar'],
-    'Mizoram': ['Aizawl', 'Lunglei', 'Champhai', 'Serchhip', 'Kolasib'],
-    'Nagaland': ['Kohima', 'Dimapur', 'Mokokchung', 'Tuensang', 'Wokha'],
-    'Sikkim': ['Gangtok', 'Namchi', 'Gyalshing', 'Mangan', 'Ravangla'],
-    'Tripura': ['Agartala', 'Udaipur', 'Dharmanagar', 'Kailasahar', 'Belonia'],
-  };
-
-  const citiesByCountry = {
-    'United States': ['New York', 'Los Angeles', 'Chicago', 'Houston', 'Phoenix', 'Philadelphia', 'San Antonio', 'San Diego', 'Dallas', 'San Jose', 'Austin', 'Seattle', 'Boston', 'Denver', 'Atlanta'],
-    'United Kingdom': ['London', 'Birmingham', 'Manchester', 'Glasgow', 'Liverpool', 'Leeds', 'Sheffield', 'Edinburgh', 'Bristol', 'Cardiff', 'Leicester', 'Coventry', 'Bradford', 'Nottingham'],
-    'Canada': ['Toronto', 'Montreal', 'Vancouver', 'Calgary', 'Edmonton', 'Ottawa', 'Winnipeg', 'Quebec City', 'Hamilton', 'Kitchener', 'London', 'Victoria', 'Halifax'],
-    'Australia': ['Sydney', 'Melbourne', 'Brisbane', 'Perth', 'Adelaide', 'Gold Coast', 'Canberra', 'Hobart', 'Darwin', 'Newcastle', 'Wollongong'],
-    'Germany': ['Berlin', 'Hamburg', 'Munich', 'Cologne', 'Frankfurt', 'Stuttgart', 'Düsseldorf', 'Leipzig', 'Dortmund', 'Essen', 'Bremen', 'Dresden', 'Hanover'],
-    'France': ['Paris', 'Marseille', 'Lyon', 'Toulouse', 'Nice', 'Nantes', 'Montpellier', 'Strasbourg', 'Bordeaux', 'Lille', 'Rennes', 'Reims'],
-    'Singapore': ['Singapore City', 'Jurong', 'Tampines', 'Woodlands', 'Ang Mo Kio', 'Toa Payoh', 'Bedok', 'Yishun'],
-    'UAE': ['Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah', 'Fujairah', 'Al Ain', 'Umm Al Quwain'],
-    'Saudi Arabia': ['Riyadh', 'Jeddah', 'Mecca', 'Medina', 'Dammam', 'Khobar', 'Dhahran', 'Tabuk', 'Abha', 'Najran'],
-    'Japan': ['Tokyo', 'Osaka', 'Yokohama', 'Nagoya', 'Sapporo', 'Fukuoka', 'Kobe', 'Kyoto', 'Kawasaki', 'Saitama'],
-  };
-
-  const getCitiesForState = () => {
-    if (formData.country === 'India') return majorCities[formData.state] || [];
-    return citiesByCountry[formData.country] || [];
-  };
+  // Get dynamic location data
+  const allCountries = getCountries();
+  const allStates = getStates(formData.country);
+  const allCities = getCities(formData.country, formData.state);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -271,37 +215,46 @@ const CompleteProfile = () => {
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
-                <label style={labelStyle}>Country</label>
+                <label style={labelStyle}>Country *</label>
                 <select name="country" value={formData.country} onChange={handleChange} style={selectStyle}>
-                  {countries.map(c => <option key={c} value={c} style={{ background: '#1e293b' }}>{c}</option>)}
+                  <option value="" style={{ background: '#1e293b' }}>Select Country</option>
+                  {allCountries.map(country => (
+                    <option key={country.isoCode} value={country.isoCode} style={{ background: '#1e293b' }}>
+                      {country.flag} {country.name}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
-                <label style={labelStyle}>State</label>
-                {formData.country === 'India' ? (
+                <label style={labelStyle}>State / Province</label>
+                {allStates.length > 0 ? (
                   <select name="state" value={formData.state} onChange={handleChange} style={selectStyle}>
                     <option value="" style={{ background: '#1e293b' }}>Select State</option>
-                    {indianStates.map(s => <option key={s} value={s} style={{ background: '#1e293b' }}>{s}</option>)}
+                    {allStates.map(state => (
+                      <option key={state.isoCode} value={state.isoCode} style={{ background: '#1e293b' }}>
+                        {state.name}
+                      </option>
+                    ))}
                   </select>
                 ) : (
-                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="State" style={inputStyle} maxLength={50} />
+                  <input type="text" name="state" value={formData.state} onChange={handleChange} placeholder="Enter state" style={inputStyle} maxLength={50} disabled={!formData.country} />
                 )}
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={labelStyle}>City</label>
-                {getCitiesForState().length > 0 ? (
+                {allCities.length > 0 ? (
                   <select name="city" value={formData.city} onChange={handleChange} style={selectStyle}>
                     <option value="" style={{ background: '#1e293b' }}>Select City</option>
-                    {getCitiesForState().map(c => <option key={c} value={c} style={{ background: '#1e293b' }}>{c}</option>)}
-                    <option value="other" style={{ background: '#1e293b' }}>Other (type below)</option>
+                    {allCities.map(city => (
+                      <option key={city.name} value={city.name} style={{ background: '#1e293b' }}>
+                        {city.name}
+                      </option>
+                    ))}
                   </select>
                 ) : (
-                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Enter city name" style={inputStyle} maxLength={50} />
-                )}
-                {formData.city === 'other' && (
-                  <input type="text" name="city" onChange={e => { if (/^[a-zA-Z\s\-']*$/.test(e.target.value)) setFormData(prev => ({ ...prev, city: e.target.value })); }} placeholder="Type your city name" style={{ ...inputStyle, marginTop: 8 }} maxLength={50} />
+                  <input type="text" name="city" value={formData.city} onChange={handleChange} placeholder="Enter city name" style={inputStyle} maxLength={50} disabled={!formData.country} />
                 )}
               </div>
               <div>

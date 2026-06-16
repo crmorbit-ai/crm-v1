@@ -69,6 +69,8 @@ const emailMessageSchema = new mongoose.Schema({
     enum: [
       'bulk',
       'otp',
+      'signup_verification',
+      'welcome',
       'meeting_invitation',
       'meeting_reminder',
       'meeting_cancellation',
@@ -130,7 +132,7 @@ const emailMessageSchema = new mongoose.Schema({
   tenant: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Tenant',
-    required: true,
+    required: false, // Optional for signup/verification emails
     index: true
   },
 

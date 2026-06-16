@@ -935,6 +935,7 @@ const completeProfile = async (req, res) => {
     } = req.body;
 
     console.log('🏢 Profile completion attempt for user:', req.user.email);
+    console.log('📎 File received:', req.file ? `Yes (${req.file.originalname}, ${req.file.size} bytes)` : 'No');
 
     // Validation
     if (!organizationName || !slug) {
@@ -962,15 +963,19 @@ const completeProfile = async (req, res) => {
     let logoPath = null;
     if (req.file) {
       try {
+        console.log('☁️ Uploading logo to Cloudinary...');
         const result = await uploadBufferToCloudinary(
           req.file.buffer, req.file.mimetype,
           'crm/logos', `tenant-setup-${Date.now()}-logo`
         );
         logoPath = result.secure_url;
+        console.log('✅ Logo uploaded successfully:', logoPath);
       } catch (cloudErr) {
-        console.error('Logo upload to Cloudinary failed:', cloudErr);
+        console.error('❌ Logo upload to Cloudinary failed:', cloudErr);
         // Continue without logo if upload fails
       }
+    } else {
+      console.log('⚠️ No logo file in request');
     }
 
     // Get Free subscription plan
