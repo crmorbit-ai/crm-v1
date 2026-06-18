@@ -36,6 +36,26 @@ const invoiceItemSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  hsnCode: {
+    type: String,
+    trim: true,
+    default: '998314' // Default: IT/Software services
+  },
+  cgst: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  sgst: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  igst: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   total: {
     type: Number,
     required: true
@@ -114,8 +134,25 @@ const invoiceSchema = new mongoose.Schema({
   },
   customerPhone: String,
   customerAddress: String,
+  customerGstin: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
+  customerState: {
+    type: String,
+    trim: true
+  },
+  customerStateCode: {
+    type: String,
+    trim: true
+  },
   billingAddress: String,
   shippingAddress: String,
+  placeOfSupply: {
+    type: String,
+    trim: true
+  },
   title: {
     type: String,
     required: true,
@@ -138,6 +175,23 @@ const invoiceSchema = new mongoose.Schema({
   totalTax: {
     type: Number,
     default: 0
+  },
+  totalCgst: {
+    type: Number,
+    default: 0
+  },
+  totalSgst: {
+    type: Number,
+    default: 0
+  },
+  totalIgst: {
+    type: Number,
+    default: 0
+  },
+  taxType: {
+    type: String,
+    enum: ['CGST+SGST', 'IGST', 'None'],
+    default: 'CGST+SGST'
   },
   totalAmount: {
     type: Number,

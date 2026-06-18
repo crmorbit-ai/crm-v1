@@ -226,32 +226,9 @@ exports.generateQuotationPDF = async (quotation, tenant) => {
 };
 
 /**
- * Generate Invoice PDF (Professional GST Format)
+ * Generate Invoice PDF
  */
 exports.generateInvoicePDF = async (invoice, tenant) => {
-  try {
-    // Use new GST invoice format
-    const gstPDF = require('./gstInvoicePDF');
-    const result = await gstPDF.generateGSTInvoicePDF(invoice, tenant);
-
-    return {
-      success: true,
-      filePath: result.filePath,
-      fileName: result.fileName
-    };
-  } catch (error) {
-    console.error('PDF Generation Error:', error);
-    return {
-      success: false,
-      message: error.message || 'Failed to generate PDF'
-    };
-  }
-};
-
-/**
- * Generate Invoice PDF (OLD FORMAT - BACKUP)
- */
-exports.generateInvoicePDF_OLD = async (invoice, tenant) => {
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({

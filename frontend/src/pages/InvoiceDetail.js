@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { API_URL, getAuthHeaders } from '../config/api.config';
 import { generateInvoicePaymentLink } from '../utils/razorpay';
-import '../styles/crm.css';
 
 const InvoiceDetail = () => {
   const { id } = useParams();
@@ -31,7 +30,6 @@ const InvoiceDetail = () => {
       const data = await response.json();
       setInvoice(data.data);
     } catch (err) {
-      if (err?.isPermissionDenied) return;
       setError(err.message || 'Failed to fetch invoice');
     } finally {
       setLoading(false);
@@ -57,7 +55,6 @@ const InvoiceDetail = () => {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
     } catch (err) {
-      if (err?.isPermissionDenied) return;
       alert('Error downloading PDF: ' + err.message);
     } finally {
       setActionLoading(false);
@@ -77,265 +74,592 @@ const InvoiceDetail = () => {
       alert('Invoice sent successfully!');
       fetchInvoice();
     } catch (err) {
-      if (err?.isPermissionDenied) return;
       alert('Error sending email: ' + err.message);
     } finally {
       setActionLoading(false);
     }
   };
 
-  const getStatusBadge = (status) => {
-    const statusConfig = {
-      draft: { label: 'Draft', color: '#6c757d' },
-      sent: { label: 'Sent', color: '#0d6efd' },
-      viewed: { label: 'Viewed', color: '#0dcaf0' },
-      partial: { label: 'Partially Paid', color: '#ffc107' },
-      paid: { label: 'Paid', color: '#198754' },
-      overdue: { label: 'Overdue', color: '#dc3545' },
-      cancelled: { label: 'Cancelled', color: '#6c757d' }
+  const handleGeneratePaymentLink = async () => {
+    try {
+      setLinkLoading(true);
+      const res = await generateInvoicePaymentLink(invoice._id);
+      setPaymentLink(res.data.paymentLinkUrl);
+      window.open(res.data.paymentLinkUrl, '_blank');
+      alert('Payment link generated successfully!');
+    } catch (e) {
+      alert(e?.message || 'Failed to generate payment link');
+    } finally {
+      setLinkLoading(false);
+    }
+  };
+
+  const getStatusStyle = (status) => {
+    const styles = {
+      draft: { bg: '#f3f4f6', color: '#374151', label: 'Draft' },
+      sent: { bg: '#dbeafe', color: '#1e40af', label: 'Sent' },
+      viewed: { bg: '#e0f2fe', color: '#075985', label: 'Viewed' },
+      partial: { bg: '#fef3c7', color: '#92400e', label: 'Partially Paid' },
+      paid: { bg: '#d1fae5', color: '#065f46', label: 'Paid' },
+      overdue: { bg: '#fee2e2', color: '#991b1b', label: 'Overdue' },
+      cancelled: { bg: '#f3f4f6', color: '#6b7280', label: 'Cancelled' }
     };
-
-    const config = statusConfig[status] || statusConfig.draft;
-    return (
-      <span style={{
-        padding: '8px 16px',
-        borderRadius: '20px',
-        fontSize: '14px',
-        fontWeight: '600',
-        backgroundColor: `${config.color}20`,
-        color: config.color
-      }}>
-        {config.label}
-      </span>
-    );
-  };
-
-  const formatDate = (date) => {
-    return new Date(date).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 0
-    }).format(amount || 0);
+    return styles[status] || styles.draft;
   };
 
   if (loading) {
     return (
-      <DashboardLayout title="Invoice Details">
-        <div style={{ textAlign: 'center', padding: '40px' }}>Loading...</div>
+      <DashboardLayout>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '400px' }}>
+          <div style={{ fontSize: '18px', color: '#6b7280' }}>Loading...</div>
+        </div>
       </DashboardLayout>
     );
   }
 
   if (error || !invoice) {
     return (
-      <DashboardLayout title="Invoice Details">
-        <div className="error-message">{error || 'Invoice not found'}</div>
+      <DashboardLayout>
+        <div style={{ padding: '40px', textAlign: 'center' }}>
+          <div style={{ fontSize: '18px', color: '#ef4444', marginBottom: '20px' }}>
+            {error || 'Invoice not found'}
+          </div>
+          <button onClick={() => navigate('/invoices')} style={styles.backButton}>
+            ← Back to Invoices
+          </button>
+        </div>
       </DashboardLayout>
     );
   }
 
-  const balanceDue = (invoice.totalAmount || 0) - (invoice.paidAmount || 0);
+  const statusStyle = getStatusStyle(invoice.status);
 
   return (
-    <DashboardLayout title={`Invoice ${invoice.invoiceNumber}`}>
-      <div className="page-header">
-        <div>
-          <h1>Invoice {invoice.invoiceNumber}</h1>
-          <p className="page-subtitle">{invoice.title}</p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            className="btn-secondary"
-            onClick={() => navigate('/invoices')}
-          >
-            ← Back
-          </button>
-          {invoice.status === 'draft' && (
-            <button
-              className="btn-primary"
-              onClick={() => navigate(`/invoices/${id}/edit`)}
-            >
-              Edit
+    <DashboardLayout>
+      <div style={styles.container}>
+        {/* Header Section */}
+        <div style={styles.header}>
+          <div style={styles.headerLeft}>
+            <button onClick={() => navigate('/invoices')} style={styles.backBtn}>
+              ← Back
             </button>
-          )}
-        </div>
-      </div>
-
-      <div className="crm-card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '28px' }}>
-          <h2 style={{ margin: 0, fontSize: '20px', fontWeight: '700' }}>Invoice Details</h2>
-          {getStatusBadge(invoice.status)}
-        </div>
-
-        <div className="resp-grid-2" style={{gap:'32px',marginBottom:'28px'}}>
-          <div>
-            <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Customer Information</h3>
-            <div style={{ fontSize: '16px', fontWeight: '600', marginBottom: '8px' }}>{invoice.customerName}</div>
-            <div style={{ fontSize: '14px', color: '#666', marginBottom: '6px', lineHeight: '1.5' }}>{invoice.customerEmail}</div>
-            {invoice.customerPhone && (
-              <div style={{ fontSize: '14px', color: '#666', marginBottom: '6px', lineHeight: '1.5' }}>{invoice.customerPhone}</div>
-            )}
-            {invoice.customerAddress && (
-              <div style={{ fontSize: '14px', color: '#666', marginTop: '12px', lineHeight: '1.6', padding: '12px', backgroundColor: '#f8f9fa', borderRadius: '6px' }}>{invoice.customerAddress}</div>
-            )}
-          </div>
-          <div>
-            <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Invoice Information</h3>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', padding: '8px 0', borderBottom: '1px solid #f1f3f5' }}>
-              <span style={{ color: '#666', fontWeight: '500' }}>Date:</span>
-              <span style={{ fontWeight: '600' }}>{formatDate(invoice.invoiceDate)}</span>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', padding: '8px 0', borderBottom: '1px solid #f1f3f5' }}>
-              <span style={{ color: '#666', fontWeight: '500' }}>Due Date:</span>
-              <span style={{ fontWeight: '600' }}>{formatDate(invoice.dueDate)}</span>
-            </div>
-            {invoice.sentAt && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', padding: '8px 0', borderBottom: '1px solid #f1f3f5' }}>
-                <span style={{ color: '#666', fontWeight: '500' }}>Sent On:</span>
-                <span style={{ fontWeight: '600' }}>{formatDate(invoice.sentAt)}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {invoice.description && (
-          <div style={{ marginBottom: '28px', padding: '16px', backgroundColor: '#f8f9fa', borderRadius: '8px', borderLeft: '4px solid #dc3545' }}>
-            <h3 style={{ fontSize: '14px', color: '#666', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Description</h3>
-            <p style={{ margin: 0, color: '#333', lineHeight: '1.6' }}>{invoice.description}</p>
-          </div>
-        )}
-
-        <h3 style={{ fontSize: '16px', marginBottom: '20px', fontWeight: '700' }}>Items</h3>
-        <div className="table-container" style={{ marginBottom: '28px' }}>
-          <table className="crm-table">
-            <thead>
-              <tr>
-                <th>Product</th>
-                <th>Description</th>
-                <th>Quantity</th>
-                <th>Unit Price</th>
-                <th>Discount</th>
-                <th>Tax</th>
-                <th>Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {invoice.items.map((item, index) => (
-                <tr key={index}>
-                  <td style={{ fontWeight: '600' }}>{item.productName}</td>
-                  <td style={{ color: '#666' }}>{item.description || '-'}</td>
-                  <td>{item.quantity}</td>
-                  <td>{formatCurrency(item.unitPrice)}</td>
-                  <td>{item.discount}%</td>
-                  <td>{item.tax}%</td>
-                  <td style={{ fontWeight: '700', color: '#1e293b' }}>{formatCurrency(item.total)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div style={{ marginTop: '28px', padding: '24px', backgroundColor: '#f8f9fa', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-            <div style={{ minWidth: '350px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', padding: '8px 0' }}>
-                <span style={{ fontWeight: '500' }}>Subtotal:</span>
-                <span style={{ fontWeight: '600', fontSize: '15px' }}>{formatCurrency(invoice.subtotal)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', padding: '8px 0', color: '#dc3545' }}>
-                <span style={{ fontWeight: '500' }}>Discount:</span>
-                <span style={{ fontWeight: '600', fontSize: '15px' }}>- {formatCurrency(invoice.totalDiscount)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px', padding: '8px 0' }}>
-                <span style={{ fontWeight: '500' }}>Tax (GST):</span>
-                <span style={{ fontWeight: '600', fontSize: '15px' }}>+ {formatCurrency(invoice.totalTax)}</span>
-              </div>
-              <div style={{ borderTop: '2px solid #dee2e6', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <span style={{ fontSize: '18px', fontWeight: '700' }}>Total:</span>
-                <span style={{ fontSize: '22px', fontWeight: '700', color: '#dc3545' }}>{formatCurrency(invoice.totalAmount)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', padding: '8px 0', color: '#198754' }}>
-                <span style={{ fontWeight: '500' }}>Paid:</span>
-                <span style={{ fontWeight: '600', fontSize: '15px' }}>- {formatCurrency(invoice.paidAmount || 0)}</span>
-              </div>
-              <div style={{ borderTop: '2px solid #dee2e6', paddingTop: '20px', display: 'flex', justifyContent: 'space-between', backgroundColor: balanceDue > 0 ? '#fff5f5' : '#f0fdf4', padding: '16px', borderRadius: '8px', marginTop: '12px' }}>
-                <span style={{ fontSize: '18px', fontWeight: '700' }}>Balance Due:</span>
-                <span style={{ fontSize: '22px', fontWeight: '700', color: balanceDue > 0 ? '#dc3545' : '#198754' }}>
-                  {formatCurrency(balanceDue)}
-                </span>
-              </div>
+            <div>
+              <h1 style={styles.title}>Invoice {invoice.invoiceNumber}</h1>
+              <p style={styles.subtitle}>{invoice.title || 'Invoice Details'}</p>
             </div>
           </div>
-        </div>
-
-        {(invoice.terms || invoice.notes) && (
-          <div style={{ marginTop: '28px', padding: '20px', backgroundColor: '#fff8e1', borderLeft: '4px solid #ffc107', borderRadius: '8px' }}>
-            {invoice.terms && (
-              <div style={{ marginBottom: invoice.notes ? '20px' : 0 }}>
-                <h4 style={{ fontSize: '14px', marginBottom: '12px', fontWeight: '600', color: '#856404' }}>Terms & Conditions</h4>
-                <p style={{ margin: 0, fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#533f03' }}>{invoice.terms}</p>
-              </div>
-            )}
-            {invoice.notes && (
-              <div>
-                <h4 style={{ fontSize: '14px', marginBottom: '12px', fontWeight: '600', color: '#856404' }}>Notes</h4>
-                <p style={{ margin: 0, fontSize: '14px', whiteSpace: 'pre-wrap', lineHeight: '1.6', color: '#533f03' }}>{invoice.notes}</p>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="crm-card">
-        <h3 style={{ marginBottom: '20px', fontSize: '18px', fontWeight: '700' }}>Actions</h3>
-        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <button className="btn-primary" onClick={handleDownloadPDF} disabled={actionLoading}>
-            📥 Download PDF
-          </button>
-          {invoice.status !== 'sent' && (
-            <button className="btn-primary" onClick={handleSendEmail} disabled={actionLoading}>
+          <div style={styles.headerRight}>
+            <span style={{ ...styles.statusBadge, background: statusStyle.bg, color: statusStyle.color }}>
+              {statusStyle.label}
+            </span>
+            <button onClick={() => navigate(`/invoices/${id}/edit`)} style={styles.editBtn}>
+              ✏️ Edit
+            </button>
+            <button onClick={handleDownloadPDF} disabled={actionLoading} style={styles.downloadBtn}>
+              📄 {actionLoading ? 'Downloading...' : 'Download PDF'}
+            </button>
+            <button onClick={handleSendEmail} disabled={actionLoading} style={styles.sendBtn}>
               📧 Send Email
             </button>
-          )}
-          {invoice.status !== 'paid' && (
-            <button
-              className="btn-primary"
-              style={{ background: '#1EB980', borderColor: '#1EB980' }}
-              disabled={linkLoading}
-              onClick={async () => {
-                try {
-                  setLinkLoading(true);
-                  const res = await generateInvoicePaymentLink(invoice._id);
-                  setPaymentLink(res.data.paymentLinkUrl);
-                  window.open(res.data.paymentLinkUrl, '_blank');
-                } catch (e) {
-                  alert(e?.message || 'Failed to generate payment link');
-                } finally { setLinkLoading(false); }
-              }}
-            >
-              {linkLoading ? '⏳ Generating...' : '💳 Generate Payment Link'}
+            <button onClick={handleGeneratePaymentLink} disabled={linkLoading} style={styles.paymentBtn}>
+              💳 {linkLoading ? 'Generating...' : 'Payment Link'}
             </button>
-          )}
-          {(paymentLink || invoice.razorpayPaymentLinkUrl) && (
-            <div style={{ width: '100%', marginTop: 8, padding: '10px 14px', background: '#f0fdf4', border: '1px solid #1EB980', borderRadius: 8, fontSize: 13 }}>
-              <span style={{ fontWeight: 600, color: '#065f46' }}>Payment Link: </span>
-              <a href={paymentLink || invoice.razorpayPaymentLinkUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#1EB980', wordBreak: 'break-all' }}>
-                {paymentLink || invoice.razorpayPaymentLinkUrl}
-              </a>
+          </div>
+        </div>
+
+        {/* Payment Link Display */}
+        {(paymentLink || invoice.razorpayPaymentLinkUrl) && (
+          <div style={styles.paymentLinkCard}>
+            <span style={styles.paymentLinkLabel}>💳 Payment Link:</span>
+            <a
+              href={paymentLink || invoice.razorpayPaymentLinkUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={styles.paymentLinkUrl}
+            >
+              {paymentLink || invoice.razorpayPaymentLinkUrl}
+            </a>
+          </div>
+        )}
+
+        <div style={styles.content}>
+          {/* Left Column */}
+          <div style={styles.leftColumn}>
+            {/* Customer Info Card */}
+            <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                <span style={styles.cardIcon}>👤</span>
+                <h3 style={styles.cardTitle}>Customer Information</h3>
+              </div>
+              <div style={styles.cardBody}>
+                <div style={styles.infoRow}>
+                  <span style={styles.label}>Name</span>
+                  <span style={styles.value}>{invoice.customerName}</span>
+                </div>
+                <div style={styles.infoRow}>
+                  <span style={styles.label}>Email</span>
+                  <span style={styles.value}>{invoice.customerEmail}</span>
+                </div>
+                <div style={styles.infoRow}>
+                  <span style={styles.label}>Phone</span>
+                  <span style={styles.value}>{invoice.customerPhone || '-'}</span>
+                </div>
+                <div style={styles.infoRow}>
+                  <span style={styles.label}>Address</span>
+                  <span style={styles.value}>{invoice.customerAddress || '-'}</span>
+                </div>
+                {invoice.customerGstin && (
+                  <div style={styles.infoRow}>
+                    <span style={styles.label}>GSTIN</span>
+                    <span style={styles.valueBold}>{invoice.customerGstin}</span>
+                  </div>
+                )}
+              </div>
             </div>
-          )}
+
+            {/* Items Card */}
+            <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                <span style={styles.cardIcon}>📦</span>
+                <h3 style={styles.cardTitle}>Items</h3>
+              </div>
+              <div style={styles.tableWrapper}>
+                <table style={styles.table}>
+                  <thead>
+                    <tr style={styles.tableHeader}>
+                      <th style={styles.th}>Product</th>
+                      <th style={styles.th}>Description</th>
+                      <th style={styles.thCenter}>Qty</th>
+                      <th style={styles.thRight}>Unit Price</th>
+                      <th style={styles.thCenter}>Discount</th>
+                      <th style={styles.thCenter}>Tax</th>
+                      <th style={styles.thRight}>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoice.items?.map((item, index) => (
+                      <tr key={index} style={styles.tableRow}>
+                        <td style={styles.td}>
+                          <div style={styles.productName}>{item.productName}</div>
+                          {item.hsnCode && <div style={styles.hsnCode}>HSN: {item.hsnCode}</div>}
+                        </td>
+                        <td style={styles.td}>{item.description || '-'}</td>
+                        <td style={styles.tdCenter}>{item.quantity}</td>
+                        <td style={styles.tdRight}>₹{item.unitPrice?.toLocaleString()}</td>
+                        <td style={styles.tdCenter}>{item.discount || 0}%</td>
+                        <td style={styles.tdCenter}>{item.tax || 18}%</td>
+                        <td style={styles.tdRight}>
+                          <span style={styles.totalAmount}>₹{item.total?.toLocaleString()}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column */}
+          <div style={styles.rightColumn}>
+            {/* Invoice Info Card */}
+            <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                <span style={styles.cardIcon}>📋</span>
+                <h3 style={styles.cardTitle}>Invoice Information</h3>
+              </div>
+              <div style={styles.cardBody}>
+                <div style={styles.infoRow}>
+                  <span style={styles.label}>Date</span>
+                  <span style={styles.value}>
+                    {new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
+                  </span>
+                </div>
+                <div style={styles.infoRow}>
+                  <span style={styles.label}>Due Date</span>
+                  <span style={styles.value}>
+                    {new Date(invoice.dueDate).toLocaleDateString('en-IN')}
+                  </span>
+                </div>
+                {invoice.placeOfSupply && (
+                  <div style={styles.infoRow}>
+                    <span style={styles.label}>Place of Supply</span>
+                    <span style={styles.value}>{invoice.placeOfSupply}</span>
+                  </div>
+                )}
+                {invoice.taxType && (
+                  <div style={styles.infoRow}>
+                    <span style={styles.label}>Tax Type</span>
+                    <span style={styles.valueBold}>{invoice.taxType}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Amount Summary Card */}
+            <div style={styles.card}>
+              <div style={styles.cardHeader}>
+                <span style={styles.cardIcon}>💰</span>
+                <h3 style={styles.cardTitle}>Amount Summary</h3>
+              </div>
+              <div style={styles.cardBody}>
+                <div style={styles.summaryRow}>
+                  <span style={styles.summaryLabel}>Subtotal</span>
+                  <span style={styles.summaryValue}>₹{invoice.subtotal?.toLocaleString()}</span>
+                </div>
+                {invoice.totalDiscount > 0 && (
+                  <div style={styles.summaryRow}>
+                    <span style={styles.summaryLabel}>Discount</span>
+                    <span style={{ ...styles.summaryValue, color: '#dc2626' }}>
+                      - ₹{invoice.totalDiscount?.toLocaleString()}
+                    </span>
+                  </div>
+                )}
+                <div style={styles.summaryRow}>
+                  <span style={styles.summaryLabel}>Tax (GST)</span>
+                  <span style={styles.summaryValue}>+ ₹{invoice.totalTax?.toLocaleString()}</span>
+                </div>
+                <div style={styles.divider}></div>
+                <div style={styles.totalRow}>
+                  <span style={styles.totalLabel}>Total</span>
+                  <span style={styles.totalValue}>₹{invoice.totalAmount?.toLocaleString()}</span>
+                </div>
+                {invoice.amountPaid > 0 && (
+                  <>
+                    <div style={styles.summaryRow}>
+                      <span style={styles.summaryLabel}>Paid</span>
+                      <span style={{ ...styles.summaryValue, color: '#16a34a' }}>
+                        - ₹{invoice.amountPaid?.toLocaleString()}
+                      </span>
+                    </div>
+                    <div style={styles.totalRow}>
+                      <span style={styles.totalLabel}>Balance Due</span>
+                      <span style={{ ...styles.totalValue, color: '#dc2626' }}>
+                        ₹{((invoice.totalAmount || 0) - (invoice.amountPaid || 0))?.toLocaleString()}
+                      </span>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Terms Card */}
+            {invoice.terms && (
+              <div style={styles.card}>
+                <div style={styles.cardHeader}>
+                  <span style={styles.cardIcon}>📝</span>
+                  <h3 style={styles.cardTitle}>Terms & Conditions</h3>
+                </div>
+                <div style={styles.cardBody}>
+                  <p style={styles.terms}>{invoice.terms}</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </DashboardLayout>
   );
+};
+
+// Modern Professional Styles
+const styles = {
+  container: {
+    padding: '24px',
+    maxWidth: '1400px',
+    margin: '0 auto',
+    background: '#f9fafb'
+  },
+  header: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    padding: '24px',
+    background: '#ffffff',
+    borderRadius: '12px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+  },
+  headerLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '16px'
+  },
+  headerRight: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center'
+  },
+  backBtn: {
+    padding: '8px 16px',
+    background: '#f3f4f6',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#374151',
+    transition: 'all 0.2s'
+  },
+  title: {
+    fontSize: '24px',
+    fontWeight: '700',
+    color: '#111827',
+    margin: '0 0 4px 0'
+  },
+  subtitle: {
+    fontSize: '14px',
+    color: '#6b7280',
+    margin: 0
+  },
+  statusBadge: {
+    padding: '6px 12px',
+    borderRadius: '6px',
+    fontSize: '13px',
+    fontWeight: '600'
+  },
+  editBtn: {
+    padding: '10px 20px',
+    background: '#f3f4f6',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#374151'
+  },
+  downloadBtn: {
+    padding: '10px 20px',
+    background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#ffffff'
+  },
+  sendBtn: {
+    padding: '10px 20px',
+    background: 'linear-gradient(135deg, #10b981, #059669)',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#ffffff'
+  },
+  paymentBtn: {
+    padding: '10px 20px',
+    background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#ffffff'
+  },
+  paymentLinkCard: {
+    padding: '16px 24px',
+    background: '#f0fdf4',
+    border: '1px solid #86efac',
+    borderRadius: '12px',
+    marginBottom: '24px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    flexWrap: 'wrap'
+  },
+  paymentLinkLabel: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#065f46'
+  },
+  paymentLinkUrl: {
+    fontSize: '14px',
+    color: '#10b981',
+    textDecoration: 'none',
+    fontWeight: '500',
+    wordBreak: 'break-all'
+  },
+  content: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 400px',
+    gap: '24px'
+  },
+  leftColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  rightColumn: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  card: {
+    background: '#ffffff',
+    borderRadius: '12px',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    overflow: 'hidden'
+  },
+  cardHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    padding: '20px 24px',
+    borderBottom: '1px solid #e5e7eb'
+  },
+  cardIcon: {
+    fontSize: '20px'
+  },
+  cardTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#111827',
+    margin: 0
+  },
+  cardBody: {
+    padding: '24px'
+  },
+  infoRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '12px 0',
+    borderBottom: '1px solid #f3f4f6'
+  },
+  label: {
+    fontSize: '14px',
+    color: '#6b7280',
+    fontWeight: '500'
+  },
+  value: {
+    fontSize: '14px',
+    color: '#111827',
+    textAlign: 'right'
+  },
+  valueBold: {
+    fontSize: '14px',
+    color: '#111827',
+    fontWeight: '600',
+    textAlign: 'right'
+  },
+  tableWrapper: {
+    overflowX: 'auto'
+  },
+  table: {
+    width: '100%',
+    borderCollapse: 'collapse'
+  },
+  tableHeader: {
+    background: '#f9fafb',
+    borderBottom: '2px solid #e5e7eb'
+  },
+  th: {
+    padding: '12px 16px',
+    textAlign: 'left',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  thCenter: {
+    padding: '12px 16px',
+    textAlign: 'center',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase'
+  },
+  thRight: {
+    padding: '12px 16px',
+    textAlign: 'right',
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase'
+  },
+  tableRow: {
+    borderBottom: '1px solid #f3f4f6'
+  },
+  td: {
+    padding: '16px',
+    fontSize: '14px',
+    color: '#374151'
+  },
+  tdCenter: {
+    padding: '16px',
+    textAlign: 'center',
+    fontSize: '14px',
+    color: '#374151'
+  },
+  tdRight: {
+    padding: '16px',
+    textAlign: 'right',
+    fontSize: '14px',
+    color: '#374151'
+  },
+  productName: {
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: '4px'
+  },
+  hsnCode: {
+    fontSize: '12px',
+    color: '#6b7280'
+  },
+  totalAmount: {
+    fontWeight: '600',
+    color: '#111827'
+  },
+  summaryRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '10px 0',
+    fontSize: '14px'
+  },
+  summaryLabel: {
+    color: '#6b7280'
+  },
+  summaryValue: {
+    fontWeight: '500',
+    color: '#111827'
+  },
+  divider: {
+    height: '1px',
+    background: '#e5e7eb',
+    margin: '16px 0'
+  },
+  totalRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    padding: '16px 0',
+    fontSize: '16px'
+  },
+  totalLabel: {
+    fontWeight: '600',
+    color: '#111827'
+  },
+  totalValue: {
+    fontWeight: '700',
+    color: '#2563eb',
+    fontSize: '18px'
+  },
+  terms: {
+    fontSize: '14px',
+    color: '#6b7280',
+    lineHeight: '1.6',
+    margin: 0
+  },
+  backButton: {
+    padding: '12px 24px',
+    background: '#3b82f6',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    fontSize: '14px',
+    fontWeight: '600'
+  }
 };
 
 export default InvoiceDetail;

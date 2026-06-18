@@ -91,6 +91,44 @@ const tenantSchema = new mongoose.Schema({
     trim: true
   },
 
+  // GST & Tax Details
+  gstin: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Optional field
+        return /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/.test(v);
+      },
+      message: 'Invalid GSTIN format'
+    }
+  },
+  panNumber: {
+    type: String,
+    trim: true,
+    uppercase: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Optional field
+        return /^[A-Z]{5}[0-9]{4}[A-Z]{1}$/.test(v);
+      },
+      message: 'Invalid PAN format'
+    }
+  },
+  stateCode: {
+    type: String,
+    trim: true,
+    validate: {
+      validator: function(v) {
+        if (!v) return true; // Optional field
+        const code = parseInt(v);
+        return code >= 1 && code <= 37; // Valid GST state codes
+      },
+      message: 'Invalid state code'
+    }
+  },
+
   // Business Details
   businessType: {
     type: String,

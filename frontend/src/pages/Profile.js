@@ -5,7 +5,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import profileService from '../services/profileService';
 import notificationService from '../services/notificationService';
 import { useAuth } from '../context/AuthContext';
-import { API_URL } from '../config/api.config';
+import { API_URL, getAuthHeaders } from '../config/api.config';
 import { getCountries, getStates, getCities, getCountryByName, getStateByName } from '../data/locationData';
 import '../styles/crm.css';
 
@@ -76,13 +76,15 @@ const Profile = () => {
   const [editedOrg, setEditedOrg] = useState({
     organizationName: '', contactEmail: '', contactPhone: '', alternatePhone: '',
     industry: '', businessType: '', legalName: '', logo: '', website: '',
-    numberOfEmployees: '', foundedYear: '', taxId: '', registrationNumber: '',
+    numberOfEmployees: '', foundedYear: '', gstin: '', panNumber: '', taxId: '', registrationNumber: '',
     socialMedia: { linkedin: '', twitter: '', facebook: '', instagram: '' },
     headquarters: { street: '', city: '', state: '', country: '', zipCode: '' },
     keyContact: { name: '', designation: '', email: '', phone: '' }
   });
   const [savingOrg, setSavingOrg] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [verifyingGST, setVerifyingGST] = useState(false);
+  const [gstVerifyMessage, setGstVerifyMessage] = useState(null);
 
   // Notification preferences
   const [notifPrefs, setNotifPrefs] = useState({
@@ -303,7 +305,7 @@ const Profile = () => {
     industry: t.industry || '', businessType: t.businessType || '',
     legalName: t.legalName || '', logo: t.logo || '', website: t.website || '',
     numberOfEmployees: t.numberOfEmployees || '', foundedYear: t.foundedYear || '',
-    taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
+    gstin: t.gstin || '', panNumber: t.panNumber || '', taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
     socialMedia: { linkedin: t.socialMedia?.linkedin || '', twitter: t.socialMedia?.twitter || '', facebook: t.socialMedia?.facebook || '', instagram: t.socialMedia?.instagram || '' },
     headquarters: { street: t.headquarters?.street || '', city: t.headquarters?.city || '', state: t.headquarters?.state || '', country: t.headquarters?.country || '', zipCode: t.headquarters?.zipCode || '' },
     keyContact: { name: t.keyContact?.name || '', designation: t.keyContact?.designation || '', email: t.keyContact?.email || '', phone: t.keyContact?.phone || '' }
@@ -328,6 +330,75 @@ const Profile = () => {
       }));
     } else {
       setEditedOrg(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleVerifyGSTIN = async () => {
+    const gstin = editedOrg.gstin?.trim().toUpperCase();
+
+    if (!gstin || gstin.length !== 15) {
+      setGstVerifyMessage({ type: 'error', text: '⚠️ Please enter a valid 15-character GSTIN' });
+      return;
+    }
+
+    try {
+      setVerifyingGST(true);
+      setGstVerifyMessage(null);
+
+      const response = await fetch(`${API_URL}/verify-gstin`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ gstin })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Verification failed');
+      }
+
+      const data = result.data;
+
+      if (data.verified) {
+        // ✅ Successfully verified with company details
+        setGstVerifyMessage({
+          type: 'success',
+          text: `✓ Verified: ${data.legalName || 'Company found'}`
+        });
+
+        // Auto-fill company details
+        setEditedOrg(prev => ({
+          ...prev,
+          companyName: data.legalName || prev.companyName,
+          panNumber: data.pan || prev.panNumber,
+          stateCode: data.stateCode || prev.stateCode,
+          // Note: address auto-fill can be added if needed
+        }));
+
+        showToast('GST verified successfully! Company details auto-filled.', 'success');
+      } else {
+        // ⚠️ Format valid but couldn't fetch details
+        setGstVerifyMessage({
+          type: 'warning',
+          text: `⚠️ ${data.message || 'Format valid but could not fetch company details'}`
+        });
+
+        // Still auto-fill what we can extract (PAN, state)
+        setEditedOrg(prev => ({
+          ...prev,
+          panNumber: data.pan || prev.panNumber,
+          stateCode: data.stateCode || prev.stateCode
+        }));
+      }
+
+    } catch (error) {
+      console.error('GST Verification Error:', error);
+      setGstVerifyMessage({
+        type: 'error',
+        text: `❌ ${error.message || 'Verification failed'}`
+      });
+    } finally {
+      setVerifyingGST(false);
     }
   };
 
@@ -903,8 +974,71 @@ const Profile = () => {
                 <input type="number" name="foundedYear" value={isEditingOrg ? editedOrg.foundedYear : (tenant.foundedYear || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., 2020" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #06b6d4' }} />
               </div>
               <div style={styles.formGroup}>
-                <label style={styles.label}>Tax ID / GST</label>
-                <input type="text" name="taxId" value={isEditingOrg ? editedOrg.taxId : (tenant.taxId || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="GST/Tax number" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #14b8a6' }} />
+                <label style={styles.label}>Company GSTIN <span style={{ color: '#10b981', fontSize: '11px' }}>(GST Number)</span></label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <input
+                    type="text"
+                    name="gstin"
+                    value={isEditingOrg ? editedOrg.gstin : (tenant.gstin || '')}
+                    onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                    onChange={handleOrgInputChange}
+                    disabled={!isEditingOrg}
+                    placeholder="29ABCDE1234F1Z5"
+                    maxLength={15}
+                    style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981', textTransform: 'uppercase', flex: 1 }}
+                  />
+                  {isEditingOrg && editedOrg.gstin && editedOrg.gstin.length === 15 && (
+                    <button
+                      type="button"
+                      onClick={handleVerifyGSTIN}
+                      disabled={verifyingGST}
+                      style={{
+                        padding: '10px 16px',
+                        background: verifyingGST ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: verifyingGST ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {verifyingGST ? '⏳ Verifying...' : '✓ Verify GST'}
+                    </button>
+                  )}
+                </div>
+                {gstVerifyMessage && (
+                  <div style={{
+                    marginTop: '6px',
+                    padding: '8px 12px',
+                    background: gstVerifyMessage.type === 'success' ? '#d1fae5' : '#fef3c7',
+                    color: gstVerifyMessage.type === 'success' ? '#065f46' : '#92400e',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}>
+                    {gstVerifyMessage.text}
+                  </div>
+                )}
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>PAN Number</label>
+                <input
+                  type="text"
+                  name="panNumber"
+                  value={isEditingOrg ? editedOrg.panNumber : (tenant.panNumber || '')}
+                  onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                  onChange={handleOrgInputChange}
+                  disabled={!isEditingOrg}
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #14b8a6', textTransform: 'uppercase' }}
+                />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Tax ID (Old)</label>
+                <input type="text" name="taxId" value={isEditingOrg ? editedOrg.taxId : (tenant.taxId || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Other tax number" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #64748b' }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Registration Number</label>

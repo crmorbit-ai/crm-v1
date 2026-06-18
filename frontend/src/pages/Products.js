@@ -201,25 +201,23 @@ const Products = () => {
       }
     }
 
-    // Validate SKU
+    // Validate SKU (relaxed - allows letters, numbers, hyphens, underscores)
     const sku = formData.articleNumber.trim();
     if (sku) {
-      if (sku.length < 3) {
-        setSkuError('SKU must be at least 3 characters');
+      if (sku.length < 2) {
+        setSkuError('SKU must be at least 2 characters');
         return;
       }
+      // Allow letters (uppercase), numbers, hyphens, underscores
       if (!/^[A-Z0-9\-_]+$/.test(sku)) {
-        setSkuError('SKU must contain only uppercase letters, numbers, hyphens, underscores');
+        setSkuError('SKU can only contain letters, numbers, hyphens (-), and underscores (_)');
         return;
       }
+      // Optional: Warn if only numbers (but don't block)
       if (/^\d+$/.test(sku)) {
-        setSkuError('SKU cannot be only numbers - add letters for proper format');
-        return;
-      }
-      const skuLetterCount = (sku.match(/[A-Z]/g) || []).length;
-      if (skuLetterCount < 1) {
-        setSkuError('SKU must contain at least 1 letter');
-        return;
+        setSkuError('Tip: SKU with letters is more professional (e.g., PROD-001)');
+        // Don't return - just warning
+        setTimeout(() => setSkuError(''), 3000);
       }
     }
 
@@ -303,7 +301,15 @@ const Products = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    let processedValue = type === 'checkbox' ? checked : value;
+
+    // Auto-uppercase SKU/Article Number as user types
+    if (name === 'articleNumber' && typeof processedValue === 'string') {
+      processedValue = processedValue.toUpperCase();
+      setSkuError(''); // Clear error as user types
+    }
+
+    setFormData(prev => ({ ...prev, [name]: processedValue }));
   };
 
   const handleFilterChange = (e) => {
@@ -400,31 +406,11 @@ const Products = () => {
               name="articleNumber"
               value={formData.articleNumber}
               maxLength={20}
-              onChange={(e) => {
-                const val = e.target.value.toUpperCase();
-                handleChange({...e, target: {...e.target, value: val}});
-                setSkuError('');
-
-                const trimmed = val.trim();
-                if (trimmed.length > 0) {
-                  if (trimmed.length < 3) {
-                    setSkuError('SKU must be at least 3 characters');
-                  } else if (!/^[A-Z0-9\-_]+$/.test(trimmed)) {
-                    setSkuError('SKU must contain only uppercase letters, numbers, hyphens, underscores');
-                  } else if (/^\d+$/.test(trimmed)) {
-                    setSkuError('SKU cannot be only numbers - add letters for proper format');
-                  } else {
-                    const letterCount = (trimmed.match(/[A-Z]/g) || []).length;
-                    if (letterCount < 1) {
-                      setSkuError('SKU must contain at least 1 letter');
-                    }
-                  }
-                }
-              }}
+              onChange={handleChange}
               required
-              style={{...iStyle, borderColor: skuError ? '#ef4444' : '#e2e8f0', textTransform: 'uppercase'}}
-              onFocus={e => e.target.style.borderColor = skuError ? '#ef4444' : '#6366f1'}
-              onBlur={e => e.target.style.borderColor = skuError ? '#ef4444' : '#e2e8f0'}
+              style={{...iStyle, textTransform: 'uppercase'}}
+              onFocus={e => e.target.style.borderColor='#6366f1'}
+              onBlur={e => e.target.style.borderColor='#e2e8f0'}
               placeholder="e.g., LAP-001, PHONE2024"
             />
             <div style={{minHeight:'20px',marginTop:'4px'}}>

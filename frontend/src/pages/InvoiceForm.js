@@ -5,6 +5,7 @@ import { productItemService } from '../services/productItemService';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import { API_URL, getAuthHeaders } from '../config/api.config';
 import templateService from '../services/templateService';
+import { getGstRateFromHsn } from '../utils/hsnGstMapping';
 import '../styles/crm.css';
 
 const STEPS = [
@@ -28,12 +29,19 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   const [wizardStep, setWizardStep] = useState(0);
   const [invoiceTemplates, setInvoiceTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [verifyingGST, setVerifyingGST] = useState(false);
+  const [gstVerifyMessage, setGstVerifyMessage] = useState(null);
 
   const [formData, setFormData] = useState({
     customerName: '',
     customerEmail: '',
     customerPhone: '',
     customerAddress: '',
+    shippingAddress: '',
+    customerGstin: '',
+    customerState: '',
+    customerStateCode: '',
+    placeOfSupply: '',
     title: '',
     description: '',
     items: [],
@@ -77,6 +85,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
         else if (customerType === 'Contact' && Array.isArray(data.data.contacts)) customerList = data.data.contacts;
         else if (customerType === 'Account' && Array.isArray(data.data.accounts)) customerList = data.data.accounts;
       }
+
       setCustomers(customerList);
     } catch (err) { console.error('Failed to fetch customers:', err); setCustomers([]); }
   };
@@ -84,7 +93,18 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   const handleCustomerSelect = (customerId) => {
     const customer = customers.find(c => c._id === customerId);
     if (customer) {
-      const customerName = customerType === 'Account' ? customer.accountName : `${customer.firstName} ${customer.lastName}`;
+      // Handle different customer types
+      let customerName = '';
+      if (customerType === 'Account') {
+        customerName = customer.accountName || customer.name || '';
+      } else if (customerType === 'Lead') {
+        // Lead has customerName field directly
+        customerName = customer.customerName || '';
+      } else {
+        // Contact
+        customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.name || '';
+      }
+
       setFormData(prev => ({
         ...prev,
         customer: customerId,
@@ -101,6 +121,74 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
         customerName: '',
         customerEmail: ''
       }));
+    }
+  };
+
+  const handleVerifyGSTIN = async () => {
+    const gstin = formData.customerGstin?.trim().toUpperCase();
+
+    if (!gstin || gstin.length !== 15) {
+      setGstVerifyMessage({ type: 'error', text: '⚠️ Please enter a valid 15-character GSTIN' });
+      return;
+    }
+
+    try {
+      setVerifyingGST(true);
+      setGstVerifyMessage(null);
+
+      const response = await fetch(`${API_URL}/verify-gstin`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ gstin })
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.message || 'Verification failed');
+      }
+
+      const data = result.data;
+
+      if (data.verified) {
+        // ✅ Successfully verified - auto-fill customer details
+        setGstVerifyMessage({
+          type: 'success',
+          text: `✓ Verified: ${data.legalName || 'Company found'}`
+        });
+
+        setFormData(prev => ({
+          ...prev,
+          customerName: data.legalName || prev.customerName,
+          customerAddress: data.address || prev.customerAddress,
+          customerState: data.state || prev.customerState,
+          customerStateCode: data.stateCode || prev.customerStateCode,
+          placeOfSupply: data.state || prev.placeOfSupply
+        }));
+      } else {
+        // ⚠️ Format valid but couldn't fetch details
+        setGstVerifyMessage({
+          type: 'warning',
+          text: `⚠️ ${data.message || 'Format valid but could not fetch company details'}`
+        });
+
+        // Still auto-fill state code from GSTIN
+        setFormData(prev => ({
+          ...prev,
+          customerStateCode: data.stateCode || prev.customerStateCode,
+          customerState: data.state || prev.customerState,
+          placeOfSupply: data.state || prev.placeOfSupply
+        }));
+      }
+
+    } catch (error) {
+      console.error('GST Verification Error:', error);
+      setGstVerifyMessage({
+        type: 'error',
+        text: `❌ ${error.message || 'Verification failed'}`
+      });
+    } finally {
+      setVerifyingGST(false);
     }
   };
 
@@ -131,7 +219,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { productName: '', description: '', quantity: 1, unitPrice: 0, discount: 0, tax: 18, total: 0 }]
+      items: [...prev.items, { productName: '', description: '', quantity: 1, unitPrice: 0, discount: 0, tax: 18, hsnCode: '998314', total: 0 }]
     }));
   };
 
@@ -143,6 +231,14 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
     setFormData(prev => {
       const newItems = [...prev.items];
       newItems[index][field] = value;
+
+      // Auto-update GST rate when HSN code changes
+      if (field === 'hsnCode' && value && value.length >= 4) {
+        const gstRate = getGstRateFromHsn(value);
+        newItems[index].tax = gstRate;
+        console.log(`🔄 HSN ${value} → GST ${gstRate}%`);
+      }
+
       const item = newItems[index];
       const sub = item.quantity * item.unitPrice;
       const disc = (sub * item.discount) / 100;
@@ -312,7 +408,14 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
               <select style={is} onChange={e => handleCustomerSelect(e.target.value)} value={formData.customer || ''}>
                 <option value="">-- Select {customerType} to auto-fill --</option>
                 {customers.map(c => {
-                  const name = customerType === 'Account' ? c.accountName : `${c.firstName} ${c.lastName}`;
+                  let name = '';
+                  if (customerType === 'Account') {
+                    name = c.accountName || c.name || c.email || 'Unknown';
+                  } else if (customerType === 'Lead') {
+                    name = c.customerName || c.email || 'Lead';
+                  } else {
+                    name = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || c.email || 'Contact';
+                  }
                   return <option key={c._id} value={c._id}>{name} - {c.email}</option>;
                 })}
               </select>
@@ -333,9 +436,101 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
                 <label style={ls}>Customer Phone</label>
                 <input style={{ ...is, background: '#f5f5f5' }} type="text" name="customerPhone" value={formData.customerPhone} onChange={handleChange} readOnly />
               </div>
+            </div>
+
+            {/* Address - Full Width */}
+            <div style={{ marginTop: '12px' }}>
+              <label style={ls}>Address *</label>
+              <textarea
+                style={{ ...is, minHeight: '80px', resize: 'vertical', background: '#ffffff', lineHeight: '1.5' }}
+                name="customerAddress"
+                value={formData.customerAddress}
+                onChange={handleChange}
+                placeholder="Enter customer full address (House/Building, Street, Area, City, State, PIN)"
+                rows={3}
+              />
+            </div>
+
+            {/* GST Details Section */}
+            <div style={{ marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+              <h4 style={{ margin: '0 0 14px 0', fontSize: '14px', fontWeight: '600', color: '#334155' }}>🧾 GST Details (Optional)</h4>
+              <div style={{ display: 'grid', gap: '12px' }}>
+                <div>
+                  <label style={ls}>Customer GSTIN <span style={{ color: '#10b981', fontSize: '11px' }}>(15 characters)</span></label>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                    <input
+                      style={{ ...is, textTransform: 'uppercase', flex: 1 }}
+                      type="text"
+                      name="customerGstin"
+                      value={formData.customerGstin}
+                      onChange={handleChange}
+                      placeholder="29ABCDE1234F1Z5"
+                      maxLength={15}
+                    />
+                    {formData.customerGstin && formData.customerGstin.length === 15 && (
+                      <button
+                        type="button"
+                        onClick={handleVerifyGSTIN}
+                        disabled={verifyingGST}
+                        style={{
+                          padding: '10px 16px',
+                          background: verifyingGST ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: verifyingGST ? 'not-allowed' : 'pointer',
+                          fontSize: '13px',
+                          fontWeight: '600',
+                          whiteSpace: 'nowrap'
+                        }}
+                      >
+                        {verifyingGST ? '⏳ Verifying...' : '✓ Verify'}
+                      </button>
+                    )}
+                  </div>
+                  {gstVerifyMessage && (
+                    <div style={{
+                      marginTop: '6px',
+                      padding: '8px 12px',
+                      background: gstVerifyMessage.type === 'success' ? '#d1fae5' : gstVerifyMessage.type === 'error' ? '#fee2e2' : '#fef3c7',
+                      color: gstVerifyMessage.type === 'success' ? '#065f46' : gstVerifyMessage.type === 'error' ? '#991b1b' : '#92400e',
+                      borderRadius: '6px',
+                      fontSize: '12px',
+                      fontWeight: '500'
+                    }}>
+                      {gstVerifyMessage.text}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={ls}>Place of Supply</label>
+                    <input style={is} type="text" name="placeOfSupply" value={formData.placeOfSupply} onChange={handleChange} placeholder="e.g., Karnataka" />
+                  </div>
+                  <div>
+                    <label style={ls}>State Code</label>
+                    <input style={is} type="text" name="customerStateCode" value={formData.customerStateCode} onChange={handleChange} placeholder="e.g., 29" maxLength={2} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Shipping Address Section (Optional - if different from billing) */}
+            <div style={{ marginTop: '20px', padding: '16px', background: '#fffbeb', borderRadius: '8px', border: '1px solid #fef3c7' }}>
+              <h4 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: '600', color: '#92400e' }}>📦 Shipping Address (Optional)</h4>
+              <p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#78350f' }}>
+                Leave blank if same as billing address. Fill only if shipping to a different location.
+              </p>
               <div>
-                <label style={ls}>Address</label>
-                <input style={{ ...is, background: '#f5f5f5' }} type="text" name="customerAddress" value={formData.customerAddress} onChange={handleChange} readOnly />
+                <label style={ls}>Shipping Address</label>
+                <textarea
+                  style={{ ...is, minHeight: '60px', resize: 'vertical', background: '#ffffff' }}
+                  name="shippingAddress"
+                  value={formData.shippingAddress}
+                  onChange={handleChange}
+                  placeholder="Enter shipping address if different from billing address"
+                  rows={2}
+                />
               </div>
             </div>
           </div>
@@ -408,8 +603,12 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
                         <input style={is} type="number" value={item.discount} onChange={e => updateItem(i, 'discount', parseFloat(e.target.value) || 0)} min="0" max="100" />
                       </div>
                       <div>
-                        <label style={ls}>Tax %</label>
+                        <label style={ls}>Tax % (GST)</label>
                         <input style={is} type="number" value={item.tax} onChange={e => updateItem(i, 'tax', parseFloat(e.target.value) || 0)} min="0" max="100" />
+                      </div>
+                      <div>
+                        <label style={ls}>HSN/SAC Code <span style={{ fontSize: '10px', color: '#10b981', fontWeight: '500' }}>✨ Auto GST</span></label>
+                        <input style={is} type="text" value={item.hsnCode} onChange={e => updateItem(i, 'hsnCode', e.target.value.toUpperCase())} placeholder="998314" maxLength={8} />
                       </div>
                       <div style={{ gridColumn: 'span 2', textAlign: 'right', padding: '8px', background: '#e8f0fe', borderRadius: '6px' }}>
                         <span style={{ fontSize: '12px', color: '#666' }}>Item Total: </span>
@@ -545,7 +744,14 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
             <select onChange={e => handleCustomerSelect(e.target.value)} className="crm-form-select" value={formData.customer || ''}>
               <option value="">-- Select {customerType} --</option>
               {customers.map(c => {
-                const name = customerType === 'Account' ? c.accountName : `${c.firstName} ${c.lastName}`;
+                let name = '';
+                if (customerType === 'Account') {
+                  name = c.accountName || c.name || c.email || 'Unknown';
+                } else if (customerType === 'Lead') {
+                  name = c.customerName || c.email || 'Lead';
+                } else {
+                  name = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || c.email || 'Contact';
+                }
                 return <option key={c._id} value={c._id}>{name} - {c.email}</option>;
               })}
             </select>
@@ -578,7 +784,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
           ) : (
             <div style={{ overflowX: 'auto' }}>
               <table className="crm-table">
-                <thead><tr><th>Product</th><th>Description</th><th>Qty</th><th>Unit Price</th><th>Discount %</th><th>Tax %</th><th>Total</th><th>Action</th></tr></thead>
+                <thead><tr><th>Product</th><th>Description</th><th>HSN/SAC</th><th>Qty</th><th>Unit Price</th><th>Disc %</th><th>GST %</th><th>Total</th><th>Action</th></tr></thead>
                 <tbody>
                   {formData.items.map((item, index) => (
                     <tr key={index}>
@@ -590,10 +796,11 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
                         {!item.product && <input type="text" value={item.productName} onChange={e => updateItem(index, 'productName', e.target.value)} placeholder="Or enter custom" className="crm-form-input" style={{ marginTop: '4px' }} />}
                       </td>
                       <td><input type="text" value={item.description} onChange={e => updateItem(index, 'description', e.target.value)} className="crm-form-input" style={{ minWidth: '120px' }} /></td>
-                      <td><input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)} min="1" className="crm-form-input" style={{ width: '70px' }} /></td>
-                      <td><input type="number" value={item.unitPrice} onChange={e => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" className="crm-form-input" style={{ width: '90px' }} /></td>
-                      <td><input type="number" value={item.discount} onChange={e => updateItem(index, 'discount', parseFloat(e.target.value) || 0)} min="0" max="100" className="crm-form-input" style={{ width: '70px' }} /></td>
-                      <td><input type="number" value={item.tax} onChange={e => updateItem(index, 'tax', parseFloat(e.target.value) || 0)} min="0" className="crm-form-input" style={{ width: '70px' }} /></td>
+                      <td><input type="text" value={item.hsnCode} onChange={e => updateItem(index, 'hsnCode', e.target.value.toUpperCase())} placeholder="998314" maxLength={8} className="crm-form-input" style={{ width: '80px' }} /></td>
+                      <td><input type="number" value={item.quantity} onChange={e => updateItem(index, 'quantity', parseFloat(e.target.value) || 0)} min="1" className="crm-form-input" style={{ width: '60px' }} /></td>
+                      <td><input type="number" value={item.unitPrice} onChange={e => updateItem(index, 'unitPrice', parseFloat(e.target.value) || 0)} min="0" className="crm-form-input" style={{ width: '80px' }} /></td>
+                      <td><input type="number" value={item.discount} onChange={e => updateItem(index, 'discount', parseFloat(e.target.value) || 0)} min="0" max="100" className="crm-form-input" style={{ width: '60px' }} /></td>
+                      <td><input type="number" value={item.tax} onChange={e => updateItem(index, 'tax', parseFloat(e.target.value) || 0)} min="0" className="crm-form-input" style={{ width: '60px' }} /></td>
                       <td style={{ fontWeight: '600' }}>{formatCurrency(item.total)}</td>
                       <td><button type="button" onClick={() => removeItem(index)} className="btn-icon">🗑️</button></td>
                     </tr>

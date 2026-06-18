@@ -1,11 +1,70 @@
 const Invoice = require('../models/Invoice');
 const ProductItem = require('../models/ProductItem');
 const StockTransaction = require('../models/StockTransaction');
+const Tenant = require('../models/Tenant');
 const fs = require('fs');
+
+// Helper function to calculate GST breakdown
+const calculateGSTBreakdown = async (invoiceData, tenantId) => {
+  try {
+    // Fetch tenant to get company state
+    const tenant = await Tenant.findById(tenantId);
+    const companyStateCode = tenant?.stateCode || tenant?.gstin?.substring(0, 2) || '29'; // Default Delhi if not set
+
+    // Extract customer state code from GSTIN or use customerStateCode
+    let customerStateCode = invoiceData.customerStateCode;
+    if (!customerStateCode && invoiceData.customerGstin) {
+      customerStateCode = invoiceData.customerGstin.substring(0, 2);
+    }
+
+    // Determine if same state (intra-state) or different state (inter-state)
+    const isSameState = customerStateCode && customerStateCode === companyStateCode;
+
+    // Calculate tax for each item
+    let totalCgst = 0;
+    let totalSgst = 0;
+    let totalIgst = 0;
+
+    invoiceData.items = invoiceData.items.map(item => {
+      const taxableAmount = item.quantity * item.unitPrice * (1 - (item.discount || 0) / 100);
+      const taxAmount = taxableAmount * ((item.tax || 18) / 100);
+
+      if (isSameState) {
+        // Intra-state: Split into CGST + SGST
+        item.cgst = taxAmount / 2;
+        item.sgst = taxAmount / 2;
+        item.igst = 0;
+        totalCgst += item.cgst;
+        totalSgst += item.sgst;
+      } else {
+        // Inter-state: IGST
+        item.cgst = 0;
+        item.sgst = 0;
+        item.igst = taxAmount;
+        totalIgst += item.igst;
+      }
+
+      return item;
+    });
+
+    // Update invoice level GST totals
+    invoiceData.totalCgst = totalCgst;
+    invoiceData.totalSgst = totalSgst;
+    invoiceData.totalIgst = totalIgst;
+    invoiceData.taxType = isSameState ? 'CGST+SGST' : 'IGST';
+    invoiceData.placeOfSupply = invoiceData.placeOfSupply || invoiceData.customerState || 'India';
+
+    return invoiceData;
+  } catch (error) {
+    console.error('GST calculation error:', error);
+    // Return original data if calculation fails
+    return invoiceData;
+  }
+};
 
 exports.createInvoice = async (req, res) => {
   try {
-    const invoiceData = {
+    let invoiceData = {
       ...req.body,
       tenant: req.user.tenant,
       createdBy: req.user.id
@@ -16,6 +75,9 @@ exports.createInvoice = async (req, res) => {
       dueDate.setDate(dueDate.getDate() + 30);
       invoiceData.dueDate = dueDate;
     }
+
+    // Calculate GST breakdown
+    invoiceData = await calculateGSTBreakdown(invoiceData, req.user.tenant);
 
     const invoice = new Invoice(invoiceData);
     await invoice.save();
@@ -131,7 +193,10 @@ exports.updateInvoice = async (req, res) => {
       });
     }
 
-    Object.assign(invoice, req.body);
+    // Calculate GST breakdown for updated data
+    let updatedData = await calculateGSTBreakdown(req.body, req.user.tenant);
+
+    Object.assign(invoice, updatedData);
     invoice.lastModifiedBy = req.user.id;
     await invoice.save();
 
