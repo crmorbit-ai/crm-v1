@@ -355,7 +355,7 @@ exports.downloadInvoicePDF = async (req, res) => {
     }
 
     const Tenant = require('../models/Tenant');
-    const tenant = await Tenant.findById(invoice.tenant || req.user.tenant);
+    const tenant = await Tenant.findById(invoice.tenant || req.user.tenant).select('organizationName contactEmail contactPhone logo invoiceLogo signature gstin panNumber headquarters bankDetails website');
 
     const { generateInvoicePDF } = require('../services/pdfService');
     const pdfResult = await generateInvoicePDF(invoice, tenant);

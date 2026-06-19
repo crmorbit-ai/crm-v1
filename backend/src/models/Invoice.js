@@ -121,7 +121,7 @@ const invoiceSchema = new mongoose.Schema({
   },
   customerModel: {
     type: String,
-    enum: ['Lead', 'Contact', 'Account'],
+    enum: ['Lead', 'Contact', 'Account', 'DataCenterCandidate'],
     required: false
   },
   customerName: {
@@ -135,6 +135,11 @@ const invoiceSchema = new mongoose.Schema({
   customerPhone: String,
   customerAddress: String,
   customerGstin: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
+  customerPan: {
     type: String,
     trim: true,
     uppercase: true

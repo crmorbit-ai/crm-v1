@@ -159,12 +159,56 @@ opportunitySchema.virtual('daysUntilClose').get(function() {
   return Math.ceil(diff / (1000 * 60 * 60 * 24));
 });
 
-// Auto-generate dealId and calculate expected revenue
+// Auto-generate dealId - use timestamp for uniqueness
 opportunitySchema.pre('save', async function(next) {
   if (this.isNew && !this.dealId) {
-    const count = await mongoose.model('Opportunity').countDocuments({ tenant: this.tenant });
-    this.dealId = `DEAL-${String(count + 1).padStart(4, '0')}`;
+    try {
+      // Get all existing dealIds for this tenant
+      const existingOpps = await mongoose.model('Opportunity')
+        .find({ tenant: this.tenant, dealId: { $regex: /^DEAL-\d+$/ } })
+        .select('dealId')
+        .lean();
+
+      // Extract all numbers and find the maximum
+      let maxNumber = 0;
+      for (const opp of existingOpps) {
+        if (opp.dealId) {
+          const match = opp.dealId.match(/^DEAL-(\d+)$/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNumber) {
+              maxNumber = num;
+            }
+          }
+        }
+      }
+
+      // Generate next number with timestamp suffix for uniqueness
+      const nextNumber = maxNumber + 1;
+      const timestamp = Date.now().toString().slice(-4); // Last 4 digits of timestamp
+
+      // Try simple increment first
+      let candidateDealId = `DEAL-${String(nextNumber).padStart(4, '0')}`;
+
+      // Check if exists
+      const exists = await mongoose.model('Opportunity')
+        .findOne({ tenant: this.tenant, dealId: candidateDealId })
+        .lean();
+
+      if (exists) {
+        // If duplicate, use timestamp-based unique ID
+        candidateDealId = `DEAL-${String(nextNumber).padStart(4, '0')}-${timestamp}`;
+      }
+
+      this.dealId = candidateDealId;
+    } catch (err) {
+      console.error('Error generating dealId:', err);
+      // Fallback: use timestamp-based unique ID
+      const timestamp = Date.now();
+      this.dealId = `DEAL-${timestamp}`;
+    }
   }
+
   if (this.amount && this.probability) {
     this.expectedRevenue = (this.amount * this.probability) / 100;
   }

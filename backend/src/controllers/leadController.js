@@ -897,23 +897,74 @@ const convertLead = async (req, res) => {
       lead.convertedContact = contact._id;
     }
 
-    // Create Opportunity
+    // Create Opportunity with explicit unique dealId generation
     if (createOpportunity && opportunityData) {
       const defaultCloseDate = new Date();
       defaultCloseDate.setDate(defaultCloseDate.getDate() + 30); // 30 days from now
 
-      opportunity = await Opportunity.create({
-        ...opportunityData,
-        closeDate: opportunityData.closeDate || defaultCloseDate,
-        account: account ? account._id : (opportunityData.account || null),
-        contact: contact ? contact._id : null,
-        lead: lead._id,
-        owner: req.user._id,
+      // Generate unique dealId at controller level
+      const existingOpps = await Opportunity.find({
         tenant: lead.tenant,
-        createdBy: req.user._id,
-        lastModifiedBy: req.user._id
-      });
-      lead.convertedOpportunity = opportunity._id;
+        dealId: { $regex: /^DEAL-\d+/ }
+      })
+      .select('dealId')
+      .lean();
+
+      let maxNumber = 0;
+      for (const opp of existingOpps) {
+        if (opp.dealId) {
+          const match = opp.dealId.match(/^DEAL-(\d+)/);
+          if (match) {
+            const num = parseInt(match[1], 10);
+            if (num > maxNumber) {
+              maxNumber = num;
+            }
+          }
+        }
+      }
+
+      const uniqueDealId = `DEAL-${String(maxNumber + 1).padStart(4, '0')}`;
+
+      const maxRetries = 5;
+      let retryCount = 0;
+      let opportunityCreated = false;
+
+      while (!opportunityCreated && retryCount < maxRetries) {
+        try {
+          // Add timestamp suffix on retries to ensure uniqueness
+          const dealIdToUse = retryCount === 0
+            ? uniqueDealId
+            : `DEAL-${String(maxNumber + 1).padStart(4, '0')}-${Date.now().toString().slice(-6)}`;
+
+          opportunity = await Opportunity.create({
+            ...opportunityData,
+            dealId: dealIdToUse, // Explicitly pass dealId
+            closeDate: opportunityData.closeDate || defaultCloseDate,
+            account: account ? account._id : (opportunityData.account || null),
+            contact: contact ? contact._id : null,
+            lead: lead._id,
+            owner: req.user._id,
+            tenant: lead.tenant,
+            createdBy: req.user._id,
+            lastModifiedBy: req.user._id
+          });
+          lead.convertedOpportunity = opportunity._id;
+          opportunityCreated = true;
+        } catch (err) {
+          // Check if it's a duplicate dealId error
+          if (err.code === 11000 && err.keyPattern && err.keyPattern.dealId) {
+            retryCount++;
+            if (retryCount >= maxRetries) {
+              throw new Error('Failed to create opportunity: duplicate dealId after multiple retries');
+            }
+            // Small delay before retry
+            await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 100));
+          } else {
+            // Other error, throw immediately
+            throw err;
+          }
+        }
+      }
     }
 
     // Mark lead as converted

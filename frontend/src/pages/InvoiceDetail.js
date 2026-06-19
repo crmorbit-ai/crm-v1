@@ -161,35 +161,33 @@ const InvoiceDetail = () => {
             <button onClick={handleSendEmail} disabled={actionLoading} style={styles.sendBtn}>
               📧 Send Email
             </button>
-            <button onClick={handleGeneratePaymentLink} disabled={linkLoading} style={styles.paymentBtn}>
-              💳 {linkLoading ? 'Generating...' : 'Payment Link'}
-            </button>
           </div>
         </div>
 
-        {/* Payment Link Display */}
-        {(paymentLink || invoice.razorpayPaymentLinkUrl) && (
-          <div style={styles.paymentLinkCard}>
-            <span style={styles.paymentLinkLabel}>💳 Payment Link:</span>
-            <a
-              href={paymentLink || invoice.razorpayPaymentLinkUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={styles.paymentLinkUrl}
-            >
-              {paymentLink || invoice.razorpayPaymentLinkUrl}
-            </a>
-          </div>
-        )}
 
         <div style={styles.content}>
           {/* Left Column */}
           <div style={styles.leftColumn}>
-            {/* Customer Info Card */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardIcon}>👤</span>
-                <h3 style={styles.cardTitle}>Customer Information</h3>
+            {/* Premium Customer Info Card - Compact */}
+            <div style={{...styles.card, border: 'none', overflow: 'hidden'}}>
+              <div style={{
+                background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)',
+                padding: '12px 20px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>👤</div>
+                  <h3 style={{ margin: 0, color: 'white', fontSize: '15px', fontWeight: '700' }}>Customer Information</h3>
+                </div>
               </div>
               <div style={styles.cardBody}>
                 <div style={styles.infoRow}>
@@ -204,9 +202,11 @@ const InvoiceDetail = () => {
                   <span style={styles.label}>Phone</span>
                   <span style={styles.value}>{invoice.customerPhone || '-'}</span>
                 </div>
-                <div style={styles.infoRow}>
+                <div style={{...styles.infoRow, alignItems: 'flex-start'}}>
                   <span style={styles.label}>Address</span>
-                  <span style={styles.value}>{invoice.customerAddress || '-'}</span>
+                  <span style={{...styles.value, maxWidth: '65%', whiteSpace: 'normal', wordBreak: 'break-word'}}>
+                    {invoice.customerAddress || '-'}
+                  </span>
                 </div>
                 {invoice.customerGstin && (
                   <div style={styles.infoRow}>
@@ -217,11 +217,26 @@ const InvoiceDetail = () => {
               </div>
             </div>
 
-            {/* Items Card */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardIcon}>📦</span>
-                <h3 style={styles.cardTitle}>Items</h3>
+            {/* Premium Items Card - Compact */}
+            <div style={{...styles.card, border: 'none', overflow: 'hidden'}}>
+              <div style={{
+                background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+                padding: '12px 20px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>📦</div>
+                  <h3 style={{ margin: 0, color: 'white', fontSize: '15px', fontWeight: '700' }}>Items</h3>
+                </div>
               </div>
               <div style={styles.tableWrapper}>
                 <table style={styles.table}>
@@ -261,11 +276,26 @@ const InvoiceDetail = () => {
 
           {/* Right Column */}
           <div style={styles.rightColumn}>
-            {/* Invoice Info Card */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardIcon}>📋</span>
-                <h3 style={styles.cardTitle}>Invoice Information</h3>
+            {/* Premium Invoice Info Card - Compact */}
+            <div style={{...styles.card, border: 'none', overflow: 'hidden'}}>
+              <div style={{
+                background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+                padding: '12px 20px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>📋</div>
+                  <h3 style={{ margin: 0, color: 'white', fontSize: '15px', fontWeight: '700' }}>Invoice Information</h3>
+                </div>
               </div>
               <div style={styles.cardBody}>
                 <div style={styles.infoRow}>
@@ -295,11 +325,26 @@ const InvoiceDetail = () => {
               </div>
             </div>
 
-            {/* Amount Summary Card */}
-            <div style={styles.card}>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardIcon}>💰</span>
-                <h3 style={styles.cardTitle}>Amount Summary</h3>
+            {/* Premium Amount Summary Card - Compact */}
+            <div style={{...styles.card, border: 'none', overflow: 'hidden'}}>
+              <div style={{
+                background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                padding: '12px 20px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '8px',
+                    background: 'rgba(255, 255, 255, 0.2)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '16px'
+                  }}>💰</div>
+                  <h3 style={{ margin: 0, color: 'white', fontSize: '15px', fontWeight: '700' }}>Amount Summary</h3>
+                </div>
               </div>
               <div style={styles.cardBody}>
                 <div style={styles.summaryRow}>
@@ -374,10 +419,11 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: '24px',
-    padding: '24px',
-    background: '#ffffff',
-    borderRadius: '12px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
+    padding: '24px 28px',
+    background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
+    borderRadius: '16px',
+    boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+    border: '1px solid rgba(226, 232, 240, 0.8)'
   },
   headerLeft: {
     display: 'flex',
@@ -431,31 +477,37 @@ const styles = {
     padding: '10px 20px',
     background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '10px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    color: '#ffffff'
+    color: '#ffffff',
+    boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)',
+    transition: 'all 0.2s'
   },
   sendBtn: {
     padding: '10px 20px',
     background: 'linear-gradient(135deg, #10b981, #059669)',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '10px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    color: '#ffffff'
+    color: '#ffffff',
+    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
+    transition: 'all 0.2s'
   },
   paymentBtn: {
     padding: '10px 20px',
     background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
     border: 'none',
-    borderRadius: '8px',
+    borderRadius: '10px',
     cursor: 'pointer',
     fontSize: '14px',
     fontWeight: '600',
-    color: '#ffffff'
+    color: '#ffffff',
+    boxShadow: '0 4px 12px rgba(139, 92, 246, 0.25)',
+    transition: 'all 0.2s'
   },
   paymentLinkCard: {
     padding: '16px 24px',
@@ -497,9 +549,10 @@ const styles = {
   },
   card: {
     background: '#ffffff',
-    borderRadius: '12px',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    overflow: 'hidden'
+    borderRadius: '16px',
+    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.06)',
+    overflow: 'hidden',
+    border: '1px solid rgba(226, 232, 240, 0.8)'
   },
   cardHeader: {
     display: 'flex',

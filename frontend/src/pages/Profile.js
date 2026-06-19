@@ -49,6 +49,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const { user: authUser, updateUser, setUser: setAuthUser } = useAuth();
   const logoInputRef = useRef(null);
+  const invoiceLogoInputRef = useRef(null);
 
   // State
   const [loading, setLoading] = useState(true);
@@ -79,12 +80,16 @@ const Profile = () => {
     numberOfEmployees: '', foundedYear: '', gstin: '', panNumber: '', taxId: '', registrationNumber: '',
     socialMedia: { linkedin: '', twitter: '', facebook: '', instagram: '' },
     headquarters: { street: '', city: '', state: '', country: '', zipCode: '' },
-    keyContact: { name: '', designation: '', email: '', phone: '' }
+    keyContact: { name: '', designation: '', email: '', phone: '' },
+    bankDetails: { bankName: '', accountNumber: '', ifscCode: '', accountType: 'Current', upiId: '' }
   });
   const [savingOrg, setSavingOrg] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingInvoiceLogo, setUploadingInvoiceLogo] = useState(false);
+  const [uploadingSignature, setUploadingSignature] = useState(false);
   const [verifyingGST, setVerifyingGST] = useState(false);
   const [gstVerifyMessage, setGstVerifyMessage] = useState(null);
+  const signatureInputRef = useRef(null);
 
   // Notification preferences
   const [notifPrefs, setNotifPrefs] = useState({
@@ -308,7 +313,8 @@ const Profile = () => {
     gstin: t.gstin || '', panNumber: t.panNumber || '', taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
     socialMedia: { linkedin: t.socialMedia?.linkedin || '', twitter: t.socialMedia?.twitter || '', facebook: t.socialMedia?.facebook || '', instagram: t.socialMedia?.instagram || '' },
     headquarters: { street: t.headquarters?.street || '', city: t.headquarters?.city || '', state: t.headquarters?.state || '', country: t.headquarters?.country || '', zipCode: t.headquarters?.zipCode || '' },
-    keyContact: { name: t.keyContact?.name || '', designation: t.keyContact?.designation || '', email: t.keyContact?.email || '', phone: t.keyContact?.phone || '' }
+    keyContact: { name: t.keyContact?.name || '', designation: t.keyContact?.designation || '', email: t.keyContact?.email || '', phone: t.keyContact?.phone || '' },
+    bankDetails: { bankName: t.bankDetails?.bankName || '', accountNumber: t.bankDetails?.accountNumber || '', ifscCode: t.bankDetails?.ifscCode || '', accountType: t.bankDetails?.accountType || 'Current', upiId: t.bankDetails?.upiId || '' }
   });
 
   const handleOrgEditToggle = () => {
@@ -430,6 +436,58 @@ const Profile = () => {
       setEditedOrg(prev => ({ ...prev, _logoPreview: null }));
     } finally {
       setUploadingLogo(false);
+    }
+  };
+
+  const handleSignatureUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('Please upload an image file'); return; }
+    if (file.size > 2 * 1024 * 1024) { alert('Image size should be less than 2MB'); return; }
+
+    try {
+      setUploadingSignature(true);
+      const formData = new FormData();
+      formData.append('signature', file);
+
+      const response = await axios.post(`${API_URL}/profile/upload-signature`, formData, {
+        headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+      });
+
+      const savedSignaturePath = response.data?.data?.signature || response.data?.signature;
+      setTenant(prev => ({ ...prev, signature: savedSignaturePath }));
+      showToast('Signature uploaded successfully!');
+    } catch (err) {
+      console.error('Signature upload error:', err);
+      alert(err.response?.data?.message || 'Error uploading signature');
+    } finally {
+      setUploadingSignature(false);
+    }
+  };
+
+  const handleInvoiceLogoUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { alert('Please upload an image file'); return; }
+    if (file.size > 5 * 1024 * 1024) { alert('Image size should be less than 5MB'); return; }
+
+    try {
+      setUploadingInvoiceLogo(true);
+      const formData = new FormData();
+      formData.append('invoiceLogo', file);
+
+      const response = await axios.post(`${API_URL}/profile/upload-invoice-logo`, formData, {
+        headers: { ...getAuthHeaders(), 'Content-Type': 'multipart/form-data' }
+      });
+
+      const savedInvoiceLogoPath = response.data?.data?.invoiceLogo || response.data?.invoiceLogo;
+      setTenant(prev => ({ ...prev, invoiceLogo: savedInvoiceLogoPath }));
+      showToast('Invoice logo uploaded successfully!');
+    } catch (err) {
+      console.error('Invoice logo upload error:', err);
+      alert(err.response?.data?.message || 'Error uploading invoice logo');
+    } finally {
+      setUploadingInvoiceLogo(false);
     }
   };
 
@@ -806,76 +864,6 @@ const Profile = () => {
               </div>
             </div>
 
-            {/* Contact Address Section in Personal Info */}
-            {tenant && (
-              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '2px solid #e5e7eb' }}>
-                <h4 style={{ fontSize: '15px', fontWeight: '600', color: '#374151', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  Contact Address
-                </h4>
-                <div className="profile-grid-2">
-                  <div style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
-                    <label style={styles.label}>Street Address</label>
-                    <input type="text" name="headquarters.street" value={isEditing ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onChange={handleOrgInputChange} disabled={!isEditing} placeholder="Street address" maxLength={255} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>Country</label>
-                    <select name="headquarters.country" value={isEditing ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditing} style={{ ...styles.select, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
-                      <option value="">Select Country...</option>
-                      {getCountries().map(country => (
-                        <option key={country.isoCode} value={country.isoCode}>
-                          {country.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>State / Province</label>
-                    {(() => {
-                      const selectedCountry = isEditing ? editedOrg.headquarters.country : tenant.headquarters?.country;
-                      const states = getStates(selectedCountry);
-
-                      if (states.length > 0) {
-                        return (
-                          <select name="headquarters.state" value={isEditing ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditing} style={{ ...styles.select, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
-                            <option value="">Select State...</option>
-                            {states.map(state => (
-                              <option key={state.isoCode} value={state.isoCode}>{state.name}</option>
-                            ))}
-                          </select>
-                        );
-                      } else {
-                        return <input type="text" name="headquarters.state" value={isEditing ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditing} placeholder="Enter state/province" maxLength={50} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />;
-                      }
-                    })()}
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>City</label>
-                    {(() => {
-                      const selectedCountry = isEditing ? editedOrg.headquarters.country : tenant.headquarters?.country;
-                      const selectedState = isEditing ? editedOrg.headquarters.state : tenant.headquarters?.state;
-                      const cities = getCities(selectedCountry, selectedState);
-
-                      if (cities.length > 0) {
-                        return (
-                          <select name="headquarters.city" value={isEditing ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditing} style={{ ...styles.select, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
-                            <option value="">Select City...</option>
-                            {cities.map(city => (
-                              <option key={city.name} value={city.name}>{city.name}</option>
-                            ))}
-                          </select>
-                        );
-                      } else {
-                        return <input type="text" name="headquarters.city" value={isEditing ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditing} placeholder="Enter city name" maxLength={100} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />;
-                      }
-                    })()}
-                  </div>
-                  <div style={styles.formGroup}>
-                    <label style={styles.label}>ZIP / Postal Code</label>
-                    <input type="text" name="headquarters.zipCode" value={isEditing ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onChange={handleOrgInputChange} disabled={!isEditing} maxLength={10} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />
-                  </div>
-                </div>
-              </div>
-            )}
             <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f3f4f6' }}>
               <div className="profile-grid-3">
                 <div style={styles.sideInfo}><span style={{ color: '#6b7280' }}>Status</span><span style={{ ...styles.badge, ...(user.isActive ? styles.badgeSuccess : styles.badgeWarning) }}>{user.isActive ? 'Active' : 'Inactive'}</span></div>
@@ -973,6 +961,15 @@ const Profile = () => {
                 <label style={styles.label}>Founded Year</label>
                 <input type="number" name="foundedYear" value={isEditingOrg ? editedOrg.foundedYear : (tenant.foundedYear || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., 2020" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #06b6d4' }} />
               </div>
+            </div>
+
+            {/* Business & Tax Information Section */}
+            {tenant && (
+              <div style={{ marginTop: '24px', paddingTop: '20px', borderTop: '2px solid #e5e7eb' }}>
+                <h4 style={{ fontSize: '15px', fontWeight: '600', color: '#374151', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  🏢 Business & Tax Information
+                </h4>
+                <div className="profile-grid-2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>Company GSTIN <span style={{ color: '#10b981', fontSize: '11px' }}>(GST Number)</span></label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
@@ -1044,7 +1041,192 @@ const Profile = () => {
                 <label style={styles.label}>Registration Number</label>
                 <input type="text" name="registrationNumber" value={isEditingOrg ? editedOrg.registrationNumber : (tenant.registrationNumber || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Company registration" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #a855f7' }} />
               </div>
-            </div>
+
+                  {/* Registered Address */}
+                  <div style={{ ...styles.formGroup, gridColumn: 'span 2', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+                    <h5 style={{ fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>📍 Registered Address</h5>
+                  </div>
+
+                  <div style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
+                    <label style={styles.label}>Street Address</label>
+                    <input type="text" name="headquarters.street" value={isEditingOrg ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Street address" maxLength={255} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Country</label>
+                    <select name="headquarters.country" value={isEditingOrg ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
+                      <option value="">Select Country...</option>
+                      {getCountries().map(country => (
+                        <option key={country.isoCode} value={country.isoCode}>
+                          {country.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>State / Province</label>
+                    {(() => {
+                      const selectedCountry = isEditingOrg ? editedOrg.headquarters.country : tenant.headquarters?.country;
+                      const states = getStates(selectedCountry);
+
+                      if (states.length > 0) {
+                        return (
+                          <select name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
+                            <option value="">Select State...</option>
+                            {states.map(state => (
+                              <option key={state.isoCode} value={state.isoCode}>{state.name}</option>
+                            ))}
+                          </select>
+                        );
+                      } else {
+                        return <input type="text" name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Enter state/province" maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />;
+                      }
+                    })()}
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>City</label>
+                    {(() => {
+                      const selectedCountry = isEditingOrg ? editedOrg.headquarters.country : tenant.headquarters?.country;
+                      const selectedState = isEditingOrg ? editedOrg.headquarters.state : tenant.headquarters?.state;
+                      const cities = getCities(selectedCountry, selectedState);
+
+                      if (cities.length > 0) {
+                        return (
+                          <select name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
+                            <option value="">Select City...</option>
+                            {cities.map(city => (
+                              <option key={city.name} value={city.name}>{city.name}</option>
+                            ))}
+                          </select>
+                        );
+                      } else {
+                        return <input type="text" name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Enter city name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />;
+                      }
+                    })()}
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>ZIP / Postal Code</label>
+                    <input type="text" name="headquarters.zipCode" value={isEditingOrg ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={10} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Payment & Bank Details Section */}
+            {(activeTab === 'organization' && tenant && user.userType === 'TENANT_ADMIN') && (
+              <div style={{ background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', padding: '20px 24px', marginBottom: '16px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '16px' }}>💳</span>
+                  <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1f2937' }}>Payment & Bank Details</h3>
+                  <span style={{ marginLeft: 'auto', fontSize: '11px', color: '#6b7280', background: '#f3f4f6', padding: '4px 10px', borderRadius: '6px', fontWeight: '600' }}>For Invoice QR Code</span>
+                </div>
+
+                <div className="profile-grid-2">
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Bank Name</label>
+                    <input type="text" name="bankDetails.bankName" value={isEditingOrg ? editedOrg.bankDetails.bankName : (tenant.bankDetails?.bankName || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="HDFC Bank" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Account Number</label>
+                    <input type="text" name="bankDetails.accountNumber" value={isEditingOrg ? editedOrg.bankDetails.accountNumber : (tenant.bankDetails?.accountNumber || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="1234567890" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>IFSC Code</label>
+                    <input type="text" name="bankDetails.ifscCode" value={isEditingOrg ? editedOrg.bankDetails.ifscCode : (tenant.bankDetails?.ifscCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="HDFC0001234" maxLength={11} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981', textTransform: 'uppercase' }} />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Account Type</label>
+                    <select name="bankDetails.accountType" value={isEditingOrg ? editedOrg.bankDetails.accountType : (tenant.bankDetails?.accountType || 'Current')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981', cursor: isEditingOrg ? 'pointer' : 'not-allowed' }}>
+                      <option value="Current">Current</option>
+                      <option value="Savings">Savings</option>
+                    </select>
+                  </div>
+                  <div style={{ ...styles.formGroup, gridColumn: 'span 2' }} className="span-2-col">
+                    <label style={styles.label}>
+                      UPI ID <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '600', marginLeft: '6px' }}>(QR Code will be generated)</span>
+                    </label>
+                    <input type="text" name="bankDetails.upiId" value={isEditingOrg ? editedOrg.bankDetails.upiId : (tenant.bankDetails?.upiId || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="company@paytm" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
+                    {(tenant.bankDetails?.upiId || editedOrg.bankDetails.upiId) && (
+                      <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#059669', fontWeight: '500' }}>✓ UPI QR code will appear on invoice PDFs for easy payment</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Signature & Invoice Logo Section - Side by Side */}
+            {(activeTab === 'organization' && tenant && user.userType === 'TENANT_ADMIN') && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+
+                {/* Signature Upload */}
+                <div style={{ background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', padding: '20px 24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '16px' }}>🖊️</span>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1f2937' }}>Authorized Signature</h3>
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    {tenant.signature ? (
+                      <div style={{ position: 'relative', width: '100%', height: '80px', border: '2px dashed #d1d5db', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#f9fafb' }}>
+                        <img src={tenant.signature} alt="Signature" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                      </div>
+                    ) : (
+                      <div style={{ width: '100%', height: '80px', border: '2px dashed #d1d5db', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', color: '#9ca3af', fontSize: '13px' }}>
+                        No signature uploaded
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => signatureInputRef.current?.click()}
+                    disabled={uploadingSignature}
+                    style={{ width: '100%', padding: '10px 20px', background: uploadingSignature ? '#9ca3af' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: uploadingSignature ? 'not-allowed' : 'pointer' }}
+                  >
+                    {uploadingSignature ? 'Uploading...' : tenant.signature ? 'Change Signature' : 'Upload Signature'}
+                  </button>
+                  <input ref={signatureInputRef} type="file" accept="image/*" onChange={handleSignatureUpload} style={{ display: 'none' }} />
+                  <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#6b7280', textAlign: 'center' }}>
+                    Transparent PNG, 400x150px
+                  </p>
+                </div>
+
+                {/* Invoice Logo Upload */}
+                <div style={{ background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', padding: '20px 24px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '16px' }}>🏢</span>
+                    <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1f2937' }}>Invoice Logo</h3>
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    {tenant?.invoiceLogo ? (
+                      <div style={{ position: 'relative', width: '100%', height: '80px', border: '2px dashed #d1d5db', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden', background: '#f9fafb' }}>
+                        <img
+                          src={tenant.invoiceLogo}
+                          alt="Invoice Logo"
+                          style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                        />
+                      </div>
+                    ) : (
+                      <div style={{ width: '100%', height: '80px', border: '2px dashed #d1d5db', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f9fafb', color: '#9ca3af', fontSize: '13px' }}>
+                        No logo uploaded
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => invoiceLogoInputRef.current?.click()}
+                    disabled={uploadingInvoiceLogo}
+                    style={{ width: '100%', padding: '10px 20px', background: uploadingInvoiceLogo ? '#9ca3af' : '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: uploadingInvoiceLogo ? 'not-allowed' : 'pointer' }}
+                  >
+                    {uploadingInvoiceLogo ? 'Uploading...' : tenant?.invoiceLogo ? 'Change Logo' : 'Upload Logo'}
+                  </button>
+                  <input ref={invoiceLogoInputRef} type="file" accept="image/*" onChange={handleInvoiceLogoUpload} style={{ display: 'none' }} />
+                  <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#6b7280', textAlign: 'center' }}>
+                    PNG/JPG, 300x120px (appears in PDF)
+                  </p>
+                </div>
+
+              </div>
+            )}
           </div>
         )}
 

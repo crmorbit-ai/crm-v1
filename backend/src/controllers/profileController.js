@@ -32,7 +32,7 @@ const getProfile = async (req, res) => {
   try {
     // Get user with populated tenant and roles
     const user = await User.findById(req.user._id)
-      .populate('tenant', 'organizationId organizationName contactEmail contactPhone alternatePhone logo industry businessType subscription settings legalName website socialMedia numberOfEmployees foundedYear taxId registrationNumber headquarters keyContact')
+      .populate('tenant', 'organizationId organizationName contactEmail contactPhone alternatePhone logo invoiceLogo signature industry businessType subscription settings legalName website socialMedia numberOfEmployees foundedYear gstin panNumber taxId registrationNumber headquarters keyContact bankDetails')
       .populate('roles', 'name description')
       .populate('groups', 'name description')
       .select('-password -emailVerificationOTP -emailVerificationOTPExpire -resetPasswordOTP -resetPasswordOTPExpire');
@@ -99,7 +99,7 @@ const updateProfile = async (req, res) => {
 
     // Get updated user with populated data
     const updatedUser = await User.findById(user._id)
-      .populate('tenant', 'organizationId organizationName contactEmail contactPhone logo industry businessType')
+      .populate('tenant', 'organizationId organizationName contactEmail contactPhone logo invoiceLogo signature industry businessType')
       .populate('roles', 'name description')
       .select('-password -emailVerificationOTP -emailVerificationOTPExpire -resetPasswordOTP -resetPasswordOTPExpire');
 
@@ -234,10 +234,13 @@ const updateOrganization = async (req, res) => {
       socialMedia,
       numberOfEmployees,
       foundedYear,
+      gstin,
+      panNumber,
       taxId,
       registrationNumber,
       headquarters,
-      keyContact
+      keyContact,
+      bankDetails
     } = req.body;
 
     // Check if user has a tenant
@@ -273,9 +276,12 @@ const updateOrganization = async (req, res) => {
     // Update new fields
     if (legalName !== undefined) tenant.legalName = legalName;
     if (logo !== undefined) tenant.logo = logo;
+    if (req.body.signature !== undefined) tenant.signature = req.body.signature;
     if (website !== undefined) tenant.website = website;
     if (numberOfEmployees !== undefined) tenant.numberOfEmployees = numberOfEmployees;
     if (foundedYear !== undefined) tenant.foundedYear = foundedYear;
+    if (gstin !== undefined) tenant.gstin = gstin;
+    if (panNumber !== undefined) tenant.panNumber = panNumber;
     if (taxId !== undefined) tenant.taxId = taxId;
     if (registrationNumber !== undefined) tenant.registrationNumber = registrationNumber;
 
@@ -307,6 +313,17 @@ const updateOrganization = async (req, res) => {
         designation: kc('designation'),
         email:       kc('email'),
         phone:       kc('phone'),
+      };
+    }
+
+    if (bankDetails) {
+      const bd = (k) => bankDetails[k] !== undefined ? bankDetails[k] : (tenant.bankDetails?.[k] || '');
+      tenant.bankDetails = {
+        bankName:       bd('bankName'),
+        accountNumber:  bd('accountNumber'),
+        ifscCode:       bd('ifscCode'),
+        accountType:    bd('accountType'),
+        upiId:          bd('upiId'),
       };
     }
 
@@ -396,11 +413,102 @@ const uploadLogo = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Upload organization signature
+ * @route   POST /api/profile/upload-signature
+ * @access  Private (TENANT_ADMIN only)
+ */
+const uploadSignature = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    if (!req.user.tenant) {
+      return errorResponse(res, 'No organization associated with this user', 400);
+    }
+
+    const tenant = await Tenant.findById(req.user.tenant);
+    if (!tenant) {
+      return errorResponse(res, 'Organization not found', 404);
+    }
+
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(
+      req.file.buffer,
+      req.file.mimetype,
+      'crm/signatures',
+      `tenant-${req.user.tenant}-signature`
+    );
+
+    tenant.signature = result.secure_url;
+    await tenant.save();
+
+    await logActivity({
+      user: req.user._id,
+      tenant: req.user.tenant,
+      action: 'organization.signature_upload',
+      entity: 'Tenant',
+      entityId: tenant._id,
+      description: 'Organization signature updated'
+    });
+
+    return successResponse(res, { signature: result.secure_url }, 'Signature updated successfully');
+  } catch (error) {
+    console.error('Upload signature error:', error);
+    return errorResponse(res, 'Error uploading signature', 500);
+  }
+};
+
+const uploadInvoiceLogo = async (req, res) => {
+  try {
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    if (!req.user.tenant) {
+      return errorResponse(res, 'No organization associated with this user', 400);
+    }
+
+    const tenant = await Tenant.findById(req.user.tenant);
+    if (!tenant) {
+      return errorResponse(res, 'Organization not found', 404);
+    }
+
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(
+      req.file.buffer,
+      req.file.mimetype,
+      'crm/invoice-logos',
+      `tenant-${req.user.tenant}-invoice-logo`
+    );
+
+    tenant.invoiceLogo = result.secure_url;
+    await tenant.save();
+
+    await logActivity({
+      user: req.user._id,
+      tenant: req.user.tenant,
+      action: 'organization.invoice_logo_upload',
+      entity: 'Tenant',
+      entityId: tenant._id,
+      description: 'Invoice logo updated'
+    });
+
+    return successResponse(res, { invoiceLogo: result.secure_url }, 'Invoice logo updated successfully');
+  } catch (error) {
+    console.error('Upload invoice logo error:', error);
+    return errorResponse(res, 'Error uploading invoice logo', 500);
+  }
+};
+
 module.exports = {
   getProfile,
   updateProfile,
   updatePassword,
   uploadProfilePicture,
   updateOrganization,
-  uploadLogo
+  uploadLogo,
+  uploadSignature,
+  uploadInvoiceLogo
 };

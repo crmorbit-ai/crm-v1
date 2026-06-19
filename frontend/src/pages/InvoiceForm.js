@@ -25,7 +25,6 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   const [validationErrors, setValidationErrors] = useState({});
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [customerType, setCustomerType] = useState('Lead');
   const [wizardStep, setWizardStep] = useState(0);
   const [invoiceTemplates, setInvoiceTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
@@ -39,6 +38,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
     customerAddress: '',
     shippingAddress: '',
     customerGstin: '',
+    customerPan: '',
     customerState: '',
     customerStateCode: '',
     placeOfSupply: '',
@@ -64,8 +64,6 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
     }
   }, [id, isEdit]);
 
-  useEffect(() => { fetchCustomers(); }, [customerType]);
-
   const fetchProducts = async () => {
     try {
       const response = await productItemService.getProductItems();
@@ -75,17 +73,10 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
 
   const fetchCustomers = async () => {
     try {
-      const endpoint = customerType === 'Lead' ? '/leads' : customerType === 'Contact' ? '/contacts' : '/accounts';
-      const response = await fetch(`${API_URL}${endpoint}?limit=1000`, { headers: getAuthHeaders() });
+      const response = await fetch(`${API_URL}/data-center?limit=1000`, { headers: getAuthHeaders() });
       if (!response.ok) throw new Error('Failed to fetch customers');
       const data = await response.json();
-      let customerList = [];
-      if (data?.data) {
-        if (customerType === 'Lead' && Array.isArray(data.data.leads)) customerList = data.data.leads;
-        else if (customerType === 'Contact' && Array.isArray(data.data.contacts)) customerList = data.data.contacts;
-        else if (customerType === 'Account' && Array.isArray(data.data.accounts)) customerList = data.data.accounts;
-      }
-
+      const customerList = data?.data?.candidates || data?.data || [];
       setCustomers(customerList);
     } catch (err) { console.error('Failed to fetch customers:', err); setCustomers([]); }
   };
@@ -93,26 +84,25 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
   const handleCustomerSelect = (customerId) => {
     const customer = customers.find(c => c._id === customerId);
     if (customer) {
-      // Handle different customer types
-      let customerName = '';
-      if (customerType === 'Account') {
-        customerName = customer.accountName || customer.name || '';
-      } else if (customerType === 'Lead') {
-        // Lead has customerName field directly
-        customerName = customer.customerName || '';
-      } else {
-        // Contact
-        customerName = `${customer.firstName || ''} ${customer.lastName || ''}`.trim() || customer.name || '';
-      }
+      // DataCenter customer - flexible fields (customerName is the main field)
+      const customerName = customer.customerName || customer.name || customer.fullName || customer.firstName || '';
+      const address = customer.address || customer.billingAddress || '';
+      const gstin = customer.gstin || customer.gstNumber || '';
+      const pan = customer.pan || customer.panNumber || (gstin && gstin.length === 15 ? gstin.substring(2, 12) : '');
+      const state = customer.state || customer.billingState || '';
 
       setFormData(prev => ({
         ...prev,
         customer: customerId,
-        customerModel: customerType,
+        customerModel: 'DataCenterCandidate',
         customerName,
-        customerEmail: customer.email,
-        customerPhone: customer.phone || customer.mobile || '',
-        customerAddress: customer.address || customer.billingAddress || ''
+        customerEmail: customer.email || '',
+        customerPhone: customer.phone || customer.mobile || customer.contactNumber || '',
+        customerAddress: address,
+        customerGstin: gstin,
+        customerPan: pan,
+        customerState: state,
+        customerStateCode: customer.stateCode || ''
       }));
       // Clear validation errors when customer is selected
       setValidationErrors(prev => ({
@@ -349,7 +339,7 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
       switch (wizardStep) {
         case 0: return (
           <div style={{ display: 'grid', gap: '14px' }}>
-      <style>{`
+            <style>{`
   /* ── RESPONSIVE ────────────────── */
   @media(max-width:768px){
     .invoicef-grid4,.invoicef-grid3{grid-template-columns:repeat(2,1fr)!important;}
@@ -393,34 +383,31 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
               </div>
             )}
             <div>
-              <label style={ls}>Customer Type</label>
-              <div className="resp-form-grid-3">
-                {['Lead', 'Contact', 'Account'].map(t => (
-                  <button key={t} type="button" onClick={() => setCustomerType(t)}
-                    style={{ padding: '10px', borderRadius: '8px', border: customerType === t ? '2px solid #4361ee' : '2px solid #e0e0e0', background: customerType === t ? '#e8f0fe' : 'white', color: customerType === t ? '#4361ee' : '#666', fontWeight: customerType === t ? '600' : '400', cursor: 'pointer', fontSize: '13px' }}>
-                    {t}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div>
               <label style={ls}>Select Customer (Optional)</label>
               <select style={is} onChange={e => handleCustomerSelect(e.target.value)} value={formData.customer || ''}>
-                <option value="">-- Select {customerType} to auto-fill --</option>
+                <option value="">-- Select Customer from Master Database --</option>
                 {customers.map(c => {
-                  let name = '';
-                  if (customerType === 'Account') {
-                    name = c.accountName || c.name || c.email || 'Unknown';
-                  } else if (customerType === 'Lead') {
-                    name = c.customerName || c.email || 'Lead';
-                  } else {
-                    name = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || c.email || 'Contact';
-                  }
-                  return <option key={c._id} value={c._id}>{name} - {c.email}</option>;
+                  const name = c.customerName || c.name || c.fullName || c.firstName || c.email || 'Customer';
+                  const displayText = c.email ? `${name} - ${c.email}` : name;
+                  return <option key={c._id} value={c._id}>{displayText}</option>;
                 })}
               </select>
-              <div style={{fontSize:'10px',color:'#64748b',marginTop:'3px'}}>💡 Select to auto-fill customer details or enter manually below</div>
+              <div style={{fontSize:'10px',color:'#64748b',marginTop:'3px'}}>💡 Select customer from Master Database to auto-fill details including GST</div>
             </div>
+
+            {/* TEMPORARY TEST - GST FIELD HERE */}
+            <div style={{ padding: '12px', background: '#ffeb3b', border: '2px solid red' }}>
+              <label style={ls}>🔥 TEST GST Field (If you see this, code is working!)</label>
+              <input
+                type="text"
+                name="customerGstin"
+                value={formData.customerGstin || ''}
+                onChange={handleChange}
+                placeholder="Enter GST"
+                style={{ ...is, border: '2px solid red' }}
+              />
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={ls}>Customer Name *</label>
@@ -451,9 +438,10 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
               />
             </div>
 
-            {/* GST Details Section */}
+            {/* GST Details Section - DEBUG */}
             <div style={{ marginTop: '20px', padding: '16px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
               <h4 style={{ margin: '0 0 14px 0', fontSize: '14px', fontWeight: '600', color: '#334155' }}>🧾 GST Details (Optional)</h4>
+              <div style={{fontSize:'10px',color:'red',marginBottom:'8px'}}>DEBUG: GST section rendering - customerGstin = "{formData.customerGstin}"</div>
               <div style={{ display: 'grid', gap: '12px' }}>
                 <div>
                   <label style={ls}>Customer GSTIN <span style={{ color: '#10b981', fontSize: '11px' }}>(15 characters)</span></label>
@@ -729,43 +717,201 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
     <>
       {error && <div className="error-message" style={{ marginBottom: '20px' }}>{error}</div>}
       <form onSubmit={handleSubmit}>
-        <div className="crm-card" style={{ marginBottom: '20px', padding: '24px' }}>
-          <h3 style={{ marginBottom: '20px', marginTop: 0 }}>Customer Information</h3>
-          <div className="resp-form-grid-3" style={{marginBottom:'20px'}}>
-            {['Lead', 'Contact', 'Account'].map(t => (
-              <button key={t} type="button" onClick={() => setCustomerType(t)}
-                style={{ padding: '12px', borderRadius: '8px', border: customerType === t ? '2px solid #4361ee' : '2px solid #e0e0e0', backgroundColor: customerType === t ? '#e8f0fe' : 'white', color: customerType === t ? '#4361ee' : '#666', fontWeight: customerType === t ? '600' : '400', cursor: 'pointer' }}>
-                {t}
-              </button>
-            ))}
+        {/* Compact Card Header - Teal Gradient */}
+        <div className="crm-card" style={{
+          marginBottom: '18px',
+          padding: '0',
+          background: 'linear-gradient(135deg, #0d9488 0%, #14b8a6 100%)',
+          border: 'none',
+          boxShadow: '0 4px 16px rgba(13, 148, 136, 0.12)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ padding: '16px 20px', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>🧑</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px' }}>Customer Information</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '11px', opacity: 0.85 }}>Select or enter customer details for invoice</p>
+              </div>
+            </div>
           </div>
+        </div>
+
+        {/* Customer Details Card */}
+        <div className="crm-card" style={{
+          marginBottom: '20px',
+          padding: '28px',
+          background: 'white',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+          borderRadius: '16px'
+        }}>
           <div className="crm-form-group" style={{ marginBottom: '16px' }}>
             <label className="crm-form-label">Select Customer *</label>
             <select onChange={e => handleCustomerSelect(e.target.value)} className="crm-form-select" value={formData.customer || ''}>
-              <option value="">-- Select {customerType} --</option>
+              <option value="">-- Select Customer from Master Database --</option>
               {customers.map(c => {
-                let name = '';
-                if (customerType === 'Account') {
-                  name = c.accountName || c.name || c.email || 'Unknown';
-                } else if (customerType === 'Lead') {
-                  name = c.customerName || c.email || 'Lead';
-                } else {
-                  name = `${c.firstName || ''} ${c.lastName || ''}`.trim() || c.name || c.email || 'Contact';
-                }
-                return <option key={c._id} value={c._id}>{name} - {c.email}</option>;
+                const name = c.customerName || c.name || c.fullName || c.firstName || c.email || 'Customer';
+                const displayText = c.email ? `${name} - ${c.email}` : name;
+                return <option key={c._id} value={c._id}>{displayText}</option>;
               })}
             </select>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
-            <div className="crm-form-group"><label className="crm-form-label">Customer Name *</label><input type="text" name="customerName" value={formData.customerName} onChange={handleChange} required className="crm-form-input" readOnly style={{ backgroundColor: '#f5f5f5' }} /></div>
-            <div className="crm-form-group"><label className="crm-form-label">Customer Email *</label><input type="email" name="customerEmail" value={formData.customerEmail} onChange={handleChange} required className="crm-form-input" readOnly style={{ backgroundColor: '#f5f5f5' }} /></div>
-            <div className="crm-form-group"><label className="crm-form-label">Customer Phone</label><input type="text" name="customerPhone" value={formData.customerPhone} onChange={handleChange} className="crm-form-input" readOnly style={{ backgroundColor: '#f5f5f5' }} /></div>
-            <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}><label className="crm-form-label">Customer Address</label><textarea name="customerAddress" value={formData.customerAddress} onChange={handleChange} rows="2" className="crm-form-textarea" readOnly style={{ backgroundColor: '#f5f5f5' }} /></div>
+            <div className="crm-form-group"><label className="crm-form-label">Customer Name *</label><input type="text" name="customerName" value={formData.customerName} onChange={handleChange} required className="crm-form-input" placeholder="Customer name" /></div>
+            <div className="crm-form-group"><label className="crm-form-label">Customer Email *</label><input type="email" name="customerEmail" value={formData.customerEmail} onChange={handleChange} required className="crm-form-input" placeholder="customer@email.com" /></div>
+            <div className="crm-form-group"><label className="crm-form-label">Customer Phone</label><input type="text" name="customerPhone" value={formData.customerPhone} onChange={handleChange} className="crm-form-input" placeholder="Phone number" /></div>
+            <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}><label className="crm-form-label">Billing Address</label><textarea name="customerAddress" value={formData.customerAddress} onChange={handleChange} rows="2" className="crm-form-textarea" placeholder="Enter billing address" /></div>
+            <div className="crm-form-group" style={{ gridColumn: '1 / -1' }}><label className="crm-form-label">Shipping Address (if different)</label><textarea name="shippingAddress" value={formData.shippingAddress || ''} onChange={handleChange} rows="2" className="crm-form-textarea" placeholder="Enter shipping address (optional - leave blank if same as billing)" /></div>
+          </div>
+
+          {/* Premium GST Details Section */}
+          <div style={{
+            marginTop: '24px',
+            padding: '20px',
+            background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+            borderRadius: '12px',
+            border: '1px solid #bae6fd',
+            boxShadow: '0 2px 8px rgba(56, 189, 248, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                background: 'linear-gradient(135deg, #0ea5e9, #0284c7)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                boxShadow: '0 4px 12px rgba(14, 165, 233, 0.25)'
+              }}>🧾</div>
+              <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#0c4a6e', letterSpacing: '-0.3px' }}>GST Information</h4>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+              <div className="crm-form-group">
+                <label className="crm-form-label">Customer GSTIN <span style={{ color: '#10b981', fontSize: '11px' }}>(15 characters)</span></label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+                  <input
+                    type="text"
+                    name="customerGstin"
+                    value={formData.customerGstin || ''}
+                    onChange={handleChange}
+                    placeholder="29ABCDE1234F1Z5"
+                    maxLength={15}
+                    className="crm-form-input"
+                    style={{ textTransform: 'uppercase', flex: 1 }}
+                  />
+                  {formData.customerGstin && formData.customerGstin.length === 15 && (
+                    <button
+                      type="button"
+                      onClick={handleVerifyGSTIN}
+                      disabled={verifyingGST}
+                      style={{
+                        padding: '10px 16px',
+                        background: verifyingGST ? '#94a3b8' : 'linear-gradient(135deg, #10b981, #059669)',
+                        color: '#fff',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: verifyingGST ? 'not-allowed' : 'pointer',
+                        fontSize: '13px',
+                        fontWeight: '600',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      {verifyingGST ? '⏳ Verifying...' : '✓ Verify GST'}
+                    </button>
+                  )}
+                </div>
+                {gstVerifyMessage && (
+                  <div style={{
+                    marginTop: '6px',
+                    padding: '8px 12px',
+                    background: gstVerifyMessage.type === 'success' ? '#d1fae5' : gstVerifyMessage.type === 'error' ? '#fee2e2' : '#fef3c7',
+                    color: gstVerifyMessage.type === 'success' ? '#065f46' : gstVerifyMessage.type === 'error' ? '#991b1b' : '#92400e',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '500'
+                  }}>
+                    {gstVerifyMessage.text}
+                  </div>
+                )}
+              </div>
+              <div className="crm-form-group">
+                <label className="crm-form-label">PAN Number <span style={{ color: '#64748b', fontSize: '11px' }}>(Auto-filled from GST)</span></label>
+                <input
+                  type="text"
+                  name="customerPan"
+                  value={formData.customerPan || ''}
+                  onChange={handleChange}
+                  placeholder="ABCDE1234F"
+                  maxLength={10}
+                  className="crm-form-input"
+                  style={{ textTransform: 'uppercase' }}
+                />
+              </div>
+              <div className="crm-form-group">
+                <label className="crm-form-label">Place of Supply</label>
+                <input type="text" name="placeOfSupply" value={formData.placeOfSupply || ''} onChange={handleChange} placeholder="e.g., Karnataka" className="crm-form-input" />
+              </div>
+              <div className="crm-form-group">
+                <label className="crm-form-label">State Code</label>
+                <input type="text" name="customerStateCode" value={formData.customerStateCode || ''} onChange={handleChange} placeholder="e.g., 29" maxLength={2} className="crm-form-input" />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '20px', padding: '24px' }}>
-          <h3 style={{ marginBottom: '20px', marginTop: 0 }}>Invoice Details</h3>
+        {/* Compact Invoice Details - Indigo Gradient */}
+        <div className="crm-card" style={{
+          marginBottom: '18px',
+          padding: '0',
+          background: 'linear-gradient(135deg, #4f46e5 0%, #6366f1 100%)',
+          border: 'none',
+          boxShadow: '0 4px 16px rgba(79, 70, 229, 0.12)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ padding: '16px 20px', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>📄</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px' }}>Invoice Details</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '11px', opacity: 0.85 }}>Configure invoice title, dates and description</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="crm-card" style={{
+          marginBottom: '20px',
+          padding: '28px',
+          background: 'white',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+          borderRadius: '16px'
+        }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
             <div className="crm-form-group"><label className="crm-form-label">Title *</label><input type="text" name="title" value={formData.title} onChange={handleChange} required className="crm-form-input" placeholder="e.g., Website Development Invoice" /></div>
             <div className="crm-form-group"><label className="crm-form-label">Invoice Date *</label><input type="date" name="invoiceDate" value={formData.invoiceDate} onChange={handleChange} required className="crm-form-input" /></div>
@@ -774,11 +920,67 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
           </div>
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '20px', padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h3 style={{ margin: 0 }}>Items</h3>
-            <button type="button" onClick={addItem} className="btn-secondary">+ Add Item</button>
+        {/* Compact Items - Orange Gradient */}
+        <div className="crm-card" style={{
+          marginBottom: '18px',
+          padding: '0',
+          background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+          border: 'none',
+          boxShadow: '0 4px 16px rgba(245, 158, 11, 0.12)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ padding: '16px 20px', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '8px',
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  backdropFilter: 'blur(10px)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                }}>📦</div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px' }}>Line Items</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '11px', opacity: 0.85 }}>Add products and services to this invoice</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={addItem}
+                style={{
+                  padding: '8px 16px',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  color: '#d97706',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  fontWeight: '700',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.12)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+              >
+                <span style={{ fontSize: '16px' }}>+</span> Add Item
+              </button>
+            </div>
           </div>
+        </div>
+
+        <div className="crm-card" style={{
+          marginBottom: '20px',
+          padding: '28px',
+          background: 'white',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+          borderRadius: '16px'
+        }}>
           {formData.items.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: '#6c757d' }}>No items added yet. Click "Add Item" to get started.</div>
           ) : (
@@ -810,28 +1012,153 @@ const InvoiceForm = ({ embedded, onClose, onSuccess }) => {
             </div>
           )}
           {formData.items.length > 0 && (
-            <div style={{ marginTop: '20px', padding: '20px', backgroundColor: '#f8f9fa', borderRadius: '8px' }}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '40px' }}>
-                <div>
-                  <div style={{ marginBottom: '8px' }}><strong>Subtotal:</strong> {formatCurrency(totals.subtotal)}</div>
-                  <div style={{ marginBottom: '8px', color: '#dc3545' }}><strong>Discount:</strong> - {formatCurrency(totals.totalDiscount)}</div>
-                  <div style={{ marginBottom: '8px' }}><strong>Tax:</strong> + {formatCurrency(totals.totalTax)}</div>
-                  <div style={{ fontSize: '18px', fontWeight: '700', color: '#198754' }}><strong>Total:</strong> {formatCurrency(totals.totalAmount)}</div>
+            <div style={{
+              marginTop: '24px',
+              padding: '24px',
+              background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)',
+              borderRadius: '12px',
+              border: '2px solid #fbbf24',
+              boxShadow: '0 4px 16px rgba(251, 191, 36, 0.15)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{
+                  padding: '16px',
+                  background: 'rgba(255, 255, 255, 0.7)',
+                  borderRadius: '10px',
+                  backdropFilter: 'blur(10px)'
+                }}>
+                  <div style={{ fontSize: '13px', color: '#92400e', fontWeight: '600', marginBottom: '4px' }}>💰 Invoice Summary</div>
+                  <div style={{ fontSize: '11px', color: '#b45309' }}>Calculated totals with tax</div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', gap: '60px', alignItems: 'center' }}>
+                    <span style={{ color: '#78716c', fontSize: '14px' }}>Subtotal</span>
+                    <span style={{ fontWeight: '600', fontSize: '15px', color: '#292524' }}>{formatCurrency(totals.subtotal)}</span>
+                  </div>
+                  {totals.totalDiscount > 0 && (
+                    <div style={{ marginBottom: '10px', display: 'flex', justifyContent: 'space-between', gap: '60px', alignItems: 'center' }}>
+                      <span style={{ color: '#dc2626', fontSize: '14px' }}>Discount</span>
+                      <span style={{ fontWeight: '600', fontSize: '15px', color: '#dc2626' }}>- {formatCurrency(totals.totalDiscount)}</span>
+                    </div>
+                  )}
+                  <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'space-between', gap: '60px', alignItems: 'center' }}>
+                    <span style={{ color: '#78716c', fontSize: '14px' }}>Tax (GST)</span>
+                    <span style={{ fontWeight: '600', fontSize: '15px', color: '#292524' }}>+ {formatCurrency(totals.totalTax)}</span>
+                  </div>
+                  <div style={{
+                    paddingTop: '12px',
+                    borderTop: '2px solid #fbbf24',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    gap: '60px',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontSize: '16px', fontWeight: '700', color: '#78350f' }}>Grand Total</span>
+                    <span style={{ fontSize: '24px', fontWeight: '800', color: '#78350f', letterSpacing: '-0.5px' }}>{formatCurrency(totals.totalAmount)}</span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="crm-card" style={{ marginBottom: '20px', padding: '24px' }}>
-          <h3 style={{ marginBottom: '20px', marginTop: 0 }}>Terms & Notes</h3>
+        {/* Compact Terms & Notes - Emerald Gradient */}
+        <div className="crm-card" style={{
+          marginBottom: '18px',
+          padding: '0',
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          border: 'none',
+          boxShadow: '0 4px 16px rgba(16, 185, 129, 0.12)',
+          overflow: 'hidden'
+        }}>
+          <div style={{ padding: '16px 20px', color: 'white' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '8px',
+                background: 'rgba(255, 255, 255, 0.2)',
+                backdropFilter: 'blur(10px)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              }}>📑</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '17px', fontWeight: '700', letterSpacing: '-0.3px' }}>Terms & Notes</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '11px', opacity: 0.85 }}>Add payment terms and additional notes</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="crm-card" style={{
+          marginBottom: '20px',
+          padding: '28px',
+          background: 'white',
+          border: '1px solid rgba(226, 232, 240, 0.8)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.04)',
+          borderRadius: '16px'
+        }}>
           <div className="crm-form-group" style={{ marginBottom: '16px' }}><label className="crm-form-label">Terms & Conditions</label><textarea name="terms" value={formData.terms} onChange={handleChange} rows="3" className="crm-form-textarea" /></div>
           <div className="crm-form-group"><label className="crm-form-label">Notes</label><textarea name="notes" value={formData.notes} onChange={handleChange} rows="3" className="crm-form-textarea" /></div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={handleCancel} className="btn-secondary">Cancel</button>
-          <button type="submit" className="btn-primary" disabled={loading}>{loading ? 'Saving...' : isEdit ? 'Update Invoice' : 'Create Invoice'}</button>
+        {/* Premium Action Buttons */}
+        <div style={{
+          display: 'flex',
+          gap: '16px',
+          justifyContent: 'flex-end',
+          padding: '24px',
+          background: 'linear-gradient(to top, #f8fafc 0%, white 100%)',
+          borderRadius: '16px',
+          border: '1px solid #e2e8f0',
+          boxShadow: '0 -4px 16px rgba(0, 0, 0, 0.02)'
+        }}>
+          <button
+            type="button"
+            onClick={handleCancel}
+            style={{
+              padding: '12px 28px',
+              background: 'white',
+              color: '#64748b',
+              border: '2px solid #e2e8f0',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              fontSize: '15px',
+              fontWeight: '600',
+              transition: 'all 0.2s',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)'
+            }}
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              padding: '12px 32px',
+              background: loading ? '#94a3b8' : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              fontSize: '15px',
+              fontWeight: '700',
+              boxShadow: loading ? 'none' : '0 8px 24px rgba(102, 126, 234, 0.35)',
+              transition: 'all 0.2s',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}
+          >
+            {loading ? (
+              <>⏳ Saving...</>
+            ) : (
+              <>{isEdit ? '✓ Update Invoice' : '✓ Create Invoice'}</>
+            )}
+          </button>
         </div>
       </form>
     </>

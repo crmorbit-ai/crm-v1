@@ -7,7 +7,9 @@ const {
   updatePassword,
   uploadProfilePicture,
   updateOrganization,
-  uploadLogo
+  uploadLogo,
+  uploadSignature,
+  uploadInvoiceLogo
 } = require('../controllers/profileController');
 const { protect } = require('../middleware/auth');
 
@@ -45,5 +47,11 @@ router.put('/organization', updateOrganization);
 
 // Upload organization logo (multipart → Cloudinary)
 router.post('/upload-logo', imageUpload.single('logo'), uploadLogo);
+
+// Upload organization signature (multipart → Cloudinary)
+router.post('/upload-signature', imageUpload.single('signature'), uploadSignature);
+
+// Upload invoice logo (multipart → Cloudinary)
+router.post('/upload-invoice-logo', imageUpload.single('invoiceLogo'), uploadInvoiceLogo);
 
 module.exports = router;

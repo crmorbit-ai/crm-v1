@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import invoiceService from '../services/invoiceService';
 import DashboardLayout from '../components/layout/DashboardLayout';
-import InvoiceForm from './InvoiceForm';
 import '../styles/crm.css';
 
 const mobileCSS = `
@@ -24,8 +23,6 @@ const Invoices = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [apiStats, setApiStats] = useState(null);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [panelWidth, setPanelWidth] = useState(42);
 
   useEffect(() => { fetchInvoices(); fetchStats(); }, [statusFilter]);
 
@@ -54,16 +51,6 @@ const Invoices = () => {
     }
   };
 
-  const handleDividerDrag = (e) => {
-    e.preventDefault();
-    const container = document.getElementById('invoices-split-container');
-    if (!container) return;
-    const startX = e.clientX, startW = panelWidth, cW = container.getBoundingClientRect().width;
-    const onMove = (mv) => { const d = ((mv.clientX - startX) / cW) * 100; setPanelWidth(Math.max(25, Math.min(65, startW + d))); };
-    const onUp = () => { document.removeEventListener('mousemove', onMove); document.removeEventListener('mouseup', onUp); };
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseup', onUp);
-  };
 
   const STATUS_CFG = {
     draft:          { label: 'Draft',    color: '#64748b', bg: '#f1f5f9' },
@@ -132,7 +119,7 @@ const Invoices = () => {
           </div>
           {/* Toolbar: New button + Search + Filter */}
           <div style={{ background: 'white', borderRadius: '10px', padding: '8px 12px', marginTop: '8px', border: '1.5px solid #e2e8f0', boxShadow: '0 1px 6px rgba(0,0,0,0.04)', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-            <button onClick={() => setShowCreateForm(true)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+            <button onClick={() => navigate('/invoices/new')} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', fontWeight: '700', fontSize: '13px', cursor: 'pointer', boxShadow: '0 2px 8px rgba(59,130,246,0.3)', whiteSpace: 'nowrap', flexShrink: 0 }}>
               + New Invoice
             </button>
             <div style={{ flex: '1', minWidth: '180px', position: 'relative' }}>
@@ -155,22 +142,8 @@ const Invoices = () => {
           {error && <div style={{ background: '#fee2e2', color: '#dc2626', padding: '10px 14px', borderRadius: '8px', marginTop: '8px', fontSize: '13px' }}>{error}</div>}
         </div>
 
-        {/* Split panel — form left, table right */}
-        <div id="invoices-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
-          {showCreateForm && (
-            <div className="inv-panel-form" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
-              <InvoiceForm embedded onClose={() => setShowCreateForm(false)} onSuccess={() => { setShowCreateForm(false); fetchInvoices(); fetchStats(); }} />
-            </div>
-          )}
-          {showCreateForm && (
-            <div onMouseDown={handleDividerDrag} title="Drag to resize"
-              style={{ width: '6px', flexShrink: 0, background: '#e2e8f0', cursor: 'col-resize', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', zIndex: 10 }}
-              onMouseEnter={e => e.currentTarget.style.background = '#93c5fd'}
-              onMouseLeave={e => e.currentTarget.style.background = '#e2e8f0'}>
-              <div style={{ width: '2px', height: '40px', borderRadius: '99px', background: 'rgba(0,0,0,0.15)' }} />
-            </div>
-          )}
-          <div className="inv-panel-table" style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
+        {/* Invoice Table */}
+        <div style={{ flex: 1, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
           {/* Table Card */}
           <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
             <div style={{ overflowX: 'auto' }}>
@@ -222,7 +195,6 @@ const Invoices = () => {
                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>Showing <strong style={{ color: '#374151' }}>{invoices.length}</strong> invoice{invoices.length !== 1 ? 's' : ''}</span>
               </div>
             )}
-          </div>
           </div>
         </div>
       </div>

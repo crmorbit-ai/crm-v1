@@ -10,14 +10,29 @@ const PLAN_COLORS = {
 };
 
 const FEATURE_LABELS = {
+  // Core CRM Features
   leadManagement:    { label: 'Lead Management',    group: 'Core' },
   contactManagement: { label: 'Contact Management', group: 'Core' },
-  dealTracking:      { label: 'Deal Tracking',      group: 'Core' },
+  dealTracking:      { label: 'Deal Tracking (Opportunities)', group: 'Core' },
   taskManagement:    { label: 'Task Management',    group: 'Core' },
+  accountManagement: { label: 'Account Management', group: 'Core' },
+
+  // Sales & Finance Features
+  quotations:        { label: 'Quotations',         group: 'Sales' },
+  invoices:          { label: 'Invoices (GST)',     group: 'Sales' },
+  purchaseOrders:    { label: 'Purchase Orders',    group: 'Sales' },
+  rfi:               { label: 'RFI Management',     group: 'Sales' },
+
+  // Advanced Features
   emailIntegration:  { label: 'Email Integration',  group: 'Advanced' },
   customFields:      { label: 'Custom Fields',      group: 'Advanced' },
+  templates:         { label: 'Document Templates', group: 'Advanced' },
+  dataCenter:        { label: 'Data Center (Master DB)', group: 'Advanced' },
+
+  // Premium Features
   crossOrgHierarchy: { label: 'Cross-Org Hierarchy',   group: 'Premium' },
   salesMonetization: { label: 'Sales Monetization',    group: 'Premium' },
+  resellerManagement:{ label: 'Reseller Management',   group: 'Premium' },
 };
 
 const LIMIT_LABELS = {
@@ -25,11 +40,21 @@ const LIMIT_LABELS = {
   leads:        'Max Leads',
   contacts:     'Max Contacts',
   deals:        'Max Deals',
+  accounts:     'Max Accounts',
+  invoices:     'Max Invoices',
+  quotations:   'Max Quotations',
+  purchaseOrders: 'Max Purchase Orders',
   storage:      'Storage (MB)',
   emailsPerDay: 'Emails / Day',
+  apiCallsPerDay: 'API Calls / Day',
 };
 
-const GROUP_COLORS = { Core: '#10b981', Advanced: '#6366f1', Premium: '#f59e0b' };
+const GROUP_COLORS = {
+  Core: '#10b981',
+  Sales: '#3b82f6',
+  Advanced: '#6366f1',
+  Premium: '#f59e0b'
+};
 
 /* ── Toggle switch ── */
 const Toggle = ({ checked, onChange, disabled }) => (

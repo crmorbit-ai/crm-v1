@@ -129,6 +129,15 @@ const tenantSchema = new mongoose.Schema({
     }
   },
 
+  // Bank & Payment Details
+  bankDetails: {
+    bankName: { type: String, trim: true },
+    accountNumber: { type: String, trim: true },
+    ifscCode: { type: String, trim: true, uppercase: true },
+    accountType: { type: String, enum: ['Savings', 'Current', ''], default: 'Current' },
+    upiId: { type: String, trim: true, lowercase: true }
+  },
+
   // Business Details
   businessType: {
     type: String,
@@ -368,6 +377,8 @@ const tenantSchema = new mongoose.Schema({
   
   // Branding
   logo: String,
+  invoiceLogo: String, // Separate logo for invoices
+  signature: String,
   primaryColor: String,
   
   // Settings
