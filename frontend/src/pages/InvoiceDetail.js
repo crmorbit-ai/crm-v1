@@ -13,10 +13,19 @@ const InvoiceDetail = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [paymentLink, setPaymentLink] = useState('');
   const [linkLoading, setLinkLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
 
   useEffect(() => {
     fetchInvoice();
   }, [id]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fetchInvoice = async () => {
     try {
@@ -136,9 +145,9 @@ const InvoiceDetail = () => {
 
   return (
     <DashboardLayout>
-      <div style={styles.container}>
+      <div style={{...styles.container, padding: isMobile ? '12px' : '24px'}}>
         {/* Header Section */}
-        <div style={styles.header}>
+        <div style={{...styles.header, padding: isMobile ? '16px' : '24px 28px'}}>
           <div style={styles.headerLeft}>
             <button onClick={() => navigate('/invoices')} style={styles.backBtn}>
               ← Back
@@ -165,7 +174,7 @@ const InvoiceDetail = () => {
         </div>
 
 
-        <div style={styles.content}>
+        <div style={{...styles.content, gridTemplateColumns: isMobile ? '1fr' : '1fr 400px'}}>
           {/* Left Column */}
           <div style={styles.leftColumn}>
             {/* Premium Customer Info Card - Compact */}
@@ -423,17 +432,21 @@ const styles = {
     background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)',
     borderRadius: '16px',
     boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-    border: '1px solid rgba(226, 232, 240, 0.8)'
+    border: '1px solid rgba(226, 232, 240, 0.8)',
+    flexWrap: 'wrap',
+    gap: '16px'
   },
   headerLeft: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px'
+    gap: '16px',
+    flexWrap: 'wrap'
   },
   headerRight: {
     display: 'flex',
     gap: '12px',
-    alignItems: 'center'
+    alignItems: 'center',
+    flexWrap: 'wrap'
   },
   backBtn: {
     padding: '8px 16px',
@@ -447,13 +460,13 @@ const styles = {
     transition: 'all 0.2s'
   },
   title: {
-    fontSize: '24px',
+    fontSize: '20px',
     fontWeight: '700',
     color: '#111827',
     margin: '0 0 4px 0'
   },
   subtitle: {
-    fontSize: '14px',
+    fontSize: '13px',
     color: '#6b7280',
     margin: 0
   },
@@ -464,38 +477,41 @@ const styles = {
     fontWeight: '600'
   },
   editBtn: {
-    padding: '10px 20px',
+    padding: '8px 16px',
     background: '#f3f4f6',
     border: 'none',
     borderRadius: '8px',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: '600',
-    color: '#374151'
+    color: '#374151',
+    whiteSpace: 'nowrap'
   },
   downloadBtn: {
-    padding: '10px 20px',
+    padding: '8px 16px',
     background: 'linear-gradient(135deg, #3b82f6, #2563eb)',
     border: 'none',
     borderRadius: '10px',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: '600',
     color: '#ffffff',
     boxShadow: '0 4px 12px rgba(59, 130, 246, 0.25)',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
+    whiteSpace: 'nowrap'
   },
   sendBtn: {
-    padding: '10px 20px',
+    padding: '8px 16px',
     background: 'linear-gradient(135deg, #10b981, #059669)',
     border: 'none',
     borderRadius: '10px',
     cursor: 'pointer',
-    fontSize: '14px',
+    fontSize: '13px',
     fontWeight: '600',
     color: '#ffffff',
     boxShadow: '0 4px 12px rgba(16, 185, 129, 0.25)',
-    transition: 'all 0.2s'
+    transition: 'all 0.2s',
+    whiteSpace: 'nowrap'
   },
   paymentBtn: {
     padding: '10px 20px',
