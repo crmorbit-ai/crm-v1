@@ -26,7 +26,7 @@ const purchaseOrderSchema = new mongoose.Schema({
   },
   customerModel: {
     type: String,
-    enum: ['Lead', 'Contact', 'Account']
+    enum: ['Lead', 'Contact', 'Account', 'DataCenterCandidate']
   },
   customerName: String,
   customerEmail: String,

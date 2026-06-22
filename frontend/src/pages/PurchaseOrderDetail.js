@@ -203,6 +203,28 @@ const PurchaseOrderDetail = () => {
               </div>
               <div style={{ fontWeight: '600', fontSize: '15px' }}>{formatDate(po.deliveryDate)}</div>
             </div>
+            {po.quotation && (
+              <div style={{ gridColumn: 'span 2', padding: '16px', background: '#f0f9ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+                <div style={{ fontSize: '12px', color: '#1e40af', marginBottom: '8px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📋 Created from Quotation
+                </div>
+                <button
+                  onClick={() => navigate(`/quotations/${typeof po.quotation === 'object' ? po.quotation._id : po.quotation}`)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#4361ee',
+                    fontWeight: '700',
+                    fontSize: '15px',
+                    cursor: 'pointer',
+                    padding: '4px 0',
+                    textDecoration: 'underline'
+                  }}
+                >
+                  View Original Quotation →
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -446,6 +468,15 @@ const PurchaseOrderDetail = () => {
                 Mark as Received
               </button>
             )}
+            {po.status === 'approved' && !po.convertedToInvoice && (
+              <button
+                className="btn-primary"
+                onClick={handleConvertToInvoice}
+                style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', border: 'none' }}
+              >
+                🧾 Convert to Invoice
+              </button>
+            )}
             {po.status === 'approved' && (
               <button className="btn-secondary" onClick={() => handleUpdateStatus('in_progress')}>
                 Start Processing
@@ -454,6 +485,15 @@ const PurchaseOrderDetail = () => {
             {po.status === 'in_progress' && !po.convertedToInvoice && (
               <button className="btn-secondary" onClick={() => handleUpdateStatus('completed')}>
                 Mark as Completed
+              </button>
+            )}
+            {po.convertedToInvoice && po.invoice && (
+              <button
+                className="btn-secondary"
+                onClick={() => navigate(`/invoices/${typeof po.invoice === 'object' ? po.invoice._id : po.invoice}`)}
+                style={{ background: 'linear-gradient(135deg, #4361ee 0%, #3730a3 100%)', color: 'white', border: 'none' }}
+              >
+                📄 View Invoice
               </button>
             )}
             {(po.status === 'draft' || po.status === 'received') && (

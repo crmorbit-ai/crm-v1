@@ -1,5 +1,6 @@
 const Quotation = require('../models/Quotation');
 const Invoice = require('../models/Invoice');
+const PurchaseOrder = require('../models/PurchaseOrder');
 const Tenant = require('../models/Tenant');
 const ProductItem = require('../models/ProductItem');
 const StockTransaction = require('../models/StockTransaction');
@@ -528,6 +529,117 @@ exports.sendQuotationEmail = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error sending quotation email',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Convert Quotation to Purchase Order (Zoho-style)
+ * @route POST /api/quotations/:id/convert-to-po
+ */
+exports.convertToPurchaseOrder = async (req, res) => {
+  try {
+    const quotation = await Quotation.findOne({
+      _id: req.params.id,
+      tenant: req.user.tenant
+    });
+
+    if (!quotation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Quotation not found'
+      });
+    }
+
+    if (quotation.convertedToPO) {
+      return res.status(400).json({
+        success: false,
+        message: 'Quotation already converted to purchase order',
+        existingPO: quotation.purchaseOrder
+      });
+    }
+
+    const { customerPONumber, poDate, deliveryDate, paymentTerms, notes } = req.body;
+
+    // Auto-generate PO from Quotation
+    const purchaseOrder = new PurchaseOrder({
+      // Link to quotation
+      quotation: quotation._id,
+      customerPONumber: customerPONumber || '',
+
+      // Auto-copy customer details
+      customer: quotation.customer,
+      customerModel: quotation.customerModel,
+      customerName: quotation.customerName,
+      customerEmail: quotation.customerEmail,
+      customerPhone: quotation.customerPhone,
+      customerAddress: quotation.customerAddress,
+
+      // Auto-copy document details
+      title: quotation.title || 'Purchase Order',
+      description: quotation.description || '',
+
+      // Auto-copy items
+      items: quotation.items.map(item => ({
+        product: item.product,
+        productName: item.productName,
+        description: item.description || '',
+        quantity: item.quantity,
+        receivedQuantity: 0,  // Initially nothing received
+        unitPrice: item.unitPrice,
+        discount: item.discount || 0,
+        tax: item.tax || 0,
+        total: item.total
+      })),
+
+      // Auto-copy amounts
+      subtotal: quotation.subtotal,
+      totalDiscount: quotation.totalDiscount || 0,
+      totalTax: quotation.totalTax,
+      totalAmount: quotation.totalAmount,
+
+      // PO specific fields
+      poDate: poDate || new Date(),
+      deliveryDate: deliveryDate || null,
+      paymentTerms: paymentTerms || quotation.terms || 'Payment due within 30 days',
+      terms: quotation.terms || '',
+      notes: notes || quotation.notes || '',
+
+      // Status
+      status: 'approved',  // Auto-approved since quotation was accepted
+      receiveStatus: 'pending',
+
+      // Tenant & user
+      tenant: quotation.tenant,
+      createdBy: req.user.id
+    });
+
+    await purchaseOrder.save();
+
+    // Update quotation with PO reference
+    quotation.convertedToPO = true;
+    quotation.purchaseOrder = purchaseOrder._id;
+    quotation.status = 'accepted';  // Mark as accepted
+    await quotation.save();
+
+    await logActivity(req, 'quotation.converted_to_po', 'Quotation', quotation._id, {
+      quotationNumber: quotation.quotationNumber,
+      poNumber: purchaseOrder.poNumber,
+      poId: purchaseOrder._id
+    });
+
+    res.json({
+      success: true,
+      message: 'Quotation converted to purchase order successfully',
+      data: purchaseOrder
+    });
+  } catch (error) {
+    console.error('Error converting quotation to PO:', error);
+    const isDuplicate = error.code === 11000;
+    res.status(isDuplicate ? 409 : 500).json({
+      success: false,
+      message: isDuplicate ? 'PO number conflict — please try again.' : 'Error converting quotation to purchase order',
       error: error.message
     });
   }

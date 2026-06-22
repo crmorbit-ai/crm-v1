@@ -2,6 +2,7 @@ const { verifyToken } = require('../utils/jwt');
 const { errorResponse } = require('../utils/response');
 const User = require('../models/User');
 const Reseller = require('../models/Reseller');
+const BlacklistedToken = require('../models/BlacklistedToken');
 
 /**
  * Protect routes - verify JWT token
@@ -21,6 +22,15 @@ const protect = async (req, res, next) => {
 
     // Verify token
     const decoded = verifyToken(token);
+
+    // ============================================
+    // 🔐 TOKEN BLACKLIST CHECK - NEW
+    // ============================================
+    const isBlacklisted = await BlacklistedToken.findOne({ token });
+    if (isBlacklisted) {
+      return errorResponse(res, 401, 'Token has been invalidated. Please login again.');
+    }
+    // ============================================
 
     // ============================================
     // 🚀 RESELLER SUPPORT - NEW

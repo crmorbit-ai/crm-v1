@@ -177,6 +177,64 @@ const InvoiceDetail = () => {
         <div style={{...styles.content, gridTemplateColumns: isMobile ? '1fr' : '1fr 400px'}}>
           {/* Left Column */}
           <div style={styles.leftColumn}>
+            {/* Document Flow Info - if created from PO/Quotation */}
+            {(invoice.purchaseOrder || invoice.quotation) && (
+              <div style={{
+                padding: '16px 20px',
+                background: '#f0f9ff',
+                borderRadius: '12px',
+                border: '1px solid #bfdbfe',
+                marginBottom: '20px'
+              }}>
+                <div style={{ fontSize: '13px', color: '#1e40af', marginBottom: '12px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  📋 Document Trail
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  {invoice.quotation && (
+                    <button
+                      onClick={() => navigate(`/quotations/${typeof invoice.quotation === 'object' ? invoice.quotation._id : invoice.quotation}`)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#4361ee',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        padding: '4px 0',
+                        textAlign: 'left',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      → View Original Quotation
+                    </button>
+                  )}
+                  {invoice.purchaseOrder && (
+                    <button
+                      onClick={() => navigate(`/purchase-orders/${typeof invoice.purchaseOrder === 'object' ? invoice.purchaseOrder._id : invoice.purchaseOrder}`)}
+                      style={{
+                        background: 'transparent',
+                        border: 'none',
+                        color: '#4361ee',
+                        fontWeight: '600',
+                        fontSize: '14px',
+                        cursor: 'pointer',
+                        padding: '4px 0',
+                        textAlign: 'left',
+                        textDecoration: 'underline'
+                      }}
+                    >
+                      → View Purchase Order
+                    </button>
+                  )}
+                  {invoice.customerPONumber && (
+                    <div style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>
+                      Customer PO: <strong style={{ color: '#1e293b' }}>{invoice.customerPONumber}</strong>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Premium Customer Info Card - Compact */}
             <div style={{...styles.card, border: 'none', overflow: 'hidden'}}>
               <div style={{
@@ -319,6 +377,35 @@ const InvoiceDetail = () => {
                     {new Date(invoice.dueDate).toLocaleDateString('en-IN')}
                   </span>
                 </div>
+                {invoice.customerPONumber && (
+                  <div style={styles.infoRow}>
+                    <span style={styles.label}>Customer PO Number</span>
+                    <span style={{...styles.value, fontWeight: '700', color: '#4361ee'}}>
+                      {invoice.customerPONumber}
+                    </span>
+                  </div>
+                )}
+                {invoice.purchaseOrder && (
+                  <div style={styles.infoRow}>
+                    <span style={styles.label}>Purchase Order</span>
+                    <span style={styles.value}>
+                      <button
+                        onClick={() => navigate(`/purchase-orders/${typeof invoice.purchaseOrder === 'object' ? invoice.purchaseOrder._id : invoice.purchaseOrder}`)}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: '#4361ee',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          padding: 0,
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        View PO →
+                      </button>
+                    </span>
+                  </div>
+                )}
                 {invoice.placeOfSupply && (
                   <div style={styles.infoRow}>
                     <span style={styles.label}>Place of Supply</span>

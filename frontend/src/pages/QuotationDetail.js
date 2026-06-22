@@ -82,6 +82,38 @@ const QuotationDetail = () => {
     }
   };
 
+  const handleConvertToPO = async () => {
+    const customerPONumber = window.prompt('Enter Customer PO Number:', 'CUST-PO-');
+    if (!customerPONumber) return;
+
+    try {
+      setActionLoading(true);
+      const response = await fetch(`${API_URL}/quotations/${id}/convert-to-po`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          customerPONumber,
+          poDate: new Date().toISOString().split('T')[0],
+          deliveryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+          paymentTerms: 'Payment due within 30 days'
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        alert('Quotation converted to Purchase Order successfully!');
+        navigate(`/purchase-orders/${data.data._id}`);
+      } else {
+        alert('Error: ' + (data.message || 'Failed to convert to PO'));
+      }
+    } catch (err) {
+      alert('Error converting to PO: ' + err.message);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleStatusChange = async (newStatus) => {
     try {
       setActionLoading(true);
@@ -326,6 +358,24 @@ const QuotationDetail = () => {
               disabled={actionLoading}
             >
               ✗ Reject
+            </button>
+          )}
+          {!quotation.convertedToPO && !quotation.convertedToInvoice && (
+            <button
+              className="btn-success"
+              onClick={handleConvertToPO}
+              disabled={actionLoading}
+              style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', border: 'none' }}
+            >
+              📦 Convert to Purchase Order
+            </button>
+          )}
+          {quotation.convertedToPO && quotation.purchaseOrder && (
+            <button
+              className="btn-secondary"
+              onClick={() => navigate(`/purchase-orders/${quotation.purchaseOrder}`)}
+            >
+              📦 View Purchase Order
             </button>
           )}
           {(quotation.status === 'accepted' && !quotation.convertedToInvoice) && (

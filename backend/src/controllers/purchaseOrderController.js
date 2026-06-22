@@ -480,3 +480,124 @@ exports.downloadPODocument = async (req, res) => {
     });
   }
 };
+
+/**
+ * Convert Purchase Order to Invoice (Zoho-style)
+ * @route POST /api/purchase-orders/:id/convert-to-invoice
+ */
+exports.convertToInvoice = async (req, res) => {
+  try {
+    const purchaseOrder = await PurchaseOrder.findOne({
+      _id: req.params.id,
+      tenant: req.user.tenant
+    });
+
+    if (!purchaseOrder) {
+      return res.status(404).json({
+        success: false,
+        message: 'Purchase order not found'
+      });
+    }
+
+    if (purchaseOrder.convertedToInvoice) {
+      return res.status(400).json({
+        success: false,
+        message: 'Purchase order already converted to invoice',
+        existingInvoice: purchaseOrder.invoice
+      });
+    }
+
+    const { invoiceDate, dueDate, terms, notes } = req.body;
+
+    // Calculate due date (default: 30 days from invoice date)
+    const calculatedDueDate = dueDate || (() => {
+      const date = new Date(invoiceDate || new Date());
+      date.setDate(date.getDate() + 30);
+      return date;
+    })();
+
+    // Auto-generate Invoice from Purchase Order
+    const invoice = new Invoice({
+      // Link to PO and quotation
+      purchaseOrder: purchaseOrder._id,
+      quotation: purchaseOrder.quotation || null,
+      customerPONumber: purchaseOrder.customerPONumber || '',
+
+      // Auto-copy customer details
+      customer: purchaseOrder.customer,
+      customerModel: purchaseOrder.customerModel,
+      customerName: purchaseOrder.customerName,
+      customerEmail: purchaseOrder.customerEmail,
+      customerPhone: purchaseOrder.customerPhone,
+      customerAddress: purchaseOrder.customerAddress,
+      billingAddress: purchaseOrder.customerAddress,
+      shippingAddress: purchaseOrder.customerAddress,
+
+      // Auto-copy document details
+      title: purchaseOrder.title || 'Invoice',
+      description: purchaseOrder.description || '',
+
+      // Auto-copy items
+      items: purchaseOrder.items.map(item => ({
+        product: item.product,
+        productName: item.productName,
+        description: item.description || '',
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discount: item.discount || 0,
+        tax: item.tax || 0,
+        hsnCode: item.hsnCode || '998314',
+        total: item.total
+      })),
+
+      // Auto-copy amounts
+      subtotal: purchaseOrder.subtotal,
+      totalDiscount: purchaseOrder.totalDiscount || 0,
+      totalTax: purchaseOrder.totalTax,
+      totalAmount: purchaseOrder.totalAmount,
+
+      // Invoice specific fields
+      invoiceDate: invoiceDate || new Date(),
+      dueDate: calculatedDueDate,
+      terms: terms || purchaseOrder.terms || 'Payment due within 30 days',
+      notes: notes || purchaseOrder.notes || '',
+
+      // Status
+      status: 'draft',  // Start as draft
+      totalPaid: 0,
+      balanceDue: purchaseOrder.totalAmount,
+
+      // Tenant & user
+      tenant: purchaseOrder.tenant,
+      createdBy: req.user.id
+    });
+
+    await invoice.save();
+
+    // Update purchase order with invoice reference
+    purchaseOrder.convertedToInvoice = true;
+    purchaseOrder.invoice = invoice._id;
+    purchaseOrder.status = 'completed';  // Mark PO as completed
+    await purchaseOrder.save();
+
+    await logActivity(req, 'purchase_order.converted_to_invoice', 'PurchaseOrder', purchaseOrder._id, {
+      poNumber: purchaseOrder.poNumber,
+      invoiceNumber: invoice.invoiceNumber,
+      invoiceId: invoice._id
+    });
+
+    res.json({
+      success: true,
+      message: 'Purchase order converted to invoice successfully',
+      data: invoice
+    });
+  } catch (error) {
+    console.error('Error converting PO to invoice:', error);
+    const isDuplicate = error.code === 11000;
+    res.status(isDuplicate ? 409 : 500).json({
+      success: false,
+      message: isDuplicate ? 'Invoice number conflict — please try again.' : 'Error converting purchase order to invoice',
+      error: error.message
+    });
+  }
+};

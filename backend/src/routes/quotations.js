@@ -16,6 +16,7 @@ router.delete('/:id', requirePermission('quotation_management', 'delete'), quota
 router.get('/:id/download-pdf', requirePermission('quotation_management', 'read'), quotationController.downloadQuotationPDF);
 router.post('/:id/send-email', requirePermission('quotation_management', 'update'), quotationController.sendQuotationEmail);
 router.post('/:id/convert-to-invoice', requirePermission('quotation_management', 'update'), quotationController.convertToInvoice);
+router.post('/:id/convert-to-po', requirePermission('quotation_management', 'update'), quotationController.convertToPurchaseOrder);
 router.patch('/:id/status', requirePermission('quotation_management', 'update'), quotationController.updateQuotationStatus);
 
 module.exports = router;

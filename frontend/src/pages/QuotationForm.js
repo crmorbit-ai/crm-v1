@@ -28,7 +28,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
   const [error, setError] = useState('');
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
-  const [customerType, setCustomerType] = useState('Lead');
+  const [customerType, setCustomerType] = useState('DataCenter');
   const [quotationTemplates, setQuotationTemplates] = useState([]);
   const [selectedTemplate, setSelectedTemplate] = useState(null);
 
@@ -43,6 +43,7 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
 
   const [formData, setFormData] = useState({
     customerName: '', customerEmail: '', customerPhone: '', customerAddress: '',
+    customerGstin: '', customerPan: '', customerState: '', customerStateCode: '', placeOfSupply: '',
     title: '', description: '',
     items: [],
     quotationDate: new Date().toISOString().split('T')[0],
@@ -65,13 +66,16 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
 
   const fetchCustomers = async () => {
     try {
-      const ep = customerType==='Lead' ? '/leads' : customerType==='Contact' ? '/contacts' : '/accounts';
-      const res = await fetch(`${API_URL}${ep}?limit=1000`, { headers: getAuthHeaders() });
+      // Only fetch Data Center customers
+      const res = await fetch(`${API_URL}/data-center?limit=1000`, { headers: getAuthHeaders() });
+      if (!res.ok) throw new Error('Failed to fetch customers');
       const data = await res.json();
-      let list = [];
-      if (data?.data) { if (customerType==='Lead') list=data.data.leads||[]; else if (customerType==='Contact') list=data.data.contacts||[]; else list=data.data.accounts||[]; }
+      const list = data?.data?.candidates || data?.data || [];
       setCustomers(list);
-    } catch { setCustomers([]); }
+    } catch (err) {
+      console.error('Failed to fetch customers:', err);
+      setCustomers([]);
+    }
   };
 
   const fetchQuotation = async () => {
@@ -85,13 +89,35 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
 
   const handleCustomerSelect = (cid) => {
     if (!cid) {
-      setFormData(p => ({ ...p, customer: '', customerModel: '', customerName: '', customerEmail: '', customerPhone: '', customerAddress: '' }));
+      setFormData(p => ({ ...p, customer: '', customerModel: '', customerName: '', customerEmail: '', customerPhone: '', customerAddress: '', customerGstin: '', customerPan: '', customerState: '', customerStateCode: '', placeOfSupply: '' }));
       return;
     }
-    const c = customers.find(x => x._id===cid); if (!c) return;
-    setFormData(p => ({ ...p, customer: cid, customerModel: customerType,
-      customerName: customerType==='Account' ? c.accountName : `${c.firstName} ${c.lastName}`,
-      customerEmail: c.email, customerPhone: c.phone||c.mobile||'', customerAddress: c.address||c.billingAddress||'' }));
+    const c = customers.find(x => x._id===cid);
+    if (!c) return;
+
+    // Data Center customer - flexible fields
+    const customerName = c.customerName || c.name || c.fullName || c.firstName || '';
+    const address = c.address || c.billingAddress || '';
+    const gstin = c.gstin || c.gstNumber || '';
+    const pan = c.pan || c.panNumber || (gstin && gstin.length === 15 ? gstin.substring(2, 12) : '');
+    const state = c.state || c.billingState || '';
+    const stateCode = c.stateCode || '';
+
+    setFormData(p => ({
+      ...p,
+      customer: cid,
+      customerModel: 'DataCenterCandidate',
+      customerName,
+      customerEmail: c.email || '',
+      customerPhone: c.phone || c.mobile || c.contactNumber || '',
+      customerAddress: address,
+      customerGstin: gstin,
+      customerPan: pan,
+      customerState: state,
+      customerStateCode: stateCode,
+      placeOfSupply: state
+    }));
+
     // Clear errors when customer is selected
     setFieldErrors(prev => ({ ...prev, customerName: '', customerEmail: '' }));
   };
@@ -281,16 +307,10 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
               </div>
             </div>
           )}
-          <div>
-            <label style={ls}>Customer Type</label>
-            <div className="resp-form-grid-3">
-              {['Lead','Contact','Account'].map(t => <button key={t} type="button" onClick={()=>setCustomerType(t)} style={btnSty(customerType===t)}>{t}</button>)}
-            </div>
-          </div>
-          <div><label style={ls}>Select Customer</label>
+          <div><label style={ls}>Select Customer (Data Center)</label>
             <select style={ss} onChange={e=>handleCustomerSelect(e.target.value)} value={formData.customer||''}>
-              <option value="">-- Select {customerType} --</option>
-              {customers.map(c => <option key={c._id} value={c._id}>{customerType==='Account'?c.accountName:`${c.firstName} ${c.lastName}`} - {c.email}</option>)}
+              <option value="">-- Select Customer --</option>
+              {customers.map(c => <option key={c._id} value={c._id}>{c.customerName || c.name || c.fullName || `${c.firstName || ''} ${c.lastName || ''}`.trim()} - {c.email}</option>)}
             </select>
           </div>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
@@ -306,6 +326,57 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
             </div>
             <div><label style={ls}>Phone</label><input name="customerPhone" value={formData.customerPhone} onChange={inp} disabled={!!formData.customer} style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} /></div>
             <div><label style={ls}>Address</label><input name="customerAddress" value={formData.customerAddress} onChange={inp} disabled={!!formData.customer} style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}} /></div>
+          </div>
+
+          {/* GST Fields Section */}
+          <div style={{ marginTop: '16px', padding: '16px', background: '#f0f9ff', borderRadius: '10px', border: '1px solid #bfdbfe' }}>
+            <div style={{ fontSize: '12px', fontWeight: '700', color: '#1e40af', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📋 GST Information</div>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+              <div>
+                <label style={ls}>GSTIN</label>
+                <input
+                  name="customerGstin"
+                  value={formData.customerGstin}
+                  onChange={inp}
+                  disabled={!!formData.customer}
+                  placeholder="29ABCDE1234F1Z5"
+                  style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}}
+                />
+              </div>
+              <div>
+                <label style={ls}>PAN</label>
+                <input
+                  name="customerPan"
+                  value={formData.customerPan}
+                  onChange={inp}
+                  disabled={!!formData.customer}
+                  placeholder="ABCDE1234F"
+                  style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}}
+                />
+              </div>
+              <div>
+                <label style={ls}>State</label>
+                <input
+                  name="customerState"
+                  value={formData.customerState}
+                  onChange={inp}
+                  disabled={!!formData.customer}
+                  placeholder="Karnataka"
+                  style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}}
+                />
+              </div>
+              <div>
+                <label style={ls}>State Code</label>
+                <input
+                  name="customerStateCode"
+                  value={formData.customerStateCode}
+                  onChange={inp}
+                  disabled={!!formData.customer}
+                  placeholder="29"
+                  style={{...is, opacity: formData.customer ? 0.6 : 1, cursor: formData.customer ? 'not-allowed' : 'text', backgroundColor: formData.customer ? '#f0f0f0' : '#f8fafc'}}
+                />
+              </div>
+            </div>
           </div>
         </div>
       );
@@ -436,8 +507,8 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
                     {['Lead','Contact','Account'].map(t=><button key={t} type="button" onClick={()=>setCustomerType(t)} style={btnSty(customerType===t)}>{t}</button>)}
                   </div>
                   <select style={ss} onChange={e=>handleCustomerSelect(e.target.value)} value={formData.customer||''}>
-                    <option value="">-- Select {customerType} --</option>
-                    {customers.map(c=><option key={c._id} value={c._id}>{customerType==='Account'?c.accountName:`${c.firstName} ${c.lastName}`} - {c.email}</option>)}
+                    <option value="">-- Select Customer --</option>
+                    {customers.map(c=><option key={c._id} value={c._id}>{c.customerName || c.name || c.fullName || `${c.firstName || ''} ${c.lastName || ''}`.trim()} - {c.email}</option>)}
                   </select>
                   {formData.customerName && <div style={{ marginTop:'6px', padding:'6px 10px', background:'#f0fdf4', border:'1px solid #86efac', borderRadius:'7px', fontSize:'12px', color:'#166534', fontWeight:'600' }}>✓ {formData.customerName}</div>}
                 </div>
@@ -545,8 +616,8 @@ const QuotationForm = ({ embedded, onClose, onSuccess }) => {
             {['Lead','Contact','Account'].map(t=><button key={t} type="button" onClick={()=>setCustomerType(t)} style={btnSty(customerType===t)}>{t}</button>)}
           </div>
           <select onChange={e=>handleCustomerSelect(e.target.value)} className="crm-form-select" value={formData.customer||''} style={{ marginBottom:'12px' }}>
-            <option value="">-- Select {customerType} --</option>
-            {customers.map(c=><option key={c._id} value={c._id}>{customerType==='Account'?c.accountName:`${c.firstName} ${c.lastName}`} - {c.email}</option>)}
+            <option value="">-- Select Customer --</option>
+            {customers.map(c=><option key={c._id} value={c._id}>{c.customerName || c.name || c.fullName || `${c.firstName || ''} ${c.lastName || ''}`.trim()} - {c.email}</option>)}
           </select>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'16px' }}>
             <div><label className="crm-form-label">Name *</label><input name="customerName" value={formData.customerName} onChange={inp} className="crm-form-input" placeholder="Customer name" /></div>

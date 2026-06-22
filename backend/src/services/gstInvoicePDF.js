@@ -117,6 +117,7 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
       const headerInfo = [
         ['Invoice No', invoice.invoiceNumber],
         ['Date', new Date(invoice.invoiceDate).toLocaleDateString('en-IN')],
+        ...(invoice.customerPONumber ? [['Customer PO', invoice.customerPONumber]] : []),
         ['PAN', tenant.panNumber || (tenant.gstin ? tenant.gstin.substring(2, 12) : 'N/A')],
         ['GST IN', tenant.gstin || 'N/A']
       ];

@@ -36,6 +36,26 @@ const quotationItemSchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
+  hsnCode: {
+    type: String,
+    trim: true,
+    default: '998314'
+  },
+  cgst: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  sgst: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
+  igst: {
+    type: Number,
+    default: 0,
+    min: 0
+  },
   total: {
     type: Number,
     required: true
@@ -61,7 +81,7 @@ const quotationSchema = new mongoose.Schema({
   },
   customerModel: {
     type: String,
-    enum: ['Lead', 'Contact', 'Account'],
+    enum: ['Lead', 'Contact', 'Account', 'DataCenterCandidate'],
     required: false
   },
   customerName: {
@@ -74,6 +94,28 @@ const quotationSchema = new mongoose.Schema({
   },
   customerPhone: String,
   customerAddress: String,
+  customerGstin: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
+  customerPan: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
+  customerState: {
+    type: String,
+    trim: true
+  },
+  customerStateCode: {
+    type: String,
+    trim: true
+  },
+  placeOfSupply: {
+    type: String,
+    trim: true
+  },
   title: {
     type: String,
     required: true,
@@ -96,6 +138,23 @@ const quotationSchema = new mongoose.Schema({
   totalTax: {
     type: Number,
     default: 0
+  },
+  totalCgst: {
+    type: Number,
+    default: 0
+  },
+  totalSgst: {
+    type: Number,
+    default: 0
+  },
+  totalIgst: {
+    type: Number,
+    default: 0
+  },
+  taxType: {
+    type: String,
+    enum: ['CGST+SGST', 'IGST', 'None'],
+    default: 'CGST+SGST'
   },
   totalAmount: {
     type: Number,
@@ -132,6 +191,14 @@ const quotationSchema = new mongoose.Schema({
   invoice: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Invoice'
+  },
+  convertedToPO: {
+    type: Boolean,
+    default: false
+  },
+  purchaseOrder: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'PurchaseOrder'
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
