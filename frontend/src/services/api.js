@@ -49,12 +49,16 @@ api.interceptors.response.use(
 
       // Handle 403 permission denied — show global toast
       // Exception: account deletion errors are NOT permission errors, pass them through silently
+      // Exception: All GET requests should fail silently (data fetches for stats, dropdowns, etc.)
       if (error.response.status === 403) {
         const responseData = error.response.data || {};
         const errorCode = responseData?.errors?.code;
         const isDeletionError = errorCode === 'ACCOUNT_DELETED' || errorCode === 'DELETION_PENDING';
 
-        if (!isDeletionError) {
+        // Only show toast for non-GET requests (POST, PUT, DELETE actions)
+        const isGetRequest = error.config?.method?.toLowerCase() === 'get';
+
+        if (!isDeletionError && !isGetRequest) {
           const msg = responseData?.message || 'You do not have permission to perform this action';
           window.dispatchEvent(new CustomEvent('app:permission-denied', { detail: { message: msg } }));
         }

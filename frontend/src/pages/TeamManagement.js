@@ -135,6 +135,7 @@ const TeamManagement = () => {
   const [groupForm, setGroupForm] = useState({ name:'', description:'', members:[] });
   const [submitting, setSubmitting] = useState(false);
   const [resetModal, setResetModal] = useState({ open:false, userId:null, userName:'' });
+  const [credentialsModal, setCredentialsModal] = useState({ open: false, userId: null, userName: '', password: '' });
   const [resetForm, setResetForm]   = useState({ newPassword:'', confirmPassword:'' });
   const [showRPwd, setShowRPwd]     = useState(false);
   const [search, setSearch]           = useState('');
@@ -260,6 +261,20 @@ const TeamManagement = () => {
   const handleDeleteUser  = async u => { if(!window.confirm(`Delete ${u.firstName}?`)) return; try{ await userService.deleteUser(u._id);  showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
   const handleDeleteRole  = async r => { if(!window.confirm(`Delete "${r.name}"?`)) return; try{ await roleService.deleteRole(r._id);   showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
   const handleDeleteGroup = async g => { if(!window.confirm(`Delete "${g.name}"?`)) return; try{ await groupService.deleteGroup(g._id); showMsg('Deleted!'); loadData(); }catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message,true); } };
+
+  const handleSendCredentials = async () => {
+    try {
+      const res = await api.post(`/users/${credentialsModal.userId}/send-credentials`, { password: credentialsModal.password });
+      if(res.success){
+        showMsg('✅ Credentials email sent successfully!');
+        setCredentialsModal({ open:false, userId:null, userName:'', password:'' });
+      }else{
+        showMsg(res.message || 'Failed to send email', true);
+      }
+    }catch(e){
+      showMsg(e.message || 'Failed to send email', true);
+    }
+  };
 
   // SAAS Admin - User Management Actions
   const handleSaasDeactivateUser = async (u) => {
@@ -1121,6 +1136,9 @@ const TeamManagement = () => {
                     <button onClick={()=>{setSelectedUser(null);openUserPanel(su);}} style={{flex:1,padding:'8px 0',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>✏️ Edit</button>
                     {su._id!==user._id&&<button onClick={()=>{setSelectedUser(null);openResetModal(su);}} style={{flex:1,padding:'8px 0',border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fff',color:'#64748b',fontSize:12,fontWeight:700,cursor:'pointer'}}>🔑 Reset Pwd</button>}
                   </div>
+                  <button onClick={()=>setCredentialsModal({ open: true, userId: su._id, userName: `${su.firstName} ${su.lastName}`, password: '' })} style={{width:'100%',padding:'8px 0',border:'1.5px solid #dbeafe',borderRadius:9,background:'linear-gradient(135deg,#eff6ff,#dbeafe)',color:'#1e40af',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
+                    📧 Send Credentials Mail
+                  </button>
                   {su._id!==user._id&&(
                     <button onClick={()=>toggleActive(su)} style={{
                       width:'100%',padding:'8px 0',borderRadius:9,fontSize:12,fontWeight:700,cursor:'pointer',
@@ -2128,6 +2146,35 @@ const TeamManagement = () => {
                   <button onClick={()=>setBulkModal(false)} style={{padding:'10px 28px',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:13,fontWeight:700,cursor:'pointer'}}>Done</button>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Credentials Email Modal */}
+      {credentialsModal.open && (
+        <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999 }}>
+          <div style={{ background:'#fff', borderRadius:12, width:450, maxWidth:'90%', boxShadow:'0 20px 60px rgba(0,0,0,0.3)' }}>
+            <div style={{ padding:'20px 24px', borderBottom:'1px solid #e2e8f0' }}>
+              <h3 style={{ margin:0, fontSize:18, fontWeight:700, color:'#0f172a' }}>📧 Send Credentials Email</h3>
+              <p style={{ margin:'6px 0 0', fontSize:13, color:'#64748b' }}>Enter password for <strong>{credentialsModal.userName}</strong></p>
+            </div>
+            <div style={{ padding:24 }}>
+              <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#334155', marginBottom:6 }}>Password</label>
+              <input
+                type="text"
+                value={credentialsModal.password}
+                onChange={(e)=>setCredentialsModal({...credentialsModal, password:e.target.value})}
+                placeholder="Enter user password"
+                autoFocus
+                style={{ width:'100%', padding:'10px 12px', fontSize:14, border:'1.5px solid #e2e8f0', borderRadius:8, outline:'none', fontFamily:'monospace' }}
+                onKeyDown={(e)=>{ if(e.key==='Enter' && credentialsModal.password) { handleSendCredentials(); } }}
+              />
+              <p style={{ margin:'8px 0 0', fontSize:12, color:'#94a3b8' }}>This password will be sent in the email and set in database</p>
+            </div>
+            <div style={{ padding:'16px 24px', borderTop:'1px solid #e2e8f0', display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button onClick={()=>setCredentialsModal({ open:false, userId:null, userName:'', password:'' })} style={{ padding:'8px 16px', fontSize:13, fontWeight:600, color:'#64748b', background:'#f1f5f9', border:'none', borderRadius:8, cursor:'pointer' }}>Cancel</button>
+              <button onClick={handleSendCredentials} disabled={!credentialsModal.password} style={{ padding:'8px 16px', fontSize:13, fontWeight:600, color:'#fff', background:credentialsModal.password?'linear-gradient(135deg,#3b82f6,#2563eb)':'#cbd5e1', border:'none', borderRadius:8, cursor:credentialsModal.password?'pointer':'not-allowed' }}>Send Email</button>
             </div>
           </div>
         </div>

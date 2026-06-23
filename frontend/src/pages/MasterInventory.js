@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import masterInventoryService from '../services/masterInventoryService';
 import { groupService } from '../services/groupService';
 import { Search, Edit2, Trash2, ArrowRight, Users } from 'lucide-react';
+import DashboardLayout from '../components/layout/DashboardLayout';
 
 export default function MasterInventory({ fromTab }) {
   const navigate = useNavigate();
@@ -220,7 +221,7 @@ export default function MasterInventory({ fromTab }) {
     return <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Loading inventory...</div>;
   }
 
-  return (
+  const content = (
     <>
       <style>{`
         @media (max-width: 768px) {
@@ -701,9 +702,9 @@ export default function MasterInventory({ fromTab }) {
         {dashboard && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
-              { label: 'Products', value: dashboard.byType?.product || 0, bg: 'linear-gradient(135deg,#4f46e5,#6366f1)', type: 'product' },
-              { label: 'Services', value: dashboard.byType?.service || 0, bg: 'linear-gradient(135deg,#d97706,#f59e0b)', type: 'service' },
-              { label: 'Leads', value: dashboard.byType?.lead || 0, bg: 'linear-gradient(135deg,#059669,#10b981)', type: 'lead' }
+              { label: 'Products', value: dashboard.byType?.product || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', type: 'product' },
+              { label: 'Services', value: dashboard.byType?.service || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', type: 'service' },
+              { label: 'Leads', value: dashboard.byType?.lead || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', type: 'lead' }
             ].map((stat, i) => (
               <div key={i} onClick={() => { setSearch(''); setTypeFilter(stat.type); setDeptFilter(''); }} style={{ position: 'relative', borderRadius: 6, padding: '12px 14px', overflow: 'hidden', cursor: 'pointer', background: stat.bg, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ position: 'relative', zIndex: 1 }}>
@@ -789,4 +790,15 @@ export default function MasterInventory({ fromTab }) {
     </div>
     </>
   );
+
+  // If not in tab mode, wrap with DashboardLayout
+  if (!fromTab) {
+    return (
+      <DashboardLayout title="Master Inventory">
+        {content}
+      </DashboardLayout>
+    );
+  }
+
+  return content;
 }

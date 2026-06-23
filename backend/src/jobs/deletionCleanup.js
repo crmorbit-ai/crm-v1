@@ -20,7 +20,7 @@ const Role = require('../models/Role');
  * Runs daily at midnight.
  */
 const runDeletionCleanup = async () => {
-  console.log('🗑️  [DeletionCleanup] Running scheduled permanent deletion check...');
+  // console.log('🗑️  [DeletionCleanup] Running scheduled permanent deletion check...');
 
   try {
     const expiredTenants = await Tenant.find({
@@ -30,7 +30,7 @@ const runDeletionCleanup = async () => {
     }).select('_id organizationName organizationId contactEmail deletionRequest');
 
     if (expiredTenants.length === 0) {
-      console.log('🗑️  [DeletionCleanup] No expired tenants found. Skipping.');
+      // console.log('🗑️  [DeletionCleanup] No expired tenants found. Skipping.');
       return;
     }
 
@@ -70,7 +70,7 @@ const runDeletionCleanup = async () => {
       }
     }
 
-    console.log('🗑️  [DeletionCleanup] Cleanup completed.');
+    // console.log('🗑️  [DeletionCleanup] Cleanup completed.');
   } catch (error) {
     console.error('❌ [DeletionCleanup] Cron job error:', error.message);
   }
@@ -86,7 +86,7 @@ const startDeletionCleanupJob = () => {
     timezone: 'Asia/Kolkata'
   });
 
-  console.log('✅ [DeletionCleanup] Scheduled permanent deletion cron job (daily midnight IST).');
+  // console.log('✅ [DeletionCleanup] Scheduled permanent deletion cron job (daily midnight IST).');
 };
 
 module.exports = { startDeletionCleanupJob, runDeletionCleanup };

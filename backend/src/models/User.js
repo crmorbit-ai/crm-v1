@@ -65,6 +65,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  mustChangePassword: {
+    type: Boolean,
+    default: false
+  },
   deactivationReason: { type: String },
   deactivatedAt: { type: Date },
   deactivatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },

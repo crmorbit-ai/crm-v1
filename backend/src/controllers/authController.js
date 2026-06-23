@@ -168,6 +168,7 @@ const login = async (req, res) => {
       isActive: user.isActive,
       emailVerified: user.emailVerified,
       isProfileComplete: user.isProfileComplete !== false, // Default to true for existing users
+      mustChangePassword: user.mustChangePassword || false, // Flag for password change popup
       lastLogin: user.lastLogin,
       tenant: user.tenant ? {
         _id: user.tenant._id,

@@ -37,7 +37,7 @@ const initLogoUrl = async () => {
       folder:     'crm-assets',
     });
     LOGO_CDN_URL = result.secure_url;
-    console.log('✅ Email logo uploaded to Cloudinary:', LOGO_CDN_URL);
+    // console.log('✅ Email logo uploaded to Cloudinary:', LOGO_CDN_URL);
   } catch (e) {
     console.warn('⚠️  Cloudinary logo upload failed:', e.message);
   }
@@ -76,6 +76,8 @@ const sendViaSES = async (to, subject, html, fromAddress = FROM_ADDRESS, plainTe
   });
   const result = await sesClient.send(command);
   console.log('✅ SES email sent:', result.MessageId, '→', to, 'from', fromAddress);
+  console.log('📧 Subject:', subject);
+  console.log('📧 To:', to);
   return result.MessageId;
 };
 
@@ -416,7 +418,61 @@ const sendLeadAssignmentEmail = async (assignedUserEmail, assignedUserName, lead
 };
 
 
-// ─── 6. Meeting Invitation ────────────────────────────────────────────────────
+// ─── 6. Send User Credentials Email ──────────────────────────────────────────
+const sendUserCredentialsEmail = async ({ userEmail, userName, loginName, password, organizationName, permissions }) => {
+  try {
+    const permissionsList = permissions && permissions.length > 0
+      ? permissions.map(p => `<li style="margin:4px 0;">${p}</li>`).join('')
+      : '<li style="margin:4px 0;color:#94a3b8;">No specific permissions assigned</li>';
+
+    const mailOptions = {
+      to: userEmail,
+      subject: `Welcome to ${organizationName} - Your Login Credentials`,
+      text: `Hi ${userName},\n\nWelcome to ${organizationName} on Unified CRM!\n\nYour login credentials:\nLogin Username: ${loginName}\nPassword: ${password}\nOrganization: ${organizationName}\n\nYou can sign in at: ${FRONTEND_URL}/login\n\nYour Permissions:\n${permissions?.join(', ') || 'Contact admin for details'}\n\nBest regards,\n${organizationName}\nUnified CRM`,
+      html: baseTemplate({
+        preheader: `Your account credentials for ${organizationName}. Welcome aboard!`,
+        body: `
+          <h2 style="font-size:24px;margin-bottom:4px;">Welcome to ${organizationName}!</h2>
+          <p style="color:#6b7280;font-size:14px;margin-bottom:28px;">Your account is ready. Here are your login details.</p>
+          <p>Hi <strong>${userName}</strong>,</p>
+          <p>Welcome aboard! Your account has been created for <strong>${organizationName}</strong> on Unified CRM.</p>
+
+          <div class="info-card">
+            <h3 style="font-size:16px;font-weight:700;color:#111827;margin:0 0 16px 0;">Login Credentials</h3>
+            <div class="info-row"><span class="info-label">Login Username</span><span class="info-value" style="font-family:'Courier New',monospace;font-size:15px;">${loginName}</span></div>
+            <div class="info-row"><span class="info-label">Password</span><span class="info-value" style="font-family:'Courier New',monospace;font-size:15px;font-weight:700;color:#dc2626;">${password}</span></div>
+            <div class="info-row"><span class="info-label">Email</span><span class="info-value">${userEmail}</span></div>
+            <div class="info-row"><span class="info-label">Organization</span><span class="info-value">${organizationName}</span></div>
+          </div>
+
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${FRONTEND_URL}/login" class="btn-primary">Sign In Now &rarr;</a>
+          </div>
+
+          <div class="info-card" style="background:#f0fdf4;border-left:4px solid #10b981;">
+            <h3 style="font-size:15px;font-weight:700;color:#065f46;margin:0 0 12px 0;">Your Permissions</h3>
+            <ul style="margin:0;padding-left:20px;color:#065f46;font-size:13px;">
+              ${permissionsList}
+            </ul>
+          </div>
+
+          <div class="alert-success">
+            <strong>Need help?</strong> Contact your administrator or visit our <a href="${FRONTEND_URL}/help" style="color:#065f46;">support center</a>.
+          </div>
+        `
+      })
+    };
+
+    const info = await sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error('❌ User credentials email error:', error.message);
+    throw new Error('Failed to send user credentials email: ' + error.message);
+  }
+};
+
+
+// ─── 7. Meeting Invitation ────────────────────────────────────────────────────
 const sendMeetingInvitation = async (meeting, attendeeEmails, organizerName, organizerEmail = '') => {
   try {
     const meetingDate = new Date(meeting.from);
@@ -789,6 +845,7 @@ module.exports = {
   sendMeetingCancellation,
   sendUserInvitationEmail,
   sendWelcomeEmail,
+  sendUserCredentialsEmail,
   sendLeadAssignmentEmail,
   sendDeletionRequestNotification,
   sendDeletionRequestConfirmation,

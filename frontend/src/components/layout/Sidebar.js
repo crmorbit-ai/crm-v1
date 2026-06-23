@@ -250,21 +250,22 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
             ) : (
               <>
                 {/* Tenant User Navigation */}
-                {/* Dashboard - only show if user has at least one permission */}
-                {(hasPermission('lead_management', 'read') ||
-                  hasPermission('contact_management', 'read') ||
-                  hasPermission('account_management', 'read') ||
-                  hasPermission('task_management', 'read') ||
-                  hasPermission('product_management', 'read') ||
-                  hasPermission('user_management', 'read')) && (
-                  <NavItem to="/dashboard" label="Dashboard" />
-                )}
+                {/* Dashboard - available to all users */}
+                <NavItem to="/dashboard" label="Dashboard" />
 
                 <div className="my-3 border-t sidebar-divider" />
 
                 {/* Sales */}
                 <NavSection title="Sales" section="sales" permissions={['data_center']}>
                   <NavItem to="/data-center" label="Customers" permission="data_center" />
+                </NavSection>
+
+                {/* Inventory */}
+                <NavSection title="Inventory" section="inventory" permissions={['data_center']}>
+                  <NavItem to="/inventory/master" label="Master Inventory" permission="data_center" />
+                  <NavItem to="/inventory/products" label="Product Inventory" permission="data_center" />
+                  <NavItem to="/inventory/services" label="Service Inventory" permission="data_center" />
+                  <NavItem to="/inventory/leads" label="Lead Inventory" permission="data_center" />
                 </NavSection>
 
                 {/* Lead Management */}
@@ -322,9 +323,8 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   <NavItem to="/activity-logs" label="Audit Logs" permission="audit_logs" />
                 </NavSection>
 
-                {/* Notifications - only for users with management permissions */}
+                {/* Notifications - only for users with user or task management permissions */}
                 {(hasPermission('user_management', 'read') ||
-                  hasPermission('lead_management', 'read') ||
                   hasPermission('task_management', 'read')) && (
                   <NavSection title="Notifications" section="notifications">
                     <NavItem to="/notifications" label="Notifications" />
@@ -339,10 +339,9 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   </NavSection>
                 )}
 
-                {/* Support - only for users with management permissions or tenant admin */}
+                {/* Support - only for users with user or task management permissions or tenant admin */}
                 {(isTenantAdmin ||
                   hasPermission('user_management', 'read') ||
-                  hasPermission('lead_management', 'read') ||
                   hasPermission('task_management', 'read')) && (
                   <NavSection title="Support" section="support">
                     <NavItem to="/support" label="My Tickets" />

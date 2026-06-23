@@ -1,13 +1,88 @@
 const express = require('express');
 const router = express.Router();
-const MasterInventoryItem = require('../models/MasterInventoryItem');
 const { protect } = require('../middleware/auth');
+const { getDataCenterConnection } = require('../config/database');
+
+// ═══════════════════════════════════════════════════════════════
+// 🌐 DATA CENTER MODEL - Shared across all tenants
+// ═══════════════════════════════════════════════════════════════
+const getMasterInventoryModel = () => {
+  const dataCenterConnection = getDataCenterConnection();
+  if (!dataCenterConnection) {
+    console.error('❌ Data Center connection not available!');
+    throw new Error('Data Center database not available');
+  }
+
+  console.log('✅ Using Data Center DB:', dataCenterConnection.name);
+
+  // Check if model already exists
+  if (dataCenterConnection.models.MasterInventoryItem) {
+    console.log('📦 Using existing MasterInventoryItem model from Data Center DB');
+    return dataCenterConnection.models.MasterInventoryItem;
+  }
+
+  console.log('🆕 Creating new MasterInventoryItem model in Data Center DB');
+
+  // Define schema
+  const mongoose = require('mongoose');
+  const masterInventoryItemSchema = new mongoose.Schema({
+    tenant: { type: String, required: true, index: true },
+    name: { type: String, required: true },
+    type: { type: String, enum: ['product', 'service', 'lead'], required: true, index: true },
+    department: { type: String, default: 'sales', index: true },
+    status: { type: String, enum: ['new', 'quoted', 'won', 'lost'], default: 'new', index: true },
+    description: String,
+
+    // Product fields
+    sku: String,
+    category: String,
+    productPrice: { type: Number, default: 0 },
+    stock: { type: Number, default: 0 },
+
+    // Service fields
+    serviceType: String,
+    duration: String,
+    serviceRate: { type: Number, default: 0 },
+
+    // Lead fields
+    leadName: String,
+    leadEmail: String,
+    leadPhone: String,
+    leadSource: String,
+
+    // Financial
+    quotedAmount: { type: Number, default: 0 },
+    wonAmount: { type: Number, default: 0 },
+    receivedAmount: { type: Number, default: 0 },
+
+    // Additional
+    notes: String,
+    tags: [String],
+
+    // Assignment
+    assignedGroup: { type: mongoose.Schema.Types.ObjectId, ref: 'Group', default: null },
+    assignedMembers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
+    assignedToName: String,
+
+    createdBy: { type: String, default: 'system' },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+    isActive: { type: Boolean, default: true }
+  });
+
+  masterInventoryItemSchema.index({ tenant: 1, name: 1 });
+  masterInventoryItemSchema.index({ tenant: 1, type: 1 });
+  masterInventoryItemSchema.index({ tenant: 1, status: 1 });
+
+  return dataCenterConnection.model('MasterInventoryItem', masterInventoryItemSchema);
+};
 
 router.use(protect);
 
 // ─── GET /api/master-inventory/dashboard ───────────────────────────────────────
 router.get('/dashboard', async (req, res) => {
   try {
+    const MasterInventoryItem = getMasterInventoryModel();
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
     const items = await MasterInventoryItem.find({ tenant, isActive: true });
     const byType = {
@@ -28,6 +103,7 @@ router.get('/dashboard', async (req, res) => {
 // ─── GET /api/master-inventory ───────────────────────────────────────────────────
 router.get('/', async (req, res) => {
   try {
+    const MasterInventoryItem = getMasterInventoryModel();
     const { page = 1, limit = 50, search, type, department, status } = req.query;
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
     const query = { tenant, isActive: true };
@@ -68,6 +144,7 @@ router.get('/', async (req, res) => {
 // ─── GET /api/master-inventory/type/:type ─────────────────────────────────────
 router.get('/type/:type', async (req, res) => {
   try {
+    const MasterInventoryItem = getMasterInventoryModel();
     const { page = 1, limit = 50, search } = req.query;
     const { type } = req.params;
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
@@ -104,6 +181,7 @@ router.get('/type/:type', async (req, res) => {
 // ─── GET /api/master-inventory/:id ────────────────────────────────────────────
 router.get('/:id', async (req, res) => {
   try {
+    const MasterInventoryItem = getMasterInventoryModel();
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
     const item = await MasterInventoryItem.findOne({ _id: req.params.id, tenant });
     if (!item) return res.status(404).json({ success: false, message: 'Item not found' });
@@ -116,6 +194,11 @@ router.get('/:id', async (req, res) => {
 // ─── POST /api/master-inventory ──────────────────────────────────────────────────
 router.post('/', async (req, res) => {
   try {
+    console.log('🔵 POST /api/master-inventory - Creating item...');
+    const MasterInventoryItem = getMasterInventoryModel();
+    console.log('📊 Model DB:', MasterInventoryItem.db.name);
+    console.log('📊 Collection:', MasterInventoryItem.collection.name);
+
     const itemData = {
       ...req.body,
       tenant: req.user.tenant || req.user._id?.toString() || 'default',
@@ -123,6 +206,8 @@ router.post('/', async (req, res) => {
     };
     const item = new MasterInventoryItem(itemData);
     await item.save();
+
+    console.log('✅ Item saved to:', item.collection.name, 'in DB:', item.db.name);
     res.status(201).json({ success: true, data: item, message: 'Item created successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to create item', error: error.message });
@@ -132,6 +217,7 @@ router.post('/', async (req, res) => {
 // ─── PATCH /api/master-inventory/:id ─────────────────────────────────────────────
 router.patch('/:id', async (req, res) => {
   try {
+    const MasterInventoryItem = getMasterInventoryModel();
     const { _id, tenant: _, createdAt, createdBy, ...updateData } = req.body;
     updateData.updatedAt = new Date();
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
@@ -150,6 +236,7 @@ router.patch('/:id', async (req, res) => {
 // ─── DELETE /api/master-inventory/:id ────────────────────────────────────────────
 router.delete('/:id', async (req, res) => {
   try {
+    const MasterInventoryItem = getMasterInventoryModel();
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
     const item = await MasterInventoryItem.findOneAndUpdate(
       { _id: req.params.id, tenant },

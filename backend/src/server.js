@@ -190,7 +190,7 @@ const fixDefaultRoles = async () => {
         { $set: { permissions: config.permissions, forUserTypes: config.forUserTypes, level: config.level } }
       );
       if (result.modifiedCount > 0) {
-        console.log(`✅ Fixed ${result.modifiedCount} "${config.name}" role(s) with correct permissions`);
+        // console.log(`✅ Fixed ${result.modifiedCount} "${config.name}" role(s) with correct permissions`);
       }
     }
   } catch (err) {
@@ -214,7 +214,7 @@ const startServer = async () => {
       startScheduledPostsJob();
       startPasswordExpiryChecker();
       emailWorker.poll();
-      console.log('✅ SQS Email Worker started');
+      // console.log('✅ SQS Email Worker started');
 
       try {
         await imapIdleService.startAllIdleConnections();

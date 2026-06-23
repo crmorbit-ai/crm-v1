@@ -149,6 +149,7 @@ const updatePassword = async (req, res) => {
     // Hash new password
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(newPassword, salt);
+    user.mustChangePassword = false; // Clear flag after password change
 
     await user.save();
 

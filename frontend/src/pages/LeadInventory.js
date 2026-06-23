@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import masterInventoryService from '../services/masterInventoryService';
 import { groupService } from '../services/groupService';
 import { Search, Edit2, Trash2, ArrowRight, Users } from 'lucide-react';
+import DashboardLayout from '../components/layout/DashboardLayout';
 
 export default function LeadInventory({ fromTab }) {
   const navigate = useNavigate();
@@ -238,7 +239,7 @@ export default function LeadInventory({ fromTab }) {
     return <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Loading leads...</div>;
   }
 
-  return (
+  const content = (
     <>
       <style>{`
         @media (max-width: 768px) {
@@ -597,9 +598,9 @@ export default function LeadInventory({ fromTab }) {
         {dashboard && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
-              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg,#10b981 0%,#34d399 50%,#6ee7b7 100%)', dept: '' },
-              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg,#059669 0%,#10b981 100%)', dept: 'sales' },
-              { label: 'Lead Gen', value: dashboard.byDept?.lead_generation || 0, bg: 'linear-gradient(135deg,#047857 0%,#059669 100%)', dept: 'lead_generation' }
+              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
+              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'sales' },
+              { label: 'Lead Gen', value: dashboard.byDept?.lead_generation || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'lead_generation' }
             ].map((stat, i) => (
               <div key={i} onClick={() => { setSearch(''); setDeptFilter(stat.dept); }} style={{ padding: '12px', background: stat.bg, borderRadius: '6px', textAlign: 'center', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#fff' }}>{stat.value}</div>
@@ -671,4 +672,14 @@ export default function LeadInventory({ fromTab }) {
     </div>
     </>
   );
+
+  if (!fromTab) {
+    return (
+      <DashboardLayout title="Lead Inventory">
+        {content}
+      </DashboardLayout>
+    );
+  }
+
+  return content;
 }

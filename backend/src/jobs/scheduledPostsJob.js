@@ -81,7 +81,7 @@ const processScheduledPosts = async () => {
  */
 const startScheduledPostsJob = () => {
   cron.schedule('* * * * *', processScheduledPosts, { timezone: 'Asia/Kolkata' });
-  console.log('✅ [ScheduledPosts] Cron started — checking every minute');
+  // console.log('✅ [ScheduledPosts] Cron started — checking every minute');
 };
 
 module.exports = { startScheduledPostsJob };

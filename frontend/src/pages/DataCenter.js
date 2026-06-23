@@ -11,10 +11,6 @@ import DynamicField from '../components/DynamicField';
 import fieldDefinitionService from '../services/fieldDefinitionService';
 import { Settings, List, LayoutGrid } from 'lucide-react';
 import ManageFieldsPanel from '../components/ManageFieldsPanel';
-import LeadInventory from './LeadInventory';
-import ProductInventory from './ProductInventory';
-import ServiceInventory from './ServiceInventory';
-import MasterInventory from './MasterInventory';
 import '../styles/crm.css';
 
 // --- Country/State/City cascade helpers ---
@@ -236,8 +232,6 @@ const DataCenter = () => {
   const [showMoveForm, setShowMoveForm] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [viewMode, setViewMode] = useState('table');
-  const [dbTab, setDbTab] = useState('customers');
-
   // Split View Panel State
   const [selectedCandidateId, setSelectedCandidateId] = useState(null);
   const [selectedCandidateData, setSelectedCandidateData] = useState(null);
@@ -788,13 +782,7 @@ const DataCenter = () => {
 
   return (
     <DashboardLayout title="Customer Database">
-      <div style={{ display: 'flex', gap: '0', borderBottom: '2px solid #e2e8f0', background: '#f8fafc', marginBottom: '20px' }}>
-        {[{ id: 'customers', label: 'Customers' }, { id: 'master', label: 'Master Inventory' }, { id: 'products', label: 'Product Inventory' }, { id: 'services', label: 'Service Inventory' }, { id: 'leads', label: 'Lead Inventory' }].map(tab => (
-          <button key={tab.id} onClick={() => setDbTab(tab.id)} style={{ padding: '12px 20px', fontSize: '13px', fontWeight: dbTab === tab.id ? '700' : '500', color: dbTab === tab.id ? '#3b82f6' : '#64748b', background: 'transparent', border: 'none', borderBottom: dbTab === tab.id ? '3px solid #3b82f6' : 'none', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.2s' }}>{tab.label}</button>
-        ))}
-      </div>
-
-      {dbTab === 'customers' && <>
+      {/* Tabs removed - inventory items moved to sidebar */}
 
       {/* ── WIZARD OVERLAY ── */}
 
@@ -1294,11 +1282,6 @@ const DataCenter = () => {
         </div>
 
       </div>
-      </>}
-      {dbTab === 'master' && <MasterInventory fromTab={true} />}
-      {dbTab === 'products' && <ProductInventory fromTab={true} />}
-      {dbTab === 'services' && <ServiceInventory fromTab={true} />}
-      {dbTab === 'leads' && <LeadInventory fromTab={true} />}
     </DashboardLayout>
   );
 };

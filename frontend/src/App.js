@@ -28,6 +28,10 @@ import AccountDetail from './pages/AccountDetail';
 import Opportunities from './pages/Opportunities';
 import DataCenter from './pages/DataCenter';
 import DataCenterDetail from './pages/DataCenterDetail';
+import MasterInventory from './pages/MasterInventory';
+import ProductInventory from './pages/ProductInventory';
+import ServiceInventory from './pages/ServiceInventory';
+import LeadInventory from './pages/LeadInventory';
 import Tasks from './pages/Tasks';
 import Meetings from './pages/Meetings';
 import MeetingDetail from './pages/MeetingDetail';
@@ -170,6 +174,12 @@ function AppRoutes() {
         <Route path="/opportunities" element={<ProtectedRoute requireTenant><Opportunities /></ProtectedRoute>} />
         <Route path="/data-center" element={<ProtectedRoute><DataCenter /></ProtectedRoute>} />
         <Route path="/data-center/:id" element={<ProtectedRoute><DataCenterDetail /></ProtectedRoute>} />
+
+        {/* Inventory Routes */}
+        <Route path="/inventory/master" element={<ProtectedRoute><MasterInventory /></ProtectedRoute>} />
+        <Route path="/inventory/products" element={<ProtectedRoute><ProductInventory /></ProtectedRoute>} />
+        <Route path="/inventory/services" element={<ProtectedRoute><ServiceInventory /></ProtectedRoute>} />
+        <Route path="/inventory/leads" element={<ProtectedRoute><LeadInventory /></ProtectedRoute>} />
 
         {/* Tasks & Activities */}
         <Route path="/tasks" element={<ProtectedRoute requireTenant><Tasks /></ProtectedRoute>} />

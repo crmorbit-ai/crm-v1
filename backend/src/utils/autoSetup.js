@@ -5,14 +5,14 @@
  */
 
 const autoSetup = async () => {
-  console.log('\n🔧 Running auto-setup checks...');
+  // console.log('\n🔧 Running auto-setup checks...');
   await Promise.all([
     ensureSubscriptionPlans(),
     ensureSuperAdminRole(),
     ensureDataCenterProducts(),
   ]);
   await cleanInvalidProfileData();
-  console.log('✅ Auto-setup complete\n');
+  // console.log('✅ Auto-setup complete\n');
 };
 
 // ─── 1. Subscription Plans ────────────────────────────────────────────────────
@@ -110,8 +110,8 @@ const ensureSuperAdminRole = async () => {
 // ─── 3. Data Center Products ──────────────────────────────────────────────────
 const ensureDataCenterProducts = async () => {
   try {
-    const { connectDataCenterDB } = require('../config/database');
-    const dcConn = await connectDataCenterDB();
+    const { getDataCenterConnection } = require('../config/database');
+    const dcConn = getDataCenterConnection();
     if (!dcConn) return;
 
     const Product = dcConn.model('Product');

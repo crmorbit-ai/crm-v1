@@ -5,7 +5,8 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI);
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    console.log(`✅ MongoDB Connected`);
+    console.log(`   Tenant Database: ${conn.connection.name}`);
 
     // Handle connection events
     mongoose.connection.on('error', (err) => {
@@ -30,7 +31,7 @@ const connectDB = async () => {
 };
 
 // ═══════════════════════════════════════════════════════════════
-// 🚀 DATA CENTER DATABASE CONNECTION (SEPARATE)
+// 🌐 MASTER DATABASE CONNECTION (Shared Global Data)
 // ═══════════════════════════════════════════════════════════════
 
 let dataCenterConnection = null;
@@ -69,7 +70,8 @@ const connectDataCenterDB = async () => {
       dataCenterConnection.model('OrgNode', OrgNode.schema);
     }
 
-    console.log(`✅ Data Center DB Connected: ${dataCenterConnection.host}`);
+    console.log(`✅ Master Database Connected`);
+    console.log(`   Database: ${dataCenterConnection.name}`);
 
     // Handle connection events
     dataCenterConnection.on('error', (err) => {

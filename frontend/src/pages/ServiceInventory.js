@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import masterInventoryService from '../services/masterInventoryService';
 import { groupService } from '../services/groupService';
 import { Search, Edit2, Trash2, ArrowRight, Users, X, Clock, DollarSign, Activity } from 'lucide-react';
+import DashboardLayout from '../components/layout/DashboardLayout';
 
 export default function ServiceInventory({ fromTab }) {
   const navigate = useNavigate();
@@ -230,7 +231,7 @@ export default function ServiceInventory({ fromTab }) {
     return <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Loading services...</div>;
   }
 
-  return (
+  const content = (
     <>
       <style>{`
         @media (max-width: 768px) {
@@ -580,9 +581,9 @@ export default function ServiceInventory({ fromTab }) {
         {dashboard && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
-              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg,#d97706 0%,#f59e0b 50%,#fbbf24 100%)', dept: '' },
-              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg,#f97316 0%,#fb923c 100%)', dept: 'sales' },
-              { label: 'Service', value: dashboard.byDept?.service || 0, bg: 'linear-gradient(135deg,#ea580c 0%,#f97316 100%)', dept: 'service' }
+              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
+              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'sales' },
+              { label: 'Service', value: dashboard.byDept?.service || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'service' }
             ].map((stat, i) => (
               <div key={i} onClick={() => { setSearch(''); setDeptFilter(stat.dept); }} style={{ background: stat.bg, borderRadius: '8px', padding: '12px 14px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: '#fff', lineHeight: '1', marginBottom: '4px' }}>{stat.value}</div>
@@ -655,4 +656,14 @@ export default function ServiceInventory({ fromTab }) {
     </div>
     </>
   );
+
+  if (!fromTab) {
+    return (
+      <DashboardLayout title="Service Inventory">
+        {content}
+      </DashboardLayout>
+    );
+  }
+
+  return content;
 }

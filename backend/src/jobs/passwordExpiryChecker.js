@@ -11,7 +11,7 @@ const WARNING_DAYS = [10, 7, 3, 1]; // Send warnings at these days remaining
  */
 const checkPasswordExpiry = async () => {
   try {
-    console.log('🔐 Running password expiry check...');
+    // console.log('🔐 Running password expiry check...);
 
     const now = new Date();
     const users = await User.find({
@@ -99,7 +99,7 @@ const startPasswordExpiryChecker = () => {
   // Run once on startup (for testing)
   if (process.env.NODE_ENV === 'development') {
     setTimeout(() => {
-      console.log('🔍 Running initial password expiry check...');
+      // console.log('🔍 Running initial password expiry check...);
       checkPasswordExpiry();
     }, 5000);
   }

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import masterInventoryService from '../services/masterInventoryService';
 import { groupService } from '../services/groupService';
 import { Search, Edit2, Trash2, ArrowRight, Users, X } from 'lucide-react';
+import DashboardLayout from '../components/layout/DashboardLayout';
 
 export default function ProductInventory({ fromTab }) {
   const navigate = useNavigate();
@@ -231,7 +232,7 @@ export default function ProductInventory({ fromTab }) {
     return <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Loading products...</div>;
   }
 
-  return (
+  const content = (
     <>
       <style>{`
         @media (max-width: 768px) {
@@ -538,9 +539,9 @@ export default function ProductInventory({ fromTab }) {
         {dashboard && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
-              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg,#4f46e5 0%,#6366f1 100%)', dept: '' },
-              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg,#3b82f6 0%,#2563eb 100%)', dept: 'sales' },
-              { label: 'Service', value: dashboard.byDept?.service || 0, bg: 'linear-gradient(135deg,#8b5cf6 0%,#7c3aed 100%)', dept: 'service' }
+              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
+              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'sales' },
+              { label: 'Service', value: dashboard.byDept?.service || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'service' }
             ].map((stat, i) => (
               <div key={i} onClick={() => { setSearch(''); setDeptFilter(stat.dept); }} style={{ padding: '12px', background: stat.bg, borderRadius: '6px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: '#fff' }}>{stat.value}</div>
@@ -614,4 +615,14 @@ export default function ProductInventory({ fromTab }) {
     </div>
     </>
   );
+
+  if (!fromTab) {
+    return (
+      <DashboardLayout title="Product Inventory">
+        {content}
+      </DashboardLayout>
+    );
+  }
+
+  return content;
 }
