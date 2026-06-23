@@ -56,13 +56,19 @@ const login = async (req, res) => {
     }
 
     if (!user) {
+      console.log(`❌ Login failed - User not found: ${identifier}`);
       return errorResponse(res, 401, 'Invalid credentials');
     }
 
+    console.log(`🔍 Login attempt for user: ${user.loginName || user.email}`);
+    console.log(`🔐 Password exists in DB: ${!!user.password}`);
+
     // Check password
     const isPasswordValid = await user.comparePassword(password);
+    console.log(`🔑 Password valid: ${isPasswordValid}`);
 
     if (!isPasswordValid) {
+      console.log(`❌ Login failed - Invalid password for: ${user.loginName || user.email}`);
       return errorResponse(res, 401, 'Invalid credentials');
     }
 

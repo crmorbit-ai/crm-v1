@@ -708,7 +708,8 @@ const resetUserPassword = async (req, res) => {
       }
     }
 
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
     await User.findByIdAndUpdate(req.params.id, { password: hashedPassword });
 
     await logActivity(req, 'user.password_reset', 'User', user._id, {

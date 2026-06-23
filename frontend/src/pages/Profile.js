@@ -300,7 +300,17 @@ const Profile = () => {
       setShowPasswordModal(false);
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setShowCurrentPw(false); setShowNewPw(false); setShowConfirmPw(false);
-    } catch (error) { console.error('Password change error:', error); alert(error.response?.data?.message || 'Error changing password'); }
+    } catch (error) {
+      console.error('Password change error:', error);
+      const errorMsg = error.message || error.response?.data?.message || 'Error changing password';
+      if (errorMsg.includes('Current password is incorrect')) {
+        alert('❌ Current password is incorrect. Please enter your correct current password.\n\nNote: If you signed in with Google, you cannot change password here.');
+      } else if (errorMsg.includes('signed in with')) {
+        alert('❌ ' + errorMsg);
+      } else {
+        alert('❌ ' + errorMsg);
+      }
+    }
     finally { setChangingPassword(false); }
   };
 

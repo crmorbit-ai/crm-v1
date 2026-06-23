@@ -140,30 +140,39 @@ const updatePassword = async (req, res) => {
       return errorResponse(res, `You are signed in with ${user.authProvider}. Password change is not available.`, 400);
     }
 
+    // Check if user has a password set
+    if (!user.password) {
+      return errorResponse(res, 'No password set for this account. Please contact administrator.', 400);
+    }
+
     // Verify current password
     const isMatch = await bcrypt.compare(currentPassword, user.password);
     if (!isMatch) {
+      console.log(`Password change failed for user ${user.email} - incorrect current password`);
       return errorResponse(res, 'Current password is incorrect', 400);
     }
 
-    // Hash new password
-    const salt = await bcrypt.genSalt(10);
-    user.password = await bcrypt.hash(newPassword, salt);
+    // Set plain password - pre-save hook will hash it
+    user.password = newPassword;
     user.mustChangePassword = false; // Clear flag after password change
 
     await user.save();
 
     // Log activity
-    await logActivity({
-      user: req.user._id,
-      tenant: req.user.tenant,
-      action: 'profile.password_change',
-      entity: 'User',
-      entityId: user._id,
-      description: 'Password changed successfully'
-    });
+    try {
+      await logActivity({
+        user: req.user._id,
+        tenant: req.user.tenant,
+        action: 'profile.password_change',
+        entity: 'User',
+        entityId: user._id,
+        description: 'Password changed successfully'
+      });
+    } catch (logError) {
+      console.error('Activity logging error (non-critical):', logError.message);
+    }
 
-    return successResponse(res, null, 'Password updated successfully');
+    return successResponse(res, 200, 'Password updated successfully', null);
 
   } catch (error) {
     console.error('Update password error:', error);

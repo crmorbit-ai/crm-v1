@@ -16,7 +16,7 @@ const logActivity = async (req, action, resourceType = null, resourceId = null, 
       resourceType,
       resourceId,
       details,
-      ipAddress: req.ip || req.connection.remoteAddress,
+      ipAddress: req.ip || req.socket?.remoteAddress || 'unknown',
       userAgent: req.get('user-agent'),
       requestMethod: req.method,
       requestPath: req.originalUrl

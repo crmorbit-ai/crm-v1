@@ -78,7 +78,8 @@ router.post('/:id/send-credentials', requirePermission('user_management', 'manag
       return res.status(400).json({ success: false, message: 'Password is required' });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
     await User.findByIdAndUpdate(req.params.id, {
       password: hashedPassword
     });
