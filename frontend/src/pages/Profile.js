@@ -730,7 +730,7 @@ const Profile = () => {
     container: { padding: 0 },
     header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' },
     headerLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
-    logoContainer: { position: 'relative', width: '70px', height: '70px', borderRadius: '12px', overflow: 'hidden', background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isEditingOrg ? 'pointer' : 'default', border: '3px solid #fff', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
+    logoContainer: { position: 'relative', width: '70px', height: '70px', borderRadius: '12px', overflow: 'hidden', background: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: isEditingOrg ? 'pointer' : 'default', border: '3px solid #e5e7eb', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' },
     logoImg: { width: '100%', height: '100%', objectFit: 'cover' },
     logoInitials: { color: '#fff', fontSize: '24px', fontWeight: '700' },
     logoOverlay: { position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' },
@@ -848,19 +848,19 @@ const Profile = () => {
             <div className="profile-grid-2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>First Name</label>
-                <input type="text" name="firstName" value={isEditing ? editedUser.firstName : user.firstName} onChange={handleInputChange} disabled={!isEditing} minLength={2} maxLength={30} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #6366f1' }} />
+                <input type="text" name="firstName" value={isEditing ? editedUser.firstName : user.firstName} onChange={handleInputChange} disabled={!isEditing} minLength={2} maxLength={30} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Last Name</label>
-                <input type="text" name="lastName" value={isEditing ? editedUser.lastName : user.lastName} onChange={handleInputChange} disabled={!isEditing} minLength={2} maxLength={30} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #6366f1' }} />
+                <input type="text" name="lastName" value={isEditing ? editedUser.lastName : user.lastName} onChange={handleInputChange} disabled={!isEditing} minLength={2} maxLength={30} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>✉️ Email</label>
-                <input type="email" value={user.email} disabled style={{ ...styles.input, ...styles.inputDisabled, borderLeft: '3px solid #94a3b8' }} />
+                <input type="email" value={user.email} disabled style={{ ...styles.input, ...styles.inputDisabled }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>📞 Phone</label>
-                <input type="text" name="phone" value={isEditing ? editedUser.phone : (user.phone || '')} onChange={handleInputChange} disabled={!isEditing} placeholder="Enter phone" maxLength={15} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
+                <input type="text" name="phone" value={isEditing ? editedUser.phone : (user.phone || '')} onChange={handleInputChange} disabled={!isEditing} placeholder="Enter phone" maxLength={15} style={{ ...styles.input, ...(!isEditing ? styles.inputDisabled : {}) }} />
               </div>
             </div>
 
@@ -904,15 +904,15 @@ const Profile = () => {
             <div className="profile-grid-2">
               <div style={styles.formGroup}>
                 <label style={styles.label}>Organization Name *</label>
-                <input type="text" name="organizationName" value={isEditingOrg ? editedOrg.organizationName : tenant.organizationName} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #6366f1' }} />
+                <input type="text" name="organizationName" value={isEditingOrg ? editedOrg.organizationName : tenant.organizationName} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Legal Name</label>
-                <input type="text" name="legalName" value={isEditingOrg ? editedOrg.legalName : (tenant.legalName || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Official legal entity name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #8b5cf6' }} />
+                <input type="text" name="legalName" value={isEditingOrg ? editedOrg.legalName : (tenant.legalName || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Official legal entity name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Industry</label>
-                <select name="industry" value={isEditingOrg ? editedOrg.industry : (tenant.industry || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }}>
+                <select name="industry" value={isEditingOrg ? editedOrg.industry : (tenant.industry || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}) }}>
                   <option value="">Select Industry...</option>
                   <option value="Technology">💻 Technology</option>
                   <option value="Software & IT Services">⌨️ Software & IT Services</option>
@@ -938,7 +938,7 @@ const Profile = () => {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Business Type</label>
-                <select name="businessType" value={isEditingOrg ? editedOrg.businessType : tenant.businessType} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #ec4899' }}>
+                <select name="businessType" value={isEditingOrg ? editedOrg.businessType : tenant.businessType} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}) }}>
                   <option value="B2B">B2B</option>
                   <option value="B2C">B2C</option>
                   <option value="B2B2C">🔄 B2B2C</option>
@@ -947,7 +947,7 @@ const Profile = () => {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Number of Employees</label>
-                <select name="numberOfEmployees" value={isEditingOrg ? editedOrg.numberOfEmployees : (tenant.numberOfEmployees || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
+                <select name="numberOfEmployees" value={isEditingOrg ? editedOrg.numberOfEmployees : (tenant.numberOfEmployees || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}) }}>
                   <option value="">Select...</option>
                   <option value="1-10">1-10</option>
                   <option value="11-50">11-50</option>
@@ -959,7 +959,7 @@ const Profile = () => {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Founded Year</label>
-                <input type="number" name="foundedYear" value={isEditingOrg ? editedOrg.foundedYear : (tenant.foundedYear || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., 2020" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #06b6d4' }} />
+                <input type="number" name="foundedYear" value={isEditingOrg ? editedOrg.foundedYear : (tenant.foundedYear || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., 2020" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
             </div>
 
@@ -982,7 +982,7 @@ const Profile = () => {
                     disabled={!isEditingOrg}
                     placeholder="29ABCDE1234F1Z5"
                     maxLength={15}
-                    style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981', textTransform: 'uppercase', flex: 1 }}
+                    style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), textTransform: 'uppercase', flex: 1 }}
                   />
                   {isEditingOrg && editedOrg.gstin && editedOrg.gstin.length === 15 && (
                     <button
@@ -1030,16 +1030,16 @@ const Profile = () => {
                   disabled={!isEditingOrg}
                   placeholder="ABCDE1234F"
                   maxLength={10}
-                  style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #14b8a6', textTransform: 'uppercase' }}
+                  style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), textTransform: 'uppercase' }}
                 />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Tax ID (Old)</label>
-                <input type="text" name="taxId" value={isEditingOrg ? editedOrg.taxId : (tenant.taxId || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Other tax number" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #64748b' }} />
+                <input type="text" name="taxId" value={isEditingOrg ? editedOrg.taxId : (tenant.taxId || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Other tax number" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Registration Number</label>
-                <input type="text" name="registrationNumber" value={isEditingOrg ? editedOrg.registrationNumber : (tenant.registrationNumber || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Company registration" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #a855f7' }} />
+                <input type="text" name="registrationNumber" value={isEditingOrg ? editedOrg.registrationNumber : (tenant.registrationNumber || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Company registration" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
 
                   {/* Registered Address */}
@@ -1049,11 +1049,11 @@ const Profile = () => {
 
                   <div style={{ ...styles.formGroup, gridColumn: 'span 2' }}>
                     <label style={styles.label}>Street Address</label>
-                    <input type="text" name="headquarters.street" value={isEditingOrg ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Street address" maxLength={255} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />
+                    <input type="text" name="headquarters.street" value={isEditingOrg ? editedOrg.headquarters.street : (tenant.headquarters?.street || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Street address" maxLength={255} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Country</label>
-                    <select name="headquarters.country" value={isEditingOrg ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
+                    <select name="headquarters.country" value={isEditingOrg ? editedOrg.headquarters.country : (tenant.headquarters?.country || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}) }}>
                       <option value="">Select Country...</option>
                       {getCountries().map(country => (
                         <option key={country.isoCode} value={country.isoCode}>
@@ -1070,7 +1070,7 @@ const Profile = () => {
 
                       if (states.length > 0) {
                         return (
-                          <select name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
+                          <select name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}) }}>
                             <option value="">Select State...</option>
                             {states.map(state => (
                               <option key={state.isoCode} value={state.isoCode}>{state.name}</option>
@@ -1078,7 +1078,7 @@ const Profile = () => {
                           </select>
                         );
                       } else {
-                        return <input type="text" name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Enter state/province" maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />;
+                        return <input type="text" name="headquarters.state" value={isEditingOrg ? editedOrg.headquarters.state : (tenant.headquarters?.state || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Enter state/province" maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />;
                       }
                     })()}
                   </div>
@@ -1091,7 +1091,7 @@ const Profile = () => {
 
                       if (cities.length > 0) {
                         return (
-                          <select name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }}>
+                          <select name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}) }}>
                             <option value="">Select City...</option>
                             {cities.map(city => (
                               <option key={city.name} value={city.name}>{city.name}</option>
@@ -1099,13 +1099,13 @@ const Profile = () => {
                           </select>
                         );
                       } else {
-                        return <input type="text" name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Enter city name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />;
+                        return <input type="text" name="headquarters.city" value={isEditingOrg ? editedOrg.headquarters.city : (tenant.headquarters?.city || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="Enter city name" maxLength={100} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />;
                       }
                     })()}
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>ZIP / Postal Code</label>
-                    <input type="text" name="headquarters.zipCode" value={isEditingOrg ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={10} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />
+                    <input type="text" name="headquarters.zipCode" value={isEditingOrg ? editedOrg.headquarters.zipCode : (tenant.headquarters?.zipCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={10} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                   </div>
                 </div>
               </div>
@@ -1123,19 +1123,19 @@ const Profile = () => {
                 <div className="profile-grid-2">
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Bank Name</label>
-                    <input type="text" name="bankDetails.bankName" value={isEditingOrg ? editedOrg.bankDetails.bankName : (tenant.bankDetails?.bankName || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="HDFC Bank" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
+                    <input type="text" name="bankDetails.bankName" value={isEditingOrg ? editedOrg.bankDetails.bankName : (tenant.bankDetails?.bankName || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="HDFC Bank" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Account Number</label>
-                    <input type="text" name="bankDetails.accountNumber" value={isEditingOrg ? editedOrg.bankDetails.accountNumber : (tenant.bankDetails?.accountNumber || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="1234567890" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
+                    <input type="text" name="bankDetails.accountNumber" value={isEditingOrg ? editedOrg.bankDetails.accountNumber : (tenant.bankDetails?.accountNumber || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="1234567890" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>IFSC Code</label>
-                    <input type="text" name="bankDetails.ifscCode" value={isEditingOrg ? editedOrg.bankDetails.ifscCode : (tenant.bankDetails?.ifscCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="HDFC0001234" maxLength={11} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981', textTransform: 'uppercase' }} />
+                    <input type="text" name="bankDetails.ifscCode" value={isEditingOrg ? editedOrg.bankDetails.ifscCode : (tenant.bankDetails?.ifscCode || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="HDFC0001234" maxLength={11} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), textTransform: 'uppercase' }} />
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Account Type</label>
-                    <select name="bankDetails.accountType" value={isEditingOrg ? editedOrg.bankDetails.accountType : (tenant.bankDetails?.accountType || 'Current')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981', cursor: isEditingOrg ? 'pointer' : 'not-allowed' }}>
+                    <select name="bankDetails.accountType" value={isEditingOrg ? editedOrg.bankDetails.accountType : (tenant.bankDetails?.accountType || 'Current')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), cursor: isEditingOrg ? 'pointer' : 'not-allowed' }}>
                       <option value="Current">Current</option>
                       <option value="Savings">Savings</option>
                     </select>
@@ -1144,7 +1144,7 @@ const Profile = () => {
                     <label style={styles.label}>
                       UPI ID <span style={{ fontSize: '11px', color: '#10b981', fontWeight: '600', marginLeft: '6px' }}>(QR Code will be generated)</span>
                     </label>
-                    <input type="text" name="bankDetails.upiId" value={isEditingOrg ? editedOrg.bankDetails.upiId : (tenant.bankDetails?.upiId || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="company@paytm" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
+                    <input type="text" name="bankDetails.upiId" value={isEditingOrg ? editedOrg.bankDetails.upiId : (tenant.bankDetails?.upiId || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="company@paytm" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
                     {(tenant.bankDetails?.upiId || editedOrg.bankDetails.upiId) && (
                       <p style={{ margin: '6px 0 0', fontSize: '12px', color: '#059669', fontWeight: '500' }}>✓ UPI QR code will appear on invoice PDFs for easy payment</p>
                     )}
@@ -1385,59 +1385,70 @@ const Profile = () => {
 
         {/* Contacts & Address Tab */}
         {activeTab === 'contact' && tenant && (
-          <>
-            <div className="profile-card">
-              <div className="profile-card-header">
-                <h3 style={{ ...styles.cardTitle, marginBottom: 0 }}>Contact Information</h3>
-                {(user.userType === 'TENANT_ADMIN' || user.userType === 'SAAS_OWNER') && !isEditingOrg && (
-                  <button type="button" onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
-                )}
-                {isEditingOrg && (
-                  <div className="profile-btn-group">
-                    <button type="button" onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
-                    <button type="button" onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
-                  </div>
-                )}
+          <div className="profile-card">
+            <div className="profile-card-header">
+              <h3 style={{ ...styles.cardTitle, marginBottom: 0 }}>Contact Information</h3>
+              {(user.userType === 'TENANT_ADMIN' || user.userType === 'SAAS_OWNER') && !isEditingOrg && (
+                <button type="button" onClick={handleOrgEditToggle} style={styles.btnPrimary}>Edit</button>
+              )}
+              {isEditingOrg && (
+                <div className="profile-btn-group">
+                  <button type="button" onClick={handleOrgEditToggle} style={styles.btnSecondary}>Cancel</button>
+                  <button type="button" onClick={handleOrgSave} disabled={savingOrg} style={styles.btnPrimary}>{savingOrg ? 'Saving...' : 'Save'}</button>
+                </div>
+              )}
+            </div>
+            <div className="profile-grid-2">
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Contact Email *</label>
+                <input type="text" name="contactEmail" value={isEditingOrg ? editedOrg.contactEmail : tenant.contactEmail} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
-              <div className="profile-grid-2">
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>✉️ Contact Email *</label>
-                  <input type="text" name="contactEmail" value={isEditingOrg ? editedOrg.contactEmail : tenant.contactEmail} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #6366f1' }} />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>📞 Contact Phone</label>
-                  <input type="text" name="contactPhone" value={isEditingOrg ? editedOrg.contactPhone : (tenant.contactPhone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #10b981' }} />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Alternate Phone</label>
-                  <input type="text" name="alternatePhone" value={isEditingOrg ? editedOrg.alternatePhone : (tenant.alternatePhone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #14b8a6' }} />
-                </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Contact Phone</label>
+                <input type="text" name="contactPhone" value={isEditingOrg ? editedOrg.contactPhone : (tenant.contactPhone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Alternate Phone</label>
+                <input type="text" name="alternatePhone" value={isEditingOrg ? editedOrg.alternatePhone : (tenant.alternatePhone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Key Contact Name *</label>
+                <input type="text" name="keyContact_name" value={isEditingOrg ? (editedOrg.keyContact?.name || '') : (tenant.keyContact?.name || '')} onChange={e => { const v = e.target.value; setEditedOrg(prev => ({ ...prev, keyContact: { ...(prev.keyContact || {}), name: v } })); }} disabled={!isEditingOrg} placeholder="Contact person name" maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Designation *</label>
+                <select name="keyContact.designation" value={isEditingOrg ? (editedOrg.keyContact?.designation || '') : (tenant.keyContact?.designation || '')} onChange={handleOrgInputChange} disabled={!isEditingOrg} style={{ ...styles.select, ...(!isEditingOrg ? styles.inputDisabled : {}) }}>
+                  <option value="">Select Designation</option>
+                  <option value="CEO">CEO</option>
+                  <option value="Managing Director">Managing Director</option>
+                  <option value="Director">Director</option>
+                  <option value="General Manager">General Manager</option>
+                  <option value="Manager">Manager</option>
+                  <option value="Assistant Manager">Assistant Manager</option>
+                  <option value="Team Lead">Team Lead</option>
+                  <option value="Supervisor">Supervisor</option>
+                  <option value="Executive">Executive</option>
+                  <option value="Senior Executive">Senior Executive</option>
+                  <option value="Coordinator">Coordinator</option>
+                  <option value="Owner">Owner</option>
+                  <option value="Partner">Partner</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Key Contact Email</label>
+                <input type="text" name="keyContact.email" value={isEditingOrg ? (editedOrg.keyContact?.email || '') : (tenant.keyContact?.email || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Key Contact Phone</label>
+                <input type="text" name="keyContact.phone" value={isEditingOrg ? (editedOrg.keyContact?.phone || '') : (tenant.keyContact?.phone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>Address Line 1</label>
+                <input type="text" name="address.line1" value={isEditingOrg ? (editedOrg.address?.line1 || '') : (tenant.address?.line1 || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}) }} />
               </div>
             </div>
-
-            <div className="profile-card">
-              <h3 style={{...styles.cardTitle, display: 'flex', alignItems: 'center', gap: '8px'}}>Key Contact Person</h3>
-              <div className="profile-grid-2">
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Name *</label>
-                  <input type="text" name="keyContact_name" value={isEditingOrg ? (editedOrg.keyContact?.name || '') : (tenant.keyContact?.name || '')} onChange={e => { const v = e.target.value; setEditedOrg(prev => ({ ...prev, keyContact: { ...(prev.keyContact || {}), name: v } })); }} disabled={!isEditingOrg} placeholder="Contact person name" maxLength={50} style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #8b5cf6' }} />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Designation *</label>
-                  <input type="text" name="keyContact.designation" value={isEditingOrg ? (editedOrg.keyContact?.designation || '') : (tenant.keyContact?.designation || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} placeholder="e.g., CEO, Manager" autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #ec4899' }} />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Email</label>
-                  <input type="text" name="keyContact.email" value={isEditingOrg ? (editedOrg.keyContact?.email || '') : (tenant.keyContact?.email || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={100} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #f59e0b' }} />
-                </div>
-                <div style={styles.formGroup}>
-                  <label style={styles.label}>Phone</label>
-                  <input type="text" name="keyContact.phone" value={isEditingOrg ? (editedOrg.keyContact?.phone || '') : (tenant.keyContact?.phone || '')} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }} onChange={handleOrgInputChange} disabled={!isEditingOrg} maxLength={15} autoComplete="new-password" style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), borderLeft: '3px solid #06b6d4' }} />
-                </div>
-              </div>
-            </div>
-
-          </>
+          </div>
         )}
 
         {/* Digital Presence Tab */}

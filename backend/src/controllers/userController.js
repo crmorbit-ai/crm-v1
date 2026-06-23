@@ -385,8 +385,8 @@ const updateUser = async (req, res) => {
     } else if (req.body.userType && req.user.userType === 'TENANT_ADMIN' && !isSelfUpdate) {
       // TENANT_ADMIN can change other users' userType, but NOT their own
       allowedFields.push('userType');
-    } else if (req.body.userType && isSelfUpdate) {
-      // ❌ Users cannot change their own userType
+    } else if (req.body.userType && isSelfUpdate && req.body.userType !== user.userType) {
+      // ❌ Users cannot change their own userType (only if actually changing)
       return errorResponse(res, 403, 'You cannot change your own user type. Contact your administrator.');
     }
 

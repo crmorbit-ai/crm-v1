@@ -144,8 +144,6 @@ const TeamManagement = () => {
   const [dragging, setDragging]       = useState(false);
   const [dragStartX, setDragStartX]   = useState(0);
   const [dragStartW, setDragStartW]   = useState(380);
-  const [otpModal, setOtpModal] = useState({ open: false, otp: '', error: '', pendingData: null, otpSent: false, sending: false });
-  const [verifying, setVerifying]     = useState(false);
 
   // SAAS Admin - Tenant selection
   const [tenants, setTenants] = useState([]);
@@ -183,12 +181,6 @@ const TeamManagement = () => {
   }, [user]);
 
   // Auto-send OTP when modal opens
-  useEffect(() => {
-    if (otpModal.open && !otpModal.otpSent && !otpModal.sending) {
-      sendOTP();
-    }
-  }, [otpModal.open]);
-
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
@@ -240,20 +232,21 @@ const TeamManagement = () => {
   const handleUserSubmit = async e => {
     e.preventDefault(); if(submitting) return;
 
-    // ALWAYS show OTP verification modal when creating new user
-    // Tenant admin email OTP verification required for all new user creation
-    if (!editingItem) {
-      setOtpModal({ open: true, otp: '', error: '', pendingData: { ...userForm, tenant: user.tenant?._id }, otpSent: false, sending: false });
-      return;
-    }
-
-    // For editing existing user, proceed directly without verification
     setSubmitting(true);
     try {
-      await userService.updateUser(editingItem._id,userForm);
-      const uid = editingItem._id;
-      if(uid) await userService.assignGroups(uid,userForm.groups);
-      showMsg('User updated!');
+      if (!editingItem) {
+        // Create new user directly without OTP verification
+        const r = await userService.createUser({ ...userForm, tenant: user.tenant?._id });
+        const uid = r.user?._id || r._id;
+        if(uid) await userService.assignGroups(uid, userForm.groups || []);
+        showMsg('User created successfully!');
+      } else {
+        // Update existing user
+        await userService.updateUser(editingItem._id,userForm);
+        const uid = editingItem._id;
+        if(uid) await userService.assignGroups(uid,userForm.groups);
+        showMsg('User updated!');
+      }
       closePanel(); loadData();
     } catch(e){ if(e?.isPermissionDenied) return; showMsg(e.message||'Error',true); }
     finally { setSubmitting(false); }
@@ -339,49 +332,6 @@ const TeamManagement = () => {
     try{ setSubmitting(true); await userService.resetUserPassword(resetModal.userId,resetForm.newPassword); showMsg(`Password reset for ${resetModal.userName}`); setResetModal({open:false,userId:null,userName:''}); }
     catch(e){ if(e?.isPermissionDenied)return; showMsg(e.message||'Failed',true); }
     finally{ setSubmitting(false); }
-  };
-
-  // Send OTP to tenant admin email
-  const sendOTP = async () => {
-    setOtpModal(prev => ({ ...prev, sending: true, error: '' }));
-    try {
-      await api.post('/users/send-creation-otp');
-      setOtpModal(prev => ({ ...prev, otpSent: true, sending: false }));
-      showMsg('OTP sent to your email');
-    } catch (err) {
-      setOtpModal(prev => ({ ...prev, error: err.response?.data?.message || 'Failed to send OTP', sending: false }));
-    }
-  };
-
-  // Verify OTP and create user
-  const verifyOTPAndCreate = async () => {
-    if (!otpModal.otp || otpModal.otp.length !== 6) {
-      setOtpModal(prev => ({ ...prev, error: 'Please enter 6-digit OTP' }));
-      return;
-    }
-
-    setVerifying(true);
-    setOtpModal(prev => ({ ...prev, error: '' }));
-    try {
-      // Verify OTP
-      await api.post('/users/verify-creation-otp', { otp: otpModal.otp });
-
-      // Create user
-      const r = await userService.createUser(otpModal.pendingData);
-      const uid = r.user?._id || r._id;
-      if (uid) await userService.assignGroups(uid, otpModal.pendingData.groups || []);
-
-      showMsg('User created successfully!');
-      setOtpModal({ open: false, otp: '', error: '', pendingData: null, otpSent: false, sending: false });
-      closePanel();
-      loadData();
-    } catch (e) {
-      if (e?.isPermissionDenied) return;
-      const errorMsg = e.response?.data?.message || e.message || 'Verification failed';
-      setOtpModal(prev => ({ ...prev, error: errorMsg }));
-    } finally {
-      setVerifying(false);
-    }
   };
 
   const handleRoleSubmit = async e => {
@@ -840,7 +790,23 @@ const TeamManagement = () => {
                   <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
                     <div>
                       <Label>Designation</Label>
-                      <Inp value={userForm.designation} onChange={e=>setUserForm({...userForm,designation:e.target.value})} placeholder="e.g. Sales Manager" />
+                      <select value={userForm.designation} onChange={e=>setUserForm({...userForm,designation:e.target.value})} style={{width:'100%',padding:'7px 10px',border:'1px solid #e2e8f0',borderRadius:6,fontSize:13,background:'#fff',color:'#334155'}}>
+                        <option value="">Select Designation</option>
+                        <option value="CEO">CEO</option>
+                        <option value="Managing Director">Managing Director</option>
+                        <option value="Director">Director</option>
+                        <option value="General Manager">General Manager</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Assistant Manager">Assistant Manager</option>
+                        <option value="Team Lead">Team Lead</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Executive">Executive</option>
+                        <option value="Senior Executive">Senior Executive</option>
+                        <option value="Coordinator">Coordinator</option>
+                        <option value="Owner">Owner</option>
+                        <option value="Partner">Partner</option>
+                        <option value="Other">Other</option>
+                      </select>
                     </div>
                     <div>
                       <Label>Reports To</Label>
@@ -1132,10 +1098,12 @@ const TeamManagement = () => {
                 })()}
 
                 <div style={{marginTop:14,display:'flex',flexDirection:'column',gap:7}}>
-                  <div style={{display:'flex',gap:7}}>
-                    <button onClick={()=>{setSelectedUser(null);openUserPanel(su);}} style={{flex:1,padding:'8px 0',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>✏️ Edit</button>
-                    {su._id!==user._id&&<button onClick={()=>{setSelectedUser(null);openResetModal(su);}} style={{flex:1,padding:'8px 0',border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fff',color:'#64748b',fontSize:12,fontWeight:700,cursor:'pointer'}}>🔑 Reset Pwd</button>}
-                  </div>
+                  {su._id!==user._id && (
+                    <div style={{display:'flex',gap:7}}>
+                      <button onClick={()=>{setSelectedUser(null);openUserPanel(su);}} style={{flex:1,padding:'8px 0',border:'none',borderRadius:9,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',color:'#fff',fontSize:12,fontWeight:700,cursor:'pointer'}}>✏️ Edit</button>
+                      <button onClick={()=>{setSelectedUser(null);openResetModal(su);}} style={{flex:1,padding:'8px 0',border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fff',color:'#64748b',fontSize:12,fontWeight:700,cursor:'pointer'}}>🔑 Reset Pwd</button>
+                    </div>
+                  )}
                   <button onClick={()=>setCredentialsModal({ open: true, userId: su._id, userName: `${su.firstName} ${su.lastName}`, password: '' })} style={{width:'100%',padding:'8px 0',border:'1.5px solid #dbeafe',borderRadius:9,background:'linear-gradient(135deg,#eff6ff,#dbeafe)',color:'#1e40af',fontSize:12,fontWeight:700,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:6}}>
                     📧 Send Credentials Mail
                   </button>
@@ -1277,10 +1245,10 @@ const TeamManagement = () => {
                       {/* actions */}
                       <td style={{...TD,textAlign:'right'}}>
                         <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
-                          <button onClick={e=>{e.stopPropagation();openUserPanel(u);}} title="Edit"
+                          {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();openUserPanel(u);}} title="Edit"
                             style={{height:26,padding:'0 10px',borderRadius:7,border:'1px solid #e0e7ff',background:'#eef2ff',color:'#4f46e5',cursor:'pointer',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4,transition:'all 0.15s',whiteSpace:'nowrap'}}>
                             ✏️ Edit
-                          </button>
+                          </button>}
                           {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();toggleActive(u);}} title={u.isActive?'Deactivate':'Activate'}
                             style={{height:26,padding:'0 9px',borderRadius:7,border:`1px solid ${u.isActive?'#fde68a':'#bbf7d0'}`,background:u.isActive?'#fffbeb':'#f0fdf4',color:u.isActive?'#b45309':'#15803d',cursor:'pointer',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4,transition:'all 0.15s',whiteSpace:'nowrap'}}>
                             {u.isActive?'⏸ Deactivate':'▶ Activate'}
@@ -1419,63 +1387,6 @@ const TeamManagement = () => {
       {/* ════════════════════════════════════════════
           TENANT ADMIN PASSWORD VERIFICATION MODAL
       ════════════════════════════════════════════ */}
-      {otpModal.open&&(
-        <div style={{position:'fixed',inset:0,background:'rgba(7,4,20,0.7)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
-          <div className="xModalIn" style={{background:'#fff',borderRadius:20,width:'100%',maxWidth:440,boxShadow:'0 30px 80px rgba(0,0,0,0.28)',overflow:'hidden'}}>
-            <div style={{padding:'14px 20px',background:'linear-gradient(135deg,#4f46e5,#7c3aed)',position:'relative',overflow:'hidden'}}>
-              <div style={{position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(255,255,255,0.2) 0%,transparent 70%)',pointerEvents:'none'}} />
-              <button onClick={()=>setOtpModal({open:false,otp:'',error:'',pendingData:null,otpSent:false,sending:false})} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
-              <div style={{display:'flex',alignItems:'center',gap:11,position:'relative',zIndex:1}}>
-                <div style={{width:36,height:36,borderRadius:10,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📧</div>
-                <div>
-                  <div style={{fontSize:15,fontWeight:800,color:'#fff',lineHeight:1.25}}>Verify OTP</div>
-                  <div style={{fontSize:11,color:'rgba(255,255,255,.7)',marginTop:2}}>Sent to {user?.email}</div>
-                </div>
-              </div>
-            </div>
-            <div style={{padding:'24px 26px'}}>
-              <div style={{background:'#eff6ff',border:'1.5px solid #bfdbfe',borderRadius:12,padding:'12px 14px',marginBottom:18,display:'flex',gap:10}}>
-                <span style={{fontSize:16,flexShrink:0}}>ℹ️</span>
-                <div style={{fontSize:12,color:'#1e40af',lineHeight:1.5}}>
-                  {otpModal.sending?<><strong>Sending OTP...</strong></>:otpModal.otpSent?<><strong>OTP Sent!</strong><br/>Check your email <strong>{user?.email}</strong> for the 6-digit code.</>:<strong>Preparing...</strong>}
-                </div>
-              </div>
-              <div style={{marginBottom:20}}>
-                <Label>Enter 6-Digit OTP</Label>
-                <Inp
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={6}
-                  style={{borderColor:otpModal.error?'#ef4444':'#e2e8f0',fontSize:18,letterSpacing:8,textAlign:'center',fontFamily:'monospace',fontWeight:700}}
-                  value={otpModal.otp}
-                  onChange={e=>{
-                    const val = e.target.value.replace(/\D/g,'');
-                    setOtpModal(prev=>({...prev,otp:val,error:''}));
-                  }}
-                  placeholder="000000"
-                  disabled={!otpModal.otpSent}
-                  autoFocus={otpModal.otpSent}
-                />
-                {otpModal.error&&<div style={{marginTop:6,fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
-                  <span>⚠️</span> {otpModal.error}
-                </div>}
-                {otpModal.otpSent&&<div style={{marginTop:8,textAlign:'center'}}>
-                  <button type="button" onClick={sendOTP} disabled={otpModal.sending} style={{background:'none',border:'none',color:'#6366f1',fontSize:12,fontWeight:600,cursor:'pointer',textDecoration:'underline'}}>
-                    {otpModal.sending?'Sending...':'Resend OTP'}
-                  </button>
-                </div>}
-              </div>
-              <div style={{display:'flex',gap:10}}>
-                <button type="button" onClick={()=>setOtpModal({open:false,otp:'',error:'',pendingData:null,otpSent:false,sending:false})} style={{flex:1,padding:'11px 0',border:'1.5px solid #e2e8f0',borderRadius:11,background:'#f8fafc',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
-                <PriBtn onClick={verifyOTPAndCreate} disabled={verifying||!otpModal.otpSent||otpModal.otp.length!==6} style={{flex:1,marginTop:0,background:(verifying||!otpModal.otpSent||otpModal.otp.length!==6)?'#cbd5e1':'linear-gradient(135deg,#4f46e5,#7c3aed)',boxShadow:(verifying||!otpModal.otpSent)?'none':'0 4px 14px rgba(79,70,229,0.4)'}}>
-                  {verifying?'Verifying...':'Verify & Create User'}
-                </PriBtn>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* ══════════ REPORTS PAGE (full tab) ══════════ */}
       {activeTab==='reports'&&(()=>{
         const now   = new Date();
