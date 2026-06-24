@@ -42,6 +42,17 @@ const EmailInbox = () => {
     fetchStats();
   }, [activeFolder, filters.page, filters.emailType, filters.status]);
 
+  // Debounced search effect
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (filters.search !== undefined) {
+        fetchEmails();
+      }
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
+  }, [filters.search]);
+
   // Socket.io real-time email notifications
   useEffect(() => {
     if (!user?.tenant) return;

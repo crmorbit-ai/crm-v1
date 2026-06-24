@@ -33,18 +33,74 @@ export default function ServiceInventory({ fromTab }) {
   const [loadingGroups, setLoadingGroups] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '', type: 'service', department: 'sales', status: 'new', description: '',
+    name: '', type: 'service', department: 'service', status: 'new', description: '',
     serviceType: '', duration: '', serviceRate: 0, quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: ''
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const ok = m => { setSuccess(m); setTimeout(() => setSuccess(''), 3000); };
   const err = m => { setError(m); setTimeout(() => setError(''), 4000); };
 
+  const validateField = (fieldName, value) => {
+    const errors = { ...fieldErrors };
+
+    switch(fieldName) {
+      case 'name':
+        if (!value.trim()) {
+          errors.name = 'Service name is required';
+        } else if (value.trim().length < 3) {
+          errors.name = 'Service name must be at least 3 characters';
+        } else if (value.trim().length > 100) {
+          errors.name = 'Service name must be less than 100 characters';
+        } else if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(value.trim())) {
+          errors.name = 'Invalid characters in service name';
+        } else {
+          delete errors.name;
+        }
+        break;
+
+      case 'serviceType':
+        if (value && value.trim() && value.trim().length < 2) {
+          errors.serviceType = 'Service type must be at least 2 characters';
+        } else {
+          delete errors.serviceType;
+        }
+        break;
+
+      case 'duration':
+        if (value && value.trim() && !/^[0-9\s]+[a-zA-Z\s]+$/.test(value.trim())) {
+          errors.duration = 'Duration format invalid (e.g., "2 hours")';
+        } else {
+          delete errors.duration;
+        }
+        break;
+
+      case 'serviceRate':
+        if (value && (isNaN(value) || parseFloat(value) < 0)) {
+          errors.serviceRate = 'Rate must be a valid positive number';
+        } else {
+          delete errors.serviceRate;
+        }
+        break;
+
+      case 'description':
+        if (value && value.trim().length > 500) {
+          errors.description = 'Description must be less than 500 characters';
+        } else {
+          delete errors.description;
+        }
+        break;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await masterInventoryService.getDashboard();
+      const r = await masterInventoryService.getDashboard({ type: 'service' });
       if (r?.data) {
         const serviceCount = r.data.byType?.service || 0;
         setDashboard({ totalItems: serviceCount, byDept: r.data.byDept || {} });
@@ -74,7 +130,7 @@ export default function ServiceInventory({ fromTab }) {
 
   useEffect(() => {
     loadItems();
-  }, [search, deptFilter]);
+  }, [search, deptFilter, loadItems]);
 
   const handleSelectItem = (item) => {
     setSelectedItem(item);
@@ -100,6 +156,7 @@ export default function ServiceInventory({ fromTab }) {
       setEditingId(null);
       setEditData(null);
       loadItems();
+      loadDashboard();
       const updatedItem = items.find(i => i._id === editingId);
       if (updatedItem) {
         setSelectedItem({ ...updatedItem, ...editData });
@@ -115,19 +172,54 @@ export default function ServiceInventory({ fromTab }) {
   };
 
   const handleCreateService = async () => {
+    // Validation
     if (!formData.name.trim()) {
-      err('Name is required');
+      err('❌ Service Name is required');
       return;
     }
+    if (formData.name.trim().length < 3) {
+      err('❌ Service Name must be at least 3 characters');
+      return;
+    }
+    if (formData.name.trim().length > 100) {
+      err('❌ Service Name must be less than 100 characters');
+      return;
+    }
+    if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(formData.name.trim())) {
+      err('❌ Service Name contains invalid characters');
+      return;
+    }
+    if (!formData.department) {
+      err('❌ Department is required');
+      return;
+    }
+    if (formData.serviceType && formData.serviceType.trim() && formData.serviceType.trim().length < 2) {
+      err('❌ Service Type must be at least 2 characters');
+      return;
+    }
+    if (formData.duration && formData.duration.trim() && !/^[0-9\s]+[a-zA-Z\s]+$/.test(formData.duration.trim())) {
+      err('❌ Duration format invalid (e.g., "2 hours", "30 mins")');
+      return;
+    }
+    if (formData.serviceRate && (isNaN(formData.serviceRate) || parseFloat(formData.serviceRate) < 0)) {
+      err('❌ Service Rate must be a valid positive number');
+      return;
+    }
+    if (formData.description && formData.description.trim().length > 500) {
+      err('❌ Description must be less than 500 characters');
+      return;
+    }
+
     setFormSubmitting(true);
     try {
       await masterInventoryService.create({...formData, type: 'service'});
-      ok('Service created');
+      ok('✅ Service created successfully');
       setIsAddingNew(false);
-      setFormData({ name: '', type: 'service', department: 'sales', status: 'new', description: '', serviceType: '', duration: '', serviceRate: 0, quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' });
+      setFormData({ name: '', type: 'service', department: 'service', status: 'new', description: '', serviceType: '', duration: '', serviceRate: 0, quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' });
       loadItems();
-    } catch {
-      err('Failed to create service');
+      loadDashboard();
+    } catch (error) {
+      err(error?.response?.data?.message || 'Failed to create service');
     } finally {
       setFormSubmitting(false);
     }
@@ -135,7 +227,7 @@ export default function ServiceInventory({ fromTab }) {
 
   const handleCancelAdd = () => {
     setIsAddingNew(false);
-    setFormData({ name: '', type: 'service', department: 'sales', status: 'new', description: '', serviceType: '', duration: '', serviceRate: 0, quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' });
+    setFormData({ name: '', type: 'service', department: 'service', status: 'new', description: '', serviceType: '', duration: '', serviceRate: 0, quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' });
   };
 
   const handleDelete = async (id) => {
@@ -148,6 +240,7 @@ export default function ServiceInventory({ fromTab }) {
         setEditingId(null);
       }
       loadItems();
+      loadDashboard();
     } catch { err('Failed to delete'); }
   };
 
@@ -282,26 +375,110 @@ export default function ServiceInventory({ fromTab }) {
             <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Name *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Service name" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, name: val});
+                    validateField('name', val);
+                  }}
+                  placeholder="Service name"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.name ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.name && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.name}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Service Type</label>
-                <input type="text" value={formData.serviceType} onChange={(e) => setFormData({...formData, serviceType: e.target.value})} placeholder="Type of service" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.serviceType}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, serviceType: val});
+                    validateField('serviceType', val);
+                  }}
+                  placeholder="Type of service"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.serviceType ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.serviceType && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.serviceType}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Duration</label>
-                <input type="text" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} placeholder="e.g., 1 hour, 2 days" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.duration}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, duration: val});
+                    validateField('duration', val);
+                  }}
+                  placeholder="e.g., 1 hour, 2 days"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.duration ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.duration && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.duration}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Rate</label>
-                <input type="number" value={formData.serviceRate} onChange={(e) => setFormData({...formData, serviceRate: parseInt(e.target.value) || 0})} placeholder="0" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="number"
+                  value={formData.serviceRate}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, serviceRate: val});
+                    validateField('serviceRate', val);
+                  }}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.serviceRate ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.serviceRate && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.serviceRate}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Department</label>
                 <select value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
-                  <option value="sales">Sales</option>
                   <option value="service">Service</option>
-                  <option value="lead_generation">Lead Gen</option>
                   <option value="operations">Operations</option>
                 </select>
               </div>
@@ -316,7 +493,28 @@ export default function ServiceInventory({ fromTab }) {
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Description</label>
-                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Service description" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', minHeight: '60px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, description: val});
+                    validateField('description', val);
+                  }}
+                  placeholder="Service description"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.description ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    minHeight: '60px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.description && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.description}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Quoted Amount</label>
@@ -352,9 +550,7 @@ export default function ServiceInventory({ fromTab }) {
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Department</label>
                 <select value={editData.department} onChange={(e) => setEditData({...editData, department: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
-                  <option value="sales">Sales</option>
                   <option value="service">Service</option>
-                  <option value="lead_generation">Lead Gen</option>
                   <option value="operations">Operations</option>
                 </select>
               </div>
@@ -561,7 +757,7 @@ export default function ServiceInventory({ fromTab }) {
           <div style={{ background: '#fff', borderRadius: '8px', padding: '20px', minWidth: '400px', boxShadow: '0 20px 25px rgba(0,0,0,0.15)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>Relocate Service to Department</h3>
             <div style={{ marginBottom: '16px' }}>
-              {['sales', 'service', 'lead_generation', 'operations'].map(dept => (
+              {['service', 'operations'].map(dept => (
                 <div key={dept} onClick={() => setSelectedRelocateDept(dept)} style={{ padding: '12px', border: selectedRelocateDept === dept ? '2px solid #f59e0b' : '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', marginBottom: '8px', background: selectedRelocateDept === dept ? '#fffbeb' : '#f8fafc', transition: 'all 0.2s' }}>
                   <div style={{ fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }}>{dept.replace('_', ' ')}</div>
                 </div>
@@ -579,13 +775,13 @@ export default function ServiceInventory({ fromTab }) {
       <div className="si-content-panel" style={{ flex: selectedItem ? '1' : '1', display: 'flex', flexDirection: 'column', padding: '0' }}>
         {/* Fixed Stats Container */}
         {dashboard && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
-              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
-              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'sales' },
-              { label: 'Service', value: dashboard.byDept?.service || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'service' }
+              { label: 'Total Services', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
+              { label: 'Service Dept', value: dashboard.byDept?.service || 0, bg: 'linear-gradient(135deg, #f59e0b, #d97706)', dept: 'service' },
+              { label: 'Operations Dept', value: dashboard.byDept?.operations || 0, bg: 'linear-gradient(135deg, #ec4899, #db2777)', dept: 'operations' }
             ].map((stat, i) => (
-              <div key={i} onClick={() => { setSearch(''); setDeptFilter(stat.dept); }} style={{ background: stat.bg, borderRadius: '8px', padding: '12px 14px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
+              <div key={i} onClick={(e) => { e.preventDefault(); setSearch(''); setDeptFilter(stat.dept); }} style={{ background: stat.bg, borderRadius: '8px', padding: '12px 14px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: '#fff', lineHeight: '1', marginBottom: '4px' }}>{stat.value}</div>
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.85)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
               </div>
@@ -603,9 +799,7 @@ export default function ServiceInventory({ fromTab }) {
           </div>
           <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', minWidth: '140px', background: '#f9fafb', fontWeight: '600', color: '#374151' }}>
             <option value="">All Departments</option>
-            <option value="sales">Sales</option>
             <option value="service">Service</option>
-            <option value="lead_generation">Lead Gen</option>
             <option value="operations">Operations</option>
           </select>
         </div>
@@ -617,6 +811,7 @@ export default function ServiceInventory({ fromTab }) {
               <tr style={{ background: '#1e293b' }}>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Name</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Type</th>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Department</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Duration</th>
                 <th style={{ padding: '12px', textAlign: 'right', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Rate</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Status</th>
@@ -625,12 +820,17 @@ export default function ServiceInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No services found</td></tr>
+                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No services found</td></tr>
               ) : (
                 items.map((item, idx) => (
                   <tr key={item._id} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fff' : '#f8fafc', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#f8fafc'}>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontWeight: '600' }}>{item.name}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a' }}>{item.serviceType || '-'}</td>
+                    <td onClick={() => handleSelectItem(item)} style={{ padding: '12px' }}>
+                      <span style={{ background: '#f0fdf4', color: '#166534', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'capitalize' }}>
+                        {item.department?.replace('_', ' ') || 'sales'}
+                      </span>
+                    </td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a' }}>{item.duration || '-'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', textAlign: 'right', fontWeight: '700' }}>₹{item.serviceRate || 0}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px' }}><span style={{ background: item.status === 'new' ? '#e0e7ff' : item.status === 'quoted' ? '#fef3c7' : item.status === 'won' ? '#d1fae5' : '#fee2e2', color: item.status === 'new' ? '#4f46e5' : item.status === 'quoted' ? '#d97706' : item.status === 'won' ? '#059669' : '#dc2626', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>{item.status}</span></td>

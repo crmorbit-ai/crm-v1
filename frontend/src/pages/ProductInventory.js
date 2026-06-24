@@ -37,14 +37,78 @@ export default function ProductInventory({ fromTab }) {
     sku: '', category: '', productPrice: 0, stock: 0, quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: ''
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const ok = m => { setSuccess(m); setTimeout(() => setSuccess(''), 3000); };
   const err = m => { setError(m); setTimeout(() => setError(''), 4000); };
 
+  const validateField = (fieldName, value) => {
+    const errors = { ...fieldErrors };
+
+    switch(fieldName) {
+      case 'name':
+        if (!value.trim()) {
+          errors.name = 'Product name is required';
+        } else if (value.trim().length < 3) {
+          errors.name = 'Product name must be at least 3 characters';
+        } else if (value.trim().length > 100) {
+          errors.name = 'Product name must be less than 100 characters';
+        } else if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(value.trim())) {
+          errors.name = 'Invalid characters in product name';
+        } else {
+          delete errors.name;
+        }
+        break;
+
+      case 'sku':
+        if (value && value.trim() && !/^[a-zA-Z0-9\-_]+$/.test(value.trim())) {
+          errors.sku = 'SKU can only contain letters, numbers, hyphens and underscores';
+        } else {
+          delete errors.sku;
+        }
+        break;
+
+      case 'category':
+        if (value && value.trim() && value.trim().length < 2) {
+          errors.category = 'Category must be at least 2 characters';
+        } else {
+          delete errors.category;
+        }
+        break;
+
+      case 'productPrice':
+        if (value && (isNaN(value) || parseFloat(value) < 0)) {
+          errors.productPrice = 'Price must be a valid positive number';
+        } else {
+          delete errors.productPrice;
+        }
+        break;
+
+      case 'stock':
+        if (value && (isNaN(value) || parseInt(value) < 0)) {
+          errors.stock = 'Stock must be a valid positive number';
+        } else {
+          delete errors.stock;
+        }
+        break;
+
+      case 'description':
+        if (value && value.trim().length > 500) {
+          errors.description = 'Description must be less than 500 characters';
+        } else {
+          delete errors.description;
+        }
+        break;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await masterInventoryService.getDashboard();
+      const r = await masterInventoryService.getDashboard({ type: 'product' });
       if (r?.data) {
         const productCount = r.data.byType?.product || 0;
         setDashboard({ totalItems: productCount, byDept: r.data.byDept || {} });
@@ -74,7 +138,7 @@ export default function ProductInventory({ fromTab }) {
 
   useEffect(() => {
     loadItems();
-  }, [search, deptFilter]);
+  }, [search, deptFilter, loadItems]);
 
   const handleSelectItem = (item) => {
     setSelectedItem(item);
@@ -101,6 +165,7 @@ export default function ProductInventory({ fromTab }) {
       setEditingId(null);
       setEditData(null);
       loadItems();
+      loadDashboard();
       const updatedItem = items.find(i => i._id === editingId);
       if (updatedItem) {
         setSelectedItem({ ...updatedItem, ...editData });
@@ -116,19 +181,63 @@ export default function ProductInventory({ fromTab }) {
   };
 
   const handleCreateProduct = async () => {
+    // Validation
     if (!formData.name.trim()) {
-      err('Name is required');
+      err('❌ Product Name is required');
       return;
     }
+    if (formData.name.trim().length < 3) {
+      err('❌ Product Name must be at least 3 characters');
+      return;
+    }
+    if (formData.name.trim().length > 100) {
+      err('❌ Product Name must be less than 100 characters');
+      return;
+    }
+    if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(formData.name.trim())) {
+      err('❌ Product Name contains invalid characters');
+      return;
+    }
+    if (!formData.department) {
+      err('❌ Department is required');
+      return;
+    }
+    if (formData.sku && formData.sku.trim() && !/^[a-zA-Z0-9\-_]+$/.test(formData.sku.trim())) {
+      err('❌ SKU can only contain letters, numbers, hyphens and underscores');
+      return;
+    }
+    if (formData.category && formData.category.trim() && formData.category.trim().length < 2) {
+      err('❌ Category must be at least 2 characters');
+      return;
+    }
+    if (formData.productPrice && (isNaN(formData.productPrice) || parseFloat(formData.productPrice) < 0)) {
+      err('❌ Price must be a valid positive number');
+      return;
+    }
+    if (formData.stock && (isNaN(formData.stock) || parseInt(formData.stock) < 0)) {
+      err('❌ Stock must be a valid positive number');
+      return;
+    }
+    if (formData.description && formData.description.trim().length > 500) {
+      err('❌ Description must be less than 500 characters');
+      return;
+    }
+
     setFormSubmitting(true);
     try {
-      await masterInventoryService.create({...formData, type: 'product', productPrice: parseInt(formData.productPrice) || 0, stock: parseInt(formData.stock) || 0});
-      ok('Product created');
+      await masterInventoryService.create({
+        ...formData,
+        type: 'product',
+        productPrice: parseInt(formData.productPrice) || 0,
+        stock: parseInt(formData.stock) || 0
+      });
+      ok('✅ Product created successfully');
       setIsAddingNew(false);
       setFormData({ name: '', type: 'product', department: 'sales', status: 'new', description: '', sku: '', category: '', productPrice: 0, stock: 0, quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' });
       loadItems();
-    } catch {
-      err('Failed to create product');
+      loadDashboard();
+    } catch (error) {
+      err(error?.response?.data?.message || 'Failed to create product');
     } finally {
       setFormSubmitting(false);
     }
@@ -149,6 +258,7 @@ export default function ProductInventory({ fromTab }) {
         setEditingId(null);
       }
       loadItems();
+      loadDashboard();
     } catch { err('Failed to delete'); }
   };
 
@@ -259,30 +369,136 @@ export default function ProductInventory({ fromTab }) {
             <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Name *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Product name" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, name: val});
+                    validateField('name', val);
+                  }}
+                  placeholder="Product name"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.name ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.name && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.name}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>SKU</label>
-                <input type="text" value={formData.sku} onChange={(e) => setFormData({...formData, sku: e.target.value})} placeholder="SKU" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.sku}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, sku: val});
+                    validateField('sku', val);
+                  }}
+                  placeholder="SKU"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.sku ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.sku && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.sku}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Category</label>
-                <input type="text" value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} placeholder="Category" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.category}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, category: val});
+                    validateField('category', val);
+                  }}
+                  placeholder="Category"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.category ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.category && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.category}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Price</label>
-                <input type="number" value={formData.productPrice} onChange={(e) => setFormData({...formData, productPrice: parseInt(e.target.value) || 0})} placeholder="0" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="number"
+                  value={formData.productPrice}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, productPrice: val});
+                    validateField('productPrice', val);
+                  }}
+                  placeholder="0"
+                  min="0"
+                  step="0.01"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.productPrice ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.productPrice && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.productPrice}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Stock</label>
-                <input type="number" value={formData.stock} onChange={(e) => setFormData({...formData, stock: parseInt(e.target.value) || 0})} placeholder="0" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, stock: val});
+                    validateField('stock', val);
+                  }}
+                  placeholder="0"
+                  min="0"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.stock ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.stock && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.stock}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Department</label>
                 <select value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
                   <option value="sales">Sales</option>
-                  <option value="service">Service</option>
-                  <option value="lead_generation">Lead Gen</option>
                   <option value="operations">Operations</option>
                 </select>
               </div>
@@ -297,7 +513,28 @@ export default function ProductInventory({ fromTab }) {
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Description</label>
-                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Product description" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', minHeight: '60px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, description: val});
+                    validateField('description', val);
+                  }}
+                  placeholder="Product description"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.description ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    minHeight: '60px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.description && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.description}</div>
+                )}
               </div>
             </div>
           ) : !editingId && (
@@ -343,8 +580,6 @@ export default function ProductInventory({ fromTab }) {
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Department</label>
                 <select value={editData.department} onChange={(e) => setEditData({...editData, department: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
                   <option value="sales">Sales</option>
-                  <option value="service">Service</option>
-                  <option value="lead_generation">Lead Gen</option>
                   <option value="operations">Operations</option>
                 </select>
               </div>
@@ -519,7 +754,7 @@ export default function ProductInventory({ fromTab }) {
           <div style={{ background: '#fff', borderRadius: '8px', padding: '20px', minWidth: '400px', boxShadow: '0 20px 25px rgba(0,0,0,0.15)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>Relocate Product to Department</h3>
             <div style={{ marginBottom: '16px' }}>
-              {['sales', 'service', 'lead_generation', 'operations'].map(dept => (
+              {['sales', 'operations'].map(dept => (
                 <div key={dept} onClick={() => setSelectedRelocateDept(dept)} style={{ padding: '12px', border: selectedRelocateDept === dept ? '2px solid #f59e0b' : '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', marginBottom: '8px', background: selectedRelocateDept === dept ? '#fffbeb' : '#f8fafc', transition: 'all 0.2s' }}>
                   <div style={{ fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }}>{dept.replace('_', ' ')}</div>
                 </div>
@@ -537,13 +772,13 @@ export default function ProductInventory({ fromTab }) {
       <div className="pi-content-panel" style={{ flex: selectedItem ? '1' : '1', display: 'flex', flexDirection: 'column', padding: '0' }}>
         {/* Fixed Stats Container */}
         {dashboard && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
-              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
-              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'sales' },
-              { label: 'Service', value: dashboard.byDept?.service || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'service' }
+              { label: 'Total Products', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
+              { label: 'Sales Team', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', dept: 'sales' },
+              { label: 'Operations Team', value: dashboard.byDept?.operations || 0, bg: 'linear-gradient(135deg, #f59e0b, #d97706)', dept: 'operations' }
             ].map((stat, i) => (
-              <div key={i} onClick={() => { setSearch(''); setDeptFilter(stat.dept); }} style={{ padding: '12px', background: stat.bg, borderRadius: '6px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
+              <div key={i} onClick={(e) => { e.preventDefault(); setSearch(''); setDeptFilter(stat.dept); }} style={{ padding: '12px', background: stat.bg, borderRadius: '6px', textAlign: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.15)', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ fontSize: '24px', fontWeight: '900', color: '#fff' }}>{stat.value}</div>
                 <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.9)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '4px' }}>{stat.label}</div>
               </div>
@@ -561,8 +796,6 @@ export default function ProductInventory({ fromTab }) {
           <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', minWidth: '140px' }}>
             <option value="">All Departments</option>
             <option value="sales">Sales</option>
-            <option value="service">Service</option>
-            <option value="lead_generation">Lead Gen</option>
             <option value="operations">Operations</option>
           </select>
         </div>
@@ -575,6 +808,7 @@ export default function ProductInventory({ fromTab }) {
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>SKU</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</th>
+                <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Price</th>
                 <th style={{ padding: '10px 12px', textAlign: 'right', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Stock</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
@@ -583,13 +817,18 @@ export default function ProductInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No products found</td></tr>
+                <tr><td colSpan="8" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No products found</td></tr>
               ) : (
                 items.map((item) => (
                   <tr key={item._id} style={{ borderBottom: '1px solid #e2e8f0', background: '#fff' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'} onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer', fontWeight: '600' }}>{item.name}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontSize: '12px', fontFamily: 'monospace', cursor: 'pointer', fontWeight: '600' }}>{item.sku || '-'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#64748b', cursor: 'pointer' }}>{item.category || '-'}</td>
+                    <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer' }}>
+                      <span style={{ background: '#f0fdf4', color: '#166534', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'capitalize' }}>
+                        {item.department?.replace('_', ' ') || 'sales'}
+                      </span>
+                    </td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', textAlign: 'right', cursor: 'pointer', fontWeight: '700' }}>₹{item.productPrice || 0}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: item.stock > 0 ? '#059669' : '#dc2626', textAlign: 'right', fontWeight: '700', cursor: 'pointer' }}>{item.stock || 0}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer' }}><span style={{ background: item.status === 'new' ? '#e0e7ff' : item.status === 'quoted' ? '#fef3c7' : item.status === 'won' ? '#d1fae5' : '#fee2e2', color: item.status === 'new' ? '#4f46e5' : item.status === 'quoted' ? '#d97706' : item.status === 'won' ? '#059669' : '#dc2626', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700' }}>{item.status}</span></td>

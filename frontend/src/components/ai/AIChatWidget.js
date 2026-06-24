@@ -204,7 +204,7 @@ const AIChatWidget = () => {
   return (
     <div style={{
       position: 'fixed',
-      bottom: '24px',
+      bottom: '90px',
       right: '24px',
       width: '420px',
       height: '600px',
@@ -214,7 +214,7 @@ const AIChatWidget = () => {
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      zIndex: 9999,
+      zIndex: 999,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
 

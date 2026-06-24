@@ -84,16 +84,25 @@ router.get('/dashboard', async (req, res) => {
   try {
     const MasterInventoryItem = getMasterInventoryModel();
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
-    const items = await MasterInventoryItem.find({ tenant, isActive: true });
+    const { type, department } = req.query;
+
+    const query = { tenant, isActive: true };
+    if (type) query.type = type;
+    if (department) query.department = department;
+
+    const items = await MasterInventoryItem.find(query);
+
     const byType = {
       product: items.filter(i => i.type === 'product').length,
       service: items.filter(i => i.type === 'service').length,
       lead: items.filter(i => i.type === 'lead').length
     };
+
     const byDept = {};
     items.forEach(item => {
       byDept[item.department] = (byDept[item.department] || 0) + 1;
     });
+
     res.json({ success: true, data: { byType, byDept, total: items.length } });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to load dashboard', error: error.message });

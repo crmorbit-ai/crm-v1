@@ -470,6 +470,13 @@ const Leads = () => {
   const [selectedGroupForAssignment, setSelectedGroupForAssignment] = useState(null);
   const [groupMembers, setGroupMembers] = useState([]);
   const [selectedMembers, setSelectedMembers] = useState([]);
+  const [showBulkConvertForm, setShowBulkConvertForm] = useState(false);
+  const [bulkConversionData, setBulkConversionData] = useState({
+    createAccount: true,
+    createContact: true,
+    createOpportunity: false,
+    closeDate: ''
+  });
   const [displayColumns, setDisplayColumns] = useState([]);
   const [leadTemplates, setLeadTemplates] = useState([]);
   const [taskTemplates, setTaskTemplates] = useState([]);
@@ -1542,6 +1549,99 @@ const Leads = () => {
         loadLeads();
       } else { setError(response.message || 'Failed to convert lead'); }
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to convert lead'); }
+  };
+
+  const handleBulkConvert = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+
+    if (selectedLeads.length === 0) {
+      setError('No leads selected for conversion');
+      return;
+    }
+
+    const totalLeads = selectedLeads.length;
+    setSuccess(`Converting ${totalLeads} leads... Please wait.`);
+
+    try {
+      let successCount = 0;
+      let failCount = 0;
+      const errors = [];
+
+      for (let i = 0; i < selectedLeads.length; i++) {
+        const leadId = selectedLeads[i];
+        try {
+          const lead = leads.find(l => l._id === leadId);
+          if (!lead) {
+            failCount++;
+            errors.push(`Lead ${i + 1}: Not found`);
+            continue;
+          }
+
+          const payload = {
+            createAccount: bulkConversionData.createAccount,
+            createContact: bulkConversionData.createContact,
+            createOpportunity: bulkConversionData.createOpportunity,
+            accountData: bulkConversionData.createAccount ? {
+              accountName: lead.company || lead.currentCompany || lead.customerName || '',
+              accountType: lead.customerType || 'Customer',
+              industry: lead.industry || '',
+              phone: lead.phone || '',
+              email: lead.email || ''
+            } : {},
+            contactData: bulkConversionData.createContact ? {
+              firstName: lead.firstName || lead.customerName || '',
+              lastName: lead.lastName || '',
+              email: lead.email || '',
+              phone: lead.phone || '',
+              title: lead.jobTitle || lead.currentDesignation || ''
+            } : {},
+            opportunityData: bulkConversionData.createOpportunity ? {
+              opportunityName: `${lead.customerName || lead.company || ''} - Opportunity`,
+              amount: lead.estimatedDealValue || 0,
+              closeDate: bulkConversionData.closeDate || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })(),
+              stage: 'Qualification',
+              probability: 50
+            } : {}
+          };
+
+          const response = await leadService.convertLead(leadId, payload);
+
+          if (response && response.success) {
+            successCount++;
+            setSuccess(`Converting... ${successCount} of ${totalLeads} completed`);
+          } else {
+            failCount++;
+            errors.push(`${lead.firstName} ${lead.lastName}: ${response.message || 'Failed'}`);
+          }
+        } catch (err) {
+          failCount++;
+          errors.push(`Lead ${i + 1}: ${err.message || 'Error'}`);
+        }
+      }
+
+      // Final message
+      if (successCount === totalLeads) {
+        setSuccess(`✅ Bulk conversion successful! All ${successCount} leads converted.`);
+      } else if (successCount > 0) {
+        setSuccess(`⚠️ Partial success: ${successCount} succeeded, ${failCount} failed. ${errors.length > 0 ? 'Errors: ' + errors.slice(0, 3).join('; ') : ''}`);
+      } else {
+        setError(`❌ Bulk conversion failed: 0 succeeded, ${failCount} failed. ${errors.slice(0, 3).join('; ')}`);
+      }
+
+      setShowBulkConvertForm(false);
+      setSelectedLeads([]);
+      setBulkConversionData({ createAccount: true, createContact: true, createOpportunity: false, closeDate: '' });
+
+      // Wait a bit before reload to show final message
+      setTimeout(() => {
+        loadLeads();
+      }, 1500);
+
+    } catch (err) {
+      setError(err.message || 'Bulk conversion failed');
+    }
   };
 
   const canUpdateLead = hasPermission('lead_management', 'update');
@@ -2645,10 +2745,18 @@ const Leads = () => {
             + New Lead
           </button>
           {selectedLeads.length > 0 && (
-            <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
-              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(245,158,11,0.3)' }}>
-              <Users className="h-4 w-4" /> Assign {selectedLeads.length}
-            </button>
+            <>
+              <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
+                style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#f59e0b,#d97706)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(245,158,11,0.3)' }}>
+                <Users className="h-4 w-4" /> Assign {selectedLeads.length}
+              </button>
+              {canConvertLead && (
+                <button onClick={() => { closeAllForms(); setShowBulkConvertForm(true); }}
+                  style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'linear-gradient(135deg,#10b981,#059669)', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(16,185,129,0.3)' }}>
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Convert {selectedLeads.length}
+                </button>
+              )}
+            </>
           )}
           {canImportLeads && (
             <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>
@@ -2810,6 +2918,63 @@ const Leads = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Bulk Convert Form */}
+      {showBulkConvertForm && (
+        <div className="crm-card" style={{ marginBottom: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb', background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+            <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#fff' }}>Bulk Convert Leads</h3>
+            <button onClick={() => { setShowBulkConvertForm(false); setBulkConversionData({ createAccount: true, createContact: true, createOpportunity: false, closeDate: '' }); }} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', cursor: 'pointer', fontSize: '18px', color: '#fff', padding: '2px 8px', borderRadius: '4px' }}>✕</button>
+          </div>
+          <form onSubmit={handleBulkConvert} style={{ padding: '16px' }}>
+            <p style={{ fontSize: '12px', color: '#6B7280', marginBottom: '16px', background: '#f0fdf4', padding: '8px 12px', borderRadius: '6px', border: '1px solid #86efac' }}>
+              Converting <strong>{selectedLeads.length}</strong> selected lead{selectedLeads.length > 1 ? 's' : ''}
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '6px', background: bulkConversionData.createAccount ? '#f0fdf4' : '#fff' }}>
+                <input type="checkbox" checked={bulkConversionData.createAccount} onChange={(e) => setBulkConversionData({ ...bulkConversionData, createAccount: e.target.checked })} style={{ width: '16px', height: '16px' }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>Create Account</div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>Create company/organization record</div>
+                </div>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '6px', background: bulkConversionData.createContact ? '#f0fdf4' : '#fff' }}>
+                <input type="checkbox" checked={bulkConversionData.createContact} onChange={(e) => setBulkConversionData({ ...bulkConversionData, createContact: e.target.checked })} style={{ width: '16px', height: '16px' }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>Create Contact</div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>Create contact person record</div>
+                </div>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', padding: '10px', border: '1px solid #e5e7eb', borderRadius: '6px', background: bulkConversionData.createOpportunity ? '#f0fdf4' : '#fff' }}>
+                <input type="checkbox" checked={bulkConversionData.createOpportunity} onChange={(e) => setBulkConversionData({ ...bulkConversionData, createOpportunity: e.target.checked })} style={{ width: '16px', height: '16px' }} />
+                <div>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#0f172a' }}>Create Opportunity</div>
+                  <div style={{ fontSize: '11px', color: '#64748b' }}>Create sales opportunity record</div>
+                </div>
+              </label>
+
+              {bulkConversionData.createOpportunity && (
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '6px' }}>Expected Close Date</label>
+                  <input type="date" value={bulkConversionData.closeDate} onChange={(e) => setBulkConversionData({ ...bulkConversionData, closeDate: e.target.value })} className="crm-form-input" style={{ width: '100%' }} />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
+              <button type="submit" className="crm-btn crm-btn-primary" style={{ flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)' }}>
+                Convert {selectedLeads.length} Lead{selectedLeads.length > 1 ? 's' : ''}
+              </button>
+              <button type="button" onClick={() => { setShowBulkConvertForm(false); setBulkConversionData({ createAccount: true, createContact: true, createOpportunity: false, closeDate: '' }); }} className="crm-btn crm-btn-outline">
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -3052,24 +3217,22 @@ const Leads = () => {
 
         {/* ── PAGINATION ── */}
         {pagination.pages > 1 && (
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 20px', borderTop:'1.5px solid #f1f5f9', background:'#fafbff' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'12px', padding:'14px 20px', borderTop:'1.5px solid #f1f5f9', background:'#fafbff' }}>
+            <button onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setPagination(prev => ({ ...prev, page: prev.page - 1 })); }} disabled={pagination.page === 1}
+              onMouseEnter={e => { if (pagination.page !== 1) { e.currentTarget.style.background='#1e3c72'; e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='#1e3c72'; } }}
+              onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.color= pagination.page === 1 ? '#cbd5e1' : '#374151'; e.currentTarget.style.borderColor='#e2e8f0'; }}
+              style={{ display:'flex', alignItems:'center', gap:'4px', padding:'7px 15px', borderRadius:'9px', border:'1.5px solid #e2e8f0', background:'white', color: pagination.page === 1 ? '#cbd5e1' : '#374151', fontSize:'13px', fontWeight:'600', cursor: pagination.page === 1 ? 'not-allowed' : 'pointer', transition:'all 0.15s' }}>
+              <ChevronLeft className="h-4 w-4" /> Prev
+            </button>
             <span style={{ fontSize:'13px', color:'#64748b', fontWeight:'600' }}>
               Page <strong style={{ color:'#0f172a' }}>{pagination.page}</strong> of {pagination.pages} &nbsp;·&nbsp; {pagination.total} leads
             </span>
-            <div style={{ display:'flex', gap:'8px' }}>
-              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}
-                onMouseEnter={e => { if (pagination.page !== 1) { e.currentTarget.style.background='#1e3c72'; e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='#1e3c72'; } }}
-                onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.color= pagination.page === 1 ? '#cbd5e1' : '#374151'; e.currentTarget.style.borderColor='#e2e8f0'; }}
-                style={{ display:'flex', alignItems:'center', gap:'4px', padding:'7px 15px', borderRadius:'9px', border:'1.5px solid #e2e8f0', background:'white', color: pagination.page === 1 ? '#cbd5e1' : '#374151', fontSize:'13px', fontWeight:'600', cursor: pagination.page === 1 ? 'not-allowed' : 'pointer', transition:'all 0.15s' }}>
-                <ChevronLeft className="h-4 w-4" /> Prev
-              </button>
-              <button onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}
-                onMouseEnter={e => { if (pagination.page !== pagination.pages) { e.currentTarget.style.background='#1e3c72'; e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='#1e3c72'; } }}
-                onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.color= pagination.page === pagination.pages ? '#cbd5e1' : '#374151'; e.currentTarget.style.borderColor='#e2e8f0'; }}
-                style={{ display:'flex', alignItems:'center', gap:'4px', padding:'7px 15px', borderRadius:'9px', border:'1.5px solid #e2e8f0', background:'white', color: pagination.page === pagination.pages ? '#cbd5e1' : '#374151', fontSize:'13px', fontWeight:'600', cursor: pagination.page === pagination.pages ? 'not-allowed' : 'pointer', transition:'all 0.15s' }}>
-                Next <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            <button onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setPagination(prev => ({ ...prev, page: prev.page + 1 })); }} disabled={pagination.page === pagination.pages}
+              onMouseEnter={e => { if (pagination.page !== pagination.pages) { e.currentTarget.style.background='#1e3c72'; e.currentTarget.style.color='#fff'; e.currentTarget.style.borderColor='#1e3c72'; } }}
+              onMouseLeave={e => { e.currentTarget.style.background='white'; e.currentTarget.style.color= pagination.page === pagination.pages ? '#cbd5e1' : '#374151'; e.currentTarget.style.borderColor='#e2e8f0'; }}
+              style={{ display:'flex', alignItems:'center', gap:'4px', padding:'7px 15px', borderRadius:'9px', border:'1.5px solid #e2e8f0', background:'white', color: pagination.page === pagination.pages ? '#cbd5e1' : '#374151', fontSize:'13px', fontWeight:'600', cursor: pagination.page === pagination.pages ? 'not-allowed' : 'pointer', transition:'all 0.15s' }}>
+              Next <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         )}
       </div>

@@ -1,7 +1,7 @@
 import api from './api';
 
 const masterInventoryService = {
-  getDashboard: () => api.get('/master-inventory/dashboard').catch((err) => {
+  getDashboard: (params = {}) => api.get('/master-inventory/dashboard', { params }).catch((err) => {
     console.error('getDashboard error:', err);
     return { data: { byType: { product: 0, service: 0, lead: 0 }, byDept: {}, total: 0 } };
   }),

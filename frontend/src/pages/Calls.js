@@ -13,6 +13,8 @@ const Calls = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [selectedCall, setSelectedCall] = useState(null);
+  const [showDetailPanel, setShowDetailPanel] = useState(false);
 
   // Related records for dropdown
   const [relatedRecords, setRelatedRecords] = useState([]);
@@ -174,7 +176,15 @@ const Calls = () => {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Call Time *</label>
-                  <input type="datetime-local" className="crm-form-input" value={formData.callStartTime} onChange={(e) => setFormData({ ...formData, callStartTime: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                  <input
+                    type="datetime-local"
+                    className="crm-form-input"
+                    value={formData.callStartTime}
+                    onChange={(e) => setFormData({ ...formData, callStartTime: e.target.value })}
+                    min={new Date().toISOString().slice(0, 16)}
+                    required
+                    style={{ padding: '8px 10px', fontSize: '13px' }}
+                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Duration (min)</label>
@@ -257,8 +267,8 @@ const Calls = () => {
             </thead>
             <tbody>
               {calls.map(call => (
-                <tr key={call._id} onClick={() => navigate(`/calls/${call._id}`)} style={{ cursor: 'pointer' }}>
-                  <td style={{ fontWeight: '500', color: '#3B82F6' }}>{call.subject}</td>
+                <tr key={call._id} style={{ cursor: 'default' }}>
+                  <td style={{ fontWeight: '500', color: '#1e3c72' }}>{call.subject}</td>
                   <td>{new Date(call.callStartTime).toLocaleString()}</td>
                   <td>{call.callDuration ? `${call.callDuration} min` : '-'}</td>
                   <td>
@@ -286,8 +296,8 @@ const Calls = () => {
                     </span>
                   </td>
                   <td>{call.relatedTo}</td>
-                  <td onClick={e => e.stopPropagation()}>
-                    <button className="crm-btn crm-btn-sm crm-btn-primary">View</button>
+                  <td>
+                    <button className="crm-btn crm-btn-sm crm-btn-primary" onClick={() => { setSelectedCall(call); setShowDetailPanel(true); }}>View</button>
                   </td>
                 </tr>
               ))}
@@ -295,6 +305,202 @@ const Calls = () => {
           </table>
         )}
       </div>
+
+      {/* Call Detail Side Panel */}
+      {showDetailPanel && selectedCall && (
+        <>
+          {/* Overlay */}
+          <div
+            onClick={() => { setShowDetailPanel(false); setSelectedCall(null); }}
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 998,
+              backdropFilter: 'blur(2px)'
+            }}
+          />
+
+          {/* Side Panel */}
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            right: 0,
+            bottom: 0,
+            width: '450px',
+            maxWidth: '90vw',
+            background: '#ffffff',
+            boxShadow: '-4px 0 24px rgba(0, 0, 0, 0.2)',
+            zIndex: 999,
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slideInRight 0.3s ease'
+          }}>
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+              padding: '20px',
+              borderBottom: '1px solid rgba(255,255,255,0.1)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div style={{ flex: 1 }}>
+                  <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: '700', color: '#fff' }}>
+                    📞 {selectedCall.subject}
+                  </h2>
+                  <div style={{ fontSize: '13px', color: 'rgba(255,255,255,0.8)' }}>
+                    {new Date(selectedCall.callStartTime).toLocaleString('en-IN', {
+                      dateStyle: 'medium',
+                      timeStyle: 'short'
+                    })}
+                  </div>
+                </div>
+                <button
+                  onClick={() => { setShowDetailPanel(false); setSelectedCall(null); }}
+                  style={{
+                    background: 'rgba(255,255,255,0.1)',
+                    border: 'none',
+                    borderRadius: '6px',
+                    padding: '8px 12px',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '18px',
+                    lineHeight: 1
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '24px' }}>
+              {/* Call Type & Result Badges */}
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+                <span style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  background: getCallTypeColor(selectedCall.callType),
+                  color: '#fff'
+                }}>
+                  {selectedCall.callType}
+                </span>
+                <span style={{
+                  padding: '6px 12px',
+                  borderRadius: '20px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  background: getResultColor(selectedCall.callResult),
+                  color: '#fff'
+                }}>
+                  {selectedCall.callResult}
+                </span>
+              </div>
+
+              {/* Details Grid */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                {/* Duration */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                    Duration
+                  </label>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#1e3c72' }}>
+                    {selectedCall.callDuration ? `${selectedCall.callDuration} minutes` : 'Not recorded'}
+                  </div>
+                </div>
+
+                {/* Purpose */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                    Purpose
+                  </label>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#1e3c72' }}>
+                    {selectedCall.callPurpose || 'Not specified'}
+                  </div>
+                </div>
+
+                {/* Related To */}
+                <div>
+                  <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                    Related To
+                  </label>
+                  <div style={{ fontSize: '15px', fontWeight: '600', color: '#1e3c72' }}>
+                    {selectedCall.relatedTo || 'Not linked'}
+                  </div>
+                </div>
+
+                {/* Description/Notes */}
+                {selectedCall.description && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>
+                      Call Notes
+                    </label>
+                    <div style={{
+                      background: '#f8fafc',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '8px',
+                      padding: '12px',
+                      fontSize: '14px',
+                      color: '#334155',
+                      lineHeight: '1.6'
+                    }}>
+                      {selectedCall.description}
+                    </div>
+                  </div>
+                )}
+
+                {/* Timestamps */}
+                <div style={{
+                  marginTop: '12px',
+                  paddingTop: '20px',
+                  borderTop: '1px solid #e2e8f0'
+                }}>
+                  <div style={{ fontSize: '11px', color: '#94a3b8', marginBottom: '4px' }}>
+                    <strong>Created:</strong> {new Date(selectedCall.createdAt).toLocaleString()}
+                  </div>
+                  {selectedCall.updatedAt && (
+                    <div style={{ fontSize: '11px', color: '#94a3b8' }}>
+                      <strong>Updated:</strong> {new Date(selectedCall.updatedAt).toLocaleString()}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div style={{
+              padding: '16px 24px',
+              borderTop: '1px solid #e2e8f0',
+              background: '#f8fafc'
+            }}>
+              <button
+                onClick={() => { setShowDetailPanel(false); setSelectedCall(null); }}
+                className="crm-btn crm-btn-outline"
+                style={{ width: '100%' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+
+          <style>{`
+            @keyframes slideInRight {
+              from {
+                transform: translateX(100%);
+                opacity: 0;
+              }
+              to {
+                transform: translateX(0);
+                opacity: 1;
+              }
+            }
+          `}</style>
+        </>
+      )}
     </DashboardLayout>
   );
 };

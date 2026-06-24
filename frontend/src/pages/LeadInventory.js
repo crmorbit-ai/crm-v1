@@ -34,18 +34,81 @@ export default function LeadInventory({ fromTab }) {
   const [loadingGroups, setLoadingGroups] = useState(false);
 
   const [formData, setFormData] = useState({
-    name: '', type: 'lead', department: 'sales', status: 'new', description: '',
+    name: '', type: 'lead', department: 'lead_generation', status: 'new', description: '',
     leadEmail: '', leadPhone: '', leadSource: '', quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: ''
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   const ok = m => { setSuccess(m); setTimeout(() => setSuccess(''), 3000); };
   const err = m => { setError(m); setTimeout(() => setError(''), 4000); };
 
+  const validateField = (fieldName, value) => {
+    const errors = { ...fieldErrors };
+
+    switch(fieldName) {
+      case 'name':
+        if (!value.trim()) {
+          errors.name = 'Lead name is required';
+        } else if (value.trim().length < 3) {
+          errors.name = 'Lead name must be at least 3 characters';
+        } else if (value.trim().length > 100) {
+          errors.name = 'Lead name must be less than 100 characters';
+        } else if (!/^[a-zA-Z\s]+$/.test(value.trim())) {
+          errors.name = 'Lead name can only contain letters and spaces';
+        } else {
+          delete errors.name;
+        }
+        break;
+
+      case 'leadEmail':
+        if (!value || !value.trim()) {
+          errors.leadEmail = 'Email is required';
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) {
+          errors.leadEmail = 'Please enter a valid email address';
+        } else {
+          delete errors.leadEmail;
+        }
+        break;
+
+      case 'leadPhone':
+        if (value && value.trim()) {
+          const cleanPhone = value.replace(/\D/g, '');
+          if (cleanPhone.length !== 10) {
+            errors.leadPhone = 'Please enter a valid 10-digit phone number';
+          } else {
+            delete errors.leadPhone;
+          }
+        } else {
+          delete errors.leadPhone;
+        }
+        break;
+
+      case 'leadSource':
+        if (value && value.trim() && value.trim().length < 2) {
+          errors.leadSource = 'Lead source must be at least 2 characters';
+        } else {
+          delete errors.leadSource;
+        }
+        break;
+
+      case 'description':
+        if (value && value.trim().length > 500) {
+          errors.description = 'Description must be less than 500 characters';
+        } else {
+          delete errors.description;
+        }
+        break;
+    }
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const loadDashboard = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await masterInventoryService.getDashboard();
+      const r = await masterInventoryService.getDashboard({ type: 'lead' });
       if (r?.data) {
         const leadCount = r.data.byType?.lead || 0;
         setDashboard({ totalItems: leadCount, byDept: r.data.byDept || {} });
@@ -75,7 +138,7 @@ export default function LeadInventory({ fromTab }) {
 
   useEffect(() => {
     loadItems();
-  }, [search, deptFilter]);
+  }, [search, deptFilter, loadItems]);
 
   const handleSelectItem = (item) => {
     setSelectedItem(item);
@@ -101,6 +164,7 @@ export default function LeadInventory({ fromTab }) {
       setEditingId(null);
       setEditData(null);
       loadItems();
+      loadDashboard();
       const updatedItem = items.find(i => i._id === editingId);
       if (updatedItem) {
         setSelectedItem({ ...updatedItem, ...editData });
@@ -116,23 +180,65 @@ export default function LeadInventory({ fromTab }) {
   };
 
   const handleCreateLead = async () => {
+    // Validation
     if (!formData.name.trim()) {
-      err('Name is required');
+      err('❌ Lead Name is required');
       return;
     }
+    if (formData.name.trim().length < 3) {
+      err('❌ Lead Name must be at least 3 characters');
+      return;
+    }
+    if (formData.name.trim().length > 100) {
+      err('❌ Lead Name must be less than 100 characters');
+      return;
+    }
+    if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(formData.name.trim())) {
+      err('❌ Lead Name contains invalid characters');
+      return;
+    }
+    if (!formData.department) {
+      err('❌ Department is required');
+      return;
+    }
+    if (!formData.leadEmail || !formData.leadEmail.trim()) {
+      err('❌ Email is required for leads');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.leadEmail.trim())) {
+      err('❌ Please enter a valid email address');
+      return;
+    }
+    if (formData.leadPhone && formData.leadPhone.trim()) {
+      const cleanPhone = formData.leadPhone.replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        err('❌ Please enter a valid 10-digit phone number');
+        return;
+      }
+    }
+    if (formData.leadSource && formData.leadSource.trim() && formData.leadSource.trim().length < 2) {
+      err('❌ Lead Source must be at least 2 characters');
+      return;
+    }
+    if (formData.description && formData.description.trim().length > 500) {
+      err('❌ Description must be less than 500 characters');
+      return;
+    }
+
     setFormSubmitting(true);
     try {
       await masterInventoryService.create({...formData, type: 'lead'});
-      ok('Lead created');
+      ok('✅ Lead created successfully');
       setIsAddingNew(false);
       setSelectedItem(null);
       setFormData({
-        name: '', type: 'lead', department: 'sales', status: 'new', description: '',
+        name: '', type: 'lead', department: 'lead_generation', status: 'new', description: '',
         leadEmail: '', leadPhone: '', leadSource: '', quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: ''
       });
       loadItems();
-    } catch {
-      err('Failed to create lead');
+      loadDashboard();
+    } catch (error) {
+      err(error?.response?.data?.message || 'Failed to create lead');
     } finally {
       setFormSubmitting(false);
     }
@@ -141,7 +247,7 @@ export default function LeadInventory({ fromTab }) {
   const handleCancelAdd = () => {
     setIsAddingNew(false);
     setFormData({
-      name: '', type: 'lead', department: 'sales', status: 'new', description: '',
+      name: '', type: 'lead', department: 'lead_generation', status: 'new', description: '',
       leadEmail: '', leadPhone: '', leadSource: '', quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: ''
     });
   };
@@ -156,6 +262,7 @@ export default function LeadInventory({ fromTab }) {
         setEditingId(null);
       }
       loadItems();
+      loadDashboard();
     } catch { err('Failed to delete'); }
   };
 
@@ -306,27 +413,109 @@ export default function LeadInventory({ fromTab }) {
             <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Name *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Lead name" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, name: val});
+                    validateField('name', val);
+                  }}
+                  placeholder="Lead name"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.name ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.name && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.name}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '600' }}>Email</label>
-                <input type="email" value={formData.leadEmail} onChange={(e) => setFormData({...formData, leadEmail: e.target.value})} placeholder="email@example.com" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <label style={{ fontSize: '11px', fontWeight: '600' }}>Email *</label>
+                <input
+                  type="email"
+                  value={formData.leadEmail}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, leadEmail: val});
+                    validateField('leadEmail', val);
+                  }}
+                  placeholder="email@example.com"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.leadEmail ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.leadEmail && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.leadEmail}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Phone</label>
-                <input type="tel" value={formData.leadPhone} onChange={(e) => setFormData({...formData, leadPhone: e.target.value})} placeholder="Phone number" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="tel"
+                  value={formData.leadPhone}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, leadPhone: val});
+                    validateField('leadPhone', val);
+                  }}
+                  placeholder="10-digit phone number"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.leadPhone ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.leadPhone && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.leadPhone}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Source</label>
-                <input type="text" value={formData.leadSource} onChange={(e) => setFormData({...formData, leadSource: e.target.value})} placeholder="Lead source" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input
+                  type="text"
+                  value={formData.leadSource}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, leadSource: val});
+                    validateField('leadSource', val);
+                  }}
+                  placeholder="Lead source"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.leadSource ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.leadSource && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.leadSource}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Department</label>
                 <select value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
-                  <option value="sales">Sales</option>
-                  <option value="service">Service</option>
                   <option value="lead_generation">Lead Gen</option>
-                  <option value="operations">Operations</option>
+                  <option value="sales">Sales</option>
                 </select>
               </div>
               <div style={{ marginBottom: '12px' }}>
@@ -340,7 +529,28 @@ export default function LeadInventory({ fromTab }) {
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Description</label>
-                <textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Lead description" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', minHeight: '60px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({...formData, description: val});
+                    validateField('description', val);
+                  }}
+                  placeholder="Lead description"
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.description ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    minHeight: '60px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px'
+                  }}
+                />
+                {fieldErrors.description && (
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.description}</div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Quoted Amount</label>
@@ -376,10 +586,8 @@ export default function LeadInventory({ fromTab }) {
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Department</label>
                 <select value={editData.department} onChange={(e) => setEditData({...editData, department: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
-                  <option value="sales">Sales</option>
-                  <option value="service">Service</option>
                   <option value="lead_generation">Lead Gen</option>
-                  <option value="operations">Operations</option>
+                  <option value="sales">Sales</option>
                 </select>
               </div>
               <div style={{ marginBottom: '12px' }}>
@@ -578,7 +786,7 @@ export default function LeadInventory({ fromTab }) {
           <div style={{ background: '#fff', borderRadius: '8px', padding: '20px', minWidth: '400px', boxShadow: '0 20px 25px rgba(0,0,0,0.15)' }}>
             <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>Relocate Lead to Department</h3>
             <div style={{ marginBottom: '16px' }}>
-              {['sales', 'service', 'lead_generation', 'operations'].map(dept => (
+              {['lead_generation', 'sales'].map(dept => (
                 <div key={dept} onClick={() => setSelectedRelocateDept(dept)} style={{ padding: '12px', border: selectedRelocateDept === dept ? '2px solid #f59e0b' : '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', marginBottom: '8px', background: selectedRelocateDept === dept ? '#fffbeb' : '#f8fafc', transition: 'all 0.2s' }}>
                   <div style={{ fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }}>{dept.replace('_', ' ')}</div>
                 </div>
@@ -596,13 +804,13 @@ export default function LeadInventory({ fromTab }) {
       <div className="li-content-panel" style={{ flex: selectedItem ? '1' : '1', display: 'flex', flexDirection: 'column', padding: '0' }}>
         {/* Fixed Stats Container */}
         {dashboard && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
-              { label: 'All', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
-              { label: 'Sales', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'sales' },
-              { label: 'Lead Gen', value: dashboard.byDept?.lead_generation || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: 'lead_generation' }
+              { label: 'Total Leads', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
+              { label: 'Sales Dept', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', dept: 'sales' },
+              { label: 'Lead Gen Dept', value: dashboard.byDept?.lead_generation || 0, bg: 'linear-gradient(135deg, #06b6d4, #0891b2)', dept: 'lead_generation' }
             ].map((stat, i) => (
-              <div key={i} onClick={() => { setSearch(''); setDeptFilter(stat.dept); }} style={{ padding: '12px', background: stat.bg, borderRadius: '6px', textAlign: 'center', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
+              <div key={i} onClick={(e) => { e.preventDefault(); setSearch(''); setDeptFilter(stat.dept); }} style={{ padding: '12px', background: stat.bg, borderRadius: '6px', textAlign: 'center', cursor: 'pointer', transition: 'transform 0.2s, box-shadow 0.2s', boxShadow: '0 4px 12px rgba(0,0,0,0.15)' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ fontSize: '24px', fontWeight: '700', color: '#fff' }}>{stat.value}</div>
                 <div style={{ fontSize: '11px', color: 'rgba(255,255,255,0.9)', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{stat.label}</div>
               </div>
@@ -620,9 +828,7 @@ export default function LeadInventory({ fromTab }) {
           <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} style={{ padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px', minWidth: '140px' }}>
             <option value="">All Departments</option>
             <option value="sales">Sales</option>
-            <option value="service">Service</option>
             <option value="lead_generation">Lead Gen</option>
-            <option value="operations">Operations</option>
           </select>
         </div>
 
@@ -648,7 +854,11 @@ export default function LeadInventory({ fromTab }) {
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer', fontWeight: '500' }}>{item.name}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontSize: '12px', cursor: 'pointer' }}>{item.leadEmail || '-'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer' }}>{item.leadPhone || '-'}</td>
-                    <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', textTransform: 'capitalize', cursor: 'pointer' }}>{item.department}</td>
+                    <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer' }}>
+                      <span style={{ background: '#f0fdf4', color: '#166534', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'capitalize' }}>
+                        {item.department?.replace('_', ' ') || 'sales'}
+                      </span>
+                    </td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer' }}><span style={{ background: item.status === 'new' ? '#e0e7ff' : item.status === 'quoted' ? '#fef3c7' : item.status === 'won' ? '#d1fae5' : '#fee2e2', color: item.status === 'new' ? '#4f46e5' : item.status === 'quoted' ? '#d97706' : item.status === 'won' ? '#059669' : '#dc2626', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '600', textTransform: 'uppercase' }}>{item.status}</span></td>
                     <td style={{ padding: '12px', textAlign: 'center', display: 'flex', gap: '8px', justifyContent: 'center' }}>
                       <button onClick={(e) => { e.stopPropagation(); handleSelectItem(item); setEditingId(item._id); setEditData({...item}); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', padding: '4px', transition: 'color 0.2s' }} onMouseEnter={(e) => e.target.style.color = '#3b82f6'} onMouseLeave={(e) => e.target.style.color = '#94a3b8'} title="Edit"><Edit2 size={16} /></button>

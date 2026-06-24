@@ -147,7 +147,14 @@ const contactSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  
+
+  // Primary Contact Flag
+  isPrimary: {
+    type: Boolean,
+    default: false,
+    index: true
+  },
+
   // Owner and Tenant
   owner: {
     type: mongoose.Schema.Types.ObjectId,

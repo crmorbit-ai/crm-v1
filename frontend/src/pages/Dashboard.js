@@ -180,7 +180,7 @@ const Dashboard = () => {
 
   // Chart Data - Real data from stats
   const pipelineChartData = stats.opportunities?.byStage?.map(item => ({
-    stage: item._id?.slice(0, 12) || 'Unknown',
+    stage: item._id || 'Unknown',
     value: item.totalAmount || 0,
     count: item.count || 0
   })) || [];
@@ -486,10 +486,10 @@ const Dashboard = () => {
             {loading ? (
               <div style={{height:'320px',display:'flex',alignItems:'center',justifyContent:'center'}}><Sk h={200} w="80%"/></div>
             ) : pipelineChartData.length > 0 ? (
-              <div style={{width:'100%',height:'360px'}}>
-                <BarChart width={600} height={350} data={pipelineChartData}>
+              <div style={{width:'100%',height:'380px',overflowX:'auto'}}>
+                <BarChart width={Math.max(600, pipelineChartData.length * 80)} height={360} data={pipelineChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" vertical={false} />
-                  <XAxis dataKey="stage" tick={{fontSize:11,fill:'#6B7280'}} angle={-12} textAnchor="end" height={70} />
+                  <XAxis dataKey="stage" tick={{fontSize:11,fill:'#6B7280'}} angle={-35} textAnchor="end" height={100} interval={0} />
                   <YAxis tick={{fontSize:11,fill:'#6B7280'}} tickFormatter={(v)=>fmtCr(v)} />
                   <Tooltip content={<CustomTooltip />} cursor={{fill:'#F9FAFB'}} />
                   <Bar dataKey="value" fill="#3B82F6" radius={[8,8,0,0]} name="Pipeline Value" />

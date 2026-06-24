@@ -769,6 +769,20 @@ const Contacts = () => {
                             <option value="">— Select Account —</option>
                             {accounts.map(a => <option key={a._id} value={a._id}>{a.accountName}</option>)}
                           </select>
+                          {formData.account && (
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', padding: '10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', cursor: 'pointer' }}>
+                              <input
+                                type="checkbox"
+                                checked={formData.isPrimary}
+                                onChange={(e) => setFormData({...formData, isPrimary: e.target.checked})}
+                                style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                              />
+                              <div>
+                                <div style={{ fontSize: '12px', fontWeight: '700', color: '#166534' }}>⭐ Mark as Primary Contact</div>
+                                <div style={{ fontSize: '10px', color: '#15803d' }}>Main decision maker for this account</div>
+                              </div>
+                            </label>
+                          )}
                         </div>
                       )}
                       {step.sections.map(sectionName => {
@@ -1214,11 +1228,19 @@ const Contacts = () => {
               <div style={{ padding: '60px', textAlign: 'center' }}><div className="spinner" style={{ margin: '0 auto' }}></div></div>
             ) : contacts.length === 0 ? (
               <div style={{ padding: '60px', textAlign: 'center' }}>
-                <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72' }}>No contacts found</p>
+                <p style={{ fontSize: '18px', fontWeight: '600', color: '#1e3c72' }}>
+                  {filters.isPrimary === 'true' ? 'No primary contacts found' : filters.hasAccount === 'true' ? 'No contacts with accounts found' : 'No contacts found'}
+                </p>
+                <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+                  {filters.isPrimary === 'true' || filters.hasAccount === 'true' ? 'Try clearing filters or create a new contact' : 'Get started by creating your first contact'}
+                </p>
+                {(filters.isPrimary === 'true' || filters.hasAccount === 'true') && (
+                  <button className="crm-btn crm-btn-outline" onClick={() => handleStatsFilter('all')} style={{ marginRight: '8px' }}>Clear Filters</button>
+                )}
                 <button className="crm-btn crm-btn-primary" onClick={() => {
                   if (!canCreateContact) { setError('Access Restricted: You do not have permission to create contacts.'); return; }
                   resetForm(); setShowCreateForm(true);
-                }}>+ Create First Contact</button>
+                }}>+ Create Contact</button>
               </div>
             ) : (
               <>
@@ -1408,10 +1430,10 @@ const Contacts = () => {
                 })()}
 
                 {pagination.pages > 1 && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', borderTop: '1px solid #e5e7eb' }}>
-                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))} disabled={pagination.page === 1}>← Previous</button>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '16px', borderTop: '1px solid #e5e7eb' }}>
+                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setPagination(prev => ({ ...prev, page: prev.page - 1 })); }} disabled={pagination.page === 1}>← Previous</button>
                     <span style={{ fontWeight: '600', color: '#1e3c72', fontSize: '13px' }}>Page {pagination.page} of {pagination.pages}</span>
-                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))} disabled={pagination.page === pagination.pages}>Next →</button>
+                    <button className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setPagination(prev => ({ ...prev, page: prev.page + 1 })); }} disabled={pagination.page === pagination.pages}>Next →</button>
                   </div>
                 )}
               </>

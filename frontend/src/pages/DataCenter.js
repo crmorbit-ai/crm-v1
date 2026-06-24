@@ -459,12 +459,6 @@ const DataCenter = () => {
   const handleFilterChange = (e) => {
     const updated = { ...filters, [e.target.name]: e.target.value };
     setFilters(updated);
-    // BUG-138: auto-reload when all fields are cleared manually
-    const allEmpty = Object.values(updated).every(v => v === '' || v === null || v === undefined);
-    if (allEmpty) {
-      setSearchError('');
-      loadCandidates(updated);
-    }
   };
 
   const applyFilters = () => {
@@ -501,8 +495,14 @@ const DataCenter = () => {
   };
 
   const handleSelectAll = () => {
-    if (selectedCandidates.length === candidates.length) setSelectedCandidates([]);
-    else setSelectedCandidates(candidates.map(c => c._id));
+    const currentPageIds = candidates.map(c => c._id);
+    const allCurrentSelected = currentPageIds.every(id => selectedCandidates.includes(id));
+
+    if (allCurrentSelected) {
+      setSelectedCandidates(prev => prev.filter(id => !currentPageIds.includes(id)));
+    } else {
+      setSelectedCandidates(prev => [...new Set([...prev, ...currentPageIds])]);
+    }
   };
 
   const handleFileUpload = async (event) => {
@@ -555,25 +555,33 @@ const DataCenter = () => {
     }
   };
 
+  const [deleteModal, setDeleteModal] = useState({ open: false, count: 0 });
+
   const handleDeleteCandidates = async () => {
     if (selectedCandidates.length === 0) { alert('Please select at least one candidate'); return; }
-    const confirmed = window.confirm(`Are you sure you want to delete ${selectedCandidates.length} customer(s)? This action cannot be undone.`);
-    if (!confirmed) return;
+    setDeleteModal({ open: true, count: selectedCandidates.length });
+  };
 
+  const confirmDelete = async () => {
     try {
       const response = await dataCenterService.deleteCandidates(selectedCandidates);
       alert(`Successfully deleted ${response.data.deleted} customer(s)!`);
       setSelectedCandidates([]);
+      setSelectedCandidateId(null);
+      setSelectedCandidateData(null);
+      setDeleteModal({ open: false, count: 0 });
       loadCandidates();
     } catch (error) {
       if (error?.isPermissionDenied) return;
       console.error('Error deleting candidates:', error);
       alert('Failed to delete customers');
+      setDeleteModal({ open: false, count: 0 });
     }
   };
 
   const handleExport = async () => {
     try {
+      await loadCandidates();
       const candidateIds = selectedCandidates.length > 0 ? selectedCandidates : null;
       const blob = await dataCenterService.exportCandidates(candidateIds);
       const url = window.URL.createObjectURL(blob);
@@ -911,24 +919,22 @@ const DataCenter = () => {
                 </div>
                 {wizardStep < CUSTOMER_WIZARD_STEPS.length - 1 ? (
                   <button type="button" onClick={() => {
-                    // BUG-123 & BUG-124: Validate Customer Name on step 0 before advancing
                     if (wizardStep === 0) {
                       const name = (fieldValues['customerName'] || '').trim();
                       if (!name) {
                         setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name is required to build a database profile.' }));
                         return;
                       }
-                      if (/[0-9]/.test(name)) {
-                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name cannot contain numbers.' }));
+                      if (!/^[a-zA-Z\s.\-']+$/.test(name)) {
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name can only contain letters, spaces, dots, hyphens and apostrophes.' }));
                         return;
                       }
-                      const onlySpecial = /^[^a-zA-Z]+$/.test(name);
-                      if (onlySpecial) {
-                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name must contain letters.' }));
+                      if (/^\s|\s$/.test(name)) {
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name cannot start or end with spaces.' }));
                         return;
                       }
-                      if (/--/.test(name) || /^\-/.test(name) || /\-$/.test(name)) {
-                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name cannot have consecutive or trailing hyphens.' }));
+                      if (/--/.test(name) || /\.\./.test(name)) {
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name cannot have consecutive special characters.' }));
                         return;
                       }
                       // Email — required + strict format
@@ -1233,7 +1239,7 @@ const DataCenter = () => {
                     <tr>
                       <th style={{ width: '80px', padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                          <input type="checkbox" checked={selectedCandidates.length === candidates.length && candidates.length > 0} onChange={handleSelectAll} style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
+                          <input type="checkbox" checked={candidates.length > 0 && candidates.every(c => selectedCandidates.includes(c._id))} onChange={handleSelectAll} style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
                           <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }} title="Select All Records">All</span>
                         </label>
                       </th>
@@ -1270,10 +1276,10 @@ const DataCenter = () => {
             )}
 
             {pagination.pages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid #e5e7eb' }}>
-                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === 1} onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}>← Prev</button>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: '1px solid #e5e7eb' }}>
+                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === 1} onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setPagination({ ...pagination, page: pagination.page - 1 }); }}>← Prev</button>
                 <span style={{ fontWeight: '600', color: '#1e3c72', fontSize: '12px' }}>Page {pagination.page} of {pagination.pages}</span>
-                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === pagination.pages} onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}>Next →</button>
+                <button className="crm-btn crm-btn-secondary crm-btn-sm" disabled={pagination.page === pagination.pages} onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setPagination({ ...pagination, page: pagination.page + 1 }); }}>Next →</button>
               </div>
             )}
           </>
@@ -1282,6 +1288,27 @@ const DataCenter = () => {
         </div>
 
       </div>
+
+      {deleteModal.open && (
+        <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,0.5)',display:'flex',alignItems:'center',justifyContent:'center',zIndex:9999}}>
+          <div style={{background:'#fff',borderRadius:12,width:450,boxShadow:'0 20px 60px rgba(0,0,0,0.3)'}}>
+            <div style={{padding:'20px 24px',borderBottom:'1px solid #e2e8f0'}}>
+              <h3 style={{margin:0,fontSize:16,fontWeight:700,color:'#ef4444'}}>⚠️ Confirm Delete</h3>
+            </div>
+            <div style={{padding:24}}>
+              <p style={{margin:0,fontSize:14,color:'#64748b'}}>
+                Are you sure you want to delete <strong>{deleteModal.count} customer(s)</strong>?
+                This action cannot be undone.
+              </p>
+            </div>
+            <div style={{padding:'16px 24px',display:'flex',gap:8,justifyContent:'flex-end',borderTop:'1px solid #e2e8f0'}}>
+              <button onClick={()=>setDeleteModal({open:false,count:0})} style={{padding:'8px 16px',border:'1px solid #e2e8f0',borderRadius:8,background:'#fff',color:'#64748b',fontSize:14,fontWeight:600,cursor:'pointer'}}>Cancel</button>
+              <button onClick={confirmDelete} style={{padding:'8px 16px',border:'none',borderRadius:8,background:'#ef4444',color:'#fff',fontSize:14,fontWeight:600,cursor:'pointer'}}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </DashboardLayout>
   );
 };

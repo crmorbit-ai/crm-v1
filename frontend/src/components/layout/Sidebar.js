@@ -16,8 +16,9 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
   const [hasMonetization, setHasMonetization] = useState(false);
   const isTenantAdmin = ['TENANT_ADMIN', 'TENANT_MANAGER'].includes(user?.userType);
   const scrollRef = useRef(null);
+  const scrollPositionRef = useRef(0);
+  const isNavigatingRef = useRef(false);
 
-  // BUG-87: Save scroll position before route changes
   const getViewport = () => {
     if (!scrollRef.current) return null;
     return scrollRef.current.querySelector('[data-radix-scroll-area-viewport]')
@@ -25,18 +26,49 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
       || scrollRef.current;
   };
 
-  // Save scroll on every scroll event
   const handleScrollSave = () => {
     const el = getViewport();
-    if (el) sessionStorage.setItem('sidebar-scroll', String(el.scrollTop));
+    if (el) {
+      scrollPositionRef.current = el.scrollTop;
+      sessionStorage.setItem('sidebar-scroll', String(el.scrollTop));
+    }
   };
 
-  // Restore scroll BEFORE browser paints — no flicker
-  useLayoutEffect(() => {
-    const saved = sessionStorage.getItem('sidebar-scroll');
-    if (!saved) return;
+  const preventScrollReset = () => {
     const el = getViewport();
-    if (el) el.scrollTop = parseInt(saved, 10);
+    if (el) {
+      const currentScroll = el.scrollTop;
+      scrollPositionRef.current = currentScroll;
+
+      const restoreScroll = () => {
+        if (el) el.scrollTop = currentScroll;
+      };
+
+      setTimeout(restoreScroll, 0);
+      requestAnimationFrame(restoreScroll);
+      setTimeout(restoreScroll, 10);
+      setTimeout(restoreScroll, 50);
+    }
+  };
+
+  useLayoutEffect(() => {
+    const el = getViewport();
+    if (!el) return;
+
+    const restorePosition = scrollPositionRef.current ||
+                           parseInt(sessionStorage.getItem('sidebar-scroll') || '0', 10);
+
+    el.scrollTop = restorePosition;
+
+    const interval = setInterval(() => {
+      if (el && el.scrollTop !== restorePosition) {
+        el.scrollTop = restorePosition;
+      }
+    }, 10);
+
+    setTimeout(() => clearInterval(interval), 100);
+
+    return () => clearInterval(interval);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -57,7 +89,10 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
     return {};
   });
 
+
   const toggleSection = (section) => {
+    preventScrollReset();
+
     setOpenSections(prev => {
       const newState = { ...prev, [section]: !prev[section] };
       localStorage.setItem('sidebarOpenSections', JSON.stringify(newState));
@@ -70,6 +105,8 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
   };
 
   const handleNavClick = () => {
+    preventScrollReset();
+
     if (isMobile && onClose) {
       onClose();
     }
@@ -119,8 +156,9 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
     return (
       <div className="mb-1">
         <button
-          onClick={() => toggleSection(section)}
+          onClick={(e) => { e.preventDefault(); toggleSection(section); }}
           className="sidebar-section-btn flex items-center justify-between w-full px-3 py-1.5 rounded-md"
+          type="button"
         >
           <span>{title}</span>
           {openSections[section] ? (

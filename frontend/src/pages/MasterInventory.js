@@ -80,7 +80,11 @@ export default function MasterInventory({ fromTab }) {
 
   useEffect(() => {
     loadItems();
-  }, [search, typeFilter, deptFilter]);
+  }, [typeFilter, deptFilter]);
+
+  useEffect(() => {
+    loadItems();
+  }, [search]);
 
   const handleSelectItem = (item) => {
     setSelectedItem(item);
@@ -190,21 +194,19 @@ export default function MasterInventory({ fromTab }) {
     }
   };
 
-  const handleRelocateDept = async () => {
+  const handleRelocateType = async () => {
     if (!selectedRelocateDept || !selectedItem) return;
     try {
       await masterInventoryService.update(selectedItem._id, {
         ...selectedItem,
-        department: selectedRelocateDept
+        type: selectedRelocateDept
       });
-      ok(`Relocated to ${selectedRelocateDept}`);
+      ok(`✅ Moved to ${selectedRelocateDept} inventory`);
       setShowRelocateModal(false);
       setSelectedRelocateDept(null);
+      setSelectedItem(null);
+      loadDashboard();
       loadItems();
-      const updatedItem = items.find(i => i._id === selectedItem._id);
-      if (updatedItem) {
-        setSelectedItem({ ...updatedItem, department: selectedRelocateDept });
-      }
     } catch {
       err('Failed to relocate item');
     }
@@ -216,6 +218,99 @@ export default function MasterInventory({ fromTab }) {
   };
 
   const getItemName = (item) => item.name || item.leadName || item.serviceName || '-';
+
+  const handleCreateItem = async () => {
+    // Common validation
+    if (!formData.name.trim()) {
+      err('❌ Name is required');
+      return;
+    }
+    if (formData.name.trim().length < 3) {
+      err('❌ Name must be at least 3 characters');
+      return;
+    }
+    if (formData.name.trim().length > 100) {
+      err('❌ Name must be less than 100 characters');
+      return;
+    }
+    if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(formData.name.trim())) {
+      err('❌ Name contains invalid characters');
+      return;
+    }
+    if (!formData.department) {
+      err('❌ Department is required');
+      return;
+    }
+    if (!formData.type) {
+      err('❌ Type is required');
+      return;
+    }
+
+    // Type-specific validation
+    if (formData.type === 'product') {
+      if (formData.sku && formData.sku.trim() && !/^[a-zA-Z0-9\-_]+$/.test(formData.sku.trim())) {
+        err('❌ SKU can only contain letters, numbers, hyphens and underscores');
+        return;
+      }
+      if (formData.productPrice && (isNaN(formData.productPrice) || parseFloat(formData.productPrice) < 0)) {
+        err('❌ Price must be a valid positive number');
+        return;
+      }
+      if (formData.stock && (isNaN(formData.stock) || parseInt(formData.stock) < 0)) {
+        err('❌ Stock must be a valid positive number');
+        return;
+      }
+    }
+
+    if (formData.type === 'service') {
+      if (formData.serviceRate && (isNaN(formData.serviceRate) || parseFloat(formData.serviceRate) < 0)) {
+        err('❌ Service Rate must be a valid positive number');
+        return;
+      }
+      if (formData.duration && formData.duration.trim() && !/^[0-9\s]+[a-zA-Z\s]+$/.test(formData.duration.trim())) {
+        err('❌ Duration format invalid (e.g., "2 hours", "30 mins")');
+        return;
+      }
+    }
+
+    if (formData.type === 'lead') {
+      if (!formData.leadEmail || !formData.leadEmail.trim()) {
+        err('❌ Email is required for leads');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.leadEmail.trim())) {
+        err('❌ Please enter a valid email address');
+        return;
+      }
+      if (formData.leadPhone && formData.leadPhone.trim()) {
+        const cleanPhone = formData.leadPhone.replace(/\D/g, '');
+        if (cleanPhone.length !== 10) {
+          err('❌ Please enter a valid 10-digit phone number');
+          return;
+        }
+      }
+    }
+
+    if (formData.description && formData.description.trim().length > 500) {
+      err('❌ Description must be less than 500 characters');
+      return;
+    }
+
+    setFormSubmitting(true);
+    try {
+      const submitData = { ...formData, tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean) };
+      await masterInventoryService.create(submitData);
+      ok('✅ Item created successfully');
+      setIsAddingNew(false);
+      setFormData({ name: '', type: 'product', department: 'sales', status: 'new', description: '', sku: '', category: '', productPrice: 0, stock: 0, serviceType: '', duration: '', serviceRate: 0, leadName: '', leadEmail: '', leadPhone: '', leadSource: '', quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' });
+      loadItems();
+      loadDashboard();
+    } catch (error) {
+      err(error?.response?.data?.message || 'Failed to create item');
+    } finally {
+      setFormSubmitting(false);
+    }
+  };
 
   if (fromTab && loading && !items.length) {
     return <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>Loading inventory...</div>;
@@ -565,7 +660,7 @@ export default function MasterInventory({ fromTab }) {
           <div style={{ padding: '12px', borderTop: '1px solid #e2e8f0', background: '#fff', display: 'flex', gap: '8px', flexDirection: 'column' }}>
             {isAddingNew ? (
               <>
-                <button onClick={() => { if (!formData.name.trim()) { err('Name is required'); return; } setFormSubmitting(true); (async () => { try { const submitData = { ...formData, tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean) }; await masterInventoryService.create(submitData); ok('Item created'); setIsAddingNew(false); setFormData({ name: '', type: 'product', department: 'sales', status: 'new', description: '', sku: '', category: '', productPrice: 0, stock: 0, serviceType: '', duration: '', serviceRate: 0, leadName: '', leadEmail: '', leadPhone: '', leadSource: '', quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' }); loadItems(); } catch { err('Failed to create item'); } finally { setFormSubmitting(false); } })(); }} disabled={formSubmitting} style={{ width: '100%', padding: '8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>{formSubmitting ? 'Creating...' : '+ Create'}</button>
+                <button onClick={handleCreateItem} disabled={formSubmitting} style={{ width: '100%', padding: '8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: formSubmitting ? 'not-allowed' : 'pointer', opacity: formSubmitting ? 0.6 : 1 }}>{formSubmitting ? 'Creating...' : '+ Create'}</button>
                 <button onClick={() => { setIsAddingNew(false); setFormData({ name: '', type: 'product', department: 'sales', status: 'new', description: '', sku: '', category: '', productPrice: 0, stock: 0, serviceType: '', duration: '', serviceRate: 0, leadName: '', leadEmail: '', leadPhone: '', leadSource: '', quotedAmount: 0, wonAmount: 0, receivedAmount: 0, notes: '', tags: '' }); }} style={{ width: '100%', padding: '8px', background: '#f3f4f6', color: '#64748b', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
               </>
             ) : editingId ? (
@@ -576,7 +671,7 @@ export default function MasterInventory({ fromTab }) {
             ) : (
               <>
                 <button onClick={handleAssignClick} style={{ width: '100%', padding: '8px', background: '#8b5cf6', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><Users size={14} /> Assign</button>
-                <button onClick={() => setShowRelocateModal(true)} style={{ width: '100%', padding: '8px', background: '#f59e0b', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><ArrowRight size={14} /> Relocate</button>
+                <button onClick={() => setShowRelocateModal(true)} style={{ width: '100%', padding: '8px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}><ArrowRight size={14} /> Move to Inventory</button>
               </>
             )}
           </div>
@@ -676,21 +771,33 @@ export default function MasterInventory({ fromTab }) {
         </div>
       )}
 
-      {/* RELOCATE MODAL */}
+      {/* RELOCATE MODAL - Move to different inventory type */}
       {showRelocateModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: '#fff', borderRadius: '8px', padding: '20px', minWidth: '400px', boxShadow: '0 20px 25px rgba(0,0,0,0.15)' }}>
-            <h3 style={{ margin: '0 0 16px', fontSize: '16px', fontWeight: '700' }}>Relocate Item to Department</h3>
+          <div style={{ background: '#fff', borderRadius: '8px', padding: '20px', minWidth: '420px', boxShadow: '0 20px 25px rgba(0,0,0,0.15)' }}>
+            <h3 style={{ margin: '0 0 8px', fontSize: '16px', fontWeight: '700' }}>Move Item to Different Inventory</h3>
+            <p style={{ margin: '0 0 16px', fontSize: '13px', color: '#64748b' }}>Select where you want to move this item</p>
             <div style={{ marginBottom: '16px' }}>
-              {['sales', 'service', 'lead_generation', 'operations'].map(dept => (
-                <div key={dept} onClick={() => setSelectedRelocateDept(dept)} style={{ padding: '12px', border: selectedRelocateDept === dept ? '2px solid #f59e0b' : '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', marginBottom: '8px', background: selectedRelocateDept === dept ? '#fffbeb' : '#f8fafc', transition: 'all 0.2s' }}>
-                  <div style={{ fontWeight: '600', color: '#0f172a', textTransform: 'capitalize' }}>{dept.replace('_', ' ')}</div>
+              {[
+                { type: 'product', label: 'Product Inventory', desc: 'Manage as a product', icon: '📦', bg: '#d1fae5', color: '#065f46' },
+                { type: 'service', label: 'Service Inventory', desc: 'Manage as a service', icon: '🔧', bg: '#e9d5ff', color: '#6b21a8' },
+                { type: 'lead', label: 'Lead Inventory', desc: 'Manage as a lead', icon: '📞', bg: '#fef3c7', color: '#92400e' }
+              ].map(item => (
+                <div key={item.type} onClick={() => setSelectedRelocateDept(item.type)} style={{ padding: '12px 16px', border: selectedRelocateDept === item.type ? '2px solid #3b82f6' : '1px solid #e2e8f0', borderRadius: '6px', cursor: 'pointer', marginBottom: '8px', background: selectedRelocateDept === item.type ? '#dbeafe' : '#fff', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ fontSize: '24px' }}>{item.icon}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', color: '#0f172a', fontSize: '14px', marginBottom: '2px' }}>{item.label}</div>
+                    <div style={{ fontSize: '12px', color: '#64748b' }}>{item.desc}</div>
+                  </div>
+                  <div style={{ background: item.bg, color: item.color, padding: '4px 10px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'uppercase' }}>
+                    {item.type}
+                  </div>
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
               <button onClick={() => { setShowRelocateModal(false); setSelectedRelocateDept(null); }} style={{ padding: '8px 16px', background: '#f3f4f6', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
-              <button onClick={handleRelocateDept} disabled={!selectedRelocateDept} style={{ padding: '8px 16px', background: selectedRelocateDept ? '#f59e0b' : '#cbd5e1', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: selectedRelocateDept ? 'pointer' : 'not-allowed' }}>Relocate</button>
+              <button onClick={handleRelocateType} disabled={!selectedRelocateDept} style={{ padding: '8px 16px', background: selectedRelocateDept ? '#3b82f6' : '#cbd5e1', color: '#fff', border: 'none', borderRadius: '4px', fontSize: '12px', fontWeight: '600', cursor: selectedRelocateDept ? 'pointer' : 'not-allowed' }}>Move Item</button>
             </div>
           </div>
         </div>
@@ -698,13 +805,13 @@ export default function MasterInventory({ fromTab }) {
 
       {/* RIGHT: List */}
       <div className="mi-content-panel" style={{ flex: selectedItem ? '1' : '1', display: 'flex', flexDirection: 'column', padding: '0' }}>
-        {/* Fixed Stats Container */}
+        {/* Type Stats */}
         {dashboard && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
               { label: 'Products', value: dashboard.byType?.product || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', type: 'product' },
-              { label: 'Services', value: dashboard.byType?.service || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', type: 'service' },
-              { label: 'Leads', value: dashboard.byType?.lead || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', type: 'lead' }
+              { label: 'Services', value: dashboard.byType?.service || 0, bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', type: 'service' },
+              { label: 'Leads', value: dashboard.byType?.lead || 0, bg: 'linear-gradient(135deg, #f59e0b, #d97706)', type: 'lead' }
             ].map((stat, i) => (
               <div key={i} onClick={() => { setSearch(''); setTypeFilter(stat.type); setDeptFilter(''); }} style={{ position: 'relative', borderRadius: 6, padding: '12px 14px', overflow: 'hidden', cursor: 'pointer', background: stat.bg, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', transition: 'transform 0.2s, box-shadow 0.2s' }} onMouseEnter={(e) => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 16px rgba(0,0,0,0.25)'; }} onMouseLeave={(e) => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)'; }}>
                 <div style={{ position: 'relative', zIndex: 1 }}>
@@ -758,9 +865,25 @@ export default function MasterInventory({ fromTab }) {
                   const isSelected = selectedItem?._id === item._id;
                   return (
                     <tr key={item._id} style={{ borderBottom: '1px solid #e2e8f0', background: isSelected ? '#e0e7ff' : i % 2 === 0 ? '#fff' : '#f9fafb', cursor: 'pointer', transition: 'background 0.1s' }} onMouseEnter={(e) => !isSelected && (e.currentTarget.style.background = '#eff6ff')} onMouseLeave={(e) => !isSelected && (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f9fafb')}>
-                      <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer', fontSize: 12 }}>{item.type}</td>
+                      <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer' }}>
+                        <span style={{
+                          background: item.type === 'product' ? '#d1fae5' : item.type === 'service' ? '#e9d5ff' : '#fef3c7',
+                          color: item.type === 'product' ? '#065f46' : item.type === 'service' ? '#6b21a8' : '#92400e',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          textTransform: 'capitalize'
+                        }}>
+                          {item.type}
+                        </span>
+                      </td>
                       <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontWeight: '500', cursor: 'pointer', fontSize: 12 }}>{getItemName(item)}</td>
-                      <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#64748b', fontSize: '12px', cursor: 'pointer' }}>{item.department}</td>
+                      <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer' }}>
+                        <span style={{ background: '#f0fdf4', color: '#166534', padding: '4px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: '700', textTransform: 'capitalize' }}>
+                          {item.department?.replace('_', ' ') || 'sales'}
+                        </span>
+                      </td>
                       <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer', textAlign: 'center' }}>
                         <span style={{ background: item.status === 'new' ? '#e0e7ff' : item.status === 'quoted' ? '#fef3c7' : item.status === 'won' ? '#d1fae5' : '#fee2e2', color: item.status === 'new' ? '#4f46e5' : item.status === 'quoted' ? '#d97706' : item.status === 'won' ? '#059669' : '#dc2626', padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                           {item.status}
