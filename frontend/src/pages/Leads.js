@@ -1854,11 +1854,8 @@ const Leads = () => {
             transition: 'all 0.2s'
           }}
         >
-          <div className="stat-icon"><Target className="h-5 w-5" /></div>
-          <div>
-            <p className="stat-value">{globalStats.total}</p>
-            <p className="stat-label">Total Leads</p>
-          </div>
+          <p className="stat-value">{globalStats.total}</p>
+          <p className="stat-label">Total Leads</p>
         </div>
         <div
           className="stat-card"
@@ -1871,11 +1868,8 @@ const Leads = () => {
             transition: 'all 0.2s'
           }}
         >
-          <div className="stat-icon" style={{background: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)'}}><Target className="h-5 w-5" /></div>
-          <div>
-            <p className="stat-value text-blue-600">{globalStats.new}</p>
-            <p className="stat-label">New Leads</p>
-          </div>
+          <p className="stat-value text-blue-600">{globalStats.new}</p>
+          <p className="stat-label">New Leads</p>
         </div>
         <div
           className="stat-card"
@@ -1888,11 +1882,8 @@ const Leads = () => {
             transition: 'all 0.2s'
           }}
         >
-          <div className="stat-icon" style={{background: 'linear-gradient(135deg, #10B981 0%, #059669 100%)'}}><Target className="h-5 w-5" /></div>
-          <div>
-            <p className="stat-value text-green-600">{globalStats.qualified}</p>
-            <p className="stat-label">Qualified</p>
-          </div>
+          <p className="stat-value text-green-600">{globalStats.qualified}</p>
+          <p className="stat-label">Qualified</p>
         </div>
         <div
           className="stat-card"
@@ -1905,11 +1896,8 @@ const Leads = () => {
             transition: 'all 0.2s'
           }}
         >
-          <div className="stat-icon" style={{background: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)'}}><Target className="h-5 w-5" /></div>
-          <div>
-            <p className="stat-value text-purple-600">{globalStats.contacted}</p>
-            <p className="stat-label">Contacted</p>
-          </div>
+          <p className="stat-value text-purple-600">{globalStats.contacted}</p>
+          <p className="stat-label">Contacted</p>
         </div>
       </div>
 
