@@ -720,7 +720,21 @@ const Contacts = () => {
         {/* LEFT: Detail Panel */}
         {/* ── LEFT: Create Form (inline) ── */}
         {showCreateForm && (
-          <div style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <div className="contact-create-panel" style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .contact-create-panel {
+                  position: fixed !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  flex: 1 1 100% !important;
+                  z-index: 1000 !important;
+                  border-right: none !important;
+                }
+              }
+            `}</style>
             <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3c72 100%)', flexShrink: 0 }}>
               <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -802,6 +816,25 @@ const Contacts = () => {
                   );
                 })()}
               </div>
+
+              {/* Error/Success Messages */}
+              {error && (
+                <div style={{ padding: '12px 16px', background: '#FEE2E2', borderTop: '2px solid #FCA5A5' }}>
+                  <div style={{ fontSize: '12px', color: '#991B1B', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>⚠️</span>
+                    {error}
+                  </div>
+                </div>
+              )}
+              {success && (
+                <div style={{ padding: '12px 16px', background: '#DCFCE7', borderTop: '2px solid #86EFAC' }}>
+                  <div style={{ fontSize: '12px', color: '#166534', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '16px' }}>✓</span>
+                    {success}
+                  </div>
+                </div>
+              )}
+
               <div style={{ padding: '11px 14px', borderTop: '1px solid #f1f5f9', background: '#fafbfc', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
                 <button type="button" onClick={() => { if (wizardStep > 0) { setWizardStep(s => s - 1); } else { setShowCreateForm(false); resetForm(); setWizardStep(0); } }}
                   style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#fff', color: '#64748b', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>
@@ -1370,9 +1403,33 @@ const Contacts = () => {
                       cellStyle: c => c.account?.accountName ? {fontWeight:600,color:'#2563eb'} : {}
                     },
                     ...allFieldDefs
-                      .filter(f=>f.isActive&&f.fieldName!=='firstName'&&f.fieldName!=='lastName'&&FIELD_COL_MAP[f.fieldName])
+                      .filter(f=>f.isActive&&f.fieldName!=='firstName'&&f.fieldName!=='lastName')
                       .sort((a,b)=>a.displayOrder-b.displayOrder)
-                      .map(f=>({ key:f.fieldName, ...FIELD_COL_MAP[f.fieldName] })),
+                      .map(f=>{
+                        // Check if standard field with mapping
+                        if (FIELD_COL_MAP[f.fieldName]) {
+                          return { key:f.fieldName, ...FIELD_COL_MAP[f.fieldName] };
+                        }
+                        // Custom field - create dynamic column
+                        return {
+                          key: f.fieldName,
+                          label: f.label || f.fieldName,
+                          width: 150,
+                          render: c => {
+                            const val = c.customFields?.[f.fieldName];
+                            if (!val) return '';
+                            // Format based on field type
+                            if (f.fieldType === 'currency') return `₹${Number(val).toLocaleString()}`;
+                            if (f.fieldType === 'date') {
+                              try { return new Date(val).toLocaleDateString(); }
+                              catch(e) { return val; }
+                            }
+                            if (f.fieldType === 'checkbox') return val ? 'Yes' : 'No';
+                            return val;
+                          },
+                          cellStyle: () => ({})
+                        };
+                      }),
                   ];
                   const totalW = 36 + activeCols.reduce((s,c)=>s+c.width,0);
 

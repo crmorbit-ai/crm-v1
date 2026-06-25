@@ -94,7 +94,7 @@ const getContact = async (req, res) => {
 const createContact = async (req, res) => {
   try {
     const { firstName, lastName, email, phone, mobile, account, title, department, reportsTo, leadSource, isPrimary, doNotCall, emailOptOut,
-      mailingStreet, mailingCity, mailingState, mailingCountry, mailingZipCode, description } = req.body;
+      mailingStreet, mailingCity, mailingState, mailingCountry, mailingZipCode, description, customFields } = req.body;
     if (!firstName) return errorResponse(res, 400, 'Please provide Customer Name');
     let accountExists = null;
     if (account) {
@@ -114,7 +114,7 @@ const createContact = async (req, res) => {
       firstName, lastName: lastName || '', email: email || '', phone, mobile, account: account || undefined, title, department, reportsTo: reportsTo || null, leadSource,
       isPrimary: isPrimary || false, doNotCall: doNotCall || false, emailOptOut: emailOptOut || false,
       mailingAddress: { street: mailingStreet, city: mailingCity, state: mailingState, country: mailingCountry, zipCode: mailingZipCode },
-      description, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
+      description, customFields: customFields || {}, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
     });
     // Update tenant usage count
     await Tenant.findByIdAndUpdate(tenant, { $inc: { 'usage.contacts': 1 } });
@@ -179,6 +179,11 @@ const updateContact = async (req, res) => {
     if (req.body.mailingState !== undefined) contact.mailingAddress.state = req.body.mailingState;
     if (req.body.mailingCountry !== undefined) contact.mailingAddress.country = req.body.mailingCountry;
     if (req.body.mailingZipCode !== undefined) contact.mailingAddress.zipCode = req.body.mailingZipCode;
+
+    // Custom fields
+    if (req.body.customFields !== undefined) {
+      contact.customFields = { ...contact.customFields, ...req.body.customFields };
+    }
 
     contact.lastModifiedBy = req.user._id;
     await contact.save();

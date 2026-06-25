@@ -103,7 +103,7 @@ const createAccount = async (req, res) => {
   try {
     const { accountName, accountType, industry, website, phone, fax, email, annualRevenue, numberOfEmployees,
       billingAddress, shippingAddress, parentAccount, rating, ownership, tickerSymbol, SICCode, description,
-      contactPerson, leadSource, gstNumber } = req.body;
+      contactPerson, leadSource, gstNumber, customFields } = req.body;
     if (!accountName) return errorResponse(res, 400, 'Please provide account name');
     let tenant;
     if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
@@ -117,7 +117,7 @@ const createAccount = async (req, res) => {
     const account = await Account.create({
       accountName, accountType: accountType || 'Prospect', industry, website, phone, fax, email, annualRevenue,
       numberOfEmployees, billingAddress, shippingAddress, parentAccount, rating, ownership, tickerSymbol,
-      SICCode, description, contactPerson, leadSource, gstNumber,
+      SICCode, description, contactPerson, leadSource, gstNumber, customFields: customFields || {},
       accountNumber: nextAccountNumber, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
     });
     await account.populate('owner', 'firstName lastName email');
@@ -176,6 +176,11 @@ const updateAccount = async (req, res) => {
         new: req.body.owner
       };
       account.owner = req.body.owner;
+    }
+
+    // Handle custom fields
+    if (req.body.customFields !== undefined) {
+      account.customFields = { ...account.customFields, ...req.body.customFields };
     }
 
     account.lastModifiedBy = req.user._id;
