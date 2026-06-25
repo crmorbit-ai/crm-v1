@@ -466,6 +466,7 @@ const Leads = () => {
 
   const [groups, setGroups] = useState([]);
   const [selectedLeads, setSelectedLeads] = useState([]);
+  const [selectAllPages, setSelectAllPages] = useState(false); // Select all across pages
   const [showAssignGroupForm, setShowAssignGroupForm] = useState(false);
   const [selectedGroupForAssignment, setSelectedGroupForAssignment] = useState(null);
   const [groupMembers, setGroupMembers] = useState([]);
@@ -1136,10 +1137,20 @@ const Leads = () => {
       if (!selectedGroupForAssignment) { setError('Please select a group'); return; }
       if (selectedMembers.length === 0) { setError('Please select at least one member'); return; }
 
-      const response = await leadService.assignLeadsToGroup(selectedLeads, selectedGroupForAssignment, selectedMembers);
+      // If selectAllPages is true, fetch all lead IDs with current filters
+      let leadsToAssign = selectedLeads;
+      if (selectAllPages) {
+        const allLeadsResponse = await leadService.getLeads({ ...filters, limit: pagination.total });
+        if (allLeadsResponse?.success) {
+          leadsToAssign = allLeadsResponse.data.leads.map(l => l._id);
+        }
+      }
+
+      const response = await leadService.assignLeadsToGroup(leadsToAssign, selectedGroupForAssignment, selectedMembers);
       if (response?.success) {
-        setSuccess(`${selectedLeads.length} leads assigned successfully!`);
+        setSuccess(`${leadsToAssign.length} leads assigned successfully!`);
         setSelectedLeads([]);
+        setSelectAllPages(false);
         setShowAssignGroupForm(false);
         setSelectedGroupForAssignment(null);
         setGroupMembers([]);
@@ -1422,28 +1433,26 @@ const Leads = () => {
   const openDetailEditForm = () => {
     if (!selectedLeadData) return;
     setError('');
-    setDetailEditData({
-      customerName: selectedLeadData.customerName || '',
-      email: selectedLeadData.email,
-      phone: selectedLeadData.phone || '',
-      company: selectedLeadData.company || '',
-      jobTitle: selectedLeadData.jobTitle || '',
-      leadSource: selectedLeadData.leadSource,
-      leadStatus: selectedLeadData.leadStatus,
-      rating: selectedLeadData.rating,
-      industry: selectedLeadData.industry || '',
-      website: selectedLeadData.website || '',
-      description: selectedLeadData.description || '',
-      customer: selectedLeadData.customer?._id || '',
-      product: selectedLeadData.product?._id || '',
-      productDetails: {
-        quantity: selectedLeadData.productDetails?.quantity || 1,
-        requirements: selectedLeadData.productDetails?.requirements || '',
-        estimatedBudget: selectedLeadData.productDetails?.estimatedBudget || '',
-        priority: selectedLeadData.productDetails?.priority || '',
-        notes: selectedLeadData.productDetails?.notes || ''
-      }
+
+    // Populate all fields from fieldDefinitions
+    const editData = {};
+    fieldDefinitions.forEach(field => {
+      const value = selectedLeadData[field.fieldName] || selectedLeadData.customFields?.[field.fieldName] || '';
+      editData[field.fieldName] = value;
     });
+
+    // Add special fields
+    editData.customer = selectedLeadData.customer?._id || '';
+    editData.product = selectedLeadData.product?._id || '';
+    editData.productDetails = {
+      quantity: selectedLeadData.productDetails?.quantity || 1,
+      requirements: selectedLeadData.productDetails?.requirements || '',
+      estimatedBudget: selectedLeadData.productDetails?.estimatedBudget || '',
+      priority: selectedLeadData.productDetails?.priority || '',
+      notes: selectedLeadData.productDetails?.notes || ''
+    };
+
+    setDetailEditData(editData);
     closeDetailForms();
     setShowDetailEditForm(true);
   };
@@ -1452,7 +1461,36 @@ const Leads = () => {
     e.preventDefault();
     try {
       setError('');
-      const response = await leadService.updateLead(selectedLeadId, detailEditData);
+
+      // For Leads: Send all fields directly (strict: false schema)
+      // Custom fields go into customFields object for backend validation
+      const standardFields = {};
+      const customFields = {};
+
+      fieldDefinitions.forEach(field => {
+        const value = detailEditData[field.fieldName];
+        // Include all values, even empty ones (to allow clearing fields)
+        if (value !== undefined) {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+          } else {
+            customFields[field.fieldName] = value;
+          }
+        }
+      });
+
+      // Add special fields
+      if (detailEditData.customer !== undefined) standardFields.customer = detailEditData.customer;
+      if (detailEditData.product !== undefined) standardFields.product = detailEditData.product;
+      if (detailEditData.productDetails !== undefined) standardFields.productDetails = detailEditData.productDetails;
+
+      // Build update data - include customFields object for backend validation
+      const updateData = {
+        ...standardFields,
+        ...(Object.keys(customFields).length > 0 ? { customFields } : {})
+      };
+
+      const response = await leadService.updateLead(selectedLeadId, updateData);
       // Use backend response directly to update UI instantly
       const updatedLead = response?.data;
       if (updatedLead) {
@@ -1556,12 +1594,21 @@ const Leads = () => {
     setError('');
     setSuccess('');
 
-    if (selectedLeads.length === 0) {
+    // If selectAllPages is true, fetch all lead IDs with current filters
+    let leadsToConvert = selectedLeads;
+    if (selectAllPages) {
+      const allLeadsResponse = await leadService.getLeads({ ...filters, limit: pagination.total });
+      if (allLeadsResponse?.success) {
+        leadsToConvert = allLeadsResponse.data.leads.map(l => l._id);
+      }
+    }
+
+    if (leadsToConvert.length === 0) {
       setError('No leads selected for conversion');
       return;
     }
 
-    const totalLeads = selectedLeads.length;
+    const totalLeads = leadsToConvert.length;
     setSuccess(`Converting ${totalLeads} leads... Please wait.`);
 
     try {
@@ -1569,8 +1616,8 @@ const Leads = () => {
       let failCount = 0;
       const errors = [];
 
-      for (let i = 0; i < selectedLeads.length; i++) {
-        const leadId = selectedLeads[i];
+      for (let i = 0; i < leadsToConvert.length; i++) {
+        const leadId = leadsToConvert[i];
         try {
           const lead = leads.find(l => l._id === leadId);
           if (!lead) {
@@ -1632,6 +1679,7 @@ const Leads = () => {
 
       setShowBulkConvertForm(false);
       setSelectedLeads([]);
+      setSelectAllPages(false);
       setBulkConversionData({ createAccount: true, createContact: true, createOpportunity: false, closeDate: '' });
 
       // Wait a bit before reload to show final message
@@ -1652,12 +1700,14 @@ const Leads = () => {
   const canDeleteLead = hasPermission('lead_management', 'delete');
 
   const handleBulkDelete = async (deleteAll = false) => {
-    const count = deleteAll ? 'ALL leads' : `${selectedLeads.length} selected ${selectedLeads.length === 1 ? 'lead' : 'leads'}`;
+    const useSelectAll = selectAllPages || deleteAll;
+    const count = useSelectAll ? `all ${pagination.total} leads` : `${selectedLeads.length} selected ${selectedLeads.length === 1 ? 'lead' : 'leads'}`;
     if (!window.confirm(`Delete ${count}? This cannot be undone.`)) return;
     try {
-      await leadService.bulkDeleteLeads(selectedLeads, deleteAll);
-      setSuccess(deleteAll ? 'All leads deleted!' : `${selectedLeads.length} leads deleted!`);
+      await leadService.bulkDeleteLeads(selectedLeads, useSelectAll);
+      setSuccess(useSelectAll ? `All ${pagination.total} leads deleted!` : `${selectedLeads.length} leads deleted!`);
       setSelectedLeads([]);
+      setSelectAllPages(false);
       loadLeads();
       refreshGlobalStats();
       setTimeout(() => setSuccess(''), 3000);
@@ -1864,11 +1914,24 @@ const Leads = () => {
       </div>
 
       {/* Split View Container */}
-      <div id="leads-split-container" style={{ display: 'flex', gap: '0', height: 'calc(100vh - 280px)', overflow: 'hidden', position: 'relative' }}>
+      <div id="leads-split-container" style={{ display: 'flex', gap: '0', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
         {/* ── LEFT: Create Form (inline) ── */}
         {showCreateForm && (
-          <div style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <div className="lead-create-form" style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .lead-create-form {
+                  position: fixed !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  z-index: 1000 !important;
+                  flex: none !important;
+                }
+              }
+            `}</style>
             {/* Gradient header with step tabs */}
             <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3c72 100%)', flexShrink: 0 }}>
               {/* Title row */}
@@ -2119,11 +2182,24 @@ const Leads = () => {
 
         {/* ── LEFT: Detail Panel ── */}
         {selectedLeadId && !showCreateForm && (
-          <div style={detailExpanded ? {
+          <div className="lead-detail-panel" style={detailExpanded ? {
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'white', zIndex: 1000, display: 'flex', flexDirection: 'column', overflow: 'hidden'
           } : {
             flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0
           }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .lead-detail-panel {
+                  position: fixed !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  z-index: 1000 !important;
+                  flex: none !important;
+                }
+              }
+            `}</style>
             {/* Panel Header */}
             <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: detailExpanded ? 'linear-gradient(135deg,#1e3c72,#2a69ac)' : 'linear-gradient(135deg,#fafbff,#f1f5f9)', flexShrink: 0 }}>
               <h3 style={{ margin: 0, color: detailExpanded ? 'white' : '#1e3c72', fontSize: '14px', fontWeight: '700' }}>Lead Details</h3>
@@ -2197,17 +2273,77 @@ const Leads = () => {
                       </div>
                       <form onSubmit={handleDetailUpdateLead}>
                         {error && <div style={{ marginBottom: 8, padding: '6px 10px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: 6, fontSize: 11, color: '#dc2626', fontWeight: 600 }}>❌ {error}</div>}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                          <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Name *</label><input type="text" name="customerName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', width: '100%' }} value={detailEditData.customerName || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="text" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Company</label><input type="text" name="company" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.company || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Job Title</label><input type="text" name="jobTitle" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.jobTitle || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Status</label><select name="leadStatus" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.leadStatus || 'New'} onChange={handleDetailEditChange}><option value="New">New</option><option value="Contacted">Contacted</option><option value="Qualified">Qualified</option><option value="Unqualified">Unqualified</option><option value="Lost">Lost</option></select></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Rating</label><select name="rating" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.rating || 'Warm'} onChange={handleDetailEditChange}><option value="Hot">Hot</option><option value="Warm">Warm</option><option value="Cold">Cold</option></select></div>
-                          <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Linked Customer</label><select name="customer" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px', width: '100%' }} value={detailEditData.customer || ''} onChange={handleDetailEditChange}><option value="">— None —</option>{customers.map(c => (<option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>))}</select></div>
+                        <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '10px' }}>
+                          {(() => {
+                            const grouped = groupFieldsBySection(fieldDefinitions);
+                            const sectionOrder = ['Basic Information', 'Lead Details', 'Contact Information', ...Object.keys(grouped).filter(s => !['Basic Information', 'Lead Details', 'Contact Information'].includes(s))];
+                            return sectionOrder.map(section => {
+                              const fields = grouped[section];
+                              if (!fields || fields.length === 0) return null;
+                              return (
+                                <div key={section} style={{ marginBottom: '12px' }}>
+                                  <h5 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>{section}</h5>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    {fields.filter(f => f.showInEdit !== false).map(field => (
+                                      <div key={field.fieldName} style={{ gridColumn: ['description', 'requirements', 'notes'].includes(field.fieldName) ? 'span 2' : 'span 1' }}>
+                                        <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>
+                                          {field.label} {field.isRequired && <span style={{ color: '#ef4444' }}>*</span>}
+                                        </label>
+                                        {field.fieldType === 'text' && (
+                                          <input type="text" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'email' && (
+                                          <input type="email" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'phone' && (
+                                          <input type="tel" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'url' && (
+                                          <input type="url" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'number' && (
+                                          <input type="number" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'textarea' && (
+                                          <textarea name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', minHeight: '60px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'dropdown' && (
+                                          <select name={field.fieldName} className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired}>
+                                            <option value="">-- Select --</option>
+                                            {field.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                          </select>
+                                        )}
+                                        {field.fieldType === 'date' && (
+                                          <input type="date" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'checkbox' && (
+                                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151' }}>
+                                            <input type="checkbox" name={field.fieldName} checked={detailEditData[field.fieldName] || false} onChange={(e) => setDetailEditData(prev => ({ ...prev, [field.fieldName]: e.target.checked }))} />
+                                            {field.label}
+                                          </label>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
+                          {/* Special Fields */}
+                          <div style={{ marginBottom: '12px' }}>
+                            <h5 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>Linked Records</h5>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                              <div style={{ gridColumn: 'span 2' }}>
+                                <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>Linked Customer</label>
+                                <select name="customer" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px', width: '100%' }} value={detailEditData.customer || ''} onChange={handleDetailEditChange}>
+                                  <option value="">— None —</option>
+                                  {customers.map(c => (<option key={c._id} value={c._id}>{c.accountName}{c.phone ? ` | ${c.phone}` : ''}</option>))}
+                                </select>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
                           <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailEditForm(false)}>Cancel</button>
                           <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }}>Update</button>
                         </div>
@@ -3007,8 +3143,32 @@ const Leads = () => {
             <span style={{ fontSize:'12px', fontWeight:'700', background:'#ede9fe', color:'#5b21b6', padding:'2px 9px', borderRadius:'99px' }}>{pagination.total}</span>
           </div>
           {selectedLeads.length > 0 && (
-            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'5px 12px', background:'#eff6ff', borderRadius:'8px', border:'1px solid #93c5fd', flexWrap:'nowrap', flexShrink:0 }}>
-              <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e40af', whiteSpace:'nowrap' }}>{selectedLeads.length} selected</span>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 14px', background: selectAllPages ? 'linear-gradient(135deg, #dbeafe, #bfdbfe)' : '#eff6ff', borderRadius:'8px', border: selectAllPages ? '2px solid #3b82f6' : '1px solid #93c5fd', flexWrap:'nowrap', flexShrink:0, boxShadow: selectAllPages ? '0 4px 12px rgba(59,130,246,0.3)' : 'none', animation: selectAllPages ? 'pulse 1.5s ease-in-out infinite' : 'none' }}>
+              <style>{`
+                @keyframes pulse {
+                  0%, 100% { box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+                  50% { box-shadow: 0 6px 20px rgba(59,130,246,0.5); }
+                }
+              `}</style>
+              <span style={{ fontSize:'12px', fontWeight:'700', color:'#1e40af', whiteSpace:'nowrap' }}>
+                {selectAllPages ? `All ${pagination.total} leads selected` : `${selectedLeads.length} selected`}
+              </span>
+              {!selectAllPages && selectedLeads.length === leads.length && pagination.total > leads.length && (
+                <button onClick={() => setSelectAllPages(true)}
+                  style={{ padding:'5px 12px', borderRadius:'6px', border:'none', background:'linear-gradient(135deg, #3b82f6, #2563eb)', color:'white', fontSize:'11px', fontWeight:'700', cursor:'pointer', whiteSpace:'nowrap', boxShadow:'0 2px 8px rgba(59,130,246,0.4)', transition:'all 0.2s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.6)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(59,130,246,0.4)'; }}>
+                  ⚡ Select all {pagination.total} leads
+                </button>
+              )}
+              {selectAllPages && (
+                <button onClick={() => { setSelectedLeads(leads.map(l => l._id)); setSelectAllPages(false); }}
+                  style={{ padding:'5px 12px', borderRadius:'6px', border:'1px solid #ef4444', background:'white', color:'#dc2626', fontSize:'11px', fontWeight:'700', cursor:'pointer', whiteSpace:'nowrap', transition:'all 0.2s' }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; }}>
+                  ✕ Clear selection
+                </button>
+              )}
               <button onClick={() => { closeAllForms(); setShowAssignGroupForm(true); }}
                 style={{ padding:'4px 10px', borderRadius:'6px', border:'none', background:'#3b82f6', color:'#fff', fontSize:'11px', fontWeight:'600', cursor:'pointer' }}>
                 Assign to Group
@@ -3132,7 +3292,18 @@ const Leads = () => {
               <thead>
                 <tr style={{ background:'linear-gradient(135deg,#f8fafc,#f1f5f9)', borderBottom:'2px solid #e2e8f0' }}>
                   <th style={{ padding:'8px 12px', position:'relative' }}>
-                    <Checkbox checked={selectedLeads.length === leads.length && leads.length > 0} onCheckedChange={(checked) => setSelectedLeads(checked ? leads.map(l => l._id) : [])} />
+                    <Checkbox
+                      checked={selectAllPages || (selectedLeads.length === leads.length && leads.length > 0)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedLeads(leads.map(l => l._id));
+                          setSelectAllPages(false); // Reset first
+                        } else {
+                          setSelectedLeads([]);
+                          setSelectAllPages(false);
+                        }
+                      }}
+                    />
                   </th>
                   <th style={{ padding:'8px 6px 8px 12px', textAlign:'left', fontSize:'10px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', position:'relative', userSelect:'none' }}>
                     #
@@ -3163,7 +3334,18 @@ const Leads = () => {
                       onMouseLeave={e => { if (!isSelected) { e.currentTarget.style.background='white'; } }}
                       style={{ cursor:'pointer', background: isSelected ? '#fafbff' : 'white', borderBottom:'1px solid #f1f5f9', borderLeft: isSelected ? '3px solid #6366f1' : '3px solid transparent', transition:'all 0.15s' }}>
                       <td style={{ padding:'7px 12px', whiteSpace:'nowrap', overflow:'hidden' }} onClick={e => e.stopPropagation()}>
-                        <Checkbox checked={selectedLeads.includes(lead._id)} onCheckedChange={(checked) => setSelectedLeads(checked ? [...selectedLeads, lead._id] : selectedLeads.filter(id => id !== lead._id))} />
+                        <Checkbox
+                          checked={selectAllPages || selectedLeads.includes(lead._id)}
+                          onCheckedChange={(checked) => {
+                            if (selectAllPages) {
+                              // If selectAllPages is on, turn it off and start fresh selection
+                              setSelectAllPages(false);
+                              setSelectedLeads(checked ? [lead._id] : []);
+                            } else {
+                              setSelectedLeads(checked ? [...selectedLeads, lead._id] : selectedLeads.filter(id => id !== lead._id));
+                            }
+                          }}
+                        />
                       </td>
                       <td style={{ padding:'7px 12px', whiteSpace:'nowrap', overflow:'hidden' }}>
                         <span style={{ fontSize:'10px', fontWeight:'700', color:'#94a3b8', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px' }}>{lead.leadNumber || '—'}</span>

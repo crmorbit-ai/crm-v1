@@ -214,7 +214,7 @@ const AIChatWidget = () => {
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
-      zIndex: 999,
+      zIndex: 10000,
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
     }}>
 

@@ -12,6 +12,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
 import { Mail, Phone, Building2, Briefcase, X, Edit, Trash2, FileText, CheckCircle2, Calendar, Star, User, Settings, List, LayoutGrid } from 'lucide-react';
 import ManageFieldsPanel from '../components/ManageFieldsPanel';
+import BulkUploadForm from '../components/BulkUploadForm';
 import '../styles/crm.css';
 
 const DEFAULT_CONTACT_FIELDS = [
@@ -214,6 +215,7 @@ const Contacts = () => {
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [filters, setFilters] = useState({ search: '', account: '', title: '', isPrimary: '', hasAccount: '' });
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showBulkUploadForm, setShowBulkUploadForm] = useState(false);
   const [wizardStep, setWizardStep] = useState(0);
   const [creating, setCreating] = useState(false);
   const [selectedCountryIso, setSelectedCountryIso] = useState('');
@@ -332,6 +334,20 @@ const Contacts = () => {
   };
 
   const handleToggleField = async (field) => {
+    // Handle reordering via drag-and-drop
+    if (field._reorder) {
+      if (!field._isStd && field._id) {
+        try {
+          await fieldDefinitionService.updateFieldDefinition(field._id, { displayOrder: field.displayOrder });
+          const updated = customFieldDefs.map(f => f._id === field._id ? { ...f, displayOrder: field.displayOrder } : f);
+          setCustomFieldDefs(updated.sort((a, b) => a.displayOrder - b.displayOrder));
+          setFieldDefinitions(buildContFields(disabledStdFields, updated));
+        } catch (err) { console.error('Reorder error:', err); }
+      }
+      return;
+    }
+
+    // Handle toggle active/inactive
     setTogglingField(field.fieldName);
     if (field._isStd) {
       const newDisabled = disabledStdFields.includes(field.fieldName)
@@ -421,6 +437,14 @@ const Contacts = () => {
   const closeAllForms = () => {
     setShowCreateForm(false);
     setShowManageFields(false);
+    setShowBulkUploadForm(false);
+  };
+
+  const handleBulkUploadComplete = async () => {
+    setShowBulkUploadForm(false);
+    await loadContacts();
+    refreshGlobalStats();
+    setSuccess('✅ Bulk upload completed successfully!');
   };
 
   const handleCreateContact = async (e) => {
@@ -599,16 +623,15 @@ const Contacts = () => {
 
   const openDetailEditForm = () => {
     if (!selectedContactData) return;
-    setDetailEditData({
-      firstName: selectedContactData.firstName || '',
-      lastName: selectedContactData.lastName || '',
-      email: selectedContactData.email || '',
-      phone: selectedContactData.phone || '',
-      mobile: selectedContactData.mobile || '',
-      title: selectedContactData.title || '',
-      department: selectedContactData.department || '',
-      description: selectedContactData.description || ''
+
+    // Populate all fields from fieldDefinitions
+    const editData = {};
+    fieldDefinitions.forEach(field => {
+      const value = selectedContactData[field.fieldName] || selectedContactData.customFields?.[field.fieldName] || '';
+      editData[field.fieldName] = value;
     });
+
+    setDetailEditData(editData);
     closeDetailForms();
     setShowDetailEditForm(true);
   };
@@ -617,7 +640,29 @@ const Contacts = () => {
     e.preventDefault();
     try {
       setError('');
-      await contactService.updateContact(selectedContactId, detailEditData);
+
+      // Separate standard fields and custom fields
+      const standardFields = {};
+      const customFields = {};
+
+      fieldDefinitions.forEach(field => {
+        const value = detailEditData[field.fieldName];
+        // Include all values, even empty ones (to allow clearing fields)
+        if (value !== undefined) {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+          } else {
+            customFields[field.fieldName] = value;
+          }
+        }
+      });
+
+      const updateData = {
+        ...standardFields,
+        ...(Object.keys(customFields).length > 0 ? { customFields } : {})
+      };
+
+      await contactService.updateContact(selectedContactId, updateData);
       setSuccess('Contact updated successfully!');
       setShowDetailEditForm(false);
       const response = await contactService.getContact(selectedContactId);
@@ -669,8 +714,8 @@ const Contacts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">Total Contacts</div>
               <div className="stat-value">{globalStats.total}</div>
+              <div className="stat-label">Total Contacts</div>
             </div>
             <div
               className="stat-card"
@@ -683,8 +728,8 @@ const Contacts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">Primary Contacts</div>
               <div className="stat-value">{globalStats.primary}</div>
+              <div className="stat-label">Primary Contacts</div>
             </div>
             <div
               className="stat-card"
@@ -697,8 +742,8 @@ const Contacts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">With Account</div>
               <div className="stat-value">{globalStats.withAccount}</div>
+              <div className="stat-label">With Account</div>
             </div>
             <div
               className="stat-card"
@@ -709,13 +754,13 @@ const Contacts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">This Page</div>
               <div className="stat-value">{stats.recent}</div>
+              <div className="stat-label">This Page</div>
             </div>
           </div>
 
       {/* Split Container */}
-      <div id="contacts-split-container" style={{ display: 'flex', height: 'calc(100vh - 280px)', overflow: 'hidden', position: 'relative' }}>
+      <div id="contacts-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
         {/* LEFT: Detail Panel */}
         {/* ── LEFT: Create Form (inline) ── */}
@@ -729,7 +774,7 @@ const Contacts = () => {
                   left: 0 !important;
                   right: 0 !important;
                   bottom: 0 !important;
-                  flex: 1 1 100% !important;
+                  flex: none !important;
                   z-index: 1000 !important;
                   border-right: none !important;
                 }
@@ -877,7 +922,20 @@ const Contacts = () => {
         )}
 
         {selectedContactId && !showCreateForm && (
-          <div style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <div className="contact-detail-panel" style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .contact-detail-panel {
+                  position: fixed !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  z-index: 1000 !important;
+                  flex: none !important;
+                }
+              }
+            `}</style>
             {/* Panel Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <h3 style={{ margin: 0, color: '#1e3c72', fontSize: '15px', fontWeight: '600' }}>Contact Details</h3>
@@ -920,15 +978,61 @@ const Contacts = () => {
                         <button onClick={() => setShowDetailEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
                       </div>
                       <form onSubmit={handleDetailUpdateContact}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Customer Name *</label><input type="text" name="firstName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.firstName || ''} onChange={handleDetailEditChange} required /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Last Name</label><input type="text" name="lastName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.lastName || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Title</label><input type="text" name="title" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.title || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Department</label><input type="text" name="department" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.department || ''} onChange={handleDetailEditChange} /></div>
+                        <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '10px' }}>
+                          {(() => {
+                            const grouped = groupFieldsBySection(fieldDefinitions);
+                            const sectionOrder = ['Basic Information', 'Professional Information', 'Mailing Address', ...Object.keys(grouped).filter(s => !['Basic Information', 'Professional Information', 'Mailing Address'].includes(s))];
+                            return sectionOrder.map(section => {
+                              const fields = grouped[section];
+                              if (!fields || fields.length === 0) return null;
+                              return (
+                                <div key={section} style={{ marginBottom: '12px' }}>
+                                  <h5 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>{section}</h5>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    {fields.filter(f => f.showInEdit !== false).map(field => (
+                                      <div key={field.fieldName} style={{ gridColumn: ['description', 'mailingStreet'].includes(field.fieldName) ? 'span 2' : 'span 1' }}>
+                                        <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>
+                                          {field.label} {field.isRequired && <span style={{ color: '#ef4444' }}>*</span>}
+                                        </label>
+                                        {field.fieldType === 'text' && (
+                                          <input type="text" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'email' && (
+                                          <input type="email" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'phone' && (
+                                          <input type="tel" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'number' && (
+                                          <input type="number" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'textarea' && (
+                                          <textarea name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', minHeight: '60px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'dropdown' && (
+                                          <select name={field.fieldName} className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired}>
+                                            <option value="">-- Select --</option>
+                                            {field.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                          </select>
+                                        )}
+                                        {field.fieldType === 'date' && (
+                                          <input type="date" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'checkbox' && (
+                                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151' }}>
+                                            <input type="checkbox" name={field.fieldName} checked={detailEditData[field.fieldName] || false} onChange={(e) => setDetailEditData(prev => ({ ...prev, [field.fieldName]: e.target.checked }))} />
+                                            {field.label}
+                                          </label>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
                           <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailEditForm(false)}>Cancel</button>
                           <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }}>Update</button>
                         </div>
@@ -1201,9 +1305,9 @@ const Contacts = () => {
         )}
 
         {/* RIGHT: Filters + List */}
-        <div style={{ flex: (selectedContactId || showCreateForm) && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%', minWidth: 0, overflow: 'auto', padding: '0 0 20px 0' }}>
+        <div style={{ flex: (selectedContactId || showCreateForm) && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%', minWidth: 0, overflow: 'auto', padding: '0 0 20px 0', display: 'flex', flexDirection: 'column' }}>
           {/* Filters */}
-          <div className="crm-card" style={{ marginBottom: '24px' }}>
+          <div className="crm-card" style={{ marginBottom: '24px', position: 'sticky', top: '0', zIndex: 9, background: 'white' }}>
             <div style={{ padding: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                 <input type="text" name="search" placeholder="Search contacts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />
@@ -1218,6 +1322,9 @@ const Contacts = () => {
                     <Settings style={{ width: '14px', height: '14px' }} /> Manage Fields
                   </button>
                 )}
+                <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>
+                  📤 Bulk Upload
+                </button>
                 <button className="crm-btn crm-btn-primary" onClick={() => {
                   if (!canCreateContact) { setError('Access Restricted: You do not have permission to create contacts.'); return; }
                   closeAllForms(); setSelectedContactId(null); setSelectedContactData(null); setDetailExpanded(false); resetForm(); setShowCreateForm(true);
@@ -1251,8 +1358,25 @@ const Contacts = () => {
             />
           )}
 
+          {/* Inline Bulk Upload Form - Compact */}
+          {showBulkUploadForm && (
+            <div className="crm-card" style={{ marginBottom: '10px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 10px', borderBottom: '1px solid #e5e7eb', background: '#f8fafc' }}>
+                <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#1e3c72' }}>Bulk Upload Contacts</h3>
+                <button onClick={() => setShowBulkUploadForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b', padding: '2px 6px' }}>✕</button>
+              </div>
+              <div style={{ padding: '10px' }}>
+                <BulkUploadForm
+                  entityType="contact"
+                  onClose={() => setShowBulkUploadForm(false)}
+                  onComplete={handleBulkUploadComplete}
+                />
+              </div>
+            </div>
+          )}
+
           {/* Contact List */}
-          <div className="crm-card">
+          <div className="crm-card" style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <div className="crm-card-header">
               <h2 className="crm-card-title">{viewMode === 'grid' ? 'Contact Cards' : 'Contact List'} ({pagination.total})</h2>
             </div>
@@ -1434,7 +1558,7 @@ const Contacts = () => {
                   const totalW = 36 + activeCols.reduce((s,c)=>s+c.width,0);
 
                   return (
-                    <div style={{ overflowX:'auto', overflowY:'auto', maxHeight:'60vh' }}>
+                    <div style={{ overflowX:'auto', flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <style>{`
                         .xl-th { position:sticky; top:0; z-index:2; background:#f0f2f5; border:1px solid #c8cdd5; padding:8px 12px; font-size:11px; font-weight:700; color:#374151; text-align:left; white-space:nowrap; user-select:none; letter-spacing:.4px; text-transform:uppercase; }
                         .xl-td { border:1px solid #e2e6eb; padding:6px 12px; font-size:13px; color:#374151; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; height:38px; vertical-align:middle; }
@@ -1499,6 +1623,7 @@ const Contacts = () => {
         </div>
 
       </div>
+
     </DashboardLayout>
   );
 };

@@ -35,12 +35,14 @@
   padding: 14px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   border: 1px solid #e5e7eb;
   transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  min-width: 0;
 }
 
 .stat-card::before {
@@ -78,6 +80,8 @@
   margin: 0 0 4px 0;
   color: #1e293b;
   line-height: 1;
+  white-space: nowrap;
+  width: 100%;
 }
 
 .stat-label {
@@ -87,6 +91,10 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
 }
 
 /* Cards - Original styling */
@@ -1399,6 +1407,19 @@
   }
 
   .bulk-actions-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    padding: 12px;
+  }
+
+  .bulk-actions-bar .selection-count {
+    text-align: center;
+    width: 100%;
+  }
+
+  .bulk-actions-bar button {
+    width: 100%;
     justify-content: center;
   }
 

@@ -179,14 +179,26 @@ const DashboardLayout = ({ children, title, actionButton }) => {
         isDesktopOpen={sidebarOpen}
       />
 
-      <div style={{ marginLeft: !isMobile && sidebarOpen ? '256px' : '0', transition: 'margin-left 0.3s ease' }} className="flex flex-col min-h-screen">
+      <div style={{
+        marginLeft: !isMobile && sidebarOpen ? '256px' : '0',
+        transition: 'margin-left 0.3s ease',
+        minHeight: '100vh',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
         <Header
           title={title}
           actionButton={actionButton}
           onMenuClick={() => setSidebarOpen(!sidebarOpen)}
           isMobile={isMobile}
         />
-        <main className="flex-1 p-4 md:p-6 bg-muted/30">
+        <main style={{
+          background: '#f8fafc',
+          padding: '1rem 1.5rem',
+          flex: '1 1 auto',
+          overflowY: 'auto',
+          overflowX: 'hidden'
+        }}>
           {children}
         </main>
       </div>

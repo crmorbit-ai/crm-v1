@@ -305,7 +305,7 @@ function App() {
           <ThemeProvider>
             <div className="App">
               <AppRoutes />
-              <AIChat />
+              {/* <AIChat /> */}
             </div>
           </ThemeProvider>
         </NotificationProvider>

@@ -533,20 +533,15 @@ const Accounts = () => {
 
   const openDetailEditForm = () => {
     if (!selectedAccountData) return;
-    setDetailEditData({
-      accountName: selectedAccountData.accountName || '',
-      accountType: selectedAccountData.accountType || 'Customer',
-      contactPerson: selectedAccountData.contactPerson || '',
-      industry: selectedAccountData.industry || '',
-      phone: selectedAccountData.phone || '',
-      website: selectedAccountData.website || '',
-      email: selectedAccountData.email || '',
-      annualRevenue: selectedAccountData.annualRevenue || '',
-      numberOfEmployees: selectedAccountData.numberOfEmployees || '',
-      leadSource: selectedAccountData.leadSource || '',
-      gstNumber: selectedAccountData.gstNumber || '',
-      description: selectedAccountData.description || ''
+
+    // Populate all fields from fieldDefinitions
+    const editData = {};
+    fieldDefinitions.forEach(field => {
+      const value = selectedAccountData[field.fieldName] || selectedAccountData.customFields?.[field.fieldName] || '';
+      editData[field.fieldName] = value;
     });
+
+    setDetailEditData(editData);
     closeDetailForms();
     setShowDetailEditForm(true);
   };
@@ -555,7 +550,29 @@ const Accounts = () => {
     e.preventDefault();
     try {
       setError('');
-      await accountService.updateAccount(selectedAccountId, detailEditData);
+
+      // Separate standard fields and custom fields
+      const standardFields = {};
+      const customFields = {};
+
+      fieldDefinitions.forEach(field => {
+        const value = detailEditData[field.fieldName];
+        // Include all values, even empty ones (to allow clearing fields)
+        if (value !== undefined) {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+          } else {
+            customFields[field.fieldName] = value;
+          }
+        }
+      });
+
+      const updateData = {
+        ...standardFields,
+        ...(Object.keys(customFields).length > 0 ? { customFields } : {})
+      };
+
+      await accountService.updateAccount(selectedAccountId, updateData);
       setSuccess('Account updated successfully!');
       setShowDetailEditForm(false);
       const response = await accountService.getAccount(selectedAccountId);
@@ -601,7 +618,7 @@ const Accounts = () => {
 
       {/* ── WIZARD OVERLAY ── */}
 
-          <div className="stats-grid">
+          <div className="stats-grid" style={{ position: 'sticky', top: 0, zIndex: 10, background: '#f8fafc', paddingBottom: '10px' }}>
             <div
               className="stat-card"
               onClick={() => handleStatsFilter('')}
@@ -613,8 +630,8 @@ const Accounts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">Total Accounts</div>
               <div className="stat-value">{stats.total}</div>
+              <div className="stat-label">Total Accounts</div>
             </div>
             <div
               className="stat-card"
@@ -627,8 +644,8 @@ const Accounts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">Customers</div>
               <div className="stat-value">{stats.customers}</div>
+              <div className="stat-label">Customers</div>
             </div>
             <div
               className="stat-card"
@@ -641,8 +658,8 @@ const Accounts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">Prospects</div>
               <div className="stat-value">{stats.prospects}</div>
+              <div className="stat-label">Prospects</div>
             </div>
             <div
               className="stat-card"
@@ -655,13 +672,13 @@ const Accounts = () => {
                 transition: 'all 0.2s'
               }}
             >
-              <div className="stat-label">Partners</div>
               <div className="stat-value">{stats.partners}</div>
+              <div className="stat-label">Partners</div>
             </div>
           </div>
 
       {/* Split Container */}
-      <div id="accounts-split-container" style={{ display: 'flex', height: 'calc(100vh - 280px)', overflow: 'hidden', position: 'relative' }}>
+      <div id="accounts-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
         {/* LEFT: Detail Panel */}
         {/* ── LEFT: Create Form (inline) ── */}
@@ -675,7 +692,7 @@ const Accounts = () => {
                   left: 0 !important;
                   right: 0 !important;
                   bottom: 0 !important;
-                  flex: 1 1 100% !important;
+                  flex: none !important;
                   z-index: 1000 !important;
                   border-right: none !important;
                 }
@@ -785,7 +802,20 @@ const Accounts = () => {
         )}
 
         {selectedAccountId && !showCreateForm && (
-          <div style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <div className="account-detail-panel" style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .account-detail-panel {
+                  position: fixed !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  z-index: 1000 !important;
+                  flex: none !important;
+                }
+              }
+            `}</style>
             {/* Panel Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <h3 style={{ margin: 0, color: '#1e3c72', fontSize: '15px', fontWeight: '600' }}>Account Details</h3>
@@ -831,20 +861,64 @@ const Accounts = () => {
                         <button onClick={() => setShowDetailEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
                       </div>
                       <form onSubmit={handleDetailUpdateAccount}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Account Name *</label><input type="text" name="accountName" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountName || ''} onChange={handleDetailEditChange} required /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Account Type</label><select name="accountType" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.accountType || 'Customer'} onChange={handleDetailEditChange}><option value="Customer">Customer</option><option value="Prospect">Prospect</option><option value="Partner">Partner</option><option value="Reseller">Reseller</option><option value="Vendor">Vendor</option><option value="Other">Other</option></select></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Contact Person</label><input type="text" name="contactPerson" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.contactPerson || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Email</label><input type="email" name="email" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.email || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Phone</label><input type="tel" name="phone" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.phone || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Website</label><input type="url" name="website" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.website || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Industry</label><select name="industry" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.industry || ''} onChange={handleDetailEditChange}><option value="">Select</option><option value="Agriculture">Agriculture</option><option value="Automotive">Automotive</option><option value="Banking & Finance">Banking &amp; Finance</option><option value="Construction">Construction</option><option value="Consulting">Consulting</option><option value="Education">Education</option><option value="Energy & Power">Energy &amp; Power</option><option value="Food & Beverage">Food &amp; Beverage</option><option value="Government">Government</option><option value="Healthcare">Healthcare</option><option value="Hospitality">Hospitality</option><option value="IT & Technology">IT &amp; Technology</option><option value="Insurance">Insurance</option><option value="Logistics & Transport">Logistics &amp; Transport</option><option value="Manufacturing">Manufacturing</option><option value="Media & Entertainment">Media &amp; Entertainment</option><option value="Pharma & Life Sciences">Pharma &amp; Life Sciences</option><option value="Real Estate">Real Estate</option><option value="Retail">Retail</option><option value="Telecom">Telecom</option><option value="Textile & Apparel">Textile &amp; Apparel</option><option value="Other">Other</option></select></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Employees</label><input type="number" name="numberOfEmployees" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.numberOfEmployees || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Annual Revenue</label><input type="number" name="annualRevenue" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.annualRevenue || ''} onChange={handleDetailEditChange} /></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>Lead Source</label><select name="leadSource" className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.leadSource || ''} onChange={handleDetailEditChange}><option value="">Select</option><option value="Website">Website</option><option value="Social Media">Social Media</option><option value="Referral">Referral</option><option value="Campaign">Campaign</option><option value="Cold Call">Cold Call</option><option value="Other">Other</option></select></div>
-                          <div><label style={{ fontSize: '10px', fontWeight: '600', color: '#374151' }}>GST Number</label><input type="text" name="gstNumber" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData.gstNumber || ''} onChange={handleDetailEditChange} /></div>
+                        <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '10px' }}>
+                          {(() => {
+                            const grouped = groupFieldsBySection(fieldDefinitions);
+                            const sectionOrder = ['Basic Information', 'Company Details', 'Address Information', ...Object.keys(grouped).filter(s => !['Basic Information', 'Company Details', 'Address Information'].includes(s))];
+                            return sectionOrder.map(section => {
+                              const fields = grouped[section];
+                              if (!fields || fields.length === 0) return null;
+                              return (
+                                <div key={section} style={{ marginBottom: '12px' }}>
+                                  <h5 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>{section}</h5>
+                                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                    {fields.filter(f => f.showInEdit !== false).map(field => (
+                                      <div key={field.fieldName} style={{ gridColumn: ['description', 'billingStreet', 'shippingStreet'].includes(field.fieldName) ? 'span 2' : 'span 1' }}>
+                                        <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>
+                                          {field.label} {field.isRequired && <span style={{ color: '#ef4444' }}>*</span>}
+                                        </label>
+                                        {field.fieldType === 'text' && (
+                                          <input type="text" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'email' && (
+                                          <input type="email" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'phone' && (
+                                          <input type="tel" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'url' && (
+                                          <input type="url" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'number' && (
+                                          <input type="number" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'textarea' && (
+                                          <textarea name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', minHeight: '60px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'dropdown' && (
+                                          <select name={field.fieldName} className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired}>
+                                            <option value="">-- Select --</option>
+                                            {field.options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                          </select>
+                                        )}
+                                        {field.fieldType === 'date' && (
+                                          <input type="date" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
+                                        )}
+                                        {field.fieldType === 'checkbox' && (
+                                          <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151' }}>
+                                            <input type="checkbox" name={field.fieldName} checked={detailEditData[field.fieldName] || false} onChange={(e) => setDetailEditData(prev => ({ ...prev, [field.fieldName]: e.target.checked }))} />
+                                            {field.label}
+                                          </label>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            });
+                          })()}
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
                           <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailEditForm(false)}>Cancel</button>
                           <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }}>Update</button>
                         </div>
@@ -1126,7 +1200,7 @@ const Accounts = () => {
         {/* RIGHT: Filters + List */}
         <div style={{ flex: (selectedAccountId || showCreateForm) && !detailExpanded ? `0 0 ${100 - detailPanelWidth}%` : '1 1 100%', minWidth: 0, overflow: 'auto', padding: '0 0 20px 0' }}>
           {/* Filters */}
-          <div className="crm-card" style={{ marginBottom: '24px' }}>
+          <div className="crm-card" style={{ marginBottom: '24px', position: 'sticky', top: '10px', zIndex: 9, background: 'white' }}>
             <div style={{ padding: '20px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                 <input type="text" name="search" placeholder="Search accounts..." className="crm-form-input" value={filters.search} onChange={handleFilterChange} />

@@ -181,8 +181,8 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
     background: 'linear-gradient(135deg, #1e3045, #1a4a42, #1d3d55, #153d35, #1e3a4a, #163832, #1e3045)',
     backgroundSize: '400% 400%',
     animation: 'sidebarFlow 8s ease infinite',
-    borderRight: '1px solid rgba(255,255,255,0.08)',
-    boxShadow: '4px 0 24px rgba(0,0,0,0.4)',
+    borderRight: 'none',
+    boxShadow: 'none',
   };
 
   return (

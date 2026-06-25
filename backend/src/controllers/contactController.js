@@ -4,6 +4,7 @@ const Account = require('../models/Account');
 const Opportunity = require('../models/Opportunity');
 const Task = require('../models/Task');
 const Tenant = require('../models/Tenant');
+const FieldDefinition = require('../models/FieldDefinition');
 const { successResponse, errorResponse } = require('../utils/response');
 const { logActivity } = require('../middleware/activityLogger');
 const { trackChanges, getRecordName } = require('../utils/changeTracker');
@@ -253,4 +254,468 @@ const getContactStats = async (req, res) => {
   }
 };
 
-module.exports = { getContacts, getContact, createContact, updateContact, deleteContact, getContactStats };
+/**
+ * @desc    Bulk upload contacts from Excel/CSV
+ * @route   POST /api/contacts/bulk-upload
+ * @access  Private
+ */
+const bulkUploadContacts = async (req, res) => {
+  const xlsx = require('xlsx');
+  const fs = require('fs');
+
+  try {
+    if (!req.file) {
+      return errorResponse(res, 400, 'Please upload a file');
+    }
+
+    const fileExtension = req.file.originalname.split('.').pop().toLowerCase();
+    let contactsData = [];
+    const errors = [];
+
+    // Read Excel/CSV file
+    if (fileExtension === 'xlsx' || fileExtension === 'xls' || fileExtension === 'csv') {
+      const workbook = xlsx.readFile(req.file.path);
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      contactsData = xlsx.utils.sheet_to_json(worksheet);
+    } else {
+      fs.unlinkSync(req.file.path);
+      return errorResponse(res, 400, 'Invalid file format. Please upload Excel (.xlsx, .xls) or CSV file');
+    }
+
+    // Determine tenant
+    let tenant;
+    if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
+      tenant = req.body.tenant;
+      if (!tenant) {
+        fs.unlinkSync(req.file.path);
+        return errorResponse(res, 400, 'Tenant is required');
+      }
+    } else {
+      tenant = req.user.tenant;
+    }
+
+    // Load field definitions for mapping custom fields
+    const fieldDefinitions = await FieldDefinition.find({
+      tenant,
+      entityType: 'Contact',
+      isActive: true
+    });
+
+    const createdContacts = [];
+
+    // Common column header → standard Contact field name mapping
+    const STANDARD_FIELD_MAP = {
+      'firstname':       'firstName',
+      'first name':      'firstName',
+      'customername':    'firstName',
+      'customer name':   'firstName',
+      'name':            'firstName',
+      'lastname':        'lastName',
+      'last name':       'lastName',
+      'email':           'email',
+      'emailaddress':    'email',
+      'email address':   'email',
+      'phone':           'phone',
+      'mobile':          'mobile',
+      'phonenumber':     'phone',
+      'phone number':    'phone',
+      'contact':         'phone',
+      'account':         'account',
+      'company':         'account',
+      'title':           'title',
+      'jobtitle':        'title',
+      'designation':     'title',
+      'department':      'department',
+      'dept':            'department',
+      'reportsto':       'reportsTo',
+      'reports to':      'reportsTo',
+      'leadsource':      'leadSource',
+      'lead source':     'leadSource',
+      'source':          'leadSource',
+      'isprimary':       'isPrimary',
+      'is primary':      'isPrimary',
+      'primary':         'isPrimary',
+      'donotcall':       'doNotCall',
+      'do not call':     'doNotCall',
+      'emailoptout':     'emailOptOut',
+      'email opt out':   'emailOptOut',
+      'description':     'description',
+      'notes':           'description',
+      'mailingstreet':   'mailingStreet',
+      'mailing street':  'mailingStreet',
+      'street':          'mailingStreet',
+      'mailingcity':     'mailingCity',
+      'mailing city':    'mailingCity',
+      'city':            'mailingCity',
+      'mailingstate':    'mailingState',
+      'mailing state':   'mailingState',
+      'state':           'mailingState',
+      'mailingcountry':  'mailingCountry',
+      'mailing country': 'mailingCountry',
+      'country':         'mailingCountry',
+      'mailingzipcode':  'mailingZipCode',
+      'mailing zipcode': 'mailingZipCode',
+      'mailing zip code':'mailingZipCode',
+      'zipcode':         'mailingZipCode',
+      'zip code':        'mailingZipCode',
+      'postalcode':      'mailingZipCode',
+      'postal code':     'mailingZipCode',
+    };
+
+    // Convert any column header to a safe camelCase key
+    const toCamelKey = (str) =>
+      str.trim()
+        .replace(/[^a-zA-Z0-9\s_]/g, '')
+        .replace(/\s+(.)/g, (_, c) => c.toUpperCase())
+        .replace(/^(.)/, c => c.toLowerCase())
+        .replace(/\s+/g, '');
+
+    // Process each contact
+    for (let i = 0; i < contactsData.length; i++) {
+      const row = contactsData[i];
+
+      try {
+        // Build contactData dynamically from field definitions
+        const contactData = {
+          tenant,
+          owner: req.body.owner || req.user._id,
+          createdBy: req.user._id,
+          lastModifiedBy: req.user._id,
+          mailingAddress: {}
+        };
+
+        const customFields = {};
+        const mappedColKeys = new Set();
+
+        // Helper function to find value in row with case-insensitive matching
+        const findValueInRow = (row, field) => {
+          if (row[field.label] !== undefined) return row[field.label];
+          if (row[field.fieldName] !== undefined) return row[field.fieldName];
+
+          const lowerLabel = field.label.toLowerCase();
+          const lowerFieldName = field.fieldName.toLowerCase();
+
+          for (const key of Object.keys(row)) {
+            const lowerKey = key.toLowerCase().trim();
+            if (lowerKey === lowerLabel || lowerKey === lowerFieldName) {
+              mappedColKeys.add(key);
+              return row[key];
+            }
+            if (lowerKey.replace(/\s+/g, '') === lowerLabel.replace(/\s+/g, '')) {
+              mappedColKeys.add(key);
+              return row[key];
+            }
+            if (lowerKey.replace(/\s+/g, '') === lowerFieldName.replace(/\s+/g, '')) {
+              mappedColKeys.add(key);
+              return row[key];
+            }
+          }
+
+          const spacedFieldName = field.fieldName.replace(/([A-Z])/g, ' $1').trim();
+          if (row[spacedFieldName] !== undefined) {
+            mappedColKeys.add(spacedFieldName);
+            return row[spacedFieldName];
+          }
+
+          return undefined;
+        };
+
+        // Process each field definition
+        fieldDefinitions.forEach(field => {
+          const value = findValueInRow(row, field);
+
+          if (value !== undefined && value !== null && value !== '') {
+            let processedValue = value;
+
+            switch (field.fieldType) {
+              case 'number':
+              case 'currency':
+              case 'percentage':
+                processedValue = parseFloat(value) || 0;
+                break;
+              case 'checkbox':
+                processedValue = value === 'Yes' || value === 'yes' || value === 'true' || value === '1' || value === true;
+                break;
+              case 'multi_select':
+                if (typeof value === 'string') processedValue = value.split(',').map(v => v.trim());
+                break;
+              case 'date':
+              case 'datetime':
+                processedValue = new Date(value);
+                break;
+              default:
+                processedValue = String(value).trim();
+            }
+
+            if (field.isStandardField) {
+              // Handle mailing address fields separately
+              if (['mailingStreet', 'mailingCity', 'mailingState', 'mailingCountry', 'mailingZipCode'].includes(field.fieldName)) {
+                const addressField = field.fieldName.replace('mailing', '').toLowerCase();
+                contactData.mailingAddress[addressField] = processedValue;
+              } else {
+                contactData[field.fieldName] = processedValue;
+              }
+            } else {
+              customFields[field.fieldName] = processedValue;
+            }
+          } else if (field.defaultValue !== null && field.defaultValue !== undefined) {
+            if (field.isStandardField) {
+              contactData[field.fieldName] = field.defaultValue;
+            } else {
+              customFields[field.fieldName] = field.defaultValue;
+            }
+          }
+        });
+
+        // Save ALL remaining columns not handled by FieldDefinitions
+        for (const [colKey, colVal] of Object.entries(row)) {
+          if (mappedColKeys.has(colKey)) continue;
+          if (colVal === undefined || colVal === null || colVal === '') continue;
+
+          const lk = colKey.toLowerCase().trim();
+
+          // Map to standard field name if known
+          if (STANDARD_FIELD_MAP[lk]) {
+            const stdField = STANDARD_FIELD_MAP[lk];
+            // Handle mailing address fields
+            if (['mailingStreet', 'mailingCity', 'mailingState', 'mailingCountry', 'mailingZipCode'].includes(stdField)) {
+              const addressField = stdField.replace('mailing', '').toLowerCase();
+              if (!contactData.mailingAddress[addressField]) {
+                contactData.mailingAddress[addressField] = colVal;
+              }
+            } else if (!contactData[stdField]) {
+              contactData[stdField] = colVal;
+            }
+          } else {
+            const camelKey = toCamelKey(colKey);
+            if (camelKey && !contactData[camelKey]) contactData[camelKey] = colVal;
+          }
+        }
+
+        // Add customFields to contactData if any exist
+        if (Object.keys(customFields).length > 0) {
+          contactData.customFields = customFields;
+        }
+
+        // Validate - firstName is required
+        if (!contactData.firstName || String(contactData.firstName).trim() === '') {
+          errors.push({
+            row: i + 2,
+            error: 'Customer Name (firstName) is required'
+          });
+          continue;
+        }
+
+        // Check for duplicate email if email and account provided
+        if (contactData.email && contactData.account) {
+          const existingContact = await Contact.findOne({
+            email: contactData.email,
+            account: contactData.account,
+            tenant,
+            isActive: true
+          });
+
+          if (existingContact) {
+            errors.push({
+              row: i + 2,
+              email: contactData.email,
+              error: 'Contact with this email already exists for this account'
+            });
+            continue;
+          }
+        }
+
+        // Create contact
+        const contact = await Contact.create(contactData);
+
+        // Update tenant usage count
+        await Tenant.findByIdAndUpdate(tenant, { $inc: { 'usage.contacts': 1 } });
+
+        createdContacts.push(contact);
+
+      } catch (error) {
+        errors.push({
+          row: i + 2,
+          error: error.message
+        });
+      }
+    }
+
+    // Delete uploaded file
+    fs.unlinkSync(req.file.path);
+
+    // Log activity
+    await logActivity(req, 'contacts.bulk_upload', 'Contact', null, {
+      totalRows: contactsData.length,
+      successCount: createdContacts.length,
+      errorCount: errors.length
+    });
+
+    successResponse(res, 200, `Successfully uploaded ${createdContacts.length} contacts`, {
+      totalRows: contactsData.length,
+      successCount: createdContacts.length,
+      errorCount: errors.length,
+      errors: errors.slice(0, 20),
+      contacts: createdContacts
+    });
+
+  } catch (error) {
+    console.error('Bulk upload error:', error);
+
+    // Delete uploaded file if exists
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Download contact template
+ * @route   GET /api/contacts/download-template
+ * @access  Private
+ */
+const downloadContactTemplate = async (req, res) => {
+  const xlsx = require('xlsx');
+
+  try {
+    // Determine tenant
+    let tenant;
+    if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
+      tenant = req.query.tenant || req.user.tenant;
+    } else {
+      tenant = req.user.tenant;
+    }
+
+    // Get active field definitions for Contact entity
+    const fieldDefinitions = await FieldDefinition.find({
+      tenant,
+      entityType: 'Contact',
+      isActive: true,
+      showInCreate: true
+    }).sort({ displayOrder: 1 });
+
+    // Build sample data dynamically based on field definitions
+    const sampleRow1 = {};
+    const sampleRow2 = {};
+
+    fieldDefinitions.forEach(field => {
+      const label = field.label;
+
+      // Generate example values based on field type
+      let example1, example2;
+
+      switch (field.fieldType) {
+        case 'text':
+          example1 = field.fieldName === 'firstName' ? 'John' :
+                     field.fieldName === 'lastName' ? 'Doe' :
+                     field.fieldName === 'title' ? 'Sales Manager' :
+                     field.fieldName === 'department' ? 'Sales' :
+                     `Example ${field.label}`;
+          example2 = field.fieldName === 'firstName' ? 'Jane' :
+                     field.fieldName === 'lastName' ? 'Smith' :
+                     field.fieldName === 'title' ? 'Marketing Director' :
+                     field.fieldName === 'department' ? 'Marketing' :
+                     `Sample ${field.label}`;
+          break;
+
+        case 'email':
+          example1 = 'john.doe@example.com';
+          example2 = 'jane.smith@example.com';
+          break;
+
+        case 'phone':
+          example1 = '+91-9876543210';
+          example2 = '+91-9876543211';
+          break;
+
+        case 'url':
+          example1 = 'https://example.com';
+          example2 = 'https://example2.com';
+          break;
+
+        case 'number':
+          example1 = '10';
+          example2 = '20';
+          break;
+
+        case 'currency':
+          example1 = '50000';
+          example2 = '75000';
+          break;
+
+        case 'percentage':
+          example1 = '75';
+          example2 = '85';
+          break;
+
+        case 'date':
+        case 'datetime':
+          example1 = '2025-01-15';
+          example2 = '2025-02-20';
+          break;
+
+        case 'checkbox':
+          example1 = field.fieldName === 'isPrimary' ? 'Yes' : 'No';
+          example2 = field.fieldName === 'isPrimary' ? 'No' : 'Yes';
+          break;
+
+        case 'picklist':
+        case 'select':
+          if (field.picklistValues && field.picklistValues.length > 0) {
+            example1 = field.picklistValues[0];
+            example2 = field.picklistValues[1] || field.picklistValues[0];
+          } else {
+            example1 = 'Option 1';
+            example2 = 'Option 2';
+          }
+          break;
+
+        case 'multi_select':
+          if (field.picklistValues && field.picklistValues.length > 0) {
+            example1 = field.picklistValues.slice(0, 2).join(', ');
+            example2 = field.picklistValues.slice(1, 3).join(', ');
+          } else {
+            example1 = 'Option1, Option2';
+            example2 = 'Option2, Option3';
+          }
+          break;
+
+        default:
+          example1 = `Example ${field.label}`;
+          example2 = `Sample ${field.label}`;
+      }
+
+      sampleRow1[label] = example1;
+      sampleRow2[label] = example2;
+    });
+
+    const data = [sampleRow1, sampleRow2];
+    const worksheet = xlsx.utils.json_to_sheet(data);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, 'Contacts');
+
+    const buffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    res.setHeader('Content-Disposition', 'attachment; filename=contacts_template.xlsx');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Download template error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+module.exports = {
+  getContacts,
+  getContact,
+  createContact,
+  updateContact,
+  deleteContact,
+  getContactStats,
+  bulkUploadContacts,
+  downloadContactTemplate
+};

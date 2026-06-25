@@ -2,24 +2,27 @@ import React, { useState } from 'react';
 import '../styles/crm.css';
 import { API_URL } from '../config/api.config';
 
-const BulkUploadForm = ({ onClose, onSuccess }) => {
+const BulkUploadForm = ({ entityType = 'lead', onClose, onSuccess, onComplete }) => {
   const [file, setFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState('');
   const [dragActive, setDragActive] = useState(false);
 
+  const endpoint = entityType === 'contact' ? 'contacts' : 'leads';
+  const templateName = entityType === 'contact' ? 'contacts_template.xlsx' : 'leads_template.xlsx';
+
   const handleDownloadTemplate = async () => {
     try {
-      const response = await fetch(`${API_URL}/leads/download-template`, {
+      const response = await fetch(`${API_URL}/${endpoint}/download-template`, {
         headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` }
       });
-      
+
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'leads_template.xlsx';
+      a.download = templateName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -89,7 +92,7 @@ const BulkUploadForm = ({ onClose, onSuccess }) => {
     formData.append('file', file);
 
     try {
-      const response = await fetch(`${API_URL}/leads/bulk-upload`, {
+      const response = await fetch(`${API_URL}/${endpoint}/bulk-upload`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`
@@ -102,7 +105,8 @@ const BulkUploadForm = ({ onClose, onSuccess }) => {
       if (data.success) {
         setResult(data.data);
         if (data.data.successCount > 0) {
-          onSuccess();
+          if (onSuccess) onSuccess();
+          if (onComplete) onComplete();
         }
       } else {
         setError(data.message || 'Upload failed');
@@ -116,26 +120,6 @@ const BulkUploadForm = ({ onClose, onSuccess }) => {
 
   return (
     <div style={{ padding: '20px' }}>
-      {/* Download Template */}
-      <div style={{ marginBottom: '24px', padding: '16px', background: '#EFF6FF', borderRadius: '8px', border: '1px solid #BFDBFE' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h4 style={{ margin: 0, marginBottom: '4px', fontSize: '14px', fontWeight: '600', color: '#1E40AF' }}>
-              📥 Need a template?
-            </h4>
-            <p style={{ margin: 0, fontSize: '13px', color: '#1E40AF' }}>
-              Download our Excel template to see the correct format
-            </p>
-          </div>
-          <button
-            className="crm-btn crm-btn-sm crm-btn-primary"
-            onClick={handleDownloadTemplate}
-          >
-            Download Template
-          </button>
-        </div>
-      </div>
-
       {/* Upload Area */}
       <div
         onDragEnter={handleDrag}

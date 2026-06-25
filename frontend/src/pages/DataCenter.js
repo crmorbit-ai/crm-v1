@@ -228,6 +228,7 @@ const DataCenter = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [selectedCandidates, setSelectedCandidates] = useState([]);
+  const [selectAllPages, setSelectAllPages] = useState(false); // Select all across pages
   const [showFilters, setShowFilters] = useState(false);
   const [showMoveForm, setShowMoveForm] = useState(false);
   const [showCreateForm, setShowCreateForm] = useState(false);
@@ -537,7 +538,16 @@ const DataCenter = () => {
   const handleMoveToLeads = async () => {
     if (selectedCandidates.length === 0) { alert('Please select at least one customer'); return; }
     try {
-      const data = { candidateIds: selectedCandidates, ...moveForm };
+      // If selectAllPages is true, fetch all customer IDs
+      let candidateIds = selectedCandidates;
+      if (selectAllPages) {
+        const allResponse = await dataCenterService.getCandidates({ ...filters, limit: stats.total });
+        if (allResponse?.data?.candidates) {
+          candidateIds = allResponse.data.candidates.map(c => c._id);
+        }
+      }
+
+      const data = { candidateIds, ...moveForm };
       const response = await dataCenterService.moveToLeads(data);
       const moved = response?.data?.success?.length || 0;
       const failed = response?.data?.failed?.length || 0;
@@ -547,6 +557,7 @@ const DataCenter = () => {
         alert(`Move failed. ${failed > 0 ? response.data.failed[0]?.reason : 'No customers were moved.'}`);
       }
       setSelectedCandidates([]);
+      setSelectAllPages(false);
       loadCandidates();
     } catch (error) {
       if (error?.isPermissionDenied) return;
@@ -559,14 +570,25 @@ const DataCenter = () => {
 
   const handleDeleteCandidates = async () => {
     if (selectedCandidates.length === 0) { alert('Please select at least one candidate'); return; }
-    setDeleteModal({ open: true, count: selectedCandidates.length });
+    const count = selectAllPages ? stats.total : selectedCandidates.length;
+    setDeleteModal({ open: true, count });
   };
 
   const confirmDelete = async () => {
     try {
-      const response = await dataCenterService.deleteCandidates(selectedCandidates);
+      // If selectAllPages is true, fetch all customer IDs
+      let candidateIds = selectedCandidates;
+      if (selectAllPages) {
+        const allResponse = await dataCenterService.getCandidates({ ...filters, limit: stats.total });
+        if (allResponse?.data?.candidates) {
+          candidateIds = allResponse.data.candidates.map(c => c._id);
+        }
+      }
+
+      const response = await dataCenterService.deleteCandidates(candidateIds);
       alert(`Successfully deleted ${response.data.deleted} customer(s)!`);
       setSelectedCandidates([]);
+      setSelectAllPages(false);
       setSelectedCandidateId(null);
       setSelectedCandidateData(null);
       setDeleteModal({ open: false, count: 0 });
@@ -795,10 +817,10 @@ const DataCenter = () => {
       {/* ── WIZARD OVERLAY ── */}
 
       <div className="stats-grid">
-        <div className="stat-card"><div className="stat-label">Total Customers</div><div className="stat-value">{stats.total}</div><div className="stat-change">Complete database</div></div>
-        <div className="stat-card"><div className="stat-label">Available Now</div><div className="stat-value">{stats.available}</div><div className="stat-change positive">Ready to hire</div></div>
-        <div className="stat-card"><div className="stat-label">Immediate Join</div><div className="stat-value">{stats.immediate}</div><div className="stat-change positive">Can join immediately</div></div>
-        <div className="stat-card"><div className="stat-label">Active This Week</div><div className="stat-value">{stats.thisWeek}</div><div className="stat-change">Recent activity</div></div>
+        <div className="stat-card"><div className="stat-value">{stats.total}</div><div className="stat-label">Total Customers</div><div className="stat-change">Complete database</div></div>
+        <div className="stat-card"><div className="stat-value">{stats.available}</div><div className="stat-label">Available Now</div><div className="stat-change positive">Ready to hire</div></div>
+        <div className="stat-card"><div className="stat-value">{stats.immediate}</div><div className="stat-label">Immediate Join</div><div className="stat-change positive">Can join immediately</div></div>
+        <div className="stat-card"><div className="stat-value">{stats.thisWeek}</div><div className="stat-label">Active This Week</div><div className="stat-change">Recent activity</div></div>
       </div>
 
       {/* Action Buttons Section */}
@@ -825,12 +847,36 @@ const DataCenter = () => {
         </div>
 
         {selectedCandidates.length > 0 && (
-          <div className="bulk-actions-bar">
-            <span className="selection-count" style={{ whiteSpace: 'nowrap' }}>{selectedCandidates.length} Selected</span>
+          <div className="bulk-actions-bar" style={{ background: selectAllPages ? 'linear-gradient(135deg, #dbeafe, #bfdbfe)' : undefined, border: selectAllPages ? '2px solid #3b82f6' : undefined, boxShadow: selectAllPages ? '0 4px 12px rgba(59,130,246,0.3)' : undefined, animation: selectAllPages ? 'pulse 1.5s ease-in-out infinite' : 'none' }}>
+            <style>{`
+              @keyframes pulse {
+                0%, 100% { box-shadow: 0 4px 12px rgba(59,130,246,0.3); }
+                50% { box-shadow: 0 6px 20px rgba(59,130,246,0.5); }
+              }
+            `}</style>
+            <span className="selection-count" style={{ whiteSpace: 'nowrap' }}>
+              {selectAllPages ? `All ${stats.total} customers selected` : `${selectedCandidates.length} Selected`}
+            </span>
+            {!selectAllPages && selectedCandidates.length === candidates.length && stats.total > candidates.length && (
+              <button onClick={() => setSelectAllPages(true)} className="crm-btn crm-btn-primary crm-btn-sm"
+                style={{ padding:'5px 12px', background:'linear-gradient(135deg, #3b82f6, #2563eb)', color:'white', fontSize:'11px', fontWeight:'700', border:'none', boxShadow:'0 2px 8px rgba(59,130,246,0.4)', transition:'all 0.2s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.05)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.6)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(59,130,246,0.4)'; }}>
+                ⚡ Select all {stats.total} customers
+              </button>
+            )}
+            {selectAllPages && (
+              <button onClick={() => { setSelectedCandidates(candidates.map(c => c._id)); setSelectAllPages(false); }} className="crm-btn crm-btn-sm"
+                style={{ padding:'5px 12px', border:'1px solid #ef4444', background:'white', color:'#dc2626', fontSize:'11px', fontWeight:'700', transition:'all 0.2s' }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = '#fee2e2'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = 'white'; }}>
+                ✕ Clear selection
+              </button>
+            )}
             <BulkCommunication selectedCandidates={selectedCandidates} candidates={candidates} myProducts={myProducts} loadMyProducts={loadMyProducts} onSuccess={() => setSelectedCandidates([])} />
             <button className="crm-btn crm-btn-success crm-btn-sm" onClick={() => { if (selectedCandidates.length === 0) { alert('Please select at least one customer'); return; } if (window.confirm(`Move ${selectedCandidates.length} customer(s) to Leads?`)) { handleMoveToLeads(); } }}>Move to Leads</button>
             <button className="crm-btn crm-btn-danger crm-btn-sm" onClick={handleDeleteCandidates}>Delete</button>
-            <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={() => setSelectedCandidates([])}>Clear</button>
+            <button className="crm-btn crm-btn-sm crm-btn-secondary" onClick={() => { setSelectedCandidates([]); setSelectAllPages(false); }}>Clear</button>
           </div>
         )}
       </div>
@@ -841,7 +887,21 @@ const DataCenter = () => {
         {/* LEFT: Detail Panel */}
         {/* ── LEFT: Create Form (inline) ── */}
         {showCreateForm && (
-          <div style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <div className="customer-create-form" style={{ flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .customer-create-form {
+                  position: fixed !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  z-index: 1000 !important;
+                  flex: none !important;
+                  border-right: none !important;
+                }
+              }
+            `}</style>
             <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3c72 100%)', flexShrink: 0 }}>
               <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -999,7 +1059,20 @@ const DataCenter = () => {
         )}
 
         {selectedCandidateId && !showCreateForm && (
-          <div style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+          <div className="customer-detail-panel" style={detailExpanded ? { position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000, background: 'white', display: 'flex', flexDirection: 'column', overflow: 'hidden' } : { flex: `0 0 ${detailPanelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <style>{`
+              @media (max-width: 768px) {
+                .customer-detail-panel {
+                  position: fixed !important;
+                  top: 0 !important;
+                  left: 0 !important;
+                  right: 0 !important;
+                  bottom: 0 !important;
+                  z-index: 1000 !important;
+                  flex: none !important;
+                }
+              }
+            `}</style>
             {/* Panel Header */}
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #e0e0e0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <h3 style={{ margin: 0, color: '#1e3c72', fontSize: '15px', fontWeight: '600' }}>Customer Details</h3>
@@ -1210,7 +1283,18 @@ const DataCenter = () => {
                 {candidates.map(candidate => (
                   <div key={candidate._id} onClick={() => handleCandidateClick(candidate._id)} style={{ background: '#fff', borderRadius: '8px', padding: '12px', border: selectedCandidateId === candidate._id ? '2px solid #1e3c72' : selectedCandidates.includes(candidate._id) ? '2px solid #4A90E2' : '1px solid #e5e7eb', cursor: 'pointer' }}>
                     <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                      <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} style={{ width: '16px', height: '16px' }} />
+                      <input type="checkbox"
+                        checked={selectAllPages || selectedCandidates.includes(candidate._id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          if (selectAllPages) {
+                            setSelectAllPages(false);
+                            setSelectedCandidates([candidate._id]);
+                          } else {
+                            handleSelectCandidate(candidate._id);
+                          }
+                        }}
+                        style={{ width: '16px', height: '16px' }} />
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                           <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{candidate.customerName || getDetailName(candidate)}</h3>
@@ -1239,7 +1323,18 @@ const DataCenter = () => {
                     <tr>
                       <th style={{ width: '80px', padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                          <input type="checkbox" checked={candidates.length > 0 && candidates.every(c => selectedCandidates.includes(c._id))} onChange={handleSelectAll} style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
+                          <input type="checkbox"
+                            checked={selectAllPages || (candidates.length > 0 && candidates.every(c => selectedCandidates.includes(c._id)))}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                handleSelectAll(e);
+                                setSelectAllPages(false);
+                              } else {
+                                setSelectedCandidates([]);
+                                setSelectAllPages(false);
+                              }
+                            }}
+                            style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
                           <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }} title="Select All Records">All</span>
                         </label>
                       </th>
@@ -1253,7 +1348,20 @@ const DataCenter = () => {
                     {candidates.map(candidate => (
                       <tr key={candidate._id} onClick={(e) => { if (e.target.type !== 'checkbox') handleCandidateClick(candidate._id); }} style={{ background: selectedCandidateId === candidate._id ? '#E0F2FE' : selectedCandidates.includes(candidate._id) ? '#EFF6FF' : '#fff', cursor: 'pointer', border: '1px solid #e5e7eb' }}>
                         <td style={{ padding: '8px' }}>
-                          <input type="checkbox" checked={selectedCandidates.includes(candidate._id)} onChange={(e) => { e.stopPropagation(); handleSelectCandidate(candidate._id); }} onClick={(e) => e.stopPropagation()} style={{ width: '16px', height: '16px' }} />
+                          <input type="checkbox"
+                            checked={selectAllPages || selectedCandidates.includes(candidate._id)}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              if (selectAllPages) {
+                                // If selectAllPages is on, turn it off and start fresh selection
+                                setSelectAllPages(false);
+                                setSelectedCandidates([candidate._id]);
+                              } else {
+                                handleSelectCandidate(candidate._id);
+                              }
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ width: '16px', height: '16px' }} />
                         </td>
                         <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
                           <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '2px 7px', borderRadius: '5px' }}>

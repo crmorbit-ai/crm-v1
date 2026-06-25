@@ -399,7 +399,8 @@ const WelcomePrompt = ({ user, onClose }) => {
               justifyContent: 'space-between',
               marginBottom: '12px',
               position: 'relative',
-              zIndex: 1
+              zIndex: 1,
+              paddingRight: '48px'  // Space for close button
             }}>
               <div style={{
                 display: 'flex',
@@ -426,7 +427,8 @@ const WelcomePrompt = ({ user, onClose }) => {
                 fontWeight: '700',
                 letterSpacing: '1px',
                 textTransform: 'uppercase',
-                border: '1px solid rgba(255,255,255,0.25)'
+                border: '1px solid rgba(255,255,255,0.25)',
+                flexShrink: 0  // Prevent badge from shrinking
               }}>
                 {content.badge}
               </div>

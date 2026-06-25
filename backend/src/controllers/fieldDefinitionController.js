@@ -12,7 +12,11 @@ exports.getFieldDefinitions = async (req, res) => {
 
     const query = {
       tenant: req.user.tenant,
-      entityType
+      entityType,
+      $or: [
+        { isStandardField: true },        // Standard fields visible to all
+        { createdBy: req.user._id }       // Custom fields only to creator
+      ]
     };
 
     if (!includeInactive) {

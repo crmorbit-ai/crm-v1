@@ -127,7 +127,20 @@ const BulkCommunication = ({
   return (
     <>
       {/* Bulk Communication Buttons */}
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      <div className="bulk-comm-buttons" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .bulk-comm-buttons {
+              width: 100%;
+              flex-direction: column !important;
+              gap: 8px !important;
+            }
+            .bulk-comm-buttons button {
+              width: 100% !important;
+              justify-content: center;
+            }
+          }
+        `}</style>
         <button
           className="crm-btn crm-btn-sm"
           onClick={handleBulkEmail}

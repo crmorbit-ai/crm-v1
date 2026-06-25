@@ -636,8 +636,11 @@ const updateLead = async (req, res) => {
     }
 
     // Update custom fields if validated
+    // Since Lead schema has strict: false, save custom fields directly to document
     if (validatedCustomFields !== null) {
-      lead.customFields = validatedCustomFields;
+      Object.keys(validatedCustomFields).forEach(key => {
+        lead.set(key, validatedCustomFields[key]);
+      });
     }
 
     lead.lastModifiedBy = req.user._id;
