@@ -15,15 +15,42 @@ const isSaasUser    = (user) => SAAS_TYPES.includes(user.userType);
 /* Submit feedback */
 exports.submitFeedback = async (req, res, next) => {
   try {
+    // Debug log
+    console.log('📝 Request body:', req.body);
+    console.log('📎 Files:', req.files);
+
     const { type, category, title, description, rating, context, directToSaas } = req.body;
+
+    // Validation
+    if (!type || !title || !description) {
+      return res.status(400).json({
+        success: false,
+        message: 'Type, title, and description are required'
+      });
+    }
 
     // Tenant admin can submit directly to SAAS by passing directToSaas: true
     const isAdminDirectSubmit = directToSaas && isTenantAdmin(req.user);
 
+    // Handle file attachments
+    const attachments = req.files ? req.files.map(file => ({
+      filename: file.filename,
+      originalName: file.originalname,
+      path: file.path,
+      size: file.size,
+      mimetype: file.mimetype
+    })) : [];
+
     const fb = await Feedback.create({
       tenant:      req.user.tenant,
       submittedBy: req.user._id,
-      type, category, title, description, rating, context,
+      type,
+      category: category || 'other',
+      title,
+      description,
+      rating: rating ? parseInt(rating) : undefined,
+      context,
+      attachments,
       ...(isAdminDirectSubmit && {
         escalatedToSaas: true,
         escalatedAt:     new Date(),
@@ -33,7 +60,10 @@ exports.submitFeedback = async (req, res, next) => {
       }),
     });
     res.status(201).json({ success: true, data: fb });
-  } catch (e) { next(e); }
+  } catch (e) {
+    console.error('❌ Feedback creation error:', e);
+    next(e);
+  }
 };
 
 /* Get my own feedback history */

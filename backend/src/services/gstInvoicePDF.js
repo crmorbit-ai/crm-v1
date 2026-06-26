@@ -49,29 +49,6 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
     }
   }
 
-  // Generate QR Code if UPI or Bank details available
-  let qrCodeBuffer = null;
-  if (tenant.bankDetails) {
-    const hasUPI = tenant.bankDetails.upiId && typeof tenant.bankDetails.upiId === 'string' && tenant.bankDetails.upiId.trim();
-    const hasBankAccount = tenant.bankDetails.accountNumber && tenant.bankDetails.ifscCode;
-
-    if (hasUPI || hasBankAccount) {
-      try {
-        let upiString;
-        if (hasUPI) {
-          upiString = `upi://pay?pa=${tenant.bankDetails.upiId}&pn=${encodeURIComponent(tenant.organizationName || 'Payment')}&am=${invoice.totalAmount}&cu=INR`;
-        } else {
-          const accountUPI = `${tenant.bankDetails.accountNumber}@${tenant.bankDetails.ifscCode.toLowerCase()}`;
-          upiString = `upi://pay?pa=${accountUPI}&pn=${encodeURIComponent(tenant.organizationName || 'Payment')}&am=${invoice.totalAmount}&cu=INR`;
-        }
-        const qrDataURL = await QRCode.toDataURL(upiString, { width: 70, margin: 1 });
-        qrCodeBuffer = Buffer.from(qrDataURL.split(',')[1], 'base64');
-      } catch (qrErr) {
-        console.log('QR generation error:', qrErr);
-      }
-    }
-  }
-
   return new Promise((resolve, reject) => {
     try {
       const doc = new PDFDocument({ size: 'A4', margin: 30 });
@@ -90,13 +67,13 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
 
       let yPos = 40;
 
-      // ============= HEADER SECTION =============
+      // ============= HEADER SECTION WITH TEAL =============
 
-      // One complete box for Logo + Invoice Details
-      doc.rect(40, yPos, 515, 80).stroke('#cccccc');
-
-      // Logo on left side inside box
+      // Logo - MAXIMUM SIZE with white background
       if (logoBuffer) {
+        // White box for logo - MAXIMUM
+        doc.rect(40, yPos, 240, 80).fill(WHITE).stroke('#cccccc');
+
         try {
           // Logo MAXIMUM SIZE - 220x70
           doc.image(logoBuffer, 50, yPos + 5, { width: 220, height: 70, fit: [220, 70] });
@@ -106,26 +83,30 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
         }
       }
 
-      // TAX INVOICE heading - right side
-      doc.fontSize(14).fillColor(BLACK).font('Helvetica-Bold')
+      // Teal bar - starts exactly from where "TAX INVOICE" begins
+      const tealStartX = logoBuffer ? 285 : 40;
+      const tealWidth = logoBuffer ? 270 : 515;
+      doc.rect(tealStartX, yPos, tealWidth, 80).fill(TEAL);
+
+      // Company details in header (right side) - TAX INVOICE
+      doc.fontSize(14).fillColor(WHITE).font('Helvetica-Bold')
          .text('TAX INVOICE', 370, yPos + 5, { width: 175, align: 'right' });
 
-      // Header info table - right side
+      // Header info table (compact)
       const headerInfoY = yPos + 23;
-      doc.fontSize(7).fillColor(BLACK).font('Helvetica');
+      doc.fontSize(7).fillColor(WHITE).font('Helvetica');
 
       const headerInfo = [
         ['Invoice No', invoice.invoiceNumber],
         ['Date', new Date(invoice.invoiceDate).toLocaleDateString('en-IN')],
-        ...(invoice.customerPONumber ? [['Customer PO', invoice.customerPONumber]] : []),
         ['PAN', tenant.panNumber || (tenant.gstin ? tenant.gstin.substring(2, 12) : 'N/A')],
         ['GST IN', tenant.gstin || 'N/A']
       ];
 
       let infoY = headerInfoY;
       headerInfo.forEach(([label, value]) => {
-        doc.fontSize(7).fillColor(GRAY).font('Helvetica-Bold').text(label + ':', 340, infoY, { width: 55 });
-        doc.fontSize(7).fillColor(BLACK).font('Helvetica').text(value, 400, infoY, { width: 145, align: 'right' });
+        doc.text(label, 370, infoY, { width: 70, align: 'left' });
+        doc.text(value, 445, infoY, { width: 100, align: 'right' });
         infoY += 10;
       });
 
@@ -141,7 +122,7 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
       // Build company address with GST and PAN
       const companyAddrParts = [];
 
-      // Address line
+      // Address line111
       const addrLine = `Reg. Office: ${tenant.headquarters?.street || ''}, ${tenant.headquarters?.city || ''}, ${tenant.headquarters?.state || ''}, ${tenant.headquarters?.zipCode || ''}`.trim();
       if (addrLine && addrLine !== 'Reg. Office:') companyAddrParts.push(addrLine);
 
@@ -238,7 +219,7 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
         hsn: 250,
         qty: 310,
         rate: 355,
-        amount: 430
+        amount: 440
       };
 
       doc.fontSize(8).fillColor(WHITE).font('Helvetica-Bold')
@@ -246,8 +227,8 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
          .text('Name of Sales', cols.name, yPos + 5, { width: 170 })
          .text('HSN/SAC', cols.hsn, yPos + 5, { width: 55 })
          .text('Qty', cols.qty, yPos + 5, { width: 35, align: 'center' })
-         .text('Rate', cols.rate, yPos + 5, { width: 70, align: 'right' })
-         .text('Amount', cols.amount, yPos + 5, { width: 120, align: 'right' });
+         .text('Rate', cols.rate, yPos + 5, { width: 80, align: 'right' })
+         .text('Amount', cols.amount, yPos + 5, { width: 110, align: 'right' });
 
       yPos += 18;
 
@@ -256,16 +237,13 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
         const rowHeight = 25;
         doc.rect(40, yPos, 515, rowHeight).stroke('#cccccc');
 
-        const formattedRate = item.unitPrice.toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-        const formattedAmount = item.total.toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
         doc.fontSize(8).fillColor(BLACK).font('Helvetica')
            .text(index + 1, cols.sno, yPos + 8, { width: 25 })
            .text(item.productName, cols.name, yPos + 8, { width: 170 })
            .text(item.hsnCode || '998314', cols.hsn, yPos + 8, { width: 55 })
            .text(item.quantity.toString(), cols.qty, yPos + 8, { width: 35, align: 'center' })
-           .text('Rs.' + formattedRate, cols.rate, yPos + 8, { width: 70, align: 'right' })
-           .text('Rs.' + formattedAmount, cols.amount, yPos + 8, { width: 120, align: 'right' });
+           .text(`₹${item.unitPrice.toLocaleString('en-IN')}`, cols.rate, yPos + 8, { width: 80, align: 'right' })
+           .text(`₹${item.total.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, cols.amount, yPos + 8, { width: 110, align: 'right' });
 
         yPos += rowHeight;
       });
@@ -283,11 +261,9 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
       doc.rect(40, yPos, 350, 15).stroke('#cccccc');
       doc.rect(390, yPos, 165, 15).fill(LIGHT_GRAY).stroke('#cccccc');
 
-      const formattedSubtotal = invoice.subtotal.toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
       doc.fontSize(8).fillColor(BLACK).font('Helvetica-Bold')
          .text('Amounts before Tax', 400, yPos + 4, { width: 90, align: 'left' })
-         .text('Rs.' + formattedSubtotal, 480, yPos + 4, { width: 70, align: 'right' });
+         .text(`₹${invoice.subtotal.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, yPos + 4, { width: 70, align: 'right' });
 
       yPos += 15;
 
@@ -303,11 +279,9 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
         doc.rect(40, yPos, 350, 15).stroke('#cccccc');
         doc.rect(390, yPos, 165, 15).stroke('#cccccc');
 
-        const formattedTaxAmount = amount.toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
         doc.fontSize(8).fillColor(BLACK).font('Helvetica')
            .text(label, 400, yPos + 4, { width: 90, align: 'left' })
-           .text('Rs.' + formattedTaxAmount, 480, yPos + 4, { width: 70, align: 'right' });
+           .text(`₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, yPos + 4, { width: 70, align: 'right' });
 
         yPos += 15;
       });
@@ -316,11 +290,9 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
       doc.rect(40, yPos, 350, 15).stroke('#cccccc');
       doc.rect(390, yPos, 165, 15).stroke('#cccccc');
 
-      const formattedTotalTax = invoice.totalTax.toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
       doc.fontSize(8).fillColor(BLACK).font('Helvetica-Bold')
          .text('Total Amounts of GST', 400, yPos + 4, { width: 90, align: 'left' })
-         .text('Rs.' + formattedTotalTax, 480, yPos + 4, { width: 70, align: 'right' });
+         .text(`₹${invoice.totalTax.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 480, yPos + 4, { width: 70, align: 'right' });
 
       yPos += 15;
 
@@ -340,13 +312,11 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
       doc.rect(40, yPos, 350, 18).fill(TEAL).stroke(TEAL);
       doc.rect(390, yPos, 165, 18).fill(TEAL).stroke(TEAL);
 
-      const formattedTotalAmount = invoice.totalAmount.toFixed(2).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-
       doc.fontSize(9).fillColor(WHITE).font('Helvetica-Bold')
          .text('Total Amounts', 395, yPos + 5, { width: 155, align: 'left' });
 
       doc.fontSize(9).fillColor(WHITE).font('Helvetica-Bold')
-         .text('Rs.' + formattedTotalAmount, 460, yPos + 5, { width: 90, align: 'right' });
+         .text(`₹${invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}`, 460, yPos + 5, { width: 90, align: 'right' });
 
       yPos += 23;
 
@@ -357,7 +327,7 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
 
       yPos += 25;
 
-      // ============= BANK DETAILS WITH QR CODE =============
+      // ============= BANK DETAILS =============
 
       if (tenant.bankDetails) {
         doc.rect(40, yPos, 515, 15).fill(LIGHT_GRAY).stroke('#cccccc');
@@ -366,9 +336,7 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
 
         yPos += 15;
 
-        const showQR = !!qrCodeBuffer;
-        const boxHeight = showQR ? 85 : 30;
-        doc.rect(40, yPos, 515, boxHeight).stroke('#cccccc');
+        doc.rect(40, yPos, 515, 30).stroke('#cccccc');
 
         const bankInfo = [
           `ACCOUNT NAME: ${tenant.organizationName || 'N/A'}`,
@@ -380,20 +348,9 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
         ].filter(Boolean).join(' | ');
 
         doc.fontSize(7).fillColor(BLACK).font('Helvetica')
-           .text(bankInfo, 45, yPos + 5, { width: showQR ? 350 : 500 });
+           .text(bankInfo, 45, yPos + 5, { width: 500 });
 
-        // Render QR Code if generated
-        if (qrCodeBuffer) {
-          doc.image(qrCodeBuffer, 410, yPos + 5, { width: 70, height: 70 });
-          doc.fontSize(6).fillColor(GRAY).font('Helvetica')
-             .text('Scan to Pay', 410, yPos + 77, { width: 70, align: 'center' });
-          if (tenant.bankDetails.upiId) {
-            doc.fontSize(7).fillColor(BLACK).font('Helvetica-Bold')
-               .text(`UPI: ${tenant.bankDetails.upiId}`, 45, yPos + 20, { width: 350 });
-          }
-        }
-
-        yPos += boxHeight + 5;
+        yPos += 35;
       }
 
       // Payment terms & Signature section - reference image style
@@ -420,34 +377,34 @@ exports.generateGSTInvoicePDF = async (invoice, tenant) => {
       doc.fontSize(8).fillColor(BLACK).font('Helvetica')
          .text('Thank you for Business with us.', rightX, termsY, { width: 255, align: 'right' });
 
-      // Signature section - RIGHT CORNER, COMPACT size just around signature
+      // Signature section - DOUBLE SIZE BOX with label
       if (signatureBuffer) {
         try {
-          const sigBoxX = 385;  // Right corner position
+          const sigBoxX = 330;
           const sigBoxY = termsY + 12;
-          const sigBoxWidth = 145;  // Compact - just around signature
-          const sigBoxHeight = 85;  // Compact height
+          const sigBoxWidth = 225;
+          const sigBoxHeight = 140;
 
-          // Signature box with border - COMPACT
+          // Signature box with border - BIGGER
           doc.rect(sigBoxX, sigBoxY, sigBoxWidth, sigBoxHeight).stroke('#cccccc');
 
-          // Signature image at top, centered
-          const sigImgWidth = 130;
-          const sigImgHeight = 55;
+          // "Authorized Signatory" label at top of box
+          doc.fontSize(9).fillColor(BLACK).font('Helvetica-Bold')
+             .text('Authorized Signatory', sigBoxX + 5, sigBoxY + 8, { width: sigBoxWidth - 10, align: 'center' });
+
+          // Signature image DOUBLE SIZE - perfectly centered
+          const sigImgWidth = 200;
+          const sigImgHeight = 100;
           const sigImgX = sigBoxX + (sigBoxWidth - sigImgWidth) / 2;
-          const sigImgY = sigBoxY + 5;
+          const sigImgY = sigBoxY + 30;
 
           doc.image(signatureBuffer, sigImgX, sigImgY, { width: sigImgWidth, height: sigImgHeight, fit: [sigImgWidth, sigImgHeight] });
-
-          // "Authorized Signatory" label at bottom of box
-          doc.fontSize(7).fillColor(BLACK).font('Helvetica-Bold')
-             .text('Authorized Signatory', sigBoxX + 5, sigBoxY + 68, { width: sigBoxWidth - 10, align: 'center' });
         } catch (err) {
           console.log('Signature render error:', err);
         }
       }
 
-      yPos += 100;
+      yPos += 155;
 
       doc.end();
 

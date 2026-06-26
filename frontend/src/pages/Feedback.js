@@ -336,6 +336,7 @@ const TenantUserView = () => {
   const [sent,   setSent]   = useState(false);
   const [descError, setDescError] = useState('');
   const [titleError, setTitleError] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [history,setHistory]= useState([]);
   const [hLoad,  setHLoad]  = useState(false);
   const [selId,  setSelId]  = useState(null);
@@ -412,9 +413,37 @@ const TenantUserView = () => {
     // All validations passed - submit
     setSending(true);
     try{
-      await api.submit({...form, rating:form.rating||undefined});
-      setSent(true); setForm({type:'',category:'other',title:'',description:'',rating:0});
-      setDescError(''); setTitleError('');
+      // If no attachments, use regular JSON
+      if (attachments.length === 0) {
+        await api.submit({...form, rating:form.rating||undefined});
+      } else {
+        // Use FormData only when files are present
+        const formData = new FormData();
+        formData.append('type', form.type);
+        formData.append('category', form.category);
+        formData.append('title', form.title);
+        formData.append('description', form.description);
+        if(form.rating) formData.append('rating', form.rating);
+
+        // Append files
+        attachments.forEach(file => {
+          formData.append('attachments', file);
+        });
+
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        await axios.post(`${BASE}/api/feedback`, formData, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+            // Don't set Content-Type - axios will auto-set with boundary
+          }
+        });
+      }
+
+      setSent(true);
+      setForm({type:'',category:'other',title:'',description:'',rating:0});
+      setAttachments([]);
+      setDescError('');
+      setTitleError('');
       setTimeout(()=>setSent(false),5000);
     }catch{}
     setSending(false);
@@ -594,6 +623,50 @@ const TenantUserView = () => {
                     )}
                   </div>
 
+                  {/* File Attachment */}
+                  <div style={{ marginBottom:20 }}>
+                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>
+                      Attachments <span style={{ color:'#94a3b8', fontWeight:400, textTransform:'none', fontSize:12 }}>(optional)</span>
+                    </label>
+                    <div style={{ border:'2px dashed #e2e8f0', borderRadius:11, padding:'20px', background:'#fafbfc', textAlign:'center', transition:'all 0.2s' }}
+                      onDragOver={e=>{ e.preventDefault(); e.currentTarget.style.borderColor='#7c3aed'; e.currentTarget.style.background='#f5f3ff'; }}
+                      onDragLeave={e=>{ e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.background='#fafbfc'; }}
+                      onDrop={e=>{ e.preventDefault(); e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.background='#fafbfc';
+                        const files=Array.from(e.dataTransfer.files);
+                        setAttachments(prev=>[...prev,...files]);
+                      }}>
+                      <input type="file" multiple accept="image/*,.pdf,.doc,.docx" id="fileInput"
+                        style={{ display:'none' }}
+                        onChange={e=>{
+                          const files=Array.from(e.target.files);
+                          setAttachments(prev=>[...prev,...files]);
+                        }}/>
+                      <label htmlFor="fileInput" style={{ cursor:'pointer' }}>
+                        <div style={{ fontSize:32, marginBottom:8 }}>📎</div>
+                        <p style={{ margin:'0 0 4px', fontSize:13, fontWeight:600, color:'#374151' }}>Click to upload or drag and drop</p>
+                        <p style={{ margin:0, fontSize:11, color:'#94a3b8' }}>PNG, JPG, PDF, DOC (max 5MB each)</p>
+                      </label>
+                    </div>
+                    {attachments.length>0 && (
+                      <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:8 }}>
+                        {attachments.map((file,idx)=>(
+                          <div key={idx} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px',
+                            background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                              <span style={{ fontSize:18 }}>📄</span>
+                              <div>
+                                <p style={{ margin:0, fontSize:12, fontWeight:600, color:'#374151' }}>{file.name}</p>
+                                <p style={{ margin:0, fontSize:10, color:'#94a3b8' }}>{(file.size/1024).toFixed(1)} KB</p>
+                              </div>
+                            </div>
+                            <button onClick={()=>setAttachments(prev=>prev.filter((_,i)=>i!==idx))}
+                              style={{ background:'none', border:'none', cursor:'pointer', fontSize:16, padding:4 }}>❌</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Rating */}
                   <div style={{ marginBottom:28, padding:'16px 18px', background:'#fafafa', borderRadius:12, border:'1px solid #f1f5f9' }}>
                     <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:12, textTransform:'uppercase', letterSpacing:0.5 }}>
@@ -700,6 +773,34 @@ const TenantUserView = () => {
                                 </div>
                               )}
 
+                              {/* Attachments */}
+                              {detail?.attachments && detail.attachments.length > 0 && (
+                                <div style={{ marginBottom:16 }}>
+                                  <p style={{ margin:'0 0 8px', fontSize:12, fontWeight:700, color:'#374151', textTransform:'uppercase', letterSpacing:0.5 }}>Attachments</p>
+                                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                                    {detail.attachments.map((att,idx)=>(
+                                      <a key={idx} href={`${BASE}/${att.path}`} target="_blank" rel="noopener noreferrer"
+                                        style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px',
+                                          background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:8, textDecoration:'none',
+                                          transition:'all 0.2s' }}
+                                        onMouseEnter={e=>{ e.currentTarget.style.background='#dcfce7'; e.currentTarget.style.borderColor='#86efac'; }}
+                                        onMouseLeave={e=>{ e.currentTarget.style.background='#f0fdf4'; e.currentTarget.style.borderColor='#bbf7d0'; }}>
+                                        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                                          <span style={{ fontSize:18 }}>
+                                            {att.mimetype?.includes('image') ? '🖼️' : att.mimetype?.includes('pdf') ? '📄' : '📎'}
+                                          </span>
+                                          <div>
+                                            <p style={{ margin:0, fontSize:12, fontWeight:600, color:'#374151' }}>{att.originalName}</p>
+                                            <p style={{ margin:0, fontSize:10, color:'#94a3b8' }}>{(att.size/1024).toFixed(1)} KB</p>
+                                          </div>
+                                        </div>
+                                        <span style={{ fontSize:16 }}>⬇️</span>
+                                      </a>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
                               {/* Conversation thread */}
                               {detail?.tenantAdminReply && (
                                 <div style={{ marginTop:16, borderLeft:'3px solid #10b981', paddingLeft:16 }}>
@@ -763,6 +864,7 @@ const TenantAdminView = () => {
   const [busy,        setBusy]       = useState(false);
   const [filters,     setFilters]    = useState({search:'',tenantAdminStatus:'',type:'',category:'',sentiment:''});
   const [cForm,       setCForm]      = useState({type:'',category:'other',title:'',description:'',rating:0});
+  const [cAttachments, setCAttachments] = useState([]);
   const [cSending,    setCsend]      = useState(false);
   const [cSent,       setCSent]      = useState(false);
   const [cDescError,  setCDescError] = useState('');
@@ -860,9 +962,38 @@ const TenantAdminView = () => {
 
     setCsend(true);
     try{
-      await api.submit({...cForm, rating:cForm.rating||undefined, directToSaas:true});
-      setCSent(true); setCForm({type:'',category:'other',title:'',description:'',rating:0});
-      setCDescError(''); setCTitleError('');
+      // If no attachments, use regular JSON
+      if (cAttachments.length === 0) {
+        await api.submit({...cForm, rating:cForm.rating||undefined, directToSaas:true});
+      } else {
+        // Use FormData only when files are present
+        const formData = new FormData();
+        formData.append('type', cForm.type);
+        formData.append('category', cForm.category);
+        formData.append('title', cForm.title);
+        formData.append('description', cForm.description);
+        if(cForm.rating) formData.append('rating', cForm.rating);
+        formData.append('directToSaas', 'true');
+
+        // Append files
+        cAttachments.forEach(file => {
+          formData.append('attachments', file);
+        });
+
+        const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+        await axios.post(`${BASE}/api/feedback`, formData, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+            // Don't set Content-Type - axios will auto-set with boundary
+          }
+        });
+      }
+
+      setCSent(true);
+      setCForm({type:'',category:'other',title:'',description:'',rating:0});
+      setCAttachments([]);
+      setCDescError('');
+      setCTitleError('');
       setTimeout(()=>setCSent(false),5000);
     }catch{}
     setCsend(false);
@@ -1110,6 +1241,38 @@ const TenantAdminView = () => {
                     <p style={{ margin:0, fontSize:14, color:'#374151', lineHeight:1.9, fontWeight:500 }}>{detail.description}</p>
                   </Card>
 
+                  {/* Attachments */}
+                  {detail.attachments && detail.attachments.length > 0 && (
+                    <Card style={{ padding:'18px 22px', marginBottom:20 }}>
+                      <p style={{ margin:'0 0 12px', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1.2 }}>📎 Attachments ({detail.attachments.length})</p>
+                      <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                        {detail.attachments.map((att,idx)=>(
+                          <a key={idx} href={`${BASE}/${att.path}`} target="_blank" rel="noopener noreferrer"
+                            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px 16px',
+                              background:'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)', border:'1.5px solid #a7f3d0', borderRadius:10, textDecoration:'none',
+                              transition:'all 0.2s cubic-bezier(0.4,0,0.2,1)', boxShadow:'0 2px 6px rgba(16,185,129,0.08)' }}
+                            onMouseEnter={e=>{ e.currentTarget.style.background='linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%)'; e.currentTarget.style.borderColor='#6ee7b7'; e.currentTarget.style.transform='translateX(4px)'; }}
+                            onMouseLeave={e=>{ e.currentTarget.style.background='linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)'; e.currentTarget.style.borderColor='#a7f3d0'; e.currentTarget.style.transform='translateX(0)'; }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                              <div style={{ width:36,height:36,borderRadius:9,background:'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0,
+                                boxShadow:'0 2px 6px rgba(16,185,129,0.3)' }}>
+                                {att.mimetype?.includes('image') ? '🖼️' : att.mimetype?.includes('pdf') ? '📄' : '📎'}
+                              </div>
+                              <div>
+                                <p style={{ margin:0, fontSize:13, fontWeight:700, color:'#065f46' }}>{att.originalName}</p>
+                                <p style={{ margin:0, fontSize:11, color:'#059669', fontWeight:600 }}>{(att.size/1024).toFixed(1)} KB · {att.mimetype?.split('/')[1]?.toUpperCase()}</p>
+                              </div>
+                            </div>
+                            <div style={{ padding:'6px 12px', background:'rgba(16,185,129,0.15)', borderRadius:8, fontSize:11, fontWeight:700, color:'#047857' }}>
+                              Download ⬇️
+                            </div>
+                          </a>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
+
                   {/* SAAS reply (read only) */}
                   {detail.adminReply && (
                     <div style={{ background:'linear-gradient(135deg,#f5f3ff,#ede9fe)', border:'2px solid #ddd6fe',
@@ -1333,6 +1496,51 @@ const TenantAdminView = () => {
                       style={{borderColor:cDescError?'#ef4444':'#e2e8f0'}}/>
                     {cDescError && <div style={{fontSize:10,color:'#ef4444',marginTop:4,fontWeight:600}}>⚠️ {cDescError}</div>}
                   </div>
+
+                  {/* File Attachment */}
+                  <div style={{ marginBottom:14 }}>
+                    <label style={{ display:'block', fontSize:10, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:0.8, marginBottom:6 }}>
+                      Attachments <span style={{ color:'#94a3b8', fontWeight:400, textTransform:'none' }}>(optional)</span>
+                    </label>
+                    <div style={{ border:'2px dashed #e2e8f0', borderRadius:10, padding:'16px', background:'#fafbfc', textAlign:'center', transition:'all 0.2s' }}
+                      onDragOver={e=>{ e.preventDefault(); e.currentTarget.style.borderColor='#7c3aed'; e.currentTarget.style.background='#f5f3ff'; }}
+                      onDragLeave={e=>{ e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.background='#fafbfc'; }}
+                      onDrop={e=>{ e.preventDefault(); e.currentTarget.style.borderColor='#e2e8f0'; e.currentTarget.style.background='#fafbfc';
+                        const files=Array.from(e.dataTransfer.files);
+                        setCAttachments(prev=>[...prev,...files]);
+                      }}>
+                      <input type="file" multiple accept="image/*,.pdf,.doc,.docx" id="cFileInput"
+                        style={{ display:'none' }}
+                        onChange={e=>{
+                          const files=Array.from(e.target.files);
+                          setCAttachments(prev=>[...prev,...files]);
+                        }}/>
+                      <label htmlFor="cFileInput" style={{ cursor:'pointer' }}>
+                        <div style={{ fontSize:28, marginBottom:6 }}>📎</div>
+                        <p style={{ margin:'0 0 3px', fontSize:12, fontWeight:600, color:'#374151' }}>Click to upload or drag and drop</p>
+                        <p style={{ margin:0, fontSize:10, color:'#94a3b8' }}>PNG, JPG, PDF, DOC (max 5MB each)</p>
+                      </label>
+                    </div>
+                    {cAttachments.length>0 && (
+                      <div style={{ marginTop:10, display:'flex', flexDirection:'column', gap:6 }}>
+                        {cAttachments.map((file,idx)=>(
+                          <div key={idx} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'8px 12px',
+                            background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:7 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                              <span style={{ fontSize:16 }}>📄</span>
+                              <div>
+                                <p style={{ margin:0, fontSize:11, fontWeight:600, color:'#374151' }}>{file.name}</p>
+                                <p style={{ margin:0, fontSize:9, color:'#94a3b8' }}>{(file.size/1024).toFixed(1)} KB</p>
+                              </div>
+                            </div>
+                            <button onClick={()=>setCAttachments(prev=>prev.filter((_,i)=>i!==idx))}
+                              style={{ background:'none', border:'none', cursor:'pointer', fontSize:14, padding:3 }}>❌</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
                   {/* Rating */}
                   <div style={{ marginBottom:16, padding:'12px 14px', background:'linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%)', borderRadius:10, border:'1.5px solid #e8edf2',
                     boxShadow:'0 2px 6px rgba(0,0,0,0.04)' }}>
@@ -1712,6 +1920,35 @@ const SaasAdminView = () => {
                     <p style={{ margin:'0 0 10px', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1 }}>User's Message</p>
                     <p style={{ margin:0, fontSize:14, color:'#374151', lineHeight:1.85 }}>{detail.description}</p>
                   </Card>
+
+                  {/* Attachments */}
+                  {detail.attachments && detail.attachments.length > 0 && (
+                    <Card style={{ padding:'16px 20px', marginBottom:18 }}>
+                      <p style={{ margin:'0 0 10px', fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', letterSpacing:1 }}>📎 Attachments ({detail.attachments.length})</p>
+                      <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                        {detail.attachments.map((att,idx)=>(
+                          <a key={idx} href={`${BASE}/${att.path}`} target="_blank" rel="noopener noreferrer"
+                            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 14px',
+                              background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:9, textDecoration:'none',
+                              transition:'all 0.2s' }}
+                            onMouseEnter={e=>{ e.currentTarget.style.background='#dcfce7'; e.currentTarget.style.borderColor='#86efac'; }}
+                            onMouseLeave={e=>{ e.currentTarget.style.background='#f0fdf4'; e.currentTarget.style.borderColor='#bbf7d0'; }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                              <div style={{ width:32,height:32,borderRadius:8,background:'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                display:'flex',alignItems:'center',justifyContent:'center',fontSize:16 }}>
+                                {att.mimetype?.includes('image') ? '🖼️' : att.mimetype?.includes('pdf') ? '📄' : '📎'}
+                              </div>
+                              <div>
+                                <p style={{ margin:0, fontSize:12, fontWeight:600, color:'#065f46' }}>{att.originalName}</p>
+                                <p style={{ margin:0, fontSize:10, color:'#059669' }}>{(att.size/1024).toFixed(1)} KB</p>
+                              </div>
+                            </div>
+                            <span style={{ fontSize:14 }}>⬇️</span>
+                          </a>
+                        ))}
+                      </div>
+                    </Card>
+                  )}
 
                   {/* Tenant admin reply */}
                   {detail.tenantAdminReply && (

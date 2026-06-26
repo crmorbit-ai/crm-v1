@@ -41,7 +41,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
   const inputStyle = {
     padding: '8px 10px',
     fontSize: '13px',
-    ...(error ? { borderColor: '#ef4444' } : {}),
+    ...(error ? { border: '2px solid #ef4444' } : {}),
   };
 
   const baseClass = disabled ? 'crm-form-input' : 'crm-form-input';
@@ -64,9 +64,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
             placeholder={placeholder || ''}
             className={baseClass}
             style={inputStyle}
-            maxLength={validations?.maxLength}
-            minLength={validations?.minLength}
-            pattern={validations?.pattern}
+            inputMode={fieldType === 'phone' ? 'numeric' : undefined}
           />
         );
 

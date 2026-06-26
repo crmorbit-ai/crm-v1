@@ -3,11 +3,18 @@
  * @param {Object} user - User object with populated roles and groups
  * @param {String} feature - Feature slug
  * @param {String} action - Action type (create, read, update, delete, manage)
+ * @param {Object} context - Optional context (e.g., relatedTo, relatedToId)
  * @returns {Boolean}
  */
 
 
-const hasPermission = (user, feature, action) => {
+const hasPermission = (user, feature, action, context = null) => {
+  // Safety check
+  if (!user) {
+    console.error('hasPermission: user is null or undefined');
+    return false;
+  }
+
   // SAAS_OWNER and SAAS_ADMIN have all permissions
   if (user.userType === 'SAAS_OWNER' || user.userType === 'SAAS_ADMIN') {
     return true;
@@ -16,6 +23,33 @@ const hasPermission = (user, feature, action) => {
   // TENANT_ADMIN has all permissions within their tenant
   if (user.userType === 'TENANT_ADMIN') {
     return true;
+  }
+
+  // TENANT_MANAGER also gets most permissions
+  if (user.userType === 'TENANT_MANAGER') {
+    return true;
+  }
+
+  // Contextual permissions for notes and tasks
+  // If user has permission on parent entity (Lead/Contact/Opportunity), allow note/task operations
+  if (context && context.relatedTo) {
+    const parentFeatureMap = {
+      'Lead': 'lead_management',
+      'Contact': 'contact_management',
+      'Opportunity': 'opportunity_management',
+      'Account': 'account_management'
+    };
+
+    const parentFeature = parentFeatureMap[context.relatedTo];
+
+    if (parentFeature && (feature === 'note_management' || feature === 'task_management')) {
+      // Recursively check if user has permission on parent entity
+      // This will check custom permissions, roles, and groups
+      const hasParentPermission = hasPermission(user, parentFeature, action);
+      if (hasParentPermission) {
+        return true;
+      }
+    }
   }
 
   // Check custom permissions first (highest priority)

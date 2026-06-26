@@ -76,7 +76,13 @@ const feedbackSchema = new mongoose.Schema({
     addedAt: { type: Date, default: Date.now },
   }],
 
-  attachments: [{ url: String, name: String, size: Number }],
+  attachments: [{
+    filename: String,
+    originalName: String,
+    path: String,
+    size: Number,
+    mimetype: String
+  }],
 
   /* ── SLA Timestamps ── */
   acknowledgedAt: Date,

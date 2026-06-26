@@ -43,6 +43,17 @@ export default function LeadInventory({ fromTab }) {
   const ok = m => { setSuccess(m); setTimeout(() => setSuccess(''), 3000); };
   const err = m => { setError(m); setTimeout(() => setError(''), 4000); };
 
+  const setFieldError = (field, message) => {
+    setFieldErrors(prev => ({ ...prev, [field]: message }));
+  };
+  const clearFieldError = (field) => {
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  };
+
   const validateField = (fieldName, value) => {
     const errors = { ...fieldErrors };
 
@@ -180,44 +191,48 @@ export default function LeadInventory({ fromTab }) {
   };
 
   const handleCreateLead = async () => {
-    // Validation
+    // Clear previous errors
+    setFieldErrors({});
+    setError('');
+
+    // Validation - field specific
     if (!formData.name.trim()) {
-      err('❌ Lead Name is required');
+      setFieldError('name', 'Lead Name is required');
       return;
     }
     if (formData.name.trim().length < 3) {
-      err('❌ Lead Name must be at least 3 characters');
+      setFieldError('name', 'Lead Name must be at least 3 characters');
       return;
     }
     if (formData.name.trim().length > 100) {
-      err('❌ Lead Name must be less than 100 characters');
+      setFieldError('name', 'Lead Name must be less than 100 characters');
       return;
     }
     if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(formData.name.trim())) {
-      err('❌ Lead Name contains invalid characters');
+      setFieldError('name', 'Lead Name contains invalid characters');
       return;
     }
     if (!formData.department) {
-      err('❌ Department is required');
+      setFieldError('department', 'Department is required');
       return;
     }
     if (!formData.leadEmail || !formData.leadEmail.trim()) {
-      err('❌ Email is required for leads');
+      setFieldError('leadEmail', 'Email is required for leads');
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.leadEmail.trim())) {
-      err('❌ Please enter a valid email address');
+      setFieldError('leadEmail', 'Please enter a valid email address');
       return;
     }
     if (formData.leadPhone && formData.leadPhone.trim()) {
       const cleanPhone = formData.leadPhone.replace(/\D/g, '');
       if (cleanPhone.length !== 10) {
-        err('❌ Please enter a valid 10-digit phone number');
+        setFieldError('leadPhone', 'Please enter a valid 10-digit phone number');
         return;
       }
     }
     if (formData.leadSource && formData.leadSource.trim() && formData.leadSource.trim().length < 2) {
-      err('❌ Lead Source must be at least 2 characters');
+      setFieldError('leadSource', 'Lead Source must be at least 2 characters');
       return;
     }
     if (formData.description && formData.description.trim().length > 500) {
@@ -351,8 +366,8 @@ export default function LeadInventory({ fromTab }) {
       <style>{`
         @media (max-width: 768px) {
           .li-container { flex-direction: column !important; }
-          .li-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; }
-          .li-content-panel { flex: 0 0 100% !important; }
+          .li-right-wrapper { order: 1 !important; }
+          .li-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; order: 2 !important; }
         }
       `}</style>
       <div className="li-container" style={{ display: 'flex', height: 'calc(100vh - 200px)', gap: '0' }}>
@@ -422,6 +437,7 @@ export default function LeadInventory({ fromTab }) {
                     validateField('name', val);
                   }}
                   placeholder="Lead name"
+                  maxLength={100}
                   style={{
                     width: '100%',
                     padding: '6px',
@@ -432,6 +448,9 @@ export default function LeadInventory({ fromTab }) {
                     marginTop: '4px'
                   }}
                 />
+                <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px', textAlign: 'right' }}>
+                  {formData.name.length}/100 characters
+                </div>
                 {fieldErrors.name && (
                   <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.name}</div>
                 )}
@@ -800,11 +819,12 @@ export default function LeadInventory({ fromTab }) {
         </div>
       )}
 
-      {/* RIGHT: List */}
-      <div className="li-content-panel" style={{ flex: selectedItem ? '1' : '1', display: 'flex', flexDirection: 'column', padding: '0' }}>
-        {/* Fixed Stats Container */}
+        {/* RIGHT: Stats + Content */}
+        <div className="li-right-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Stats Wrapper */}
         {dashboard && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
+          <div className="li-stats-wrapper" style={{ background: '#fff', flexShrink: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
               { label: 'Total Leads', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
               { label: 'Sales Dept', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', dept: 'sales' },
@@ -816,10 +836,12 @@ export default function LeadInventory({ fromTab }) {
               </div>
             ))}
           </div>
+          </div>
         )}
 
+        {/* Content Panel - Search, Filters & Table */}
+        <div className="li-content-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
-          {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✕ {error}</div>}
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add Lead</button>
           <div style={{ flex: 1, minWidth: '200px' }}>
@@ -878,8 +900,9 @@ export default function LeadInventory({ fromTab }) {
             <button onClick={() => loadItems(pag.page + 1)} disabled={pag.page === pag.pages} style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: pag.page === pag.pages ? 'default' : 'pointer', opacity: pag.page === pag.pages ? 0.5 : 1 }}>Next</button>
           </div>
         )}
+        </div>
+        </div>
       </div>
-    </div>
     </>
   );
 

@@ -8,7 +8,13 @@ const { errorResponse } = require('../utils/response');
  */
 const requirePermission = (feature, action) => {
   return (req, res, next) => {
-    if (!hasPermission(req.user, feature, action)) {
+    // Build context from request body OR query params for contextual permissions
+    const context = {
+      relatedTo: req.body?.relatedTo || req.query?.relatedTo,
+      relatedToId: req.body?.relatedToId || req.query?.relatedToId
+    };
+
+    if (!hasPermission(req.user, feature, action, context)) {
       return errorResponse(res, 403, `Permission denied: ${feature}.${action}`);
     }
     next();

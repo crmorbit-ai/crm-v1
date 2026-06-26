@@ -8,6 +8,15 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { useAuth } from '../context/AuthContext';
 import '../styles/crm.css';
 
+// Helper: Get today's date in YYYY-MM-DD format for date inputs
+const getTodayDateString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const ContactDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -28,13 +37,13 @@ const ContactDetail = () => {
 
   // Form data
   const [formData, setFormData] = useState({});
-  const [taskData, setTaskData] = useState({
+  const [taskData, setTaskData] = useState(() => ({
     subject: '',
-    dueDate: '',
+    dueDate: getTodayDateString(),
     status: 'Not Started',
     priority: 'Normal',
     description: ''
-  });
+  }));
   const [noteData, setNoteData] = useState({
     title: '',
     content: ''
@@ -90,7 +99,7 @@ const ContactDetail = () => {
       });
       setSuccess('Task created successfully!');
       setShowTaskForm(false);
-      setTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+      setTaskData({ subject: '', dueDate: getTodayDateString(), status: 'Not Started', priority: 'Normal', description: '' });
       loadTasks();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
@@ -576,7 +585,7 @@ const ContactDetail = () => {
                 <div>
                   <div style={{display:'flex',justifyContent:'space-between',marginBottom:'12px'}}>
                     <h5 style={{fontSize:'14px',fontWeight:'600'}}>Notes ({notes.length})</h5>
-                    <button className="crm-btn crm-btn-sm crm-btn-primary" onClick={() => { closeAllForms(); setShowNoteForm(true); }}>+ Add Note</button>
+                    <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ background: '#7C3AED', borderColor: '#7C3AED' }} onClick={() => { closeAllForms(); setShowNoteForm(true); }}>+ Add Note</button>
                   </div>
 
                   {/* Inline Note Form */}
@@ -597,7 +606,7 @@ const ContactDetail = () => {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
                           <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" onClick={() => setShowNoteForm(false)}>Cancel</button>
-                          <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ background: '#A855F7' }}>Add Note</button>
+                          <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ background: '#7C3AED', borderColor: '#7C3AED' }}>Add Note</button>
                         </div>
                       </form>
                     </div>
@@ -614,7 +623,7 @@ const ContactDetail = () => {
                       ))}
                     </div>
                   ) : (
-                    <div style={{border:'1px solid #E5E7EB',borderRadius:'8px',padding:'20px',textAlign:'center',color:'#666'}}>No notes found</div>
+                    <div style={{border:'1px solid #d1d5db',borderRadius:'8px',padding:'20px',textAlign:'center',color:'#374151',background:'#f3f4f6',fontWeight:'500'}}>No notes found</div>
                   )}
                 </div>
               </div>

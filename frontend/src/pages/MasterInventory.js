@@ -43,9 +43,20 @@ export default function MasterInventory({ fromTab }) {
     notes: '', tags: ''
   });
   const [formSubmitting, setFormSubmitting] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState({}); // Field-level errors
 
   const ok = m => { setSuccess(m); setTimeout(() => setSuccess(''), 3000); };
   const err = m => { setError(m); setTimeout(() => setError(''), 4000); };
+  const setFieldError = (field, message) => {
+    setFieldErrors(prev => ({ ...prev, [field]: message }));
+  };
+  const clearFieldError = (field) => {
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  };
 
   const loadDashboard = useCallback(async () => {
     setLoading(true);
@@ -220,66 +231,70 @@ export default function MasterInventory({ fromTab }) {
   const getItemName = (item) => item.name || item.leadName || item.serviceName || '-';
 
   const handleCreateItem = async () => {
+    // Clear all previous errors
+    setFieldErrors({});
+    setError('');
+
     // Common validation
     if (!formData.name.trim()) {
-      err('❌ Name is required');
+      setFieldError('name', 'Name is required');
       return;
     }
     if (formData.name.trim().length < 3) {
-      err('❌ Name must be at least 3 characters');
+      setFieldError('name', 'Name must be at least 3 characters');
       return;
     }
     if (formData.name.trim().length > 100) {
-      err('❌ Name must be less than 100 characters');
+      setFieldError('name', 'Name must be less than 100 characters');
       return;
     }
     if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(formData.name.trim())) {
-      err('❌ Name contains invalid characters');
+      setFieldError('name', 'Name contains invalid characters');
       return;
     }
     if (!formData.department) {
-      err('❌ Department is required');
+      setFieldError('department', 'Department is required');
       return;
     }
     if (!formData.type) {
-      err('❌ Type is required');
+      setFieldError('type', 'Type is required');
       return;
     }
 
     // Type-specific validation
     if (formData.type === 'product') {
       if (formData.sku && formData.sku.trim() && !/^[a-zA-Z0-9\-_]+$/.test(formData.sku.trim())) {
-        err('❌ SKU can only contain letters, numbers, hyphens and underscores');
+        setFieldError('sku', 'SKU can only contain letters, numbers, hyphens and underscores');
         return;
       }
       if (formData.productPrice && (isNaN(formData.productPrice) || parseFloat(formData.productPrice) < 0)) {
-        err('❌ Price must be a valid positive number');
+        setFieldError('productPrice', 'Price must be a valid positive number');
         return;
       }
       if (formData.stock && (isNaN(formData.stock) || parseInt(formData.stock) < 0)) {
-        err('❌ Stock must be a valid positive number');
+        setFieldError('stock', 'Stock must be a valid positive number');
         return;
       }
     }
 
     if (formData.type === 'service') {
       if (formData.serviceRate && (isNaN(formData.serviceRate) || parseFloat(formData.serviceRate) < 0)) {
-        err('❌ Service Rate must be a valid positive number');
+        setFieldError('serviceRate', 'Service Rate must be a valid positive number');
         return;
       }
       if (formData.duration && formData.duration.trim() && !/^[0-9\s]+[a-zA-Z\s]+$/.test(formData.duration.trim())) {
-        err('❌ Duration format invalid (e.g., "2 hours", "30 mins")');
+        setFieldError('duration', 'Duration format invalid (e.g., "2 hours", "30 mins")');
         return;
       }
     }
 
     if (formData.type === 'lead') {
       if (!formData.leadEmail || !formData.leadEmail.trim()) {
-        err('❌ Email is required for leads');
+        setFieldError('leadEmail', 'Email is required for leads');
         return;
       }
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.leadEmail.trim())) {
-        err('❌ Please enter a valid email address');
+        setFieldError('leadEmail', 'Please enter a valid email address');
         return;
       }
       if (formData.leadPhone && formData.leadPhone.trim()) {
@@ -321,8 +336,13 @@ export default function MasterInventory({ fromTab }) {
       <style>{`
         @media (max-width: 768px) {
           .mi-container { flex-direction: column !important; }
-          .mi-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; }
-          .mi-content-panel { flex: 0 0 100% !important; }
+          .mi-right-wrapper { order: 1 !important; }
+          .mi-detail-panel {
+            flex: 0 0 100% !important;
+            border-right: none !important;
+            border-bottom: 1px solid #e2e8f0 !important;
+            order: 2 !important;
+          }
         }
       `}</style>
       <div className="mi-container" style={{ display: 'flex', height: 'calc(100vh - 200px)', gap: '0' }}>
@@ -376,25 +396,93 @@ export default function MasterInventory({ fromTab }) {
           {isAddingNew ? (
             <div style={{ flex: 1, padding: '16px', overflowY: 'auto' }}>
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '600' }}>Name *</label>
-                <input type="text" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <label style={{ fontSize: '11px', fontWeight: '600', color: fieldErrors.name ? '#dc2626' : '#1f2937' }}>Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => {
+                    setFormData({...formData, name: e.target.value});
+                    clearFieldError('name');
+                  }}
+                  maxLength={100}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.name ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px',
+                    outline: 'none'
+                  }}
+                />
+                <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px', textAlign: 'right' }}>
+                  {formData.name.length}/100 characters
+                </div>
+                {fieldErrors.name && (
+                  <div style={{ color: '#dc2626', fontSize: '11px', marginTop: '4px', fontWeight: '500' }}>
+                    ✕ {fieldErrors.name}
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '600' }}>Type *</label>
-                <select value={formData.type} onChange={(e) => setFormData({...formData, type: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: fieldErrors.type ? '#dc2626' : '#1f2937' }}>Type *</label>
+                <select
+                  value={formData.type}
+                  onChange={(e) => {
+                    setFormData({...formData, type: e.target.value});
+                    clearFieldError('type');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.type ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px',
+                    outline: 'none'
+                  }}
+                >
                   <option value="product">Product</option>
                   <option value="service">Service</option>
                   <option value="lead">Lead</option>
                 </select>
+                {fieldErrors.type && (
+                  <div style={{ color: '#dc2626', fontSize: '11px', marginTop: '4px', fontWeight: '500' }}>
+                    ✕ {fieldErrors.type}
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ fontSize: '11px', fontWeight: '600' }}>Department</label>
-                <select value={formData.department} onChange={(e) => setFormData({...formData, department: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: fieldErrors.department ? '#dc2626' : '#1f2937' }}>Department *</label>
+                <select
+                  value={formData.department}
+                  onChange={(e) => {
+                    setFormData({...formData, department: e.target.value});
+                    clearFieldError('department');
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '6px',
+                    border: fieldErrors.department ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                    borderRadius: '4px',
+                    fontSize: '12px',
+                    boxSizing: 'border-box',
+                    marginTop: '4px',
+                    outline: 'none'
+                  }}
+                >
                   <option value="sales">Sales</option>
                   <option value="service">Service</option>
                   <option value="lead_generation">Lead Gen</option>
                   <option value="operations">Operations</option>
                 </select>
+                {fieldErrors.department && (
+                  <div style={{ color: '#dc2626', fontSize: '11px', marginTop: '4px', fontWeight: '500' }}>
+                    ✕ {fieldErrors.department}
+                  </div>
+                )}
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Status</label>
@@ -452,8 +540,30 @@ export default function MasterInventory({ fromTab }) {
                     <input type="text" value={formData.leadName} onChange={(e) => setFormData({...formData, leadName: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
                   </div>
                   <div style={{ marginBottom: '12px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '600' }}>Email</label>
-                    <input type="email" value={formData.leadEmail} onChange={(e) => setFormData({...formData, leadEmail: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: fieldErrors.leadEmail ? '#dc2626' : '#1f2937' }}>Email *</label>
+                    <input
+                      type="email"
+                      value={formData.leadEmail}
+                      onChange={(e) => {
+                        setFormData({...formData, leadEmail: e.target.value});
+                        clearFieldError('leadEmail');
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        border: fieldErrors.leadEmail ? '2px solid #dc2626' : '1px solid #e2e8f0',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        boxSizing: 'border-box',
+                        marginTop: '4px',
+                        outline: 'none'
+                      }}
+                    />
+                    {fieldErrors.leadEmail && (
+                      <div style={{ color: '#dc2626', fontSize: '11px', marginTop: '4px', fontWeight: '500' }}>
+                        ✕ {fieldErrors.leadEmail}
+                      </div>
+                    )}
                   </div>
                   <div style={{ marginBottom: '12px' }}>
                     <label style={{ fontSize: '11px', fontWeight: '600' }}>Phone</label>
@@ -803,11 +913,12 @@ export default function MasterInventory({ fromTab }) {
         </div>
       )}
 
-      {/* RIGHT: List */}
-      <div className="mi-content-panel" style={{ flex: selectedItem ? '1' : '1', display: 'flex', flexDirection: 'column', padding: '0' }}>
-        {/* Type Stats */}
+        {/* RIGHT: Stats + Content */}
+        <div className="mi-right-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Stats Wrapper */}
         {dashboard && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
+          <div className="mi-stats-wrapper" style={{ background: '#fff', flexShrink: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
               { label: 'Products', value: dashboard.byType?.product || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', type: 'product' },
               { label: 'Services', value: dashboard.byType?.service || 0, bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', type: 'service' },
@@ -821,10 +932,12 @@ export default function MasterInventory({ fromTab }) {
               </div>
             ))}
           </div>
+          </div>
         )}
 
+        {/* Content Panel - Search, Filters & Table */}
+        <div className="mi-content-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
-          {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✕ {error}</div>}
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add Item</button>
           <div style={{ flex: 1, minWidth: '200px' }}>
@@ -909,8 +1022,9 @@ export default function MasterInventory({ fromTab }) {
             <button onClick={() => loadItems(pag.page + 1)} disabled={pag.page === pag.pages} style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: pag.page === pag.pages ? 'default' : 'pointer', opacity: pag.page === pag.pages ? 0.5 : 1 }}>Next</button>
           </div>
         )}
+        </div>
+        </div>
       </div>
-    </div>
     </>
   );
 

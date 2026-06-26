@@ -97,6 +97,14 @@ const createContact = async (req, res) => {
     const { firstName, lastName, email, phone, mobile, account, title, department, reportsTo, leadSource, isPrimary, doNotCall, emailOptOut,
       mailingStreet, mailingCity, mailingState, mailingCountry, mailingZipCode, description, customFields } = req.body;
     if (!firstName) return errorResponse(res, 400, 'Please provide Customer Name');
+
+    // Phone validation - only allow digits and must be 10 digits if provided
+    if (phone && !/^\d{10}$/.test(phone)) {
+      return errorResponse(res, 400, 'Phone number must be exactly 10 digits');
+    }
+    if (mobile && !/^\d{10}$/.test(mobile)) {
+      return errorResponse(res, 400, 'Mobile number must be exactly 10 digits');
+    }
     let accountExists = null;
     if (account) {
       accountExists = await Account.findById(account);
@@ -145,18 +153,26 @@ const updateContact = async (req, res) => {
   try {
     const contact = await Contact.findById(req.params.id);
     if (!contact) return errorResponse(res, 404, 'Contact not found');
-    
+
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       if (contact.tenant.toString() !== req.user.tenant.toString()) {
         return errorResponse(res, 403, 'Access denied');
       }
     }
 
+    // Phone validation - only allow digits and must be 10 digits if provided
+    if (req.body.phone && req.body.phone !== '' && !/^\d{10}$/.test(req.body.phone)) {
+      return errorResponse(res, 400, 'Phone number must be exactly 10 digits');
+    }
+    if (req.body.mobile && req.body.mobile !== '' && !/^\d{10}$/.test(req.body.mobile)) {
+      return errorResponse(res, 400, 'Mobile number must be exactly 10 digits');
+    }
+
     const fields = [
-      'firstName', 'lastName', 'email', 'phone', 'mobile', 'title', 
+      'firstName', 'lastName', 'email', 'phone', 'mobile', 'title',
       'department', 'description', 'isPrimary', 'doNotCall', 'emailOptOut'
     ];
-    
+
     // Track changes BEFORE updating
     const changes = trackChanges(contact, req.body, fields);
 

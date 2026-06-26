@@ -80,9 +80,12 @@ const getOpportunity = async (req, res) => {
 
 const createOpportunity = async (req, res) => {
   try {
+    console.log("===== CREATE OPPORTUNITY START =====");
+console.log("REQ USER:", req.user);
     const { opportunityName, amount, closeDate, stage, probability, type, leadSource, account, contact, nextStep, description, campaignSource, contactRole, accountManager } = req.body;
     if (!opportunityName || !closeDate || !account) return errorResponse(res, 400, 'Please provide opportunityName, closeDate, and account');
     const accountExists = await Account.findById(account);
+    console.log("Account Found:", accountExists?._id);
     if (!accountExists) return errorResponse(res, 404, 'Account not found');
     let tenant;
     if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
@@ -109,12 +112,14 @@ const createOpportunity = async (req, res) => {
     }
 
     const opportunity = await Opportunity.create({
+      
       opportunityName, amount: amount || 0, closeDate, stage: stage || 'Qualification', probability: probability || 50,
       type: type || 'New Business', leadSource, account, contact, nextStep, description, campaignSource, contactRole,
       accountManager: accountManager || null,
       contract: contractData.url ? contractData : undefined,
       owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
     });
+    console.log("STEP 1: Opportunity Created");
 
     // Update tenant usage count
     await Tenant.findByIdAndUpdate(tenant, { $inc: { 'usage.deals': 1 } });

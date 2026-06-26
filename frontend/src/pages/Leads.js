@@ -1263,9 +1263,19 @@ const Leads = () => {
 
   const loadDetailNotes = async (leadId) => {
     try {
+      console.log('Loading notes for lead:', leadId);
       const response = await noteService.getNotes({ relatedTo: 'Lead', relatedToId: leadId, limit: 100 });
-      if (response?.success) setDetailNotes(response.data?.notes || []);
-    } catch (err) { console.error('Load notes error:', err); }
+      console.log('Notes API response:', response);
+      // API interceptor unwraps response.data, so response is already the data object
+      if (response?.success) {
+        console.log('Setting notes:', response.data?.notes);
+        setDetailNotes(response.data?.notes || []);
+      } else {
+        console.log('Response success is false or undefined');
+      }
+    } catch (err) {
+      console.error('Load notes error:', err);
+    }
   };
 
   const loadDetailCustomFields = async () => {
@@ -1339,7 +1349,8 @@ const Leads = () => {
       setSuccess('Task created successfully!');
       setShowDetailTaskForm(false);
       setDetailTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
-      loadDetailTasks(selectedLeadId);
+      await loadDetailTasks(selectedLeadId);
+      setDetailActiveTab('activities'); // Switch to activities tab to show the new task
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create task'); }
   };
@@ -1420,13 +1431,21 @@ const Leads = () => {
     }
     try {
       setError('');
+      console.log('Creating note for lead:', selectedLeadId);
       await noteService.createNote({ ...detailNoteData, relatedTo: 'Lead', relatedToId: selectedLeadId });
+      console.log('Note created, reloading notes...');
       setSuccess('Note created successfully!');
       setShowDetailNoteForm(false);
       setDetailNoteData({ title: '', content: '' });
-      loadDetailNotes(selectedLeadId);
+      await loadDetailNotes(selectedLeadId);
+      console.log('Switching to notes tab...');
+      setDetailActiveTab('notes'); // Switch to notes tab to show the new note
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create note'); }
+    } catch (err) {
+      console.error('Create note error:', err);
+      if (err?.isPermissionDenied) return;
+      setError(err.message || 'Failed to create note');
+    }
   };
 
   // Detail Panel - Edit Lead
@@ -2605,7 +2624,7 @@ const Leads = () => {
                                   <input type="text" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', borderColor: taskSubjectError ? '#ef4444' : undefined }} value={detailTaskData.subject} onChange={(e) => { setDetailTaskData({ ...detailTaskData, subject: e.target.value }); setTaskSubjectError(''); }} />
                                   {taskSubjectError && <div style={{ fontSize: 10, color: '#dc2626', marginTop: 2 }}>⚠ {taskSubjectError}</div>}
                                 </div>
-                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date *</label><input type="date" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} min={new Date().toISOString().split('T')[0]} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date & Time *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} min={new Date().toISOString().slice(0, 16)} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Priority</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.priority} onChange={(e) => setDetailTaskData({ ...detailTaskData, priority: e.target.value })}><option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option></select></div>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
@@ -2681,7 +2700,7 @@ const Leads = () => {
                                     <span style={{ fontSize: '10px', background: task.priority === 'High' ? '#FEE2E2' : '#E0E7FF', color: task.priority === 'High' ? '#991B1B' : '#3730A3', padding: '1px 6px', borderRadius: '4px' }}>{task.priority}</span>
                                   </div>
                                   <p style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 4px 0' }}>{task.subject}</p>
-                                  <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>Due: {new Date(task.dueDate).toLocaleDateString()}</p>
+                                  <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>Due: {new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                                 </div>
                               ))}
                               {detailMeetings.filter(m => m.status === 'Scheduled').map(meeting => (
@@ -2745,7 +2764,7 @@ const Leads = () => {
                     {/* Notes Tab */}
                     {detailActiveTab === 'notes' && (
                       <div>
-                        <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px', marginBottom: '12px' }} onClick={() => { closeDetailForms(); setShowDetailNoteForm(true); }}>+ Add Note</button>
+                        <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px', marginBottom: '12px', background: '#7C3AED', borderColor: '#7C3AED' }} onClick={() => { closeDetailForms(); setShowDetailNoteForm(true); }}>+ Add Note</button>
 
                         {/* Note Form */}
                         {showDetailNoteForm && (
@@ -2763,7 +2782,7 @@ const Leads = () => {
                               <div style={{ marginBottom: '8px' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Content *</label><textarea className="crm-form-textarea" rows="3" style={{ width: '100%', padding: '4px 6px', fontSize: '11px' }} value={detailNoteData.content} onChange={(e) => setDetailNoteData({ ...detailNoteData, content: e.target.value })} required /></div>
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                                 <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailNoteForm(false)}>Cancel</button>
-                                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px', background: '#A855F7' }}>Add Note</button>
+                                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px', background: '#7C3AED', borderColor: '#7C3AED' }}>Add Note</button>
                               </div>
                             </form>
                           </div>
@@ -2771,7 +2790,7 @@ const Leads = () => {
 
                         {/* Notes List */}
                         {detailNotes.length === 0 ? (
-                          <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '6px' }}>No notes found</p>
+                          <p style={{ fontSize: '12px', color: '#374151', textAlign: 'center', padding: '20px', background: '#f3f4f6', borderRadius: '6px', border: '1px solid #d1d5db', fontWeight: '500' }}>No notes found</p>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {detailNotes.map(note => (
@@ -2888,8 +2907,24 @@ const Leads = () => {
             </button>
           )}
           {canDeleteLead && (
-            <button onClick={() => handleBulkDelete(true)}
-              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', borderRadius:'10px', border:'none', background:'#f43f5e', color:'#fff', fontSize:'13px', fontWeight:'600', cursor:'pointer', boxShadow:'0 2px 8px rgba(244,63,94,0.3)' }}>
+            <button
+              onClick={() => handleBulkDelete(true)}
+              disabled={leads.length === 0}
+              style={{
+                display:'flex',
+                alignItems:'center',
+                gap:'6px',
+                padding:'9px 14px',
+                borderRadius:'10px',
+                border:'none',
+                background: leads.length === 0 ? '#d1d5db' : '#f43f5e',
+                color:'#fff',
+                fontSize:'13px',
+                fontWeight:'600',
+                cursor: leads.length === 0 ? 'not-allowed' : 'pointer',
+                boxShadow: leads.length === 0 ? 'none' : '0 2px 8px rgba(244,63,94,0.3)',
+                opacity: leads.length === 0 ? 0.6 : 1
+              }}>
               <Trash2 className="h-4 w-4" /> Delete All
             </button>
           )}

@@ -202,6 +202,44 @@ const CONTACT_WIZARD_STEPS = [
   { label: 'Additional',    icon: '📋', desc: 'Notes & preferences',         sections: ['Additional Information'] },
 ];
 
+// Helper function to get active wizard steps (only steps with enabled fields)
+const getActiveWizardSteps = (fieldDefinitions) => {
+  const grouped = {};
+  fieldDefinitions.forEach(field => {
+    if (field.isActive && field.showInCreate !== false) {
+      const section = field.section || 'Additional Information';
+      if (!grouped[section]) grouped[section] = [];
+      grouped[section].push(field);
+    }
+  });
+
+  return CONTACT_WIZARD_STEPS.filter(step => {
+    // For Professional step: show if it has enabled fields (title, department etc) OR keep account selector
+    // For now, we'll show Professional step only if it has enabled fields in its sections
+    // The account dropdown is nice-to-have but not mandatory
+    const hasEnabledFields = step.sections.some(sectionName => grouped[sectionName]?.length > 0);
+
+    // Special case: If step has includeAccount but no fields, we can still show it for account selection
+    // Comment this out for now to strictly hide empty steps
+    // if (step.includeAccount && !hasEnabledFields) {
+    //   return true; // Keep Professional step even if empty, for account dropdown
+    // }
+
+    return hasEnabledFields;
+  });
+};
+
+// Helper: Get today's date in YYYY-MM-DD format for date inputs
+const getTodayDateString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  const hours = String(today.getHours()).padStart(2, '0');
+  const minutes = String(today.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
+
 const Contacts = () => {
   const navigate = useNavigate();
   const { user, hasPermission } = useAuth();
@@ -263,7 +301,13 @@ const Contacts = () => {
 
   // Detail Panel Form Data
   const [detailEditData, setDetailEditData] = useState({});
-  const [detailTaskData, setDetailTaskData] = useState({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+  const [detailTaskData, setDetailTaskData] = useState(() => ({
+    subject: '',
+    dueDate: getTodayDateString(),
+    status: 'Not Started',
+    priority: 'Normal',
+    description: ''
+  }));
   const [taskFormError, setTaskFormError] = useState('');
   const [detailNoteData, setDetailNoteData] = useState({ title: '', content: '' });
 
@@ -275,6 +319,14 @@ const Contacts = () => {
   }, [pagination.page, filters.search, filters.account, filters.title, filters.isPrimary, filters.hasAccount]);
 
   useEffect(() => { refreshGlobalStats(); }, []);
+
+  // Reset wizard step when field definitions change (to avoid out-of-bounds index)
+  useEffect(() => {
+    const activeSteps = getActiveWizardSteps(fieldDefinitions);
+    if (wizardStep >= activeSteps.length) {
+      setWizardStep(Math.max(0, activeSteps.length - 1));
+    }
+  }, [fieldDefinitions, wizardStep]);
 
   const refreshGlobalStats = () => {
     contactService.getContactStats().then(res => {
@@ -398,7 +450,22 @@ const Contacts = () => {
 
   const handleFieldChange = (fieldName, value) => {
     setFieldValues(prev => ({ ...prev, [fieldName]: value }));
-    setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+
+    // Find field definition to check if it's a phone field
+    const field = fieldDefinitions.find(f => f.fieldName === fieldName);
+
+    // Phone validation for dynamic fields
+    if (field && field.fieldType === 'phone' && value) {
+      if (!/^\d*$/.test(value)) {
+        setFieldErrors(prev => ({ ...prev, [fieldName]: 'Only digits are allowed' }));
+      } else if (value.length > 0 && value.length !== 10) {
+        setFieldErrors(prev => ({ ...prev, [fieldName]: 'Please enter exactly 10 digits' }));
+      } else {
+        setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+      }
+    } else {
+      setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+    }
   };
 
   const renderDynamicField = (field) => {
@@ -447,12 +514,92 @@ const Contacts = () => {
     setSuccess('✅ Bulk upload completed successfully!');
   };
 
+  const handleExportContacts = () => {
+    try {
+      if (contacts.length === 0) {
+        setError('No contacts to export');
+        setTimeout(() => setError(''), 3000);
+        return;
+      }
+
+      // Define CSV headers
+      const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Mobile', 'Job Title', 'Department', 'Account', 'Lead Source', 'Is Primary'];
+
+      // Convert contacts to CSV rows
+      const rows = contacts.map(contact => [
+        contact.firstName || '',
+        contact.lastName || '',
+        contact.email || '',
+        contact.phone || '',
+        contact.mobile || '',
+        contact.jobTitle || contact.title || '',
+        contact.department || '',
+        contact.account?.accountName || '',
+        contact.leadSource || '',
+        contact.isPrimary ? 'Yes' : 'No'
+      ]);
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n');
+
+      // Create download link
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `contacts_export_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setSuccess(`✅ Exported ${contacts.length} contacts successfully!`);
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError('Failed to export contacts');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
   const handleCreateContact = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (creating) return;
     setCreating(true);
     try {
       setError('');
+
+      // Validate phone fields before submission
+      let hasError = false;
+      const newErrors = {};
+
+      // Check formData phone/mobile
+      if (formData.phone && (!/^\d+$/.test(formData.phone) || formData.phone.length !== 10)) {
+        newErrors.phone = formData.phone.length !== 10 ? 'Please enter exactly 10 digits' : 'Only digits are allowed';
+        hasError = true;
+      }
+      if (formData.mobile && (!/^\d+$/.test(formData.mobile) || formData.mobile.length !== 10)) {
+        newErrors.mobile = formData.mobile.length !== 10 ? 'Please enter exactly 10 digits' : 'Only digits are allowed';
+        hasError = true;
+      }
+
+      // Check dynamic phone fields
+      fieldDefinitions.forEach(field => {
+        const value = fieldValues[field.fieldName];
+        if (field.fieldType === 'phone' && value && (!/^\d+$/.test(value) || value.length !== 10)) {
+          newErrors[field.fieldName] = value.length !== 10 ? 'Please enter exactly 10 digits' : 'Only digits are allowed';
+          hasError = true;
+        }
+      });
+
+      if (hasError) {
+        setFieldErrors(newErrors);
+        setCreating(false);
+        return;
+      }
+
       const standardFields = {};
       const customFields = {};
       fieldDefinitions.forEach(field => {
@@ -485,7 +632,29 @@ const Contacts = () => {
 
   const handleChange = (e) => {
     const { name, type, checked, value } = e.target;
+
     setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value });
+
+    // Phone validation - check if it contains only digits and is 10 digits
+    if ((name === 'phone' || name === 'mobile') && type !== 'checkbox' && value) {
+      if (!/^\d*$/.test(value)) {
+        setFieldErrors(prev => ({ ...prev, [name]: 'Only digits are allowed' }));
+      } else if (value.length > 0 && value.length !== 10) {
+        setFieldErrors(prev => ({ ...prev, [name]: 'Please enter exactly 10 digits' }));
+      } else {
+        setFieldErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors[name];
+          return newErrors;
+        });
+      }
+    } else if ((name === 'phone' || name === 'mobile') && !value) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleFilterChange = (e) => {
@@ -601,9 +770,10 @@ const Contacts = () => {
       await taskService.createTask({ ...detailTaskData, relatedTo: 'Contact', relatedToId: selectedContactId });
       setSuccess('Task created successfully!');
       setShowDetailTaskForm(false);
-      setDetailTaskData({ subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: '' });
+      setDetailTaskData({ subject: '', dueDate: getTodayDateString(), status: 'Not Started', priority: 'Normal', description: '' });
       setTaskFormError('');
-      loadDetailTasks(selectedContactId);
+      await loadDetailTasks(selectedContactId);
+      setDetailActiveTab('tasks'); // Switch to tasks tab to show the new task
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setTaskFormError(err.message || 'Failed to create task'); }
   };
@@ -616,7 +786,8 @@ const Contacts = () => {
       setSuccess('Note created successfully!');
       setShowDetailNoteForm(false);
       setDetailNoteData({ title: '', content: '' });
-      loadDetailNotes(selectedContactId);
+      await loadDetailNotes(selectedContactId);
+      setDetailActiveTab('notes'); // Switch to notes tab to show the new note
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to create note'); }
   };
@@ -780,20 +951,24 @@ const Contacts = () => {
                 }
               }
             `}</style>
+            {(() => {
+              const activeSteps = getActiveWizardSteps(fieldDefinitions);
+              return (
+                <>
             <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e3c72 100%)', flexShrink: 0 }}>
               <div style={{ padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>👤</div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Contact</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {CONTACT_WIZARD_STEPS.length}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {activeSteps.length}</div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
                   style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
               </div>
               <div style={{ display: 'flex', padding: '8px 10px 0' }}>
-                {CONTACT_WIZARD_STEPS.map((step, idx) => {
+                {activeSteps.map((step, idx) => {
                   const isDone = idx < wizardStep; const isActive = idx === wizardStep;
                   return (
                     <div key={idx} onClick={() => isDone && setWizardStep(idx)}
@@ -807,17 +982,18 @@ const Contacts = () => {
                 })}
               </div>
               <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
-                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / CONTACT_WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
+                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / activeSteps.length) * 100}%`, transition: 'width 0.35s ease' }} />
               </div>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
                 <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{CONTACT_WIZARD_STEPS[wizardStep]?.icon} {CONTACT_WIZARD_STEPS[wizardStep]?.label}</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{CONTACT_WIZARD_STEPS[wizardStep]?.desc}</p>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{activeSteps[wizardStep]?.icon} {activeSteps[wizardStep]?.label}</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{activeSteps[wizardStep]?.desc}</p>
                 </div>
                 {(() => {
-                  const step = CONTACT_WIZARD_STEPS[wizardStep];
+                  const step = activeSteps[wizardStep];
+                  if (!step) return null; // Safety check
                   const grouped = groupFieldsBySection(fieldDefinitions);
                   return (
                     <div>
@@ -886,23 +1062,28 @@ const Contacts = () => {
                   {wizardStep === 0 ? 'Cancel' : '← Back'}
                 </button>
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  {CONTACT_WIZARD_STEPS.map((_, idx) => (
+                  {activeSteps.map((_, idx) => (
                     <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
                   ))}
                 </div>
-                {wizardStep < CONTACT_WIZARD_STEPS.length - 1 ? (
+                {wizardStep < activeSteps.length - 1 ? (
                   <button type="button" onClick={() => {
-                    // BUG-164: Validate Customer Name (firstName) on step 0
+                    // BUG-164: Validate Customer Name (firstName) on step 0 - only if field is enabled
                     if (wizardStep === 0) {
-                      const name = (fieldValues['firstName'] || '').trim();
-                      if (!name) {
-                        setFieldErrors(prev => ({ ...prev, firstName: 'Customer Name is required.' })); return;
-                      }
-                      if (!/[a-zA-Z]/.test(name)) {
-                        setFieldErrors(prev => ({ ...prev, firstName: 'Please enter a valid customer name containing alphabetical characters.' })); return;
-                      }
-                      if (/^[^a-zA-Z0-9]+$/.test(name)) {
-                        setFieldErrors(prev => ({ ...prev, firstName: 'Please enter a valid customer name containing alphabetical characters.' })); return;
+                      // Check if firstName field is enabled in current active step
+                      const firstNameField = fieldDefinitions.find(f => f.fieldName === 'firstName' && f.isActive && f.showInCreate !== false);
+
+                      if (firstNameField) {
+                        const name = (fieldValues['firstName'] || '').trim();
+                        if (!name) {
+                          setFieldErrors(prev => ({ ...prev, firstName: 'Customer Name is required.' })); return;
+                        }
+                        if (!/[a-zA-Z]/.test(name)) {
+                          setFieldErrors(prev => ({ ...prev, firstName: 'Please enter a valid customer name containing alphabetical characters.' })); return;
+                        }
+                        if (/^[^a-zA-Z0-9]+$/.test(name)) {
+                          setFieldErrors(prev => ({ ...prev, firstName: 'Please enter a valid customer name containing alphabetical characters.' })); return;
+                        }
                       }
                     }
                     setWizardStep(s => s + 1);
@@ -918,6 +1099,9 @@ const Contacts = () => {
                 )}
               </div>
             </div>
+          </>
+              );
+            })()}
           </div>
         )}
 
@@ -958,7 +1142,13 @@ const Contacts = () => {
                       </div>
                       <div style={{ flex: 1 }}>
                         <h2 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 4px 0', color: '#1e3c72' }}>{selectedContactData.firstName} {selectedContactData.lastName}</h2>
-                        <p style={{ color: '#666', fontSize: '13px', margin: 0 }}>{selectedContactData.title || 'No title'} {selectedContactData.account && `at ${selectedContactData.account.accountName}`}</p>
+                        {(selectedContactData.title || selectedContactData.department || selectedContactData.account?.accountName) && (
+                          <p style={{ color: '#666', fontSize: '13px', margin: 0 }}>
+                            {selectedContactData.title || selectedContactData.department || ''}
+                            {(selectedContactData.title || selectedContactData.department) && selectedContactData.account && ' at '}
+                            {selectedContactData.account?.accountName || ''}
+                          </p>
+                        )}
                         {selectedContactData.isPrimary && <span style={{ display: 'inline-block', marginTop: '6px', padding: '2px 8px', background: '#DCFCE7', color: '#166534', borderRadius: '4px', fontSize: '10px', fontWeight: '600' }}>Primary Contact</span>}
                       </div>
                     </div>
@@ -987,7 +1177,7 @@ const Contacts = () => {
                               if (!fields || fields.length === 0) return null;
                               return (
                                 <div key={section} style={{ marginBottom: '12px' }}>
-                                  <h5 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>{section}</h5>
+                                  <h5 style={{ fontSize: '11px', fontWeight: '700', color: '#000000', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', paddingBottom: '4px', borderBottom: '1px solid #e2e8f0' }}>{section}</h5>
                                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                     {fields.filter(f => f.showInEdit !== false).map(field => (
                                       <div key={field.fieldName} style={{ gridColumn: ['description', 'mailingStreet'].includes(field.fieldName) ? 'span 2' : 'span 1' }}>
@@ -1053,9 +1243,9 @@ const Contacts = () => {
 
                   {/* Tabs */}
                   <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', background: '#f9fafb' }}>
-                    <button onClick={() => setDetailActiveTab('overview')} style={{ flex: 1, padding: '10px', fontSize: '12px', fontWeight: '600', border: 'none', background: detailActiveTab === 'overview' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'overview' ? '2px solid #1e3c72' : '2px solid transparent', color: detailActiveTab === 'overview' ? '#1e3c72' : '#64748b', cursor: 'pointer' }}>Overview</button>
-                    <button onClick={() => setDetailActiveTab('activities')} style={{ flex: 1, padding: '10px', fontSize: '12px', fontWeight: '600', border: 'none', background: detailActiveTab === 'activities' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'activities' ? '2px solid #1e3c72' : '2px solid transparent', color: detailActiveTab === 'activities' ? '#1e3c72' : '#64748b', cursor: 'pointer' }}>Tasks ({detailTasks.length})</button>
-                    <button onClick={() => setDetailActiveTab('notes')} style={{ flex: 1, padding: '10px', fontSize: '12px', fontWeight: '600', border: 'none', background: detailActiveTab === 'notes' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'notes' ? '2px solid #1e3c72' : '2px solid transparent', color: detailActiveTab === 'notes' ? '#1e3c72' : '#64748b', cursor: 'pointer' }}>Notes ({detailNotes.length})</button>
+                    <button onClick={() => setDetailActiveTab('overview')} style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: '700', border: 'none', background: detailActiveTab === 'overview' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'overview' ? '3px solid #1e3c72' : '3px solid transparent', color: detailActiveTab === 'overview' ? '#1e3c72' : '#000000', cursor: 'pointer' }}>Overview</button>
+                    <button onClick={() => setDetailActiveTab('activities')} style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: '700', border: 'none', background: detailActiveTab === 'activities' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'activities' ? '3px solid #1e3c72' : '3px solid transparent', color: detailActiveTab === 'activities' ? '#1e3c72' : '#000000', cursor: 'pointer' }}>Tasks ({detailTasks.length})</button>
+                    <button onClick={() => setDetailActiveTab('notes')} style={{ flex: 1, padding: '10px', fontSize: '13px', fontWeight: '700', border: 'none', background: detailActiveTab === 'notes' ? 'white' : 'transparent', borderBottom: detailActiveTab === 'notes' ? '3px solid #1e3c72' : '3px solid transparent', color: detailActiveTab === 'notes' ? '#1e3c72' : '#000000', cursor: 'pointer' }}>Notes ({detailNotes.length})</button>
                   </div>
 
                   {/* Tab Content */}
@@ -1108,7 +1298,7 @@ const Contacts = () => {
                             if (!fields || fields.length === 0) return null;
                             return (
                               <div key={section} style={{ marginBottom: '14px' }}>
-                                <h4 style={{ fontSize: '10px', fontWeight: '700', color: '#64748b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#000000', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
                                   {section}
                                   <span style={{ flex: 1, height: '1px', background: '#e2e8f0' }} />
@@ -1125,8 +1315,8 @@ const Contacts = () => {
                                     const isPhone = fieldType === 'phone' || key === 'phone' || key === 'mobile';
                                     const isUrl = fieldType === 'url' || key === 'website';
                                     return (
-                                      <div key={key} style={{ background: '#f9fafb', padding: '8px 10px', borderRadius: '6px', border: '1px solid #f1f5f9' }}>
-                                        <p style={{ fontSize: '9px', color: '#9CA3AF', marginBottom: '3px', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</p>
+                                      <div key={key} style={{ background: '#f3f4f6', padding: '8px 10px', borderRadius: '6px', border: '1px solid #d1d5db' }}>
+                                        <p style={{ fontSize: '10px', color: '#374151', marginBottom: '3px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.3px' }}>{label}</p>
                                         {isEmail ? <a href={`mailto:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#3B82F6', wordBreak: 'break-all' }}>{display}</a>
                                           : isPhone ? <a href={`tel:${display}`} style={{ fontSize: '12px', fontWeight: '500', color: '#059669' }}>{display}</a>
                                           : isUrl ? <a href={display} target="_blank" rel="noopener noreferrer" style={{ fontSize: '12px', fontWeight: '500', color: '#7C3AED', wordBreak: 'break-all' }}>{display}</a>
@@ -1171,7 +1361,7 @@ const Contacts = () => {
                         {/* Related Deals/Opportunities */}
                         {selectedContactData.relatedData?.opportunities && (
                           <div style={{ marginTop: '16px' }}>
-                            <h4 style={{ fontSize: '11px', fontWeight: '700', color: '#64748b', marginBottom: '10px', textTransform: 'uppercase' }}>Deals ({selectedContactData.relatedData.opportunities.total || 0})</h4>
+                            <h4 style={{ fontSize: '12px', fontWeight: '700', color: '#000000', marginBottom: '10px', textTransform: 'uppercase' }}>Deals ({selectedContactData.relatedData.opportunities.total || 0})</h4>
                             {selectedContactData.relatedData.opportunities.data?.length > 0 ? (
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                 {selectedContactData.relatedData.opportunities.data.map(opp => (
@@ -1186,7 +1376,7 @@ const Contacts = () => {
                                 ))}
                               </div>
                             ) : (
-                              <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '16px', background: '#f9fafb', borderRadius: '6px' }}>No deals found</p>
+                              <p style={{ fontSize: '13px', color: '#374151', textAlign: 'center', padding: '16px', background: '#f3f4f6', borderRadius: '6px', fontWeight: '500', border: '1px solid #d1d5db' }}>No deals found</p>
                             )}
                           </div>
                         )}
@@ -1228,7 +1418,7 @@ const Contacts = () => {
                                     </div>
                                   )}
                                 </div>
-                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date *</label><input type="date" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
+                                <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Due Date & Time *</label><input type="datetime-local" className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.dueDate} onChange={(e) => setDetailTaskData({ ...detailTaskData, dueDate: e.target.value })} required /></div>
                                 <div><label style={{ fontSize: '10px', fontWeight: '600' }}>Priority</label><select className="crm-form-select" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailTaskData.priority} onChange={(e) => setDetailTaskData({ ...detailTaskData, priority: e.target.value })}><option value="High">High</option><option value="Normal">Normal</option><option value="Low">Low</option></select></div>
                               </div>
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
@@ -1239,7 +1429,7 @@ const Contacts = () => {
                           </div>
                         )}
                         {detailTasks.length === 0 ? (
-                          <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '6px' }}>No tasks found</p>
+                          <p style={{ fontSize: '13px', color: '#374151', textAlign: 'center', padding: '20px', background: '#f3f4f6', borderRadius: '6px', fontWeight: '500', border: '1px solid #d1d5db' }}>No tasks found</p>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                             {detailTasks.map(task => (
@@ -1250,7 +1440,7 @@ const Contacts = () => {
                                   {task.status === 'Completed' && <span style={{ fontSize: '10px', background: '#DCFCE7', color: '#166534', padding: '1px 6px', borderRadius: '4px' }}>Done</span>}
                                 </div>
                                 <p style={{ fontSize: '12px', fontWeight: '600', margin: '0 0 4px 0' }}>{task.subject}</p>
-                                <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>Due: {new Date(task.dueDate).toLocaleDateString()}</p>
+                                <p style={{ fontSize: '10px', color: '#6B7280', margin: 0 }}>Due: {new Date(task.dueDate).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                               </div>
                             ))}
                           </div>
@@ -1260,7 +1450,7 @@ const Contacts = () => {
 
                     {detailActiveTab === 'notes' && (
                       <div>
-                        <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px', marginBottom: '12px' }} onClick={() => { closeDetailForms(); setShowDetailNoteForm(true); }}>+ Add Note</button>
+                        <button className="crm-btn crm-btn-sm crm-btn-primary" style={{ fontSize: '11px', padding: '4px 10px', marginBottom: '12px', background: '#7C3AED', borderColor: '#7C3AED' }} onClick={() => { closeDetailForms(); setShowDetailNoteForm(true); }}>+ Add Note</button>
                         {showDetailNoteForm && (
                           <div style={{ marginBottom: '12px', padding: '10px', background: '#FDF4FF', borderRadius: '6px', border: '1px solid #E879F9' }}>
                             <form onSubmit={handleDetailCreateNote}>
@@ -1268,13 +1458,13 @@ const Contacts = () => {
                               <div style={{ marginBottom: '8px' }}><label style={{ fontSize: '10px', fontWeight: '600' }}>Content *</label><textarea className="crm-form-textarea" rows="3" style={{ width: '100%', padding: '4px 6px', fontSize: '11px' }} value={detailNoteData.content} onChange={(e) => setDetailNoteData({ ...detailNoteData, content: e.target.value })} required /></div>
                               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
                                 <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px' }} onClick={() => setShowDetailNoteForm(false)}>Cancel</button>
-                                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px', background: '#A855F7' }}>Add Note</button>
+                                <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '10px', padding: '3px 8px', background: '#7C3AED', borderColor: '#7C3AED' }}>Add Note</button>
                               </div>
                             </form>
                           </div>
                         )}
                         {detailNotes.length === 0 ? (
-                          <p style={{ fontSize: '12px', color: '#9CA3AF', textAlign: 'center', padding: '20px', background: '#f9fafb', borderRadius: '6px' }}>No notes found</p>
+                          <p style={{ fontSize: '13px', color: '#374151', textAlign: 'center', padding: '20px', background: '#f3f4f6', borderRadius: '6px', fontWeight: '500', border: '1px solid #d1d5db' }}>No notes found</p>
                         ) : (
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                             {detailNotes.map(note => (
@@ -1324,6 +1514,14 @@ const Contacts = () => {
                 )}
                 <button className="crm-btn crm-btn-outline" onClick={() => { closeAllForms(); setShowBulkUploadForm(true); }}>
                   📤 Bulk Upload
+                </button>
+                <button
+                  className="crm-btn crm-btn-outline"
+                  onClick={handleExportContacts}
+                  title="Export contacts to CSV"
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  📥 Export
                 </button>
                 <button className="crm-btn crm-btn-primary" onClick={() => {
                   if (!canCreateContact) { setError('Access Restricted: You do not have permission to create contacts.'); return; }
@@ -1412,7 +1610,13 @@ const Contacts = () => {
                           </div>
                           <div>
                             <h3 style={{ margin: 0, fontSize: '15px', fontWeight: '700', color: '#1e3c72' }}>{contact.firstName} {contact.lastName}</h3>
-                            <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{contact.title || 'No title'}</p>
+                            {(contact.title || contact.department || contact.account?.accountName) && (
+                              <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
+                                {contact.title || contact.department || ''}
+                                {contact.title && contact.account?.accountName && ' at '}
+                                {!contact.title && contact.account?.accountName && contact.account.accountName}
+                              </p>
+                            )}
                           </div>
                         </div>
                         {contact.isPrimary && <span style={{ display: 'inline-block', padding: '2px 8px', background: '#DCFCE7', color: '#166534', borderRadius: '4px', fontSize: '10px', fontWeight: '600', marginBottom: '8px' }}>Primary</span>}

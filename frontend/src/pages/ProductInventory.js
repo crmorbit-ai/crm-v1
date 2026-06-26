@@ -42,6 +42,17 @@ export default function ProductInventory({ fromTab }) {
   const ok = m => { setSuccess(m); setTimeout(() => setSuccess(''), 3000); };
   const err = m => { setError(m); setTimeout(() => setError(''), 4000); };
 
+  const setFieldError = (field, message) => {
+    setFieldErrors(prev => ({ ...prev, [field]: message }));
+  };
+  const clearFieldError = (field) => {
+    setFieldErrors(prev => {
+      const newErrors = { ...prev };
+      delete newErrors[field];
+      return newErrors;
+    });
+  };
+
   const validateField = (fieldName, value) => {
     const errors = { ...fieldErrors };
 
@@ -181,45 +192,49 @@ export default function ProductInventory({ fromTab }) {
   };
 
   const handleCreateProduct = async () => {
-    // Validation
+    // Clear previous errors
+    setFieldErrors({});
+    setError('');
+
+    // Validation - field specific
     if (!formData.name.trim()) {
-      err('❌ Product Name is required');
+      setFieldError('name', 'Product Name is required');
       return;
     }
     if (formData.name.trim().length < 3) {
-      err('❌ Product Name must be at least 3 characters');
+      setFieldError('name', 'Product Name must be at least 3 characters');
       return;
     }
     if (formData.name.trim().length > 100) {
-      err('❌ Product Name must be less than 100 characters');
+      setFieldError('name', 'Product Name must be less than 100 characters');
       return;
     }
     if (!/^[a-zA-Z0-9\s\-_.()&]+$/.test(formData.name.trim())) {
-      err('❌ Product Name contains invalid characters');
+      setFieldError('name', 'Product Name contains invalid characters');
       return;
     }
     if (!formData.department) {
-      err('❌ Department is required');
+      setFieldError('department', 'Department is required');
       return;
     }
     if (formData.sku && formData.sku.trim() && !/^[a-zA-Z0-9\-_]+$/.test(formData.sku.trim())) {
-      err('❌ SKU can only contain letters, numbers, hyphens and underscores');
+      setFieldError('sku', 'SKU can only contain letters, numbers, hyphens and underscores');
       return;
     }
     if (formData.category && formData.category.trim() && formData.category.trim().length < 2) {
-      err('❌ Category must be at least 2 characters');
+      setFieldError('category', 'Category must be at least 2 characters');
       return;
     }
     if (formData.productPrice && (isNaN(formData.productPrice) || parseFloat(formData.productPrice) < 0)) {
-      err('❌ Price must be a valid positive number');
+      setFieldError('productPrice', 'Price must be a valid positive number');
       return;
     }
     if (formData.stock && (isNaN(formData.stock) || parseInt(formData.stock) < 0)) {
-      err('❌ Stock must be a valid positive number');
+      setFieldError('stock', 'Stock must be a valid positive number');
       return;
     }
     if (formData.description && formData.description.trim().length > 500) {
-      err('❌ Description must be less than 500 characters');
+      setFieldError('description', 'Description must be less than 500 characters');
       return;
     }
 
@@ -347,8 +362,8 @@ export default function ProductInventory({ fromTab }) {
       <style>{`
         @media (max-width: 768px) {
           .pi-container { flex-direction: column !important; }
-          .pi-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; }
-          .pi-content-panel { flex: 0 0 100% !important; }
+          .pi-right-wrapper { order: 1 !important; }
+          .pi-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; order: 2 !important; }
         }
       `}</style>
       <div className="pi-container" style={{ display: 'flex', height: 'calc(100vh - 200px)', gap: '0' }}>
@@ -373,23 +388,27 @@ export default function ProductInventory({ fromTab }) {
                   type="text"
                   value={formData.name}
                   onChange={(e) => {
-                    const val = e.target.value;
-                    setFormData({...formData, name: val});
-                    validateField('name', val);
+                    setFormData({...formData, name: e.target.value});
+                    clearFieldError('name');
                   }}
                   placeholder="Product name"
+                  maxLength={100}
                   style={{
                     width: '100%',
                     padding: '6px',
-                    border: fieldErrors.name ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                    border: fieldErrors.name ? '2px solid #ef4444' : '1px solid #e2e8f0',
                     borderRadius: '4px',
                     fontSize: '12px',
                     boxSizing: 'border-box',
-                    marginTop: '4px'
+                    marginTop: '4px',
+                    outline: 'none'
                   }}
                 />
+                <div style={{ fontSize: '10px', color: '#6b7280', marginTop: '4px', textAlign: 'right' }}>
+                  {formData.name.length}/100 characters
+                </div>
                 {fieldErrors.name && (
-                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px' }}>⚠ {fieldErrors.name}</div>
+                  <div style={{ fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '500' }}>✕ {fieldErrors.name}</div>
                 )}
               </div>
               <div style={{ marginBottom: '12px' }}>
@@ -768,11 +787,12 @@ export default function ProductInventory({ fromTab }) {
         </div>
       )}
 
-      {/* RIGHT: List */}
-      <div className="pi-content-panel" style={{ flex: selectedItem ? '1' : '1', display: 'flex', flexDirection: 'column', padding: '0' }}>
-        {/* Fixed Stats Container */}
+        {/* RIGHT: Stats + Content */}
+        <div className="pi-right-wrapper" style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+        {/* Stats Wrapper */}
         {dashboard && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', background: '#fff', position: 'sticky', top: '0', zIndex: 20 }}>
+          <div className="pi-stats-wrapper" style={{ background: '#fff', flexShrink: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', padding: '20px 20px 12px 20px', position: 'sticky', top: '0', zIndex: 20 }}>
             {[
               { label: 'Total Products', value: dashboard.totalItems || 0, bg: 'linear-gradient(135deg, #14b8a6, #0d9488)', dept: '' },
               { label: 'Sales Team', value: dashboard.byDept?.sales || 0, bg: 'linear-gradient(135deg, #8b5cf6, #7c3aed)', dept: 'sales' },
@@ -784,10 +804,12 @@ export default function ProductInventory({ fromTab }) {
               </div>
             ))}
           </div>
+          </div>
         )}
 
+        {/* Content Panel - Search, Filters & Table */}
+        <div className="pi-content-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
-          {error && <div style={{ background: '#fef2f2', border: '1px solid #fca5a5', color: '#dc2626', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✕ {error}</div>}
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add Product</button>
           <div style={{ flex: 1, minWidth: '200px' }}>
@@ -850,8 +872,9 @@ export default function ProductInventory({ fromTab }) {
             <button onClick={() => loadItems(pag.page + 1)} disabled={pag.page === pag.pages} style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: pag.page === pag.pages ? 'default' : 'pointer', opacity: pag.page === pag.pages ? 0.5 : 1 }}>Next</button>
           </div>
         )}
+        </div>
+        </div>
       </div>
-    </div>
     </>
   );
 
