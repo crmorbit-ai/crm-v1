@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Counter = require('./Counter');
 
 const opportunitySchema = new mongoose.Schema({
   // Deal ID (auto-generated)
@@ -160,58 +161,41 @@ opportunitySchema.virtual('daysUntilClose').get(function() {
 });
 
 // Auto-generate dealId - use timestamp for uniqueness
+// Auto-generate Deal ID using atomic counter
 opportunitySchema.pre('save', async function(next) {
   if (this.isNew && !this.dealId) {
     try {
-      // Get all existing dealIds for this tenant
-      const existingOpps = await mongoose.model('Opportunity')
-        .find({ tenant: this.tenant, dealId: { $regex: /^DEAL-\d+$/ } })
-        .select('dealId')
-        .lean();
+      const year = new Date().getFullYear();
 
-      // Extract all numbers and find the maximum
-      let maxNumber = 0;
-      for (const opp of existingOpps) {
-        if (opp.dealId) {
-          const match = opp.dealId.match(/^DEAL-(\d+)$/);
-          if (match) {
-            const num = parseInt(match[1], 10);
-            if (num > maxNumber) {
-              maxNumber = num;
-            }
-          }
+      const counter = await Counter.findOneAndUpdate(
+        {
+          name: 'deal',
+          tenant: this.tenant,
+          year: year
+        },
+        {
+          $inc: { sequence: 1 }
+        },
+        {
+          new: true,
+          upsert: true,
+          setDefaultsOnInsert: true
         }
-      }
+      );
 
-      // Generate next number with timestamp suffix for uniqueness
-      const nextNumber = maxNumber + 1;
-      const timestamp = Date.now().toString().slice(-4); // Last 4 digits of timestamp
+      const nextNumber = counter.sequence;
 
-      // Try simple increment first
-      let candidateDealId = `DEAL-${String(nextNumber).padStart(4, '0')}`;
+      this.dealId = `DEAL-${year}-${String(nextNumber).padStart(5, '0')}`;
 
-      // Check if exists
-      const exists = await mongoose.model('Opportunity')
-        .findOne({ tenant: this.tenant, dealId: candidateDealId })
-        .lean();
-
-      if (exists) {
-        // If duplicate, use timestamp-based unique ID
-        candidateDealId = `DEAL-${String(nextNumber).padStart(4, '0')}-${timestamp}`;
-      }
-
-      this.dealId = candidateDealId;
     } catch (err) {
-      console.error('Error generating dealId:', err);
-      // Fallback: use timestamp-based unique ID
-      const timestamp = Date.now();
-      this.dealId = `DEAL-${timestamp}`;
+      return next(err);
     }
   }
 
   if (this.amount && this.probability) {
     this.expectedRevenue = (this.amount * this.probability) / 100;
   }
+
   next();
 });
 
