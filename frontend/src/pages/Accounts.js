@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Country, State, City } from 'country-state-city';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -237,6 +237,24 @@ const Accounts = () => {
   const [selectedStateIso, setSelectedStateIso] = useState('');
   const [detailPanelWidth, setDetailPanelWidth] = useState(42);
   const [detailExpanded, setDetailExpanded] = useState(false);
+
+  // Compute active wizard steps based on field definitions
+  const activeWizardSteps = useMemo(() => {
+    const grouped = {};
+    fieldDefinitions.forEach(field => {
+      if (field.isActive && field.showInCreate !== false) {
+        const section = field.section || 'Additional Information';
+        if (!grouped[section]) grouped[section] = [];
+        grouped[section].push(field);
+      }
+    });
+
+    return ACCOUNT_WIZARD_STEPS.filter(step => {
+      return step.sections.some(sectionName => {
+        return grouped[sectionName] && grouped[sectionName].length > 0;
+      });
+    });
+  }, [fieldDefinitions]);
 
   // Split View Panel State
   const [selectedAccountId, setSelectedAccountId] = useState(null);
@@ -704,14 +722,14 @@ const Accounts = () => {
                   <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🏢</div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Account</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {ACCOUNT_WIZARD_STEPS.length}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {activeWizardSteps.length}</div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
                   style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
               </div>
               <div style={{ display: 'flex', padding: '8px 10px 0' }}>
-                {ACCOUNT_WIZARD_STEPS.map((step, idx) => {
+                {activeWizardSteps.map((step, idx) => {
                   const isDone = idx < wizardStep; const isActive = idx === wizardStep;
                   return (
                     <div key={idx} onClick={() => isDone && setWizardStep(idx)}
@@ -725,17 +743,17 @@ const Accounts = () => {
                 })}
               </div>
               <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
-                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / ACCOUNT_WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
+                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / activeWizardSteps.length) * 100}%`, transition: 'width 0.35s ease' }} />
               </div>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
                 <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{ACCOUNT_WIZARD_STEPS[wizardStep]?.icon} {ACCOUNT_WIZARD_STEPS[wizardStep]?.label}</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{ACCOUNT_WIZARD_STEPS[wizardStep]?.desc}</p>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{activeWizardSteps[wizardStep]?.icon} {activeWizardSteps[wizardStep]?.label}</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{activeWizardSteps[wizardStep]?.desc}</p>
                 </div>
                 {(() => {
-                  const step = ACCOUNT_WIZARD_STEPS[wizardStep];
+                  const step = activeWizardSteps[wizardStep];
                   const grouped = groupFieldsBySection(fieldDefinitions);
                   return (
                     <div>
@@ -781,11 +799,11 @@ const Accounts = () => {
                   {wizardStep === 0 ? 'Cancel' : '← Back'}
                 </button>
                 <div style={{ display: 'flex', gap: '4px' }}>
-                  {ACCOUNT_WIZARD_STEPS.map((_, idx) => (
+                  {activeWizardSteps.map((_, idx) => (
                     <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
                   ))}
                 </div>
-                {wizardStep < ACCOUNT_WIZARD_STEPS.length - 1 ? (
+                {wizardStep < activeWizardSteps.length - 1 ? (
                   <button type="button" onClick={() => setWizardStep(s => s + 1)}
                     style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
                     Next →

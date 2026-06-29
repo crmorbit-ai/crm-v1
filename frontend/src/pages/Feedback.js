@@ -341,6 +341,9 @@ const TenantUserView = () => {
   const [hLoad,  setHLoad]  = useState(false);
   const [selId,  setSelId]  = useState(null);
   const [detail, setDetail] = useState(null);
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(10);
 
   useEffect(()=>{ if(tab==='history') loadHistory(); },[tab]);
 
@@ -444,6 +447,10 @@ const TenantUserView = () => {
       setAttachments([]);
       setDescError('');
       setTitleError('');
+
+      // Scroll to top to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       setTimeout(()=>setSent(false),5000);
     }catch{}
     setSending(false);
@@ -452,6 +459,19 @@ const TenantUserView = () => {
   const canSubmit = form.type && form.title.trim() && form.description.trim() && !titleError && !descError;
   const stats = { total:history.length, open:history.filter(h=>!['resolved','closed'].includes(h.status)).length, replied:history.filter(h=>h.tenantAdminReply).length };
   const ratingLabel = ['','Poor','Fair','Good','Very Good','Excellent'];
+
+  // Filter and paginate history
+  const filteredHistory = history.filter(h => {
+    if (!historySearch.trim()) return true;
+    const q = historySearch.toLowerCase();
+    return h.title?.toLowerCase().includes(q) ||
+           h.description?.toLowerCase().includes(q) ||
+           h.category?.toLowerCase().includes(q) ||
+           h.type?.toLowerCase().includes(q);
+  });
+  const totalHistory = filteredHistory.length;
+  const paginatedHistory = filteredHistory.slice((historyPage - 1) * historyLimit, historyPage * historyLimit);
+  const totalPages = Math.ceil(totalHistory / historyLimit);
 
   return (
     <DashboardLayout>
@@ -698,8 +718,8 @@ const TenantUserView = () => {
                       {sending ? '⏳ Submitting…' : '🚀 Submit Feedback'}
                     </Btn>
                     {!canSubmit && (
-                      <span style={{ fontSize:12, color:'#cbd5e1', fontStyle:'italic' }}>
-                        {!form.type ? 'Select a feedback type first' : !form.title.trim() ? 'Add a title to continue' : 'Add a description to continue'}
+                      <span style={{ fontSize:12, color:'#64748b', fontWeight:600 }}>
+                        {!form.type ? '⚠️ Select a feedback type first' : !form.title.trim() ? '⚠️ Add a title to continue' : '⚠️ Add a description to continue'}
                       </span>
                     )}
                   </div>
@@ -717,6 +737,29 @@ const TenantUserView = () => {
                 <KpiCard label="Replied"   value={stats.replied} color="#10b981" icon="💬"/>
               </div>
 
+              {/* Search Bar */}
+              {history.length > 0 && (
+                <div style={{ marginBottom: 20 }}>
+                  <input
+                    type="text"
+                    placeholder="🔍 Search submissions by title, description, category..."
+                    value={historySearch}
+                    onChange={e => { setHistorySearch(e.target.value); setHistoryPage(1); }}
+                    style={{
+                      width: '100%',
+                      padding: '12px 16px',
+                      fontSize: 14,
+                      border: '1.5px solid #e2e8f0',
+                      borderRadius: 10,
+                      outline: 'none',
+                      transition: 'border-color 0.2s',
+                    }}
+                    onFocus={e => e.target.style.borderColor = '#7c3aed'}
+                    onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
+              )}
+
               {hLoad ? (
                 <Card style={{ padding:60, textAlign:'center' }}>
                   <div style={{ fontSize:32, marginBottom:12 }}>⏳</div>
@@ -724,9 +767,11 @@ const TenantUserView = () => {
                 </Card>
               ) : history.length===0 ? (
                 <Card><EmptyState icon="📭" title="No submissions yet" sub="Submit your first feedback above and track responses here."/></Card>
+              ) : filteredHistory.length === 0 ? (
+                <Card><EmptyState icon="🔍" title="No results found" sub="Try a different search term or clear the filter."/></Card>
               ) : (
                 <Card>
-                  {history.map((fb,i)=>{
+                  {paginatedHistory.map((fb,i)=>{
                     const t=TYPE[fb.type]||{icon:'💬',color:'#64748b',bg:'#f8fafc'};
                     const ts=TSTATUS[fb.tenantAdminStatus]||TSTATUS.pending;
                     const expanded=selId===fb._id;
@@ -737,7 +782,7 @@ const TenantUserView = () => {
                           style={{ padding:'18px 22px', cursor:'pointer', transition:'background 0.12s',
                             background: expanded ? '#faf5ff' : '#fff',
                             borderLeft:`3px solid ${expanded?'#7c3aed':ts.dot||'transparent'}`,
-                            borderRadius: i===0 ? '14px 14px 0 0' : i===history.length-1&&!expanded ? '0 0 14px 14px' : 0 }}
+                            borderRadius: i===0 ? '14px 14px 0 0' : i===paginatedHistory.length-1&&!expanded ? '0 0 14px 14px' : 0 }}
                           onMouseEnter={e=>{ if(!expanded) e.currentTarget.style.background='#fafafa'; }}
                           onMouseLeave={e=>{ if(!expanded) e.currentTarget.style.background='#fff'; }}>
                           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start' }}>
@@ -837,6 +882,66 @@ const TenantUserView = () => {
                       </div>
                     );
                   })}
+
+                  {/* Pagination Footer */}
+                  {totalPages > 1 && (
+                    <>
+                      <Divider />
+                      <div style={{ padding: '16px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#fafafa' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ fontSize: 13, color: '#64748b', fontWeight: 500 }}>
+                            Showing <strong>{((historyPage - 1) * historyLimit) + 1}-{Math.min(historyPage * historyLimit, totalHistory)}</strong> of <strong>{totalHistory}</strong>
+                          </span>
+                          <select
+                            value={historyLimit}
+                            onChange={e => { setHistoryLimit(Number(e.target.value)); setHistoryPage(1); }}
+                            style={{ padding: '6px 10px', fontSize: 12, border: '1px solid #e2e8f0', borderRadius: 6, background: '#fff', cursor: 'pointer', outline: 'none' }}
+                          >
+                            <option value={10}>10 / page</option>
+                            <option value={20}>20 / page</option>
+                            <option value={50}>50 / page</option>
+                          </select>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button
+                            onClick={() => setHistoryPage(p => Math.max(1, p - 1))}
+                            disabled={historyPage === 1}
+                            style={{
+                              padding: '7px 14px',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              border: '1px solid #e2e8f0',
+                              borderRadius: 7,
+                              background: historyPage === 1 ? '#f8fafc' : '#fff',
+                              color: historyPage === 1 ? '#cbd5e1' : '#475569',
+                              cursor: historyPage === 1 ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            ← Previous
+                          </button>
+                          <span style={{ padding: '7px 12px', fontSize: 12, fontWeight: 600, color: '#64748b' }}>
+                            Page {historyPage} of {totalPages}
+                          </span>
+                          <button
+                            onClick={() => setHistoryPage(p => Math.min(totalPages, p + 1))}
+                            disabled={historyPage === totalPages}
+                            style={{
+                              padding: '7px 14px',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              border: '1px solid #e2e8f0',
+                              borderRadius: 7,
+                              background: historyPage === totalPages ? '#f8fafc' : '#fff',
+                              color: historyPage === totalPages ? '#cbd5e1' : '#475569',
+                              cursor: historyPage === totalPages ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            Next →
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </Card>
               )}
             </>
@@ -994,6 +1099,10 @@ const TenantAdminView = () => {
       setCAttachments([]);
       setCDescError('');
       setCTitleError('');
+
+      // Scroll to top to show success message
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
       setTimeout(()=>setCSent(false),5000);
     }catch{}
     setCsend(false);
@@ -1569,8 +1678,8 @@ const TenantAdminView = () => {
                       {cSending ? '⏳ Sending…' : '📨 Send to SAAS →'}
                     </Btn>
                     {(!cForm.type||!cForm.title.trim()||!cForm.description.trim()) && (
-                      <span style={{ fontSize:10, color:'#cbd5e1', fontStyle:'italic' }}>
-                        {!cForm.type ? 'Select message type first' : !cForm.title.trim() ? 'Add a subject' : 'Add your message'}
+                      <span style={{ fontSize:10, color:'#64748b', fontWeight:600 }}>
+                        {!cForm.type ? '⚠️ Select message type first' : !cForm.title.trim() ? '⚠️ Add a subject' : '⚠️ Add your message'}
                       </span>
                     )}
                   </div>

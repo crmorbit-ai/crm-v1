@@ -27,6 +27,7 @@ const getMasterInventoryModel = () => {
   const mongoose = require('mongoose');
   const masterInventoryItemSchema = new mongoose.Schema({
     tenant: { type: String, required: true, index: true },
+    serialNumber: { type: String, unique: true, index: true },
     name: { type: String, required: true },
     type: { type: String, enum: ['product', 'service', 'lead'], required: true, index: true },
     department: { type: String, default: 'sales', index: true },
@@ -208,8 +209,31 @@ router.post('/', async (req, res) => {
     console.log('📊 Model DB:', MasterInventoryItem.db.name);
     console.log('📊 Collection:', MasterInventoryItem.collection.name);
 
+    // Generate Serial Number
+    const year = new Date().getFullYear();
+    const type = req.body.type || 'product';
+    const prefix = type === 'product' ? 'MI-P' : type === 'service' ? 'MI-S' : 'MI-L';
+
+    // Find the last serial number for this type and year
+    const lastItem = await MasterInventoryItem.findOne({
+      serialNumber: { $regex: `^${prefix}-${year}-` }
+    }).sort({ serialNumber: -1 });
+
+    let serialNumber;
+    if (lastItem && lastItem.serialNumber) {
+      // Extract the counter from last serial number
+      const match = lastItem.serialNumber.match(/-(\d+)$/);
+      const lastCounter = match ? parseInt(match[1]) : 0;
+      const newCounter = String(lastCounter + 1).padStart(4, '0');
+      serialNumber = `${prefix}-${year}-${newCounter}`;
+    } else {
+      // First item of this type in this year
+      serialNumber = `${prefix}-${year}-0001`;
+    }
+
     const itemData = {
       ...req.body,
+      serialNumber,
       tenant: req.user.tenant || req.user._id?.toString() || 'default',
       createdBy: req.user.email || 'system'
     };
@@ -217,6 +241,7 @@ router.post('/', async (req, res) => {
     await item.save();
 
     console.log('✅ Item saved to:', item.collection.name, 'in DB:', item.db.name);
+    console.log('🔢 Generated Serial Number:', serialNumber);
     res.status(201).json({ success: true, data: item, message: 'Item created successfully' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Failed to create item', error: error.message });

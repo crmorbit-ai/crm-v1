@@ -629,6 +629,9 @@ export default function ProductInventory({ fromTab }) {
               <div style={{ marginBottom: '0', borderBottom: '1px solid #e2e8f0' }}>
                 <div style={{ padding: '10px 12px', borderLeft: '3px solid #6366f1', background: '#fff' }}>
                   <h4 style={{ margin: '0 0 6px', fontSize: '10px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Basic Info</h4>
+                  {selectedItem.serialNumber && (
+                    <p style={{ margin: '0 0 6px', fontSize: '11px', color: '#6366f1', fontWeight: '700', fontFamily: 'monospace' }}>SN: {selectedItem.serialNumber}</p>
+                  )}
                   <p style={{ margin: '0 0 6px', fontSize: '12px', color: '#0f172a', fontWeight: '600' }}>{selectedItem.name}</p>
                   <p style={{ margin: 0, fontSize: '11px', color: '#64748b', lineHeight: '1.4' }}>{selectedItem.description || '-'}</p>
                 </div>
@@ -827,6 +830,7 @@ export default function ProductInventory({ fromTab }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #334155', background: '#1e293b' }}>
+                <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Serial No.</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>SKU</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Category</th>
@@ -839,10 +843,11 @@ export default function ProductInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="8" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No products found</td></tr>
+                <tr><td colSpan="9" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No products found</td></tr>
               ) : (
                 items.map((item) => (
                   <tr key={item._id} style={{ borderBottom: '1px solid #e2e8f0', background: '#fff' }} onMouseEnter={(e) => e.currentTarget.style.background = '#f0fdf4'} onMouseLeave={(e) => e.currentTarget.style.background = '#fff'}>
+                    <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#6366f1', fontSize: '11px', fontFamily: 'monospace', cursor: 'pointer', fontWeight: '700' }}>{item.serialNumber || '—'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer', fontWeight: '600' }}>{item.name}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontSize: '12px', fontFamily: 'monospace', cursor: 'pointer', fontWeight: '600' }}>{item.sku || '-'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#64748b', cursor: 'pointer' }}>{item.category || '-'}</td>

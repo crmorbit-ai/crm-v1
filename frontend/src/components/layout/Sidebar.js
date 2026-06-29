@@ -16,6 +16,16 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
   const [hasMonetization, setHasMonetization] = useState(false);
   const isTenantAdmin = ['TENANT_ADMIN', 'TENANT_MANAGER'].includes(user?.userType);
   const scrollRef = useRef(null);
+
+  // Debug: Log user permissions (only once on mount)
+  React.useEffect(() => {
+    if (user?.roles) {
+      const allPerms = user.roles.flatMap(role =>
+        role.permissions?.map(p => p.feature) || []
+      );
+      console.log('🔐 User Permissions:', [...new Set(allPerms)].sort());
+    }
+  }, [user]);
   const scrollPositionRef = useRef(0);
   const isNavigatingRef = useRef(false);
 
@@ -113,8 +123,11 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
   };
 
   // Check if user has permission - hide item completely if no access
-  const NavItem = ({ to, label, permission }) => {
-    const hasAccess = permission ? hasPermission(permission, 'read') : true;
+  const NavItem = ({ to, label, permission, fallbackPermissions = [] }) => {
+    // Check main permission or any fallback permissions
+    const hasAccess = permission
+      ? (hasPermission(permission, 'read') || fallbackPermissions.some(p => hasPermission(p, 'read')))
+      : true;
     const active = isActive(to);
 
     // Hide completely if no permission
@@ -350,25 +363,27 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   <NavItem to="/social-media" label="Social Media" permission="social_media" />
                 </NavSection>
 
+                {/* System Settings */}
+                <NavSection title="System" section="system" permissions={['system', 'system_settings']}>
+                  <NavItem to="/settings" label="Settings" permission="system" />
+                </NavSection>
+
                 <div className="my-3 border-t sidebar-divider" />
 
                 {/* Access Management */}
-                <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'audit_logs', 'role_template', 'org_chart', 'org_hierarchy']}>
-                  <NavItem to="/users" label="Users" permission="user_management" />
+                <NavSection title="Access Management" section="accessManagement" permissions={['user_management', 'group_management', 'role_management', 'audit_logs', 'role_template', 'org_chart', 'org_hierarchy']}>
+                  <NavItem to="/users" label="Users" permission="user_management" fallbackPermissions={['group_management', 'role_management']} />
                   <NavItem to="/org-chart" label="Org Chart" permission="org_chart" />
                   <NavItem to="/org-hierarchy" label="Org Hierarchy" permission="org_hierarchy" />
                   <NavItem to="/role-template" label="Role Template" permission="role_template" />
                   <NavItem to="/activity-logs" label="Audit Logs" permission="audit_logs" />
                 </NavSection>
 
-                {/* Notifications - only for users with user or task management permissions */}
-                {(hasPermission('user_management', 'read') ||
-                  hasPermission('task_management', 'read')) && (
-                  <NavSection title="Notifications" section="notifications">
-                    <NavItem to="/notifications" label="Notifications" />
-                    <NavItem to="/notification-settings" label="Notification Settings" />
-                  </NavSection>
-                )}
+                {/* Notifications */}
+                <NavSection title="Notifications" section="notifications" permissions={['notification_management', 'notifications']}>
+                  <NavItem to="/notifications" label="Notifications" permission="notifications" />
+                  <NavItem to="/notification-settings" label="Notification Settings" permission="notification_settings" />
+                </NavSection>
 
                 {/* Sales Monetization — only if plan has feature */}
                 {hasMonetization && (
@@ -377,15 +392,11 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   </NavSection>
                 )}
 
-                {/* Support - only for users with user or task management permissions or tenant admin */}
-                {(isTenantAdmin ||
-                  hasPermission('user_management', 'read') ||
-                  hasPermission('task_management', 'read')) && (
-                  <NavSection title="Support" section="support">
-                    <NavItem to="/support" label="My Tickets" />
-                    <NavItem to="/feedback" label={isTenantAdmin ? "Feedback Inbox" : "Feedback"} />
-                  </NavSection>
-                )}
+                {/* Support */}
+                <NavSection title="Support" section="support" permissions={['support', 'my_tickets', 'ticket_management', 'support_tickets', 'support_management', 'feedback']}>
+                  <NavItem to="/support" label="My Tickets" permission="my_tickets" fallbackPermissions={['support', 'ticket_management', 'support_tickets', 'support_management']} />
+                  <NavItem to="/feedback" label={isTenantAdmin ? "Feedback Inbox" : "Feedback"} permission="feedback" fallbackPermissions={['feedback_management']} />
+                </NavSection>
 
               </>
             )}

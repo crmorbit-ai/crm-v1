@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import templateService from '../services/templateService';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -586,6 +586,25 @@ const Leads = () => {
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
   const [fieldValues, setFieldValues] = useState({});
   const [fieldErrors, setFieldErrors] = useState({});
+
+  // Compute active wizard steps based on field definitions
+  const activeWizardSteps = useMemo(() => {
+    const grouped = {};
+    fieldDefinitions.forEach(field => {
+      if (field.isActive && field.showInCreate !== false) {
+        const section = field.section || 'Additional Information';
+        if (!grouped[section]) grouped[section] = [];
+        grouped[section].push(field);
+      }
+    });
+
+    return WIZARD_STEPS.filter(step => {
+      // Keep step if any of its sections have active fields
+      return step.sections.some(sectionName => {
+        return grouped[sectionName] && grouped[sectionName].length > 0;
+      });
+    });
+  }, [fieldDefinitions]);
   // Cascading country/state/city ISO codes for create form
   const [selectedCountryIso, setSelectedCountryIso] = useState('');
   const [selectedStateIso, setSelectedStateIso] = useState('');
@@ -1003,7 +1022,7 @@ const Leads = () => {
 
   const handleCreateLead = async (e) => {
     e.preventDefault();
-    if (wizardStep !== WIZARD_STEPS.length - 1) return; // only submit on last step
+    if (wizardStep !== activeWizardSteps.length - 1) return; // only submit on last step
     if (creating) return;
     setCreating(true);
     try {
@@ -1044,7 +1063,7 @@ const Leads = () => {
 
   // Validate required fields in current wizard step
   const validateCurrentStep = () => {
-    const step = WIZARD_STEPS[wizardStep];
+    const step = activeWizardSteps[wizardStep];
     const groupedFields = groupFieldsBySection(fieldDefinitions);
     const errors = {};
     let hasError = false;
@@ -1081,7 +1100,7 @@ const Leads = () => {
 
   // Returns true if current step has at least one required field
   const currentStepHasRequired = () => {
-    const step = WIZARD_STEPS[wizardStep];
+    const step = activeWizardSteps[wizardStep];
     const groupedFields = groupFieldsBySection(fieldDefinitions);
     return step.sections.some(sectionName =>
       (groupedFields[sectionName] || []).some(f => f.isRequired)
@@ -1947,7 +1966,7 @@ const Leads = () => {
                   <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>🎯</div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Lead</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>{selectedTemplate ? '⚡ Template Mode — Quick Create' : `Step ${wizardStep + 1} of ${WIZARD_STEPS.length}`}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>{selectedTemplate ? '⚡ Template Mode — Quick Create' : `Step ${wizardStep + 1} of ${activeWizardSteps.length}`}</div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
@@ -1957,7 +1976,7 @@ const Leads = () => {
               {!selectedTemplate && (
                 <>
                   <div style={{ display: 'flex', padding: '8px 10px 0' }}>
-                    {WIZARD_STEPS.map((step, idx) => {
+                    {activeWizardSteps.map((step, idx) => {
                       const isDone = idx < wizardStep;
                       const isActive = idx === wizardStep;
                       return (
@@ -1972,7 +1991,7 @@ const Leads = () => {
                     })}
                   </div>
                   <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
-                    <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
+                    <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / activeWizardSteps.length) * 100}%`, transition: 'width 0.35s ease' }} />
                   </div>
                 </>
               )}
@@ -2081,11 +2100,11 @@ const Leads = () => {
                   <>
                     {/* Current step header */}
                     <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-                      <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{WIZARD_STEPS[wizardStep].icon} {WIZARD_STEPS[wizardStep].label}</h4>
-                      <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{WIZARD_STEPS[wizardStep].desc}</p>
+                      <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{activeWizardSteps[wizardStep].icon} {activeWizardSteps[wizardStep].label}</h4>
+                      <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{activeWizardSteps[wizardStep].desc}</p>
                     </div>
                     {(() => {
-                      const step = WIZARD_STEPS[wizardStep];
+                      const step = activeWizardSteps[wizardStep];
                       const groupedFields = groupFieldsBySection(fieldDefinitions);
                       return (
                         <div>
@@ -2159,11 +2178,11 @@ const Leads = () => {
                 ) : (
                   <>
                     <div style={{ display: 'flex', gap: '4px' }}>
-                      {WIZARD_STEPS.map((_, idx) => (
+                      {activeWizardSteps.map((_, idx) => (
                         <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
                       ))}
                     </div>
-                    {wizardStep < WIZARD_STEPS.length - 1 ? (
+                    {wizardStep < activeWizardSteps.length - 1 ? (
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         {!currentStepHasRequired() && (
                           <button type="button" onClick={() => { setFieldErrors({}); setWizardStep(s => s + 1); }}

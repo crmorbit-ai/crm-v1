@@ -605,6 +605,12 @@ export default function ServiceInventory({ fromTab }) {
               <div style={{ marginBottom: '12px', paddingBottom: '12px', borderLeft: '4px solid #6366f1' }}>
                 <h4 style={{ margin: '0 0 8px 0', fontSize: '10px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Basic Info</h4>
                 <div style={{ paddingLeft: '12px' }}>
+                  {selectedItem.serialNumber && (
+                    <div style={{ marginBottom: '8px' }}>
+                      <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>Serial No:</span>
+                      <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#6366f1', fontWeight: '700', fontFamily: 'monospace' }}>{selectedItem.serialNumber}</p>
+                    </div>
+                  )}
                   <div style={{ marginBottom: '8px' }}>
                     <span style={{ fontSize: '10px', color: '#64748b', fontWeight: '600' }}>Name:</span>
                     <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#0f172a', fontWeight: '500' }}>{selectedItem.name}</p>
@@ -831,6 +837,7 @@ export default function ServiceInventory({ fromTab }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#1e293b' }}>
+                <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Serial No.</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Name</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Type</th>
                 <th style={{ padding: '12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px', fontSize: '11px', borderRight: '1px solid #334155' }}>Department</th>
@@ -842,10 +849,11 @@ export default function ServiceInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No services found</td></tr>
+                <tr><td colSpan="8" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No services found</td></tr>
               ) : (
                 items.map((item, idx) => (
                   <tr key={item._id} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? '#fff' : '#f8fafc', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#f8fafc'}>
+                    <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#6366f1', fontSize: '11px', fontFamily: 'monospace', fontWeight: '700' }}>{item.serialNumber || '—'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontWeight: '600' }}>{item.name}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a' }}>{item.serviceType || '-'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px' }}>

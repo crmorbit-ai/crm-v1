@@ -624,15 +624,28 @@ const Support = () => {
                   </div>
                 )}
                 {tickets.length > 0 && (
-                  <div style={{ padding: '10px 14px', borderTop: '1px solid #f8fafc', background: '#fff7ed', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '12px', color: '#94a3b8' }}>Showing <strong style={{ color: '#374151' }}>{tickets.length}</strong> ticket{tickets.length !== 1 ? 's' : ''}</span>
+                  <div style={{ padding: '10px 14px', borderTop: '1px solid #f8fafc', background: '#fff7ed', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <span style={{ fontSize: '12px', color: '#94a3b8' }}>
+                        Showing <strong style={{ color: '#374151' }}>{((pagination.page - 1) * pagination.limit) + 1}-{Math.min(pagination.page * pagination.limit, pagination.total)}</strong> of <strong style={{ color: '#374151' }}>{pagination.total}</strong> ticket{pagination.total !== 1 ? 's' : ''}
+                      </span>
+                      <select
+                        value={pagination.limit}
+                        onChange={(e) => setPagination(p => ({ ...p, limit: Number(e.target.value), page: 1 }))}
+                        style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', fontSize: '12px', color: '#374151', cursor: 'pointer' }}>
+                        <option value={10}>10 / page</option>
+                        <option value={20}>20 / page</option>
+                        <option value={50}>50 / page</option>
+                        <option value={100}>100 / page</option>
+                      </select>
+                    </div>
                     {pagination.pages > 1 && (
                       <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                         <button onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))} disabled={pagination.page === 1}
-                          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: pagination.page === 1 ? 'default' : 'pointer', fontSize: '12px', color: '#374151', opacity: pagination.page === 1 ? 0.5 : 1 }}>← Prev</button>
-                        <span style={{ padding: '5px 8px', fontSize: '12px', color: '#64748b' }}>{pagination.page} / {pagination.pages}</span>
+                          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: pagination.page === 1 ? 'not-allowed' : 'pointer', fontSize: '12px', color: '#374151', opacity: pagination.page === 1 ? 0.5 : 1 }}>← Prev</button>
+                        <span style={{ padding: '5px 8px', fontSize: '12px', color: '#64748b', fontWeight: '600' }}>Page {pagination.page} of {pagination.pages}</span>
                         <button onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))} disabled={pagination.page === pagination.pages}
-                          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: pagination.page === pagination.pages ? 'default' : 'pointer', fontSize: '12px', color: '#374151', opacity: pagination.page === pagination.pages ? 0.5 : 1 }}>Next →</button>
+                          style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid #e2e8f0', background: 'white', cursor: pagination.page === pagination.pages ? 'not-allowed' : 'pointer', fontSize: '12px', color: '#374151', opacity: pagination.page === pagination.pages ? 0.5 : 1 }}>Next →</button>
                       </div>
                     )}
                   </div>

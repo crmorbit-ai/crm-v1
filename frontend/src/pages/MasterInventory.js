@@ -671,6 +671,12 @@ export default function MasterInventory({ fromTab }) {
               <div style={{ marginBottom: 0 }}>
                 <div style={{ background: 'linear-gradient(90deg,#6366f118 0%,transparent 100%)', borderLeft: '3px solid #6366f1', padding: '5px 10px', fontSize: 10, fontWeight: '800', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '8px' }}>Basic Info</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: 0 }}>
+                  {selectedItem.serialNumber && (
+                    <>
+                      <div style={{ padding: '5px 10px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', fontSize: 10, fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Serial No.</div>
+                      <div style={{ padding: '5px 10px', borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #f1f5f9', fontSize: 12, fontWeight: '700', color: '#6366f1', fontFamily: 'monospace', background: '#f8fafc' }}>{selectedItem.serialNumber}</div>
+                    </>
+                  )}
                   <div style={{ padding: '5px 10px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', fontSize: 10, fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.3px' }}>Name</div>
                   <div style={{ padding: '5px 10px', borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #f1f5f9', fontSize: 12, fontWeight: '500', color: '#1e293b', wordBreak: 'break-all' }}>{selectedItem.name}</div>
                   <div style={{ padding: '5px 10px', borderBottom: '1px solid #f1f5f9', background: '#fff', fontSize: 10, fontWeight: '600', color: '#64748b', textTransform: 'uppercase' }}>Type</div>
@@ -962,6 +968,7 @@ export default function MasterInventory({ fromTab }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#1e293b', border: '1px solid #334155' }}>
+                <th style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Serial No.</th>
                 <th style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</th>
                 <th style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
                 <th style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Department</th>
@@ -972,12 +979,15 @@ export default function MasterInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No items found</td></tr>
+                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No items found</td></tr>
               ) : (
                 items.map((item, i) => {
                   const isSelected = selectedItem?._id === item._id;
                   return (
                     <tr key={item._id} style={{ borderBottom: '1px solid #e2e8f0', background: isSelected ? '#e0e7ff' : i % 2 === 0 ? '#fff' : '#f9fafb', cursor: 'pointer', transition: 'background 0.1s' }} onMouseEnter={(e) => !isSelected && (e.currentTarget.style.background = '#eff6ff')} onMouseLeave={(e) => !isSelected && (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f9fafb')}>
+                      <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 11, fontWeight: '700', color: '#6366f1' }}>
+                        {item.serialNumber || '—'}
+                      </td>
                       <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer' }}>
                         <span style={{
                           background: item.type === 'product' ? '#d1fae5' : item.type === 'service' ? '#e9d5ff' : '#fef3c7',

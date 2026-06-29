@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import DashboardLayout from '../components/layout/DashboardLayout';
@@ -274,6 +274,24 @@ const DataCenter = () => {
   const [togglingField, setTogglingField] = useState(null);
 
   const [wizardStep, setWizardStep] = useState(0);
+
+  // Compute active wizard steps based on field definitions
+  const activeWizardSteps = useMemo(() => {
+    const grouped = {};
+    fieldDefinitions.forEach(field => {
+      if (field.isActive && field.showInCreate !== false) {
+        const section = field.section || 'Additional Information';
+        if (!grouped[section]) grouped[section] = [];
+        grouped[section].push(field);
+      }
+    });
+
+    return CUSTOMER_WIZARD_STEPS.filter(step => {
+      return step.sections.some(sectionName => {
+        return grouped[sectionName] && grouped[sectionName].length > 0;
+      });
+    });
+  }, [fieldDefinitions]);
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [selectedCountryIso, setSelectedCountryIso] = useState('');
@@ -284,24 +302,37 @@ const DataCenter = () => {
 
   const extractColumns = (candidatesData) => {
     if (!candidatesData || candidatesData.length === 0) return [];
-    const allKeys = new Set();
-    const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource', 'customerNumber'];
 
-    candidatesData.forEach(candidate => {
-      Object.keys(candidate).forEach(key => {
-        if (!excludeKeys.includes(key) && candidate[key] !== null && candidate[key] !== undefined && candidate[key] !== '') {
-          allKeys.add(key);
-        }
+    // Get active fields from field definitions
+    const activeFields = fieldDefinitions
+      .filter(f => f.isActive && f.showInCreate !== false)
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map(f => f.fieldName);
+
+    // If no field definitions loaded yet, fall back to extracting from data
+    if (activeFields.length === 0) {
+      const allKeys = new Set();
+      const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource', 'customerNumber'];
+
+      candidatesData.forEach(candidate => {
+        Object.keys(candidate).forEach(key => {
+          if (!excludeKeys.includes(key) && candidate[key] !== null && candidate[key] !== undefined && candidate[key] !== '') {
+            allKeys.add(key);
+          }
+        });
       });
-    });
 
-    const columnsArray = Array.from(allKeys);
-    const statusIndex = columnsArray.indexOf('status');
-    if (statusIndex > -1) {
-      columnsArray.splice(statusIndex, 1);
-      columnsArray.push('status');
+      const columnsArray = Array.from(allKeys);
+      const statusIndex = columnsArray.indexOf('status');
+      if (statusIndex > -1) {
+        columnsArray.splice(statusIndex, 1);
+        columnsArray.push('status');
+      }
+      return columnsArray;
     }
-    return columnsArray;
+
+    // Return only active fields in correct order
+    return activeFields;
   };
 
   const loadCandidates = async (overrideFilters) => {
@@ -393,9 +424,12 @@ const DataCenter = () => {
   const groupFieldsBySection = (fields) => {
     const grouped = {};
     fields.forEach(field => {
-      const section = field.section || 'Additional Information';
-      if (!grouped[section]) grouped[section] = [];
-      grouped[section].push(field);
+      // Only include active fields that should be shown in create form
+      if (field.isActive && field.showInCreate !== false) {
+        const section = field.section || 'Additional Information';
+        if (!grouped[section]) grouped[section] = [];
+        grouped[section].push(field);
+      }
     });
     return grouped;
   };
@@ -908,14 +942,14 @@ const DataCenter = () => {
                   <div style={{ width: '30px', height: '30px', borderRadius: '8px', background: 'linear-gradient(135deg,#3b82f6,#6366f1)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '15px' }}>👤</div>
                   <div>
                     <div style={{ fontSize: '13px', fontWeight: '700', color: 'white' }}>New Customer</div>
-                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {CUSTOMER_WIZARD_STEPS.length}</div>
+                    <div style={{ fontSize: '10px', color: 'rgba(255,255,255,0.45)' }}>Step {wizardStep + 1} of {activeWizardSteps.length}</div>
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); setFieldValues({}); setWizardStep(0); setSelectedCountryIso(''); setSelectedStateIso(''); }}
                   style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
               </div>
               <div style={{ display: 'flex', padding: '8px 10px 0' }}>
-                {CUSTOMER_WIZARD_STEPS.map((step, idx) => {
+                {activeWizardSteps.map((step, idx) => {
                   const isDone = idx < wizardStep; const isActive = idx === wizardStep;
                   return (
                     <div key={idx} onClick={() => isDone && setWizardStep(idx)}
@@ -929,7 +963,7 @@ const DataCenter = () => {
                 })}
               </div>
               <div style={{ height: '3px', background: 'rgba(255,255,255,0.08)', margin: '0 10px 8px' }}>
-                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / CUSTOMER_WIZARD_STEPS.length) * 100}%`, transition: 'width 0.35s ease' }} />
+                <div style={{ height: '100%', background: 'linear-gradient(90deg,#3b82f6,#6366f1)', borderRadius: '99px', width: `${(wizardStep / activeWizardSteps.length) * 100}%`, transition: 'width 0.35s ease' }} />
               </div>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
@@ -942,11 +976,11 @@ const DataCenter = () => {
                   </div>
                 )}
                 <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
-                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{CUSTOMER_WIZARD_STEPS[wizardStep]?.icon} {CUSTOMER_WIZARD_STEPS[wizardStep]?.label}</h4>
-                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{CUSTOMER_WIZARD_STEPS[wizardStep]?.desc}</p>
+                  <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{activeWizardSteps[wizardStep]?.icon} {activeWizardSteps[wizardStep]?.label}</h4>
+                  <p style={{ margin: 0, fontSize: '11px', color: '#94a3b8' }}>{activeWizardSteps[wizardStep]?.desc}</p>
                 </div>
                 {(() => {
-                  const step = CUSTOMER_WIZARD_STEPS[wizardStep];
+                  const step = activeWizardSteps[wizardStep];
                   const grouped = groupFieldsBySection(fieldDefinitions);
                   return (
                     <div>
@@ -973,11 +1007,11 @@ const DataCenter = () => {
                   {wizardStep === 0 ? 'Cancel' : '← Back'}
                 </button>
                 <div className="dc-wizard-dots" style={{ display: 'flex', gap: '4px' }}>
-                  {CUSTOMER_WIZARD_STEPS.map((_, idx) => (
+                  {activeWizardSteps.map((_, idx) => (
                     <div key={idx} style={{ width: idx === wizardStep ? '16px' : '5px', height: '5px', borderRadius: '99px', background: idx < wizardStep ? '#10b981' : idx === wizardStep ? '#3b82f6' : '#e2e8f0', transition: 'all 0.25s' }} />
                   ))}
                 </div>
-                {wizardStep < CUSTOMER_WIZARD_STEPS.length - 1 ? (
+                {wizardStep < activeWizardSteps.length - 1 ? (
                   <button type="button" onClick={() => {
                     if (wizardStep === 0) {
                       const name = (fieldValues['customerName'] || '').trim();

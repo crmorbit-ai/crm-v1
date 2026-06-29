@@ -636,6 +636,12 @@ export default function LeadInventory({ fromTab }) {
               <div style={{ marginBottom: '16px', borderLeft: '3px solid #6366f1', background: 'linear-gradient(90deg,#6366f118 0%,transparent 100%)', padding: '12px 12px 12px 16px' }}>
                 <h4 style={{ margin: '0 0 8px', fontSize: '10px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Basic Info</h4>
                 <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr', gap: '8px 12px', fontSize: '12px' }}>
+                  {selectedItem.serialNumber && (
+                    <>
+                      <span style={{ color: '#64748b', fontWeight: '600' }}>Serial No.</span>
+                      <span style={{ color: '#6366f1', fontWeight: '700', fontFamily: 'monospace', fontSize: '11px' }}>{selectedItem.serialNumber}</span>
+                    </>
+                  )}
                   <span style={{ color: '#64748b', fontWeight: '600' }}>Name</span>
                   <span style={{ color: '#0f172a' }}>{selectedItem.name || '-'}</span>
                   <span style={{ color: '#64748b', fontWeight: '600' }}>Type</span>
@@ -859,6 +865,7 @@ export default function LeadInventory({ fromTab }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
+                <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Serial No.</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Phone</th>
@@ -869,10 +876,11 @@ export default function LeadInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="6" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No leads found</td></tr>
+                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No leads found</td></tr>
               ) : (
                 items.map((item, idx) => (
                   <tr key={item._id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #e2e8f0', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#f9fafb'}>
+                    <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#6366f1', fontSize: '11px', fontFamily: 'monospace', cursor: 'pointer', fontWeight: '700' }}>{item.serialNumber || '—'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer', fontWeight: '500' }}>{item.name}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontSize: '12px', cursor: 'pointer' }}>{item.leadEmail || '-'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer' }}>{item.leadPhone || '-'}</td>
