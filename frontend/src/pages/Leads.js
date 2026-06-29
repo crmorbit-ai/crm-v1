@@ -92,9 +92,13 @@ const DEFAULT_LEAD_FIELDS = [
   { fieldName: 'region', label: 'Region', fieldType: 'text', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 21 },
   { fieldName: 'numberOfEmployees', label: 'No. of Employees', fieldType: 'number', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 22 },
   { fieldName: 'annualRevenue', label: 'Annual Revenue', fieldType: 'currency', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 23 },
+  { fieldName: 'gstNumber', label: 'GST Number', fieldType: 'text', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 24, placeholder: '22AAAAA0000A1Z5' },
+  { fieldName: 'panNumber', label: 'PAN Number', fieldType: 'text', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 25, placeholder: 'ABCDE1234F' },
   { fieldName: 'country', label: 'Country', fieldType: 'dropdown', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 30 },
   { fieldName: 'state', label: 'State', fieldType: 'dropdown', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 31 },
   { fieldName: 'city', label: 'City', fieldType: 'dropdown', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 32 },
+  { fieldName: 'pincode', label: 'Pincode / ZIP', fieldType: 'text', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 33, placeholder: '110001' },
+  { fieldName: 'address', label: 'Street Address', fieldType: 'textarea', section: 'Address', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 34 },
   { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Requirements', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
   { fieldName: 'requirements', label: 'Requirements', fieldType: 'textarea', section: 'Requirements', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2 },
   { fieldName: 'competitor', label: 'Competitor', fieldType: 'text', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 42 },
@@ -3264,7 +3268,12 @@ const Leads = () => {
                         {(lead.customerName?.[0] || '?').toUpperCase()}
                       </div>
                       <div style={{ flex:1, minWidth:0 }}>
-                        <h3 style={{ margin:'0 0 2px', fontSize:'14px', fontWeight:'800', color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.customerName}</h3>
+                        <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'2px' }}>
+                          <h3 style={{ margin:0, fontSize:'14px', fontWeight:'800', color:'#0f172a', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{lead.customerName}</h3>
+                          <span style={{ fontSize:'9px', fontWeight:'700', color:'#7c3aed', background:'#f3e8ff', padding:'2px 5px', borderRadius:'4px', border:'1px solid #c4b5fd', whiteSpace:'nowrap' }}>
+                            {lead.leadId || `L${String(lead.leadNumber || 0).padStart(5, '0')}`}
+                          </span>
+                        </div>
                         <p style={{ margin:0, fontSize:'11px', color:'#94a3b8', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {[lead.jobTitle, lead.company].filter(Boolean).join(' · ')}
                         </p>
@@ -3305,7 +3314,7 @@ const Leads = () => {
                     {/* Footer */}
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:'10px', borderTop:'1px solid #f1f5f9' }}>
                       {lead.estimatedDealValue
-                        ? <span style={{ fontSize:'13px', fontWeight:'800', color:'#0f172a' }}>${Number(lead.estimatedDealValue).toLocaleString()}</span>
+                        ? <span style={{ fontSize:'13px', fontWeight:'800', color:'#0f172a' }}>₹{Number(lead.estimatedDealValue).toLocaleString('en-IN')}</span>
                         : <span style={{ fontSize:'12px', color:'#cbd5e1' }}>No deal value</span>}
                       {lead.expectedCloseDate && (
                         <div style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', color:'#94a3b8' }}>
@@ -3348,7 +3357,7 @@ const Leads = () => {
                     />
                   </th>
                   <th style={{ padding:'8px 6px 8px 12px', textAlign:'left', fontSize:'10px', fontWeight:'800', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px', position:'relative', userSelect:'none' }}>
-                    #
+                    Lead ID
                     <span onMouseDown={e => startResize(e, '__num__')}
                       style={{ position:'absolute', right:0, top:'20%', bottom:'20%', width:'3px', cursor:'col-resize', zIndex:2, background:'#cbd5e1', borderRadius:'2px', transition:'background 0.15s' }}
                       onMouseEnter={e => e.currentTarget.style.background='#6366f1'}
@@ -3390,7 +3399,9 @@ const Leads = () => {
                         />
                       </td>
                       <td style={{ padding:'7px 12px', whiteSpace:'nowrap', overflow:'hidden' }}>
-                        <span style={{ fontSize:'10px', fontWeight:'700', color:'#94a3b8', background:'#f1f5f9', padding:'2px 6px', borderRadius:'4px' }}>{lead.leadNumber || '—'}</span>
+                        <span style={{ fontSize:'10px', fontWeight:'700', color:'#7c3aed', background:'#f3e8ff', padding:'3px 7px', borderRadius:'5px', border:'1px solid #c4b5fd' }}>
+                          {lead.leadId || `L${String(lead.leadNumber || 0).padStart(5, '0')}`}
+                        </span>
                       </td>
                       {displayColumns.map((col) => (
                         <td key={col} style={{ padding:'7px 12px', whiteSpace:'nowrap' }}>

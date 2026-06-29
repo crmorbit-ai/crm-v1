@@ -69,7 +69,19 @@ const ActivityLogs = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    const newFilters = { ...filters, [name]: value };
+
+    // Validate date range
+    if (newFilters.startDate && newFilters.endDate) {
+      if (new Date(newFilters.endDate) < new Date(newFilters.startDate)) {
+        setError('End Date cannot be before Start Date');
+        return;
+      } else {
+        setError('');
+      }
+    }
+
+    setFilters(newFilters);
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
@@ -105,6 +117,9 @@ const ActivityLogs = () => {
     if (action.includes('updated')) return 'status-badge contacted';
     if (action.includes('deleted')) return 'status-badge lost';
     if (action.includes('login')) return 'status-badge new';
+    if (action.includes('MESSAGE') || action.includes('message')) return 'status-badge negotiation'; // Support messages
+    if (action.includes('SUPPORT') || action.includes('support')) return 'status-badge proposal'; // Support tickets
+    if (action.includes('FEEDBACK') || action.includes('feedback')) return 'status-badge meeting'; // Feedback
     return 'status-badge';
   };
 
@@ -252,6 +267,8 @@ const ActivityLogs = () => {
               placeholder="Start Date"
               className="crm-form-input"
               value={filters.startDate}
+              min="2020-01-01"
+              max={new Date().toISOString().split('T')[0]}
               onChange={handleFilterChange}
             />
             <input
@@ -260,6 +277,8 @@ const ActivityLogs = () => {
               placeholder="End Date"
               className="crm-form-input"
               value={filters.endDate}
+              min={filters.startDate || "2020-01-01"}
+              max={new Date().toISOString().split('T')[0]}
               onChange={handleFilterChange}
             />
             <select
@@ -363,22 +382,26 @@ const ActivityLogs = () => {
             <div style={{ overflowX: 'auto' }}>
               <table className="crm-table">
                 <thead>
-                  <tr>
-                    <th style={{ whiteSpace: 'nowrap' }}>Date/Time</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>User</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Action</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Resource</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>IP Address</th>
-                    <th style={{ whiteSpace: 'nowrap' }}>Details</th>
+                  <tr style={{ background: '#e2e8f0' }}>
+                    <th style={{ whiteSpace: 'nowrap', width: '60px', textAlign: 'center', background: '#e2e8f0', fontWeight: '800', color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '14px 12px', borderBottom: '2px solid #cbd5e1' }}>#</th>
+                    <th style={{ whiteSpace: 'nowrap', background: '#e2e8f0', fontWeight: '800', color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '14px 12px', borderBottom: '2px solid #cbd5e1' }}>Date/Time</th>
+                    <th style={{ whiteSpace: 'nowrap', background: '#e2e8f0', fontWeight: '800', color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '14px 12px', borderBottom: '2px solid #cbd5e1' }}>User</th>
+                    <th style={{ whiteSpace: 'nowrap', background: '#e2e8f0', fontWeight: '800', color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '14px 12px', borderBottom: '2px solid #cbd5e1' }}>Action</th>
+                    <th style={{ whiteSpace: 'nowrap', background: '#e2e8f0', fontWeight: '800', color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '14px 12px', borderBottom: '2px solid #cbd5e1' }}>Resource</th>
+                    <th style={{ whiteSpace: 'nowrap', background: '#e2e8f0', fontWeight: '800', color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '14px 12px', borderBottom: '2px solid #cbd5e1' }}>IP Address</th>
+                    <th style={{ whiteSpace: 'nowrap', background: '#e2e8f0', fontWeight: '800', color: '#1e293b', fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', padding: '14px 12px', borderBottom: '2px solid #cbd5e1' }}>Details</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.map((log) => (
-                    <tr key={log._id}>
-                      <td style={{ whiteSpace: 'nowrap' }}>
+                  {logs.map((log, index) => (
+                    <tr key={log._id} style={{ borderBottom: '1px solid #cbd5e1' }}>
+                      <td style={{ whiteSpace: 'nowrap', textAlign: 'center', fontWeight: '600', color: '#64748b', fontSize: '13px', padding: '12px' }}>
+                        {(pagination.page - 1) * pagination.limit + index + 1}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap', padding: '12px' }}>
                         {formatDate(log.createdAt)}
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
+                      <td style={{ whiteSpace: 'nowrap', padding: '12px' }}>
                         <div style={{ fontWeight: '500' }}>
                           {log.user ? `${log.user.firstName} ${log.user.lastName}` : 'System'}
                         </div>
@@ -388,19 +411,19 @@ const ActivityLogs = () => {
                           </div>
                         )}
                       </td>
-                      <td>
+                      <td style={{ padding: '12px' }}>
                         <span className={getActionBadgeClass(log.action)} style={{ whiteSpace: 'nowrap' }}>
                           {log.action}
                         </span>
                       </td>
-                      <td style={{ whiteSpace: 'nowrap' }}>
+                      <td style={{ whiteSpace: 'nowrap', padding: '12px' }}>
                     {log.resourceType ? (
                 <div style={{ fontWeight: '500', color: '#374151' }}>
                          {log.resourceType}
                            </div>
                          ) : '-'}
                            </td>
-                      <td style={{ fontSize: '13px', fontFamily: 'monospace', color: '#666', whiteSpace: 'nowrap' }}>
+                      <td style={{ fontSize: '13px', fontFamily: 'monospace', color: '#666', whiteSpace: 'nowrap', padding: '12px' }}>
                         {log.ipAddress || '-'}
                       </td>
                       <td style={{ maxWidth: '450px', minWidth: '350px', padding: '12px' }}>
@@ -597,6 +620,17 @@ const ActivityLogs = () => {
                                 border: '1px solid #e5e7eb'
                               }}>
                                 {log.details.recordName}
+                              </div>
+                            )}
+
+                            {/* Show "No details" if all fields are empty */}
+                            {!log.details.changes && !log.details.targetUser && !log.details.changedBy && !log.details.recordName && (
+                              <div style={{
+                                color: '#9ca3af',
+                                fontSize: '12px',
+                                fontStyle: 'italic'
+                              }}>
+                                No details
                               </div>
                             )}
                           </div>

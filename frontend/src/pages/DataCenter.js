@@ -303,20 +303,26 @@ const DataCenter = () => {
   const extractColumns = (candidatesData) => {
     if (!candidatesData || candidatesData.length === 0) return [];
 
+    // Internal/system fields that should NEVER be shown in table
+    const systemFields = [
+      '_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt',
+      'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource', 'customerNumber',
+      'movedToLeadsAt', 'currentCTC', 'expectedCTC', 'bb', 'dumm'
+    ];
+
     // Get active fields from field definitions
     const activeFields = fieldDefinitions
-      .filter(f => f.isActive && f.showInCreate !== false)
+      .filter(f => f.isActive && f.showInCreate !== false && !systemFields.includes(f.fieldName))
       .sort((a, b) => a.displayOrder - b.displayOrder)
       .map(f => f.fieldName);
 
     // If no field definitions loaded yet, fall back to extracting from data
     if (activeFields.length === 0) {
       const allKeys = new Set();
-      const excludeKeys = ['_id', '__v', 'tenant', 'importedBy', 'importedAt', 'createdAt', 'updatedAt', 'movedBy', 'movedToTenant', 'leadId', 'isActive', 'dataSource', 'customerNumber'];
 
       candidatesData.forEach(candidate => {
         Object.keys(candidate).forEach(key => {
-          if (!excludeKeys.includes(key) && candidate[key] !== null && candidate[key] !== undefined && candidate[key] !== '') {
+          if (!systemFields.includes(key) && candidate[key] !== null && candidate[key] !== undefined && candidate[key] !== '') {
             allKeys.add(key);
           }
         });
@@ -840,6 +846,21 @@ const DataCenter = () => {
     if (value === null || value === undefined || value === '') return '-';
     if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : '-';
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+
+    // Format date values (ISO strings like "2026-06-29T11:17:32.357Z")
+    if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+      const date = new Date(value);
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString('en-IN', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    }
+
     if (typeof value === 'object') return JSON.stringify(value);
     return value.toString();
   };
@@ -1332,7 +1353,9 @@ const DataCenter = () => {
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
                           <h3 style={{ margin: 0, fontSize: '14px', fontWeight: '700', color: '#1e3c72', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>{candidate.customerName || getDetailName(candidate)}</h3>
-                          {candidate.customerNumber && <span style={{ fontSize: '10px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '1px 6px', borderRadius: '4px' }}>{String(candidate.customerNumber).padStart(5, '0')}</span>}
+                          <span style={{ fontSize: '10px', fontWeight: '700', color: '#1e40af', background: '#dbeafe', padding: '2px 6px', borderRadius: '4px', border: '1px solid #93c5fd' }}>
+                            {candidate.customerId || `C${String(candidate.customerNumber || 0).padStart(5, '0')}`}
+                          </span>
                         </div>
                         <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>{candidate.currentDesignation || 'N/A'}</p>
                       </div>
@@ -1398,8 +1421,8 @@ const DataCenter = () => {
                             style={{ width: '16px', height: '16px' }} />
                         </td>
                         <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#94a3b8', background: '#f1f5f9', padding: '2px 7px', borderRadius: '5px' }}>
-                            {candidate.customerNumber ? String(candidate.customerNumber).padStart(5, '0') : '—'}
+                          <span style={{ fontSize: '11px', fontWeight: '700', color: '#1e40af', background: '#dbeafe', padding: '3px 8px', borderRadius: '6px', border: '1px solid #93c5fd' }}>
+                            {candidate.customerId || `C${String(candidate.customerNumber || 0).padStart(5, '0')}`}
                           </span>
                         </td>
                         {displayColumns.map((column) => {

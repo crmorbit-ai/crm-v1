@@ -111,7 +111,13 @@ const createAccount = async (req, res) => {
       if (!tenant) return errorResponse(res, 400, 'Tenant is required');
     } else tenant = req.user.tenant;
     const existingAccount = await Account.findOne({ accountName, tenant, isActive: true });
-    if (existingAccount) return errorResponse(res, 400, 'Account with this name already exists');
+    if (existingAccount) {
+      return res.status(400).json({
+        success: false,
+        field: 'accountName',
+        message: 'Account name already exists. Please choose a unique name.'
+      });
+    }
     const lastAccount = await Account.findOne({ tenant }).sort({ accountNumber: -1 }).select('accountNumber');
     const nextAccountNumber = (lastAccount?.accountNumber || 0) + 1;
     const account = await Account.create({
@@ -136,6 +142,22 @@ const createAccount = async (req, res) => {
     successResponse(res, 201, 'Account created successfully', account);
   } catch (error) {
     console.error('Create account error:', error);
+    // Handle MongoDB duplicate key error
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern || {})[0];
+      if (field === 'accountName') {
+        return res.status(400).json({
+          success: false,
+          field: 'accountName',
+          message: 'Account name already exists. Please choose a unique name.'
+        });
+      }
+      return res.status(400).json({
+        success: false,
+        field: field,
+        message: `${field} already exists. Please use a different value.`
+      });
+    }
     errorResponse(res, 500, 'Server error');
   }
 };

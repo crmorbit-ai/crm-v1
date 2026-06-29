@@ -87,7 +87,7 @@ export default function NotificationSettings() {
           <div style={{ background:'rgba(255,255,255,0.08)', border:'1px solid rgba(255,255,255,0.12)', borderRadius:'14px', padding:'14px 20px', minWidth:'180px' }}>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:'8px' }}>
               <span style={{ fontSize:'12px', color:'rgba(255,255,255,0.6)', fontWeight:'600' }}>Active</span>
-              <span style={{ fontSize:'18px', fontWeight:'800', color:'#fff' }}>{enabledCount}<span style={{ fontSize:'12px', color:'rgba(255,255,255,0.4)', fontWeight:'400' }}>/{totalCount}</span></span>
+              <span style={{ fontSize:'18px', fontWeight:'800', color:'#fff' }}>{enabledCount}<span style={{ fontSize:'12px', color:'#fff', fontWeight:'600' }}>/{totalCount}</span></span>
             </div>
             <div style={{ height:'6px', borderRadius:'99px', background:'rgba(255,255,255,0.15)', overflow:'hidden' }}>
               <div style={{ height:'100%', borderRadius:'99px', background:'linear-gradient(90deg,#a5b4fc,#818cf8)', width:`${(enabledCount/totalCount)*100}%`, transition:'width 0.3s ease' }} />
@@ -153,7 +153,7 @@ export default function NotificationSettings() {
                   </div>
                   <div>
                     <div style={{ fontSize:'14px', fontWeight:'600', color: isOn ? '#0f172a' : '#94a3b8', transition:'color 0.2s' }}>{item.label}</div>
-                    <div style={{ fontSize:'12px', color:'#cbd5e1', marginTop:'2px' }}>{item.desc}</div>
+                    <div style={{ fontSize:'12px', color:'#64748b', marginTop:'2px', fontWeight:'500' }}>{item.desc}</div>
                   </div>
                 </div>
 

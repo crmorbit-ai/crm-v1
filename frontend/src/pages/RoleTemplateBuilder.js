@@ -45,10 +45,57 @@ const Steps = ({ active }) => (
 /* ── Single Role Row ─────────────────────────────────────── */
 const RoleRow = ({ role, index, total, allRoles, onChange, onDelete, onMoveUp, onMoveDown }) => {
   const [open, setOpen] = useState(false);
+  const [editData, setEditData] = useState(null);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [saving, setSaving] = useState(false);
   const color = lc(role.level ?? index);
 
+  const handleExpand = () => {
+    if (!open) {
+      // Opening - initialize edit data
+      setEditData({ ...role });
+      setHasChanges(false);
+    }
+    setOpen(o => !o);
+  };
+
+  const handleFieldChange = (key, value) => {
+    setEditData(prev => ({ ...prev, [key]: value }));
+    setHasChanges(true);
+  };
+
+  const handleSave = () => {
+    if (editData && hasChanges) {
+      setSaving(true);
+      // Save all changes
+      Object.keys(editData).forEach(key => {
+        onChange(key, editData[key]);
+      });
+      // Small delay for visual feedback
+      setTimeout(() => {
+        setHasChanges(false);
+        setEditData(null);
+        setSaving(false);
+        setOpen(false);
+      }, 300);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditData(null);
+    setHasChanges(false);
+    setOpen(false);
+  };
+
+  const currentData = editData || role;
+
+  // Only add ID to first role of each level
+  const isFirstOfLevel = allRoles.findIndex(r => (r.level ?? 0) === (role.level ?? 0)) === index;
+
   return (
-    <div style={{ border: `1.5px solid ${color}30`, borderRadius: 14, marginBottom: 8, background: '#fff', overflow: 'hidden' }}>
+    <div
+      id={isFirstOfLevel ? `role-level-${role.level ?? 0}` : undefined}
+      style={{ border: `1.5px solid ${color}30`, borderRadius: 14, marginBottom: 8, background: '#fff', overflow: 'hidden', scrollMarginTop: '80px' }}>
       <style>{`
   /* ── RESPONSIVE ────────────────── */
   @media(max-width:768px){
@@ -67,7 +114,7 @@ const RoleRow = ({ role, index, total, allRoles, onChange, onDelete, onMoveUp, o
 `}</style>
 
       {/* Collapsed header */}
-      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', cursor:'pointer' }} onClick={() => setOpen(o => !o)}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', cursor:'pointer' }} onClick={handleExpand}>
         <div style={{ width:28, height:28, borderRadius:8, background:`${color}18`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:11, fontWeight:900, color, flexShrink:0 }}>
           L{role.level ?? index}
         </div>
@@ -85,50 +132,132 @@ const RoleRow = ({ role, index, total, allRoles, onChange, onDelete, onMoveUp, o
 
         {/* Move + Delete */}
         <div style={{ display:'flex', gap:4 }} onClick={e => e.stopPropagation()}>
-          <button onClick={onMoveUp}   disabled={index === 0}       style={abtn}>↑</button>
-          <button onClick={onMoveDown} disabled={index === total-1} style={abtn}>↓</button>
-          <button onClick={onDelete}   style={{ ...abtn, color:'#f43f5e', background:'#fff1f2', borderColor:'#fecaca' }}>✕</button>
+          <button onClick={(e) => { e.stopPropagation(); onMoveUp(); }}   disabled={index === 0}       style={abtn} title="Move Up">↑</button>
+          <button onClick={(e) => { e.stopPropagation(); onMoveDown(); }} disabled={index === total-1} style={abtn} title="Move Down">↓</button>
+          <button onClick={(e) => { e.stopPropagation(); onDelete(); }}   style={{ ...abtn, color:'#f43f5e', background:'#fff1f2', borderColor:'#fecaca' }} title="Delete Role">✕</button>
         </div>
-        <span style={{ fontSize:12, color:'#94a3b8', marginLeft:4 }}>{open ? '▾' : '▸'}</span>
+        <button
+          onClick={(e) => { e.stopPropagation(); handleExpand(); }}
+          style={{
+            fontSize: 20,
+            color: '#64748b',
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '8px 10px',
+            borderRadius: 6,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s',
+            minWidth: 36,
+            minHeight: 36
+          }}
+          onMouseEnter={(e) => { e.target.style.background = '#f1f5f9'; e.target.style.color = '#0f172a'; }}
+          onMouseLeave={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#64748b'; }}
+          title={open ? 'Collapse' : 'Expand'}
+        >
+          {open ? '▾' : '▸'}
+        </button>
       </div>
 
       {/* Expanded fields */}
       {open && (
-        <div style={{ padding:'0 14px 16px', borderTop:'1px solid #f1f5f9', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:12 }}>
-          <div>
-            <label style={lbl}>Role Name *</label>
-            <input value={role.roleName} onChange={e => onChange('roleName', e.target.value)}
-              style={inp} placeholder="e.g. Chief Executive Officer" />
+        <>
+          <div style={{ padding:'0 14px 16px', borderTop:'1px solid #f1f5f9', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginTop:12 }}>
+            <div>
+              <label style={lbl}>Role Name *</label>
+              <input value={currentData.roleName} onChange={e => handleFieldChange('roleName', e.target.value)}
+                style={inp} placeholder="e.g. Chief Executive Officer" />
+            </div>
+            <div>
+              <label style={lbl}>Level <span style={{ fontWeight:400, color:'#94a3b8' }}>(0 = top)</span></label>
+              <input type="number" min="0" value={currentData.level ?? 0} onChange={e => handleFieldChange('level', parseInt(e.target.value) || 0)} style={inp} />
+            </div>
+            <div>
+              <label style={lbl}>Type</label>
+              <select value={currentData.type} onChange={e => handleFieldChange('type', e.target.value)} style={inp}>
+                {TYPES.map(t => <option key={t} value={t}>{TYPE_META[t]} {t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label style={lbl}>Reports Under <span style={{ fontWeight:400, color:'#94a3b8' }}>(parent role)</span></label>
+              <select value={currentData.parentRoleId || ''} onChange={e => handleFieldChange('parentRoleId', e.target.value || null)} style={inp}>
+                <option value="">— Top Level —</option>
+                {allRoles.filter(r => r.roleId !== role.roleId).map(r => (
+                  <option key={r.roleId} value={r.roleId}>{TYPE_META[r.type]} {r.roleName} (L{r.level})</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ gridColumn:'1/-1' }}>
+              <label style={lbl}>
+                Match Keywords <span style={{ fontWeight:400, color:'#94a3b8' }}>— comma separated, used to match lead designations automatically</span>
+              </label>
+              <input
+                value={(currentData.keywords || []).join(', ')}
+                onChange={e => handleFieldChange('keywords', e.target.value.split(',').map(k => k.trim()).filter(Boolean))}
+                style={inp} placeholder="e.g. ceo, chief executive, managing director, md" />
+            </div>
           </div>
-          <div>
-            <label style={lbl}>Level <span style={{ fontWeight:400, color:'#94a3b8' }}>(0 = top)</span></label>
-            <input type="number" min="0" value={role.level ?? 0} onChange={e => onChange('level', parseInt(e.target.value) || 0)} style={inp} />
+
+          {/* Save/Cancel buttons */}
+          <div style={{
+            display: 'flex',
+            gap: 8,
+            padding: '12px 14px',
+            borderTop: '1px solid #e2e8f0',
+            background: '#f8fafc'
+          }}>
+            <button
+              onClick={handleSave}
+              disabled={!hasChanges || saving}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: saving ? '#059669' : hasChanges ? '#10b981' : '#d1d5db',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: hasChanges && !saving ? 'pointer' : 'not-allowed',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                opacity: saving ? 0.8 : 1
+              }}
+              title={saving ? 'Saving...' : hasChanges ? 'Save changes' : 'No changes to save'}
+            >
+              <span style={{ fontSize: '16px' }}>{saving ? '⏳' : '✓'}</span> {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+            <button
+              onClick={handleCancel}
+              disabled={saving}
+              style={{
+                flex: 1,
+                padding: '10px',
+                background: '#fff',
+                color: saving ? '#cbd5e1' : '#64748b',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '13px',
+                fontWeight: '700',
+                cursor: saving ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                opacity: saving ? 0.5 : 1
+              }}
+              title={saving ? 'Cannot cancel while saving' : 'Cancel and close'}
+            >
+              <span style={{ fontSize: '16px' }}>✕</span> Cancel
+            </button>
           </div>
-          <div>
-            <label style={lbl}>Type</label>
-            <select value={role.type} onChange={e => onChange('type', e.target.value)} style={inp}>
-              {TYPES.map(t => <option key={t} value={t}>{TYPE_META[t]} {t.charAt(0).toUpperCase()+t.slice(1)}</option>)}
-            </select>
-          </div>
-          <div>
-            <label style={lbl}>Reports Under <span style={{ fontWeight:400, color:'#94a3b8' }}>(parent role)</span></label>
-            <select value={role.parentRoleId || ''} onChange={e => onChange('parentRoleId', e.target.value || null)} style={inp}>
-              <option value="">— Top Level —</option>
-              {allRoles.filter(r => r.roleId !== role.roleId).map(r => (
-                <option key={r.roleId} value={r.roleId}>{TYPE_META[r.type]} {r.roleName} (L{r.level})</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ gridColumn:'1/-1' }}>
-            <label style={lbl}>
-              Match Keywords <span style={{ fontWeight:400, color:'#94a3b8' }}>— comma separated, used to match lead designations automatically</span>
-            </label>
-            <input
-              value={(role.keywords || []).join(', ')}
-              onChange={e => onChange('keywords', e.target.value.split(',').map(k => k.trim()).filter(Boolean))}
-              style={inp} placeholder="e.g. ceo, chief executive, managing director, md" />
-          </div>
-        </div>
+        </>
       )}
     </div>
   );
@@ -186,14 +315,62 @@ export default function RoleTemplateBuilder() {
   }, [location.pathname]);
 
   /* ── Role helpers ── */
-  const addRole = () => setRoles(r => [...r, {
-    roleId: `role_${uid()}`, roleName: '', level: r.length,
-    type: 'role', parentRoleId: null, keywords: [], order: r.length,
-  }]);
+  const addRole = () => {
+    // Validate: Check if last role has a name before adding new one
+    if (roles.length > 0) {
+      const lastRole = roles[roles.length - 1];
+      if (!lastRole.roleName || !lastRole.roleName.trim()) {
+        showToast('⚠️ Please fill the current role name before adding a new role');
+        return;
+      }
+    }
+
+    setRoles(r => [...r, {
+      roleId: `role_${uid()}`, roleName: '', level: r.length,
+      type: 'role', parentRoleId: null, keywords: [], order: r.length,
+    }]);
+  };
   const upd  = (idx, k, v) => setRoles(r => r.map((ro, i) => i === idx ? { ...ro, [k]: v } : ro));
-  const del  = (idx)        => setRoles(r => r.filter((_, i) => i !== idx));
+  const del  = async (idx) => {
+    const roleToDelete = roles[idx];
+
+    // Confirm deletion
+    const roleName = roleToDelete.roleName || 'Unnamed';
+    if (!window.confirm(`Delete role "${roleName}"? This will save the template immediately.`)) {
+      return;
+    }
+
+    const updatedRoles = roles.filter((_, i) => i !== idx);
+
+    // Optimistic UI update
+    setRoles(updatedRoles);
+
+    // Persist to backend
+    try {
+      await svc.saveTemplate({ templateName: tplName, roles: updatedRoles });
+      showToast(`✅ Role "${roleName}" deleted`);
+    } catch (e) {
+      // Rollback on error
+      setRoles(roles);
+      showToast('❌ Failed to delete role: ' + (e.response?.data?.message || e.message));
+    }
+  };
   const up   = (idx)        => { if (!idx) return; setRoles(r => { const a=[...r]; [a[idx-1],a[idx]]=[a[idx],a[idx-1]]; return a; }); };
   const down = (idx)        => { if (idx >= roles.length-1) return; setRoles(r => { const a=[...r]; [a[idx],a[idx+1]]=[a[idx+1],a[idx]]; return a; }); };
+
+  const scrollToLevel = (level) => {
+    const element = document.getElementById(`role-level-${level}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // Brief highlight effect
+      const originalBoxShadow = element.style.boxShadow;
+      element.style.transition = 'box-shadow 0.3s ease-in-out';
+      element.style.boxShadow = '0 0 0 3px #3b82f6, 0 4px 20px rgba(59,130,246,0.3)';
+      setTimeout(() => {
+        element.style.boxShadow = originalBoxShadow;
+      }, 1500);
+    }
+  };
 
   const saveAndPreview = async () => {
     if (!roles.length) return showToast('Add at least one role first');
@@ -257,7 +434,35 @@ export default function RoleTemplateBuilder() {
           {roles.length > 0 && (
             <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:12 }}>
               {[...new Set(roles.map(r => r.level ?? 0))].sort().map(lvl => (
-                <div key={lvl} style={{ display:'flex', alignItems:'center', gap:5, background:'#fff', border:`1px solid ${lc(lvl)}33`, borderRadius:8, padding:'4px 10px' }}>
+                <div
+                  key={lvl}
+                  onClick={() => scrollToLevel(lvl)}
+                  style={{
+                    display:'flex',
+                    alignItems:'center',
+                    gap:5,
+                    background:'#fff',
+                    border:`1px solid ${lc(lvl)}33`,
+                    borderRadius:8,
+                    padding:'4px 10px',
+                    cursor:'pointer',
+                    transition:'all 0.2s',
+                    userSelect:'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = `${lc(lvl)}15`;
+                    e.currentTarget.style.borderColor = lc(lvl);
+                    e.currentTarget.style.transform = 'translateY(-2px)';
+                    e.currentTarget.style.boxShadow = '0 4px 8px rgba(0,0,0,0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = '#fff';
+                    e.currentTarget.style.borderColor = `${lc(lvl)}33`;
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                  title={`Click to scroll to Level ${lvl} roles`}
+                >
                   <div style={{ width:9, height:9, borderRadius:'50%', background:lc(lvl) }} />
                   <span style={{ fontSize:11, fontWeight:700, color:'#475569' }}>
                     Level {lvl}: {roles.filter(r => (r.level ?? 0) === lvl).length} role(s)
@@ -376,15 +581,20 @@ export default function RoleTemplateBuilder() {
           {genResult && (
             <div style={{ background:'#f0fdf4', border:'1px solid #bbf7d0', borderRadius:12, padding:16, marginBottom:16 }}>
               <div style={{ fontSize:13, fontWeight:800, color:'#15803d', marginBottom:8 }}>✅ Org Tree Generated!</div>
-              <div style={{ display:'flex', gap:20, fontSize:12, color:'#166534', flexWrap:'wrap' }}>
+              <div style={{ display:'flex', gap:20, fontSize:12, color:'#166534', flexWrap:'wrap', marginBottom:12 }}>
                 <span>📊 {genResult.totalLeads?.toLocaleString()} leads</span>
                 <span>✓ {genResult.matched?.toLocaleString()} matched</span>
                 <span>⚠️ {genResult.unmatched?.toLocaleString()} unmatched</span>
                 <span>🌳 {genResult.totalNodes?.toLocaleString()} total nodes</span>
               </div>
-              <a href="/org-hierarchy" style={{ display:'inline-block', marginTop:10, padding:'8px 18px', background:'#16a34a', color:'#fff', borderRadius:8, fontSize:12, fontWeight:700, textDecoration:'none' }}>
-                View Org Hierarchy →
-              </a>
+              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                <a href="/org-hierarchy" style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'10px 20px', background:'#16a34a', color:'#fff', borderRadius:8, fontSize:13, fontWeight:700, textDecoration:'none', transition:'all 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#15803d'} onMouseLeave={(e) => e.target.style.background = '#16a34a'}>
+                  View Org Hierarchy →
+                </a>
+                <button onClick={() => { setStep(0); setGenResult(null); }} style={{ display:'inline-flex', alignItems:'center', gap:6, padding:'10px 20px', background:'#fff', color:'#15803d', border:'1px solid #86efac', borderRadius:8, fontSize:13, fontWeight:700, cursor:'pointer', transition:'all 0.2s' }} onMouseEnter={(e) => { e.target.style.background = '#dcfce7'; e.target.style.borderColor = '#15803d'; }} onMouseLeave={(e) => { e.target.style.background = '#fff'; e.target.style.borderColor = '#86efac'; }}>
+                  ← Edit Roles Again
+                </button>
+              </div>
             </div>
           )}
 

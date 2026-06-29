@@ -398,6 +398,24 @@ const TeamManagement = () => {
   const PermTable = ({hasP,toggleP}) => {
     const scrollContainerRef = React.useRef(null);
 
+    // Check if all features have a specific action
+    const isAllChecked = (action) => {
+      return FEATURES.every(f => hasP(f.slug, action));
+    };
+
+    // Toggle all features for a specific action
+    const toggleAllForAction = (action) => {
+      const shouldCheck = !isAllChecked(action);
+      FEATURES.forEach(f => {
+        const currentlyHas = hasP(f.slug, action);
+        if (shouldCheck && !currentlyHas) {
+          toggleP(f.slug, action);
+        } else if (!shouldCheck && currentlyHas) {
+          toggleP(f.slug, action);
+        }
+      });
+    };
+
     return (
       <div
         ref={scrollContainerRef}
@@ -413,7 +431,20 @@ const TeamManagement = () => {
         <table style={{width:'100%',borderCollapse:'collapse',fontSize:11,tableLayout:'fixed'}}>
           <thead><tr style={{background:'#f8fafc',position:'sticky',top:0,zIndex:10}}>
             <th style={{textAlign:'left',padding:'7px 10px',fontWeight:700,color:'#64748b',fontSize:10,textTransform:'uppercase',borderBottom:'1px solid #e2e8f0',width:'60%'}}>Module</th>
-            {ACTIONS.map(a=><th key={a} title={a} style={{padding:'7px 4px',fontWeight:700,color:'#64748b',fontSize:10,borderBottom:'1px solid #e2e8f0',width:`${40/ACTIONS.length}%`}}>{a[0].toUpperCase()}</th>)}
+            {ACTIONS.map(a=>(
+              <th key={a} title={`${a} - Click checkbox to select all`} style={{padding:'7px 4px',fontWeight:700,color:'#64748b',fontSize:10,borderBottom:'1px solid #e2e8f0',width:`${40/ACTIONS.length}%`,cursor:'pointer'}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:3}}>
+                  <span>{a[0].toUpperCase()}</span>
+                  <input
+                    type="checkbox"
+                    checked={isAllChecked(a)}
+                    onChange={() => toggleAllForAction(a)}
+                    style={{cursor:'pointer',width:13,height:13,accentColor:'#4f46e5',margin:0}}
+                    title={`Select/Deselect all ${a}`}
+                  />
+                </div>
+              </th>
+            ))}
           </tr></thead>
         <tbody>
           {categories.map(cat=>(

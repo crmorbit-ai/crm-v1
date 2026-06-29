@@ -64,6 +64,7 @@ export default function Notifications() {
   const [page, setPage] = useState(1);
   const [pag, setPag] = useState({});
   const [busyId, setBusyId] = useState(null);
+  const [overallStats, setOverallStats] = useState({ total: 0, unread: 0 }); // Overall counts (filter-independent)
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -79,13 +80,27 @@ export default function Notifications() {
     finally { setLoading(false); }
   }, [page, cat, readF]);
 
+  // Fetch overall stats separately (runs once on mount and after mark read actions)
+  const loadOverallStats = useCallback(async () => {
+    try {
+      const r = await notificationService.getNotifications({ page: 1, limit: 100 }); // Get first 100 to count
+      const allNotifs = r?.data?.notifications || [];
+      setOverallStats({
+        total: r?.data?.pagination?.total || allNotifs.length,
+        unread: allNotifs.filter(n => !n.isRead).length
+      });
+    } catch {}
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadOverallStats(); }, [loadOverallStats]); // Load stats once on mount
 
   const markRead = async (n) => {
     if (!n.isRead) {
       setBusyId(n._id);
       await notificationService.markAsRead(n._id);
       setNotifs(p => p.map(x => x._id === n._id ? { ...x, isRead: true } : x));
+      setOverallStats(s => ({ ...s, unread: Math.max(0, s.unread - 1) })); // Update overall stats
       fetchUnreadCount();
       setBusyId(null);
     }
@@ -101,6 +116,7 @@ export default function Notifications() {
   const markAll = async () => {
     await notificationService.markAllAsRead();
     setNotifs(p => p.map(n => ({ ...n, isRead: true })));
+    setOverallStats(s => ({ ...s, unread: 0 })); // Update overall stats
     fetchUnreadCount();
   };
 
@@ -110,7 +126,14 @@ export default function Notifications() {
     await notificationService.deleteNotification(id);
 
     // Remove from list
+    const deletedNotif = notifs.find(n => n._id === id);
     setNotifs(p => p.filter(n => n._id !== id));
+
+    // Update overall stats
+    setOverallStats(s => ({
+      total: Math.max(0, s.total - 1),
+      unread: deletedNotif && !deletedNotif.isRead ? Math.max(0, s.unread - 1) : s.unread
+    }));
 
     // Update pagination counts
     setPag(p => ({
@@ -123,8 +146,9 @@ export default function Notifications() {
     setBusyId(null);
   };
 
-  const unread = notifs.filter(n => !n.isRead).length;
-  const total = pag.total || 0;
+  // Use overallStats for header counters (filter-independent)
+  const total = overallStats.total;
+  const unread = overallStats.unread;
 
   return (
     <DashboardLayout title="Notifications">
@@ -132,14 +156,24 @@ export default function Notifications() {
       {/* ── STAT CARDS ── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
         {[
-          { label: 'Total',     value: total,              icon: '🔔', from: '#1d4ed8', to: '#2563eb', shadow: 'rgba(37,99,235,0.35)' },
-          { label: 'Unread',   value: unread,             icon: '🔵', from: '#6d28d9', to: '#7c3aed', shadow: 'rgba(124,58,237,0.35)' },
-          { label: 'Read',     value: total - unread,     icon: '✅', from: '#15803d', to: '#16a34a', shadow: 'rgba(22,163,74,0.35)'  },
-          { label: 'This Page',value: notifs.length,      icon: '📄', from: '#b45309', to: '#d97706', shadow: 'rgba(217,119,6,0.35)'  },
+          { label: 'Total',     value: total,              icon: '🔔', from: '#1d4ed8', to: '#2563eb', shadow: 'rgba(37,99,235,0.35)', filter: '' },
+          { label: 'Unread',   value: unread,             icon: '🔵', from: '#6d28d9', to: '#7c3aed', shadow: 'rgba(124,58,237,0.35)', filter: false },
+          { label: 'Read',     value: total - unread,     icon: '✅', from: '#15803d', to: '#16a34a', shadow: 'rgba(22,163,74,0.35)', filter: true  },
+          { label: 'This Page',value: notifs.length,      icon: '📄', from: '#b45309', to: '#d97706', shadow: 'rgba(217,119,6,0.35)', filter: null  },
         ].map(s => (
           <div key={s.label}
+            onClick={() => { if (s.filter !== null) { setReadF(s.filter); setPage(1); } }}
             className="relative overflow-hidden rounded-xl p-4 flex items-center gap-3"
-            style={{ background: `linear-gradient(135deg, ${s.from}, ${s.to})`, boxShadow: `0 4px 14px ${s.shadow}` }}>
+            style={{
+              background: `linear-gradient(135deg, ${s.from}, ${s.to})`,
+              boxShadow: `0 4px 14px ${s.shadow}`,
+              cursor: s.filter !== null ? 'pointer' : 'default',
+              transform: readF === s.filter ? 'scale(1.03)' : 'scale(1)',
+              transition: 'all 0.2s ease',
+              border: readF === s.filter ? '2px solid rgba(255,255,255,0.5)' : '2px solid transparent'
+            }}
+            onMouseEnter={e => { if (s.filter !== null) e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = readF === s.filter ? 'scale(1.03)' : 'scale(1)'; }}>
             {/* watermark circle */}
             <div className="absolute -right-3 -bottom-3 w-20 h-20 rounded-full"
               style={{ background: 'rgba(255,255,255,0.08)' }} />

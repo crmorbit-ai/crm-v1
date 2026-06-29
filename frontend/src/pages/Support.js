@@ -224,7 +224,7 @@ const Support = () => {
   ];
 
   const thStyle = { padding: '10px 14px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap', background: '#f8fafc' };
-  const tdStyle = { padding: '11px 14px', borderBottom: '1px solid #f8fafc', verticalAlign: 'middle' };
+  const tdStyle = { padding: '11px 14px', borderBottom: '1px solid #cbd5e1', verticalAlign: 'middle' };
   const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' };
 
   // Removed full-page loading - now shows inline spinner instead

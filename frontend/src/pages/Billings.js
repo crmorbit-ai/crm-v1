@@ -646,7 +646,7 @@ const Billings = () => {
               {/* top bar */}
               <div style={{padding:'13px 16px',borderBottom:'1px solid rgba(255,255,255,0.07)',display:'flex',justifyContent:'space-between',alignItems:'center',background:'rgba(255,255,255,0.02)'}}>
                 <span style={{fontSize:10,color:'rgba(255,255,255,0.35)',textTransform:'uppercase',letterSpacing:1.4,fontWeight:700}}>Invoice Detail</span>
-                <button onClick={()=>setSelected(null)} style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.09)',color:'rgba(255,255,255,0.4)',width:26,height:26,borderRadius:7,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}}>✕</button>
+                <button onClick={()=>setSelected(null)} style={{background:'rgba(255,255,255,0.06)',border:'1px solid rgba(255,255,255,0.09)',color:'rgba(255,255,255,0.4)',width:26,height:26,borderRadius:7,cursor:'pointer',fontSize:14,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:700}} title="Close">✕</button>
               </div>
 
               <div style={{overflowY:'auto',maxHeight:'calc(100vh - 280px)',padding:'16px'}}>

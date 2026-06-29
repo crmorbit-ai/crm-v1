@@ -464,7 +464,35 @@ const Accounts = () => {
       loadAccounts();
       loadStats(); // Reload global stats after create
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create account'); }
+    } catch (err) {
+      if (err?.isPermissionDenied) return;
+      // Check for field-level error
+      if (err.response?.data?.field) {
+        const errorField = err.response.data.field;
+        setFieldErrors({
+          ...fieldErrors,
+          [errorField]: err.response.data.message
+        });
+
+        // Navigate to the step containing the error field
+        const errorFieldDef = fieldDefinitions.find(f => f.fieldName === errorField);
+        if (errorFieldDef) {
+          const sectionIndex = activeWizardSteps.findIndex(step =>
+            step.sections.includes(errorFieldDef.section)
+          );
+          if (sectionIndex !== -1 && sectionIndex !== wizardStep) {
+            setWizardStep(sectionIndex);
+          }
+        }
+
+        // Scroll to top to see the error
+        setTimeout(() => {
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 100);
+      } else {
+        setError(err.response?.data?.message || 'Failed to create account');
+      }
+    }
     finally { setCreating(false); }
   };
 
@@ -726,7 +754,7 @@ const Accounts = () => {
                   </div>
                 </div>
                 <button onClick={() => { setShowCreateForm(false); resetForm(); setWizardStep(0); }}
-                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }}>✕</button>
+                  style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '7px', padding: '5px 9px', color: 'white', cursor: 'pointer', fontSize: '15px', lineHeight: 1 }} title="Close">✕</button>
               </div>
               <div style={{ display: 'flex', padding: '8px 10px 0' }}>
                 {activeWizardSteps.map((step, idx) => {
@@ -876,7 +904,7 @@ const Accounts = () => {
                     <div style={{ margin: '12px', padding: '12px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #93C5FD' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                         <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#1E40AF' }}>Edit Account</h5>
-                        <button onClick={() => setShowDetailEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
+                        <button onClick={() => setShowDetailEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }} title="Close">✕</button>
                       </div>
                       <form onSubmit={handleDetailUpdateAccount}>
                         <div style={{ maxHeight: '400px', overflowY: 'auto', marginBottom: '10px' }}>

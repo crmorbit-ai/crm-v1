@@ -11,6 +11,7 @@ const { trackChanges, getRecordName } = require('../utils/changeTracker');
 const { sendLeadAssignmentEmail } = require('../utils/emailService');
 const { hasPermission } = require('../utils/permissions');
 const { createNotification } = require('../services/notificationService');
+const { getDataCenterConnection } = require('../config/database');
 
 /**
  * @desc    Get all leads
@@ -369,6 +370,16 @@ const createLead = async (req, res) => {
     const lastLead = await Lead.findOne({ tenant }).sort({ leadNumber: -1 }).select('leadNumber');
     const nextLeadNumber = (lastLead?.leadNumber || 0) + 1;
 
+    // Get organization name for formatted lead ID
+    const tenantDoc = await Tenant.findById(tenant).select('organizationName');
+    const orgName = tenantDoc?.organizationName || 'ORG';
+
+    // Extract first 2 letters from organization name (uppercase)
+    const orgPrefix = orgName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase() || 'OR';
+
+    // Generate formatted lead ID: L + OrgPrefix + 5-digit number
+    const formattedLeadId = `L${orgPrefix}${String(nextLeadNumber).padStart(5, '0')}`;
+
     // 🔥 Create lead with ALL fields directly at root level + system fields
     const leadData = {
       ...otherFields,  // All form fields go directly to root
@@ -379,7 +390,8 @@ const createLead = async (req, res) => {
       tenant,
       createdBy: req.user._id,
       lastModifiedBy: req.user._id,
-      leadNumber: nextLeadNumber
+      leadNumber: nextLeadNumber,
+      leadId: formattedLeadId  // Formatted display ID
     };
 
     console.log('Lead data to create:', JSON.stringify(leadData, null, 2));
@@ -389,7 +401,54 @@ const createLead = async (req, res) => {
     // Update tenant usage count
     await Tenant.findByIdAndUpdate(tenant, { $inc: { 'usage.leads': 1 } });
 
-    console.log('✅ Lead created successfully:', lead._id);
+    console.log('✅ Lead created successfully:', lead._id, '| Lead ID:', formattedLeadId);
+
+    // 🔥 AUTO-SYNC: Create corresponding customer in Master Database
+    try {
+      const dataCenterConn = getDataCenterConnection();
+      if (!dataCenterConn) {
+        throw new Error('Data Center connection not available');
+      }
+
+      const DataCenterCandidate = dataCenterConn.model('DataCenterCandidate');
+
+      // Get organization name for formatted customer ID
+      const tenantDoc = await Tenant.findById(tenant).select('organizationName');
+      const orgName = tenantDoc?.organizationName || 'ORG';
+
+      // Extract first 2 letters from organization name (uppercase)
+      const orgPrefix = orgName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase() || 'OR';
+
+      // Get next customer number
+      const lastCustomer = await DataCenterCandidate.findOne({ tenant }).sort({ customerNumber: -1 }).select('customerNumber');
+      const nextCustomerNumber = (lastCustomer?.customerNumber || 0) + 1;
+
+      // Generate formatted customer ID: C + OrgPrefix + 5-digit number
+      const formattedCustomerId = `C${orgPrefix}${String(nextCustomerNumber).padStart(5, '0')}`;
+
+      // Prepare customer data (copy all lead fields)
+      const customerData = {
+        ...otherFields,  // All lead fields
+        tenant,
+        status: 'Lead',  // Mark as lead-sourced
+        leadId: lead._id,  // Link back to lead
+        movedBy: req.user._id,
+        movedToLeadsAt: new Date(),
+        movedToTenant: tenant,
+        importedBy: req.user._id,
+        importedAt: new Date(),
+        dataSource: 'Lead',
+        customerNumber: nextCustomerNumber,
+        customerId: formattedCustomerId,  // Formatted display ID
+        isActive: true
+      };
+
+      await DataCenterCandidate.create(customerData);
+      console.log('✅ Customer auto-created in Master Database:', formattedCustomerId);
+    } catch (err) {
+      console.error('❌ Failed to auto-create customer:', err.message);
+      // Don't fail the lead creation if customer sync fails
+    }
 
     // Populate fields
     await lead.populate('owner', 'firstName lastName email');
@@ -646,6 +705,31 @@ const updateLead = async (req, res) => {
     lead.lastModifiedBy = req.user._id;
     await lead.save();
     await lead.populate('owner', 'firstName lastName email');
+
+    // 🔥 AUTO-SYNC: Update corresponding customer in Master Database
+    try {
+      const dataCenterConn = getDataCenterConnection();
+      if (dataCenterConn) {
+        const DataCenterCandidate = dataCenterConn.model('DataCenterCandidate');
+
+        // Find customer linked to this lead
+        const customer = await DataCenterCandidate.findOne({ leadId: lead._id, tenant: lead.tenant });
+
+        if (customer) {
+          // Update customer with latest lead data
+          Object.keys(req.body).forEach(key => {
+            if (key !== 'tenant' && key !== '_id' && key !== 'customerNumber') {
+              customer.set(key, req.body[key]);
+            }
+          });
+          await customer.save();
+          console.log('✅ Customer auto-updated in Master Database');
+        }
+      }
+    } catch (err) {
+      console.error('❌ Failed to auto-update customer:', err.message);
+      // Don't fail the lead update if customer sync fails
+    }
     if (lead.product) {
       await lead.populate('product', 'name articleNumber category price');
     }
@@ -773,6 +857,22 @@ const deleteLead = async (req, res) => {
 
     // Update tenant usage count
     await Tenant.findByIdAndUpdate(lead.tenant, { $inc: { 'usage.leads': -1 } });
+
+    // 🔥 AUTO-SYNC: Soft delete corresponding customer in Master Database
+    try {
+      const dataCenterConn = getDataCenterConnection();
+      if (dataCenterConn) {
+        const DataCenterCandidate = dataCenterConn.model('DataCenterCandidate');
+
+        await DataCenterCandidate.updateOne(
+          { leadId: lead._id, tenant: lead.tenant },
+          { $set: { isActive: false, status: 'Deleted' } }
+        );
+        console.log('✅ Customer auto-deleted in Master Database');
+      }
+    } catch (err) {
+      console.error('❌ Failed to auto-delete customer:', err.message);
+    }
 
     await logActivity(req, 'lead.deleted', 'Lead', lead._id, {
       firstName: lead.firstName,

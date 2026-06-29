@@ -13,6 +13,7 @@ export default function LeadInventory({ fromTab }) {
   const [items, setItems] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [pag, setPag] = useState({ page: 1, pages: 1, total: 0 });
+  const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -131,7 +132,7 @@ export default function LeadInventory({ fromTab }) {
   const loadItems = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = { page, limit: 50, search, type: 'lead' };
+      const params = { page, limit, search, type: 'lead' };
       if (deptFilter) params.department = deptFilter;
       const r = await masterInventoryService.getAll(params);
       if (r?.data) {
@@ -140,7 +141,7 @@ export default function LeadInventory({ fromTab }) {
       }
     } catch { err('Failed to load items'); }
     finally { setLoading(false); }
-  }, [search, deptFilter]);
+  }, [limit, search, deptFilter]);
 
   useEffect(() => {
     loadDashboard();
@@ -901,13 +902,79 @@ export default function LeadInventory({ fromTab }) {
           </table>
         </div>
 
-        {pag.pages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px', padding: '0 20px' }}>
-            <button onClick={() => loadItems(pag.page - 1)} disabled={pag.page === 1} style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: pag.page === 1 ? 'default' : 'pointer', opacity: pag.page === 1 ? 0.5 : 1 }}>Prev</button>
-            <div style={{ padding: '6px 12px', fontSize: '12px' }}>Page {pag.page} of {pag.pages}</div>
-            <button onClick={() => loadItems(pag.page + 1)} disabled={pag.page === pag.pages} style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: pag.page === pag.pages ? 'default' : 'pointer', opacity: pag.page === pag.pages ? 0.5 : 1 }}>Next</button>
+        {/* Pagination Footer */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '14px 20px',
+          borderTop: '1px solid #e2e8f0',
+          background: '#fafafa',
+          marginTop: '20px'
+        }}>
+          {/* Left: Count & Rows per page */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+              Showing <strong>{((pag.page - 1) * limit) + 1}-{Math.min(pag.page * limit, pag.total)}</strong> of <strong>{pag.total}</strong>
+            </span>
+            <select
+              value={limit}
+              onChange={(e) => { setLimit(Number(e.target.value)); setPag(p => ({ ...p, page: 1 })); }}
+              style={{
+                padding: '6px 10px',
+                fontSize: '12px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                background: '#fff',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </select>
           </div>
-        )}
+
+          {/* Right: Page controls */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={() => loadItems(pag.page - 1)}
+              disabled={pag.page === 1}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                background: pag.page === 1 ? '#f8fafc' : '#fff',
+                color: pag.page === 1 ? '#cbd5e1' : '#475569',
+                cursor: pag.page === 1 ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              ◄ Previous
+            </button>
+            <button
+              onClick={() => loadItems(pag.page + 1)}
+              disabled={pag.page === pag.pages}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                background: pag.page === pag.pages ? '#f8fafc' : '#fff',
+                color: pag.page === pag.pages ? '#cbd5e1' : '#475569',
+                cursor: pag.page === pag.pages ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Next ►
+            </button>
+          </div>
+        </div>
         </div>
         </div>
       </div>

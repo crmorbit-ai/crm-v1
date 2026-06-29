@@ -19,7 +19,9 @@ const {
 } = require('../controllers/leadController');
 const {
   verifyEmailAddress,
-  verifyPhoneNumber
+  verifyPhoneNumber,
+  verifyGST,
+  validatePAN
 } = require('../controllers/verificationController');
 const { protect } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
@@ -69,14 +71,24 @@ const upload = multer({
 router.use(protect);
 
 // ✅ VERIFICATION ROUTES (NEW)
-router.post('/verify-email', 
-  requirePermission('lead_management', 'create'), 
+router.post('/verify-email',
+  requirePermission('lead_management', 'create'),
   verifyEmailAddress
 );
 
-router.post('/verify-phone', 
-  requirePermission('lead_management', 'create'), 
+router.post('/verify-phone',
+  requirePermission('lead_management', 'create'),
   verifyPhoneNumber
+);
+
+router.post('/verify-gst',
+  requirePermission('lead_management', 'create'),
+  verifyGST
+);
+
+router.post('/validate-pan',
+  requirePermission('lead_management', 'create'),
+  validatePAN
 );
 
 // Bulk upload routes (BEFORE /:id routes)

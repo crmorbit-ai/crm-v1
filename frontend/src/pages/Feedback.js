@@ -567,18 +567,24 @@ const TenantUserView = () => {
                   </div>
 
                   <div style={{ marginBottom:16 }}>
-                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>
-                      Title <span style={{ color:'#ef4444' }}>*</span>
+                    <label style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>
+                      <span>Title <span style={{ color:'#ef4444' }}>*</span></span>
+                      <span style={{ fontSize:11, fontWeight:600, color: form.title.length > 200 ? '#ef4444' : form.title.length > 180 ? '#f59e0b' : '#64748b' }}>
+                        {form.title.length}/200
+                      </span>
                     </label>
                     <Input
                       value={form.title}
+                      maxLength={200}
                       onChange={e => {
                         const val = e.target.value;
                         setForm(f => ({ ...f, title: val }));
                         setTitleError('');
 
                         const trimmed = val.trim();
-                        if (trimmed.length > 0 && trimmed.length < 5) {
+                        if (val.length > 200) {
+                          setTitleError('Title too long - maximum 200 characters');
+                        } else if (trimmed.length > 0 && trimmed.length < 5) {
                           setTitleError('Title too short - minimum 5 characters');
                         } else if (trimmed.length > 0) {
                           const letterCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
@@ -605,18 +611,24 @@ const TenantUserView = () => {
                   </div>
 
                   <div style={{ marginBottom:20 }}>
-                    <label style={{ display:'block', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>
-                      Description <span style={{ color:'#ef4444' }}>*</span>
+                    <label style={{ display:'flex', justifyContent:'space-between', alignItems:'center', fontSize:12, fontWeight:700, color:'#374151', marginBottom:8, textTransform:'uppercase', letterSpacing:0.5 }}>
+                      <span>Description <span style={{ color:'#ef4444' }}>*</span></span>
+                      <span style={{ fontSize:11, fontWeight:600, color: form.description.length > 5000 ? '#ef4444' : form.description.length > 4500 ? '#f59e0b' : '#64748b' }}>
+                        {form.description.length}/5000
+                      </span>
                     </label>
                     <Textarea
                       value={form.description}
+                      maxLength={5000}
                       onChange={e => {
                         const val = e.target.value;
                         setForm(f => ({ ...f, description: val }));
                         setDescError('');
 
                         const trimmed = val.trim();
-                        if (trimmed.length > 0 && trimmed.length < 20) {
+                        if (val.length > 5000) {
+                          setDescError('Description too long - maximum 5000 characters');
+                        } else if (trimmed.length > 0 && trimmed.length < 20) {
                           setDescError('Description too short - minimum 20 characters');
                         } else if (trimmed.length > 0) {
                           const letterCount = (trimmed.match(/[a-zA-Z]/g) || []).length;
