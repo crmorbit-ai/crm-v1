@@ -1566,17 +1566,11 @@ const Leads = () => {
         ...(Object.keys(customFields).length > 0 ? { customFields } : {})
       };
 
-      // Debug log
-      console.log('💰 Update Data BEFORE API:', { dealCurrency: updateData.dealCurrency, estimatedDealValue: updateData.estimatedDealValue });
-      console.log('📦 Full Update Data:', JSON.stringify(updateData, null, 2));
-
       const response = await leadService.updateLead(selectedLeadId, updateData);
-      console.log('✅ Backend Response:', response?.data);
 
       // Use backend response directly to update UI instantly
       const updatedLead = response?.data;
       if (updatedLead) {
-        console.log('🔄 Updating UI with:', { dealCurrency: updatedLead.dealCurrency, estimatedDealValue: updatedLead.estimatedDealValue });
         setSelectedLeadData(updatedLead);
         setLeads(prev => prev.map(l => l._id === selectedLeadId ? { ...l, ...updatedLead } : l));
       }
@@ -1589,7 +1583,6 @@ const Leads = () => {
 
   const handleDetailEditChange = (e) => {
     const { name, value } = e.target;
-    console.log('🔧 Edit Change:', name, '=', value, 'Type:', typeof value);
     if (name.startsWith('productDetails.')) {
       const fieldName = name.split('.')[1];
       setDetailEditData(prev => ({ ...prev, productDetails: { ...prev.productDetails, [fieldName]: value } }));
@@ -2383,7 +2376,7 @@ const Leads = () => {
                                             <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: '600', color: '#64748b', pointerEvents: 'none' }}>
                                               {detailEditData.dealCurrency === 'USD' ? '$' : detailEditData.dealCurrency === 'EUR' ? '€' : detailEditData.dealCurrency === 'GBP' ? '£' : '₹'}
                                             </span>
-                                            <input type="number" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px 4px 24px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} step="0.01" />
+                                            <input type="number" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px 4px 24px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} step="any" min="0" />
                                           </div>
                                         )}
                                         {field.fieldType === 'textarea' && (

@@ -47,7 +47,7 @@ const profileResponsiveCSS = `
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { user: authUser, updateUser, setUser: setAuthUser } = useAuth();
+  const { user: authUser, updateUser, setUser: setAuthUser, hasPermission } = useAuth();
   const logoInputRef = useRef(null);
   const invoiceLogoInputRef = useRef(null);
 
@@ -1122,7 +1122,7 @@ const Profile = () => {
             )}
 
             {/* Payment & Bank Details Section */}
-            {(activeTab === 'organization' && tenant && user.userType === 'TENANT_ADMIN') && (
+            {(activeTab === 'organization' && tenant && (user.userType === 'TENANT_ADMIN' || user.userType === 'TENANT_MANAGER' || hasPermission('invoice_management', 'create'))) && (
               <div style={{ background: '#fff', borderRadius: '12px', border: '1.5px solid #e5e7eb', padding: '20px 24px', marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
                   <span style={{ fontSize: '16px' }}>💳</span>
@@ -1164,7 +1164,7 @@ const Profile = () => {
             )}
 
             {/* Signature & Invoice Logo Section - Side by Side */}
-            {(activeTab === 'organization' && tenant && user.userType === 'TENANT_ADMIN') && (
+            {(activeTab === 'organization' && tenant && (user.userType === 'TENANT_ADMIN' || user.userType === 'TENANT_MANAGER' || hasPermission('invoice_management', 'create'))) && (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '16px' }}>
 
                 {/* Signature Upload */}
@@ -1186,16 +1186,22 @@ const Profile = () => {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => signatureInputRef.current?.click()}
-                    disabled={uploadingSignature}
-                    style={{ width: '100%', padding: '10px 20px', background: uploadingSignature ? '#9ca3af' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: uploadingSignature ? 'not-allowed' : 'pointer' }}
-                  >
-                    {uploadingSignature ? 'Uploading...' : tenant.signature ? 'Change Signature' : 'Upload Signature'}
-                  </button>
-                  <input ref={signatureInputRef} type="file" accept="image/*" onChange={handleSignatureUpload} style={{ display: 'none' }} />
+                  {(user.userType === 'TENANT_ADMIN' || user.userType === 'TENANT_MANAGER') && (
+                    <>
+                      <button
+                        onClick={() => signatureInputRef.current?.click()}
+                        disabled={uploadingSignature}
+                        style={{ width: '100%', padding: '10px 20px', background: uploadingSignature ? '#9ca3af' : '#3b82f6', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: uploadingSignature ? 'not-allowed' : 'pointer' }}
+                      >
+                        {uploadingSignature ? 'Uploading...' : tenant.signature ? 'Change Signature' : 'Upload Signature'}
+                      </button>
+                      <input ref={signatureInputRef} type="file" accept="image/*" onChange={handleSignatureUpload} style={{ display: 'none' }} />
+                    </>
+                  )}
                   <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#6b7280', textAlign: 'center' }}>
-                    Transparent PNG, 400x150px
+                    {(user.userType === 'TENANT_ADMIN' || user.userType === 'TENANT_MANAGER')
+                      ? 'Transparent PNG, 400x150px'
+                      : 'Only Admin/Manager can upload signature'}
                   </p>
                 </div>
 
@@ -1222,16 +1228,22 @@ const Profile = () => {
                     )}
                   </div>
 
-                  <button
-                    onClick={() => invoiceLogoInputRef.current?.click()}
-                    disabled={uploadingInvoiceLogo}
-                    style={{ width: '100%', padding: '10px 20px', background: uploadingInvoiceLogo ? '#9ca3af' : '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: uploadingInvoiceLogo ? 'not-allowed' : 'pointer' }}
-                  >
-                    {uploadingInvoiceLogo ? 'Uploading...' : tenant?.invoiceLogo ? 'Change Logo' : 'Upload Logo'}
-                  </button>
-                  <input ref={invoiceLogoInputRef} type="file" accept="image/*" onChange={handleInvoiceLogoUpload} style={{ display: 'none' }} />
+                  {(user.userType === 'TENANT_ADMIN' || user.userType === 'TENANT_MANAGER') && (
+                    <>
+                      <button
+                        onClick={() => invoiceLogoInputRef.current?.click()}
+                        disabled={uploadingInvoiceLogo}
+                        style={{ width: '100%', padding: '10px 20px', background: uploadingInvoiceLogo ? '#9ca3af' : '#10b981', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: uploadingInvoiceLogo ? 'not-allowed' : 'pointer' }}
+                      >
+                        {uploadingInvoiceLogo ? 'Uploading...' : tenant?.invoiceLogo ? 'Change Logo' : 'Upload Logo'}
+                      </button>
+                      <input ref={invoiceLogoInputRef} type="file" accept="image/*" onChange={handleInvoiceLogoUpload} style={{ display: 'none' }} />
+                    </>
+                  )}
                   <p style={{ margin: '8px 0 0', fontSize: '11px', color: '#6b7280', textAlign: 'center' }}>
-                    PNG/JPG, 300x120px (appears in PDF)
+                    {(user.userType === 'TENANT_ADMIN' || user.userType === 'TENANT_MANAGER')
+                      ? 'PNG/JPG, 300x120px (appears in PDF)'
+                      : 'Only Admin/Manager can upload logo'}
                   </p>
                 </div>
 

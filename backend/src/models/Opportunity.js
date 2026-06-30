@@ -21,7 +21,13 @@ const opportunitySchema = new mongoose.Schema({
     default: 0,
     min: 0
   },
-  
+
+  currency: {
+    type: String,
+    enum: ['INR', 'USD', 'EUR', 'GBP'],
+    default: 'INR'
+  },
+
   closeDate: {
     type: Date,
     required: [true, 'Close date is required']

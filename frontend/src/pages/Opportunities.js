@@ -709,7 +709,12 @@ const Opportunities = () => {
                           borderRadius:'6px',padding:'4px 8px',marginBottom:'10px'
                         }}>
                           <span style={{fontSize:'13px',fontWeight:'700',color: isLost ? '#DC2626' : '#059669'}}>
-                            ₹{(opp.amount||0).toLocaleString('en-IN')}
+                            {opp.currency === 'USD' ? '$' : opp.currency === 'EUR' ? '€' : opp.currency === 'GBP' ? '£' : '₹'}
+                            {(opp.amount||0).toLocaleString(
+                              opp.currency === 'INR' ? 'en-IN' :
+                              opp.currency === 'EUR' ? 'de-DE' :
+                              opp.currency === 'GBP' ? 'en-GB' : 'en-US'
+                            )}
                           </span>
                         </div>
 
@@ -882,7 +887,12 @@ const Opportunities = () => {
                   borderRadius: '8px',
                   border: '1px solid #A7F3D0'
                 }}>
-                  ₹{(selectedDeal.amount || 0).toLocaleString('en-IN')}
+                  {selectedDeal.currency === 'USD' ? '$' : selectedDeal.currency === 'EUR' ? '€' : selectedDeal.currency === 'GBP' ? '£' : '₹'}
+                  {(selectedDeal.amount || 0).toLocaleString(
+                    selectedDeal.currency === 'INR' ? 'en-IN' :
+                    selectedDeal.currency === 'EUR' ? 'de-DE' :
+                    selectedDeal.currency === 'GBP' ? 'en-GB' : 'en-US'
+                  )}
                 </span>
               </div>
             </div>

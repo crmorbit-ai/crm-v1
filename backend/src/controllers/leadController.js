@@ -640,10 +640,6 @@ const updateLead = async (req, res) => {
       'requirements', 'competitor', 'facebook', 'instagram', 'whatsApp'
     ];
 
-    // Debug incoming data
-    console.log('🔍 Incoming dealCurrency:', req.body.dealCurrency);
-    console.log('🔍 Incoming estimatedDealValue:', req.body.estimatedDealValue, 'Type:', typeof req.body.estimatedDealValue);
-
     // Track changes BEFORE updating
     const changes = trackChanges(lead, req.body, allowedFields);
 
@@ -653,9 +649,6 @@ const updateLead = async (req, res) => {
         lead.set(field, req.body[field]);
       }
     });
-
-    console.log('✅ After set - dealCurrency:', lead.dealCurrency);
-    console.log('✅ After set - estimatedDealValue:', lead.estimatedDealValue, 'Type:', typeof lead.estimatedDealValue);
 
     // Handle product field separately (to avoid empty string ObjectId error)
     if (req.body.product !== undefined) {
