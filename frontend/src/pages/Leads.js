@@ -86,6 +86,7 @@ const DEFAULT_LEAD_FIELDS = [
   { fieldName: 'qualificationStatus', label: 'Qualification Status', fieldType: 'dropdown', section: 'Lead Details', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 13, options: [{ label: 'Unqualified', value: 'Unqualified' }, { label: 'In Progress', value: 'In Progress' }, { label: 'Qualified', value: 'Qualified' }] },
   { fieldName: 'priority', label: 'Priority', fieldType: 'dropdown', section: 'Lead Details', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 14, options: [{ label: 'Low', value: 'Low' }, { label: 'Medium', value: 'Medium' }, { label: 'High', value: 'High' }] },
   { fieldName: 'campaign', label: 'Campaign', fieldType: 'text', section: 'Lead Details', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 15 },
+  { fieldName: 'dealCurrency', label: 'Deal Currency', fieldType: 'dropdown', section: 'Lead Details', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 15.5, options: [{ label: '₹ INR (Indian Rupee)', value: 'INR' }, { label: '$ USD (US Dollar)', value: 'USD' }, { label: '€ EUR (Euro)', value: 'EUR' }, { label: '£ GBP (British Pound)', value: 'GBP' }] },
   { fieldName: 'estimatedDealValue', label: 'Estimated Deal Value', fieldType: 'currency', section: 'Lead Details', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 16 },
   { fieldName: 'expectedCloseDate', label: 'Expected Close Date', fieldType: 'date', section: 'Lead Details', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 17 },
   { fieldName: 'industry', label: 'Industry', fieldType: 'dropdown', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20, options: [{ label: 'Agriculture', value: 'Agriculture' }, { label: 'Automotive', value: 'Automotive' }, { label: 'Banking & Finance', value: 'Banking & Finance' }, { label: 'Construction', value: 'Construction' }, { label: 'Consulting', value: 'Consulting' }, { label: 'Education', value: 'Education' }, { label: 'Energy & Power', value: 'Energy & Power' }, { label: 'Food & Beverage', value: 'Food & Beverage' }, { label: 'Government', value: 'Government' }, { label: 'Healthcare', value: 'Healthcare' }, { label: 'Hospitality', value: 'Hospitality' }, { label: 'IT & Technology', value: 'IT & Technology' }, { label: 'Insurance', value: 'Insurance' }, { label: 'Logistics & Transport', value: 'Logistics & Transport' }, { label: 'Manufacturing', value: 'Manufacturing' }, { label: 'Media & Entertainment', value: 'Media & Entertainment' }, { label: 'Pharma & Life Sciences', value: 'Pharma & Life Sciences' }, { label: 'Real Estate', value: 'Real Estate' }, { label: 'Retail', value: 'Retail' }, { label: 'Telecom', value: 'Telecom' }, { label: 'Textile & Apparel', value: 'Textile & Apparel' }, { label: 'Other', value: 'Other' }] },
@@ -588,7 +589,7 @@ const Leads = () => {
   const [newCategoryName, setNewCategoryName] = useState('');
 
   const [fieldDefinitions, setFieldDefinitions] = useState([]);
-  const [fieldValues, setFieldValues] = useState({});
+  const [fieldValues, setFieldValues] = useState({ dealCurrency: 'INR' });
   const [fieldErrors, setFieldErrors] = useState({});
 
   // Compute active wizard steps based on field definitions
@@ -800,7 +801,8 @@ const Leads = () => {
       'phoneVerified', 'phoneVerificationStatus', 'phoneVerificationDetails',
       'emailOptOut', 'doNotCall', 'assignedGroup', 'assignedMembers', 'assignmentChain',
       'dataCenterCandidateId', 'product', 'productDetails', 'owner', 'customFields',
-      'tags', 'leadNumber', 'source', 'rating', 'customer',
+      'tags', 'leadNumber', 'leadId', 'source', 'rating', 'customer',
+      'description', 'requirements',
     ]);
 
     // Build ordered columns: standard fields (active) + custom fields (active), sorted by displayOrder
@@ -873,7 +875,18 @@ const Leads = () => {
     if (Array.isArray(value)) return value.length > 0 ? value.join(', ') : '-';
     if (typeof value === 'boolean') return value ? 'Yes' : 'No';
     if (typeof value === 'object') return '-';
-    return value.toString();
+
+    // Strip HTML tags and decode entities for clean display
+    const stringValue = value.toString();
+    if (stringValue.includes('<') || stringValue.includes('&')) {
+      const temp = document.createElement('div');
+      temp.innerHTML = stringValue;
+      const cleanText = temp.textContent || temp.innerText || '';
+      // Truncate if too long
+      return cleanText.length > 100 ? cleanText.substring(0, 100) + '...' : cleanText;
+    }
+
+    return stringValue;
   };
 
   // Use custom field label if available, otherwise convert camelCase
@@ -1188,7 +1201,7 @@ const Leads = () => {
     setFormData({ customer: '', product: '', productDetails: { quantity: 1, requirements: '', estimatedBudget: '', priority: '', notes: '' } });
     setEmailVerification({ status: 'pending', message: '', isValid: null });
     setPhoneVerification({ status: 'pending', message: '', isValid: null });
-    setFieldValues({});
+    setFieldValues({ dealCurrency: 'INR' });
     setFieldErrors({});
     setSelectedTemplate(null);
     setSelectedCountryIso('');
@@ -1471,6 +1484,16 @@ const Leads = () => {
     }
   };
 
+  // Helper function to strip HTML tags
+  const stripHTML = (html) => {
+    if (!html || typeof html !== 'string') return html;
+    if (!html.includes('<') && !html.includes('&')) return html;
+
+    const temp = document.createElement('div');
+    temp.innerHTML = html;
+    return temp.textContent || temp.innerText || '';
+  };
+
   // Detail Panel - Edit Lead
   const openDetailEditForm = () => {
     if (!selectedLeadData) return;
@@ -1479,7 +1502,13 @@ const Leads = () => {
     // Populate all fields from fieldDefinitions
     const editData = {};
     fieldDefinitions.forEach(field => {
-      const value = selectedLeadData[field.fieldName] || selectedLeadData.customFields?.[field.fieldName] || '';
+      let value = selectedLeadData[field.fieldName] || selectedLeadData.customFields?.[field.fieldName] || '';
+
+      // Strip HTML from text/textarea fields
+      if ((field.fieldType === 'text' || field.fieldType === 'textarea') && value) {
+        value = stripHTML(value);
+      }
+
       editData[field.fieldName] = value;
     });
 
@@ -1488,11 +1517,16 @@ const Leads = () => {
     editData.product = selectedLeadData.product?._id || '';
     editData.productDetails = {
       quantity: selectedLeadData.productDetails?.quantity || 1,
-      requirements: selectedLeadData.productDetails?.requirements || '',
+      requirements: stripHTML(selectedLeadData.productDetails?.requirements || ''),
       estimatedBudget: selectedLeadData.productDetails?.estimatedBudget || '',
       priority: selectedLeadData.productDetails?.priority || '',
-      notes: selectedLeadData.productDetails?.notes || ''
+      notes: stripHTML(selectedLeadData.productDetails?.notes || '')
     };
+
+    // Set default currency if not present
+    if (!editData.dealCurrency) {
+      editData.dealCurrency = 'INR';
+    }
 
     setDetailEditData(editData);
     closeDetailForms();
@@ -1532,10 +1566,17 @@ const Leads = () => {
         ...(Object.keys(customFields).length > 0 ? { customFields } : {})
       };
 
+      // Debug log
+      console.log('💰 Update Data BEFORE API:', { dealCurrency: updateData.dealCurrency, estimatedDealValue: updateData.estimatedDealValue });
+      console.log('📦 Full Update Data:', JSON.stringify(updateData, null, 2));
+
       const response = await leadService.updateLead(selectedLeadId, updateData);
+      console.log('✅ Backend Response:', response?.data);
+
       // Use backend response directly to update UI instantly
       const updatedLead = response?.data;
       if (updatedLead) {
+        console.log('🔄 Updating UI with:', { dealCurrency: updatedLead.dealCurrency, estimatedDealValue: updatedLead.estimatedDealValue });
         setSelectedLeadData(updatedLead);
         setLeads(prev => prev.map(l => l._id === selectedLeadId ? { ...l, ...updatedLead } : l));
       }
@@ -1548,6 +1589,7 @@ const Leads = () => {
 
   const handleDetailEditChange = (e) => {
     const { name, value } = e.target;
+    console.log('🔧 Edit Change:', name, '=', value, 'Type:', typeof value);
     if (name.startsWith('productDetails.')) {
       const fieldName = name.split('.')[1];
       setDetailEditData(prev => ({ ...prev, productDetails: { ...prev.productDetails, [fieldName]: value } }));
@@ -1613,6 +1655,7 @@ const Leads = () => {
         opportunityData: detailConversionData.createOpportunity ? {
           opportunityName: `${lead.customerName || lead.company || ''} - Opportunity`,
           amount: lead.estimatedDealValue || 0,
+          currency: lead.dealCurrency || 'INR',
           closeDate: detailConversionData.closeDate || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })(),
           stage: 'Qualification',
           probability: 50,
@@ -1859,6 +1902,7 @@ const Leads = () => {
           value={fieldValues[field.fieldName] || ''}
           onChange={handleFieldChange}
           error={fieldErrors[field.fieldName]}
+          formData={fieldValues}
         />
         {isEmail && <div className="absolute right-3 top-1/2 -translate-y-1/2"><VerificationIcon status={emailVerification.status} /></div>}
         {isPhone && <div className="absolute right-3 top-1/2 -translate-y-1/2"><VerificationIcon status={phoneVerification.status} /></div>}
@@ -2334,6 +2378,14 @@ const Leads = () => {
                                         {field.fieldType === 'number' && (
                                           <input type="number" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
                                         )}
+                                        {field.fieldType === 'currency' && (
+                                          <div style={{ position: 'relative' }}>
+                                            <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '11px', fontWeight: '600', color: '#64748b', pointerEvents: 'none' }}>
+                                              {detailEditData.dealCurrency === 'USD' ? '$' : detailEditData.dealCurrency === 'EUR' ? '€' : detailEditData.dealCurrency === 'GBP' ? '£' : '₹'}
+                                            </span>
+                                            <input type="number" name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px 4px 24px', fontSize: '11px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} step="0.01" />
+                                          </div>
+                                        )}
                                         {field.fieldType === 'textarea' && (
                                           <textarea name={field.fieldName} className="crm-form-input" style={{ padding: '4px 6px', fontSize: '11px', minHeight: '60px' }} value={detailEditData[field.fieldName] || ''} onChange={handleDetailEditChange} required={field.isRequired} />
                                         )}
@@ -2417,7 +2469,10 @@ const Leads = () => {
                           </label>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '8px', background: detailConversionData.createOpportunity ? '#dbeafe' : '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', cursor: 'pointer' }}>
                             <input type="checkbox" name="createOpportunity" checked={detailConversionData.createOpportunity} onChange={handleDetailConversionChange} />
-                            <div><div style={{ fontWeight: '600' }}>Opportunity</div><div style={{ fontSize: '10px', color: '#64748b' }}>₹{selectedLeadData.estimatedDealValue || '0'}</div></div>
+                            <div><div style={{ fontWeight: '600' }}>Opportunity</div><div style={{ fontSize: '10px', color: '#64748b' }}>
+                              {selectedLeadData.dealCurrency === 'USD' ? '$' : selectedLeadData.dealCurrency === 'EUR' ? '€' : selectedLeadData.dealCurrency === 'GBP' ? '£' : '₹'}
+                              {selectedLeadData.estimatedDealValue || '0'}
+                            </div></div>
                           </label>
                         </div>
                         {detailConversionData.createOpportunity && (
@@ -2514,7 +2569,11 @@ const Leads = () => {
                                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                   {fields.map(({ key, label, fieldType, value }) => {
                                     let display = value;
-                                    if (fieldType === 'currency') display = `₹${Number(value).toLocaleString()}`;
+                                    if (fieldType === 'currency') {
+                                      const currencySymbol = selectedLeadData.dealCurrency === 'USD' ? '$' : selectedLeadData.dealCurrency === 'EUR' ? '€' : selectedLeadData.dealCurrency === 'GBP' ? '£' : '₹';
+                                      const locale = selectedLeadData.dealCurrency === 'INR' ? 'en-IN' : selectedLeadData.dealCurrency === 'EUR' ? 'de-DE' : selectedLeadData.dealCurrency === 'GBP' ? 'en-GB' : 'en-US';
+                                      display = `${currencySymbol}${Number(value).toLocaleString(locale)}`;
+                                    }
                                     else if (fieldType === 'date') { try { display = new Date(value).toLocaleDateString(); } catch(e) { display = value; } }
                                     else if (fieldType === 'checkbox') display = value ? 'Yes' : 'No';
                                     else if (Array.isArray(value)) display = value.join(', ');
@@ -3314,7 +3373,14 @@ const Leads = () => {
                     {/* Footer */}
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', paddingTop:'10px', borderTop:'1px solid #f1f5f9' }}>
                       {lead.estimatedDealValue
-                        ? <span style={{ fontSize:'13px', fontWeight:'800', color:'#0f172a' }}>₹{Number(lead.estimatedDealValue).toLocaleString('en-IN')}</span>
+                        ? <span style={{ fontSize:'13px', fontWeight:'800', color:'#0f172a' }}>
+                            {lead.dealCurrency === 'USD' ? '$' : lead.dealCurrency === 'EUR' ? '€' : lead.dealCurrency === 'GBP' ? '£' : '₹'}
+                            {Number(lead.estimatedDealValue).toLocaleString(
+                              lead.dealCurrency === 'INR' ? 'en-IN' :
+                              lead.dealCurrency === 'EUR' ? 'de-DE' :
+                              lead.dealCurrency === 'GBP' ? 'en-GB' : 'en-US'
+                            )}
+                          </span>
                         : <span style={{ fontSize:'12px', color:'#cbd5e1' }}>No deal value</span>}
                       {lead.expectedCloseDate && (
                         <div style={{ display:'flex', alignItems:'center', gap:'4px', fontSize:'11px', color:'#94a3b8' }}>
@@ -3338,7 +3404,6 @@ const Leads = () => {
                 {displayColumns.map(col => (
                   <col key={col} data-col={col} style={{ width: colWidths[col] || DEFAULT_COL_WIDTH[col] || 150 }} />
                 ))}
-                {canDeleteLead && <col style={{ width:'52px' }} />}
               </colgroup>
               <thead>
                 <tr style={{ background:'linear-gradient(135deg,#f8fafc,#f1f5f9)', borderBottom:'2px solid #e2e8f0' }}>
@@ -3372,7 +3437,6 @@ const Leads = () => {
                         onMouseLeave={e => e.currentTarget.style.background='#cbd5e1'} />
                     </th>
                   ))}
-                  {canDeleteLead && <th style={{ padding:'8px 12px' }} />}
                 </tr>
               </thead>
               <tbody>
@@ -3432,16 +3496,6 @@ const Leads = () => {
                           )}
                         </td>
                       ))}
-                      {canDeleteLead && (
-                        <td style={{ padding:'7px 12px', whiteSpace:'nowrap', overflow:'hidden' }} onClick={e => e.stopPropagation()}>
-                          <button onClick={(e) => handleDeleteLead(e, lead._id)}
-                            onMouseEnter={e => { e.currentTarget.style.background='#ef4444'; e.currentTarget.style.color='#fff'; }}
-                            onMouseLeave={e => { e.currentTarget.style.background='#fee2e2'; e.currentTarget.style.color='#ef4444'; }}
-                            style={{ background:'#fee2e2', border:'none', borderRadius:'6px', padding:'4px 6px', cursor:'pointer', color:'#ef4444', display:'flex', alignItems:'center', transition:'all 0.15s' }}>
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        </td>
-                      )}
                     </tr>
                   );
                 })}

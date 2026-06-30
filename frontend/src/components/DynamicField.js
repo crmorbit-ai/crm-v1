@@ -5,7 +5,7 @@ import { CheckCircle, XCircle, Loader } from 'lucide-react';
  * DynamicField Component
  * Renders custom form fields with the same look/size as standard CRM fields.
  */
-const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = false }) => {
+const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = false, formData = {} }) => {
   const {
     fieldName,
     label,
@@ -42,23 +42,52 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
     setGstError('');
 
     try {
-      const response = await fetch('/api/leads/verify-gst', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ gstNumber: value.toUpperCase() })
-      });
+      // Client-side validation first
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+      const upperValue = value.toUpperCase();
 
-      const data = await response.json();
+      if (!gstRegex.test(upperValue)) {
+        setGstVerified(false);
+        setGstError('Invalid GST format');
+        setGstVerifying(false);
+        return;
+      }
 
-      if (data.success && data.data.valid) {
+      // Extract PAN from GST (characters 3-12, index 2-11)
+      const extractedPAN = upperValue.substring(2, 12);
+
+      // Auto-fill PAN number field
+      onChange('panNumber', extractedPAN);
+
+      // Try API verification (if backend is running)
+      try {
+        const response = await fetch('/api/leads/verify-gst', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify({ gstNumber: upperValue })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success && data.data.valid) {
+            setGstVerified(true);
+            setGstError('');
+          } else {
+            setGstVerified(false);
+            setGstError(data.data?.error || data.message || 'Invalid GST number');
+          }
+        } else {
+          // API not available, use regex validation
+          setGstVerified(true);
+          setGstError('');
+        }
+      } catch (apiErr) {
+        // API not available, use regex validation result
         setGstVerified(true);
         setGstError('');
-      } else {
-        setGstVerified(false);
-        setGstError(data.data?.error || data.message || 'Invalid GST number');
       }
     } catch (err) {
       setGstVerified(false);
@@ -264,8 +293,17 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
           />
         );
 
-      case 'number':
       case 'currency':
+        // Get currency symbol based on selected currency
+        const selectedCurrency = formData?.dealCurrency || 'INR';
+        const currencySymbols = {
+          'INR': '₹',
+          'USD': '$',
+          'EUR': '€',
+          'GBP': '£'
+        };
+        const currencySymbol = currencySymbols[selectedCurrency] || '₹';
+
         return (
           <div style={{ position: 'relative' }}>
             <span style={{
@@ -278,7 +316,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
               color: '#64748b',
               pointerEvents: 'none',
               zIndex: 1
-            }}>₹</span>
+            }}>{currencySymbol}</span>
             <input
               type="number"
               id={fieldName}
@@ -295,6 +333,25 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
               step="0.01"
             />
           </div>
+        );
+
+      case 'number':
+        return (
+          <input
+            type="number"
+            id={fieldName}
+            name={fieldName}
+            value={value || ''}
+            onChange={handleChange}
+            disabled={disabled}
+            required={isRequired}
+            placeholder={placeholder || ''}
+            className={baseClass}
+            style={inputStyle}
+            min={validations?.min}
+            max={validations?.max}
+            step={validations?.step || '1'}
+          />
         );
 
       case 'percentage':
