@@ -48,6 +48,9 @@ import TemplateManagement from './pages/TemplateManagement';
 import NotificationSettings from './pages/NotificationSettings';
 import DocumentTemplates from './pages/DocumentTemplates';
 import SocialMedia from './pages/SocialMedia';
+import Proposals from './pages/Proposals';
+import ProposalForm from './pages/ProposalForm';
+import ProposalDetail from './pages/ProposalDetail';
 import Quotations from './pages/Quotations';
 import QuotationForm from './pages/QuotationForm';
 import QuotationDetail from './pages/QuotationDetail';
@@ -196,6 +199,10 @@ function AppRoutes() {
         <Route path="/rfi/new" element={<ProtectedRoute requireTenant><RFIForm /></ProtectedRoute>} />
         <Route path="/rfi/:id" element={<ProtectedRoute requireTenant><RFIDetail /></ProtectedRoute>} />
         <Route path="/rfi/:id/edit" element={<ProtectedRoute requireTenant><RFIForm /></ProtectedRoute>} />
+        <Route path="/proposals" element={<ProtectedRoute requireTenant><Proposals /></ProtectedRoute>} />
+        <Route path="/proposals/new" element={<ProtectedRoute requireTenant><ProposalForm /></ProtectedRoute>} />
+        <Route path="/proposals/:id" element={<ProtectedRoute requireTenant><ProposalDetail /></ProtectedRoute>} />
+        <Route path="/proposals/:id/edit" element={<ProtectedRoute requireTenant><ProposalForm /></ProtectedRoute>} />
         <Route path="/quotations" element={<ProtectedRoute requireTenant><Quotations /></ProtectedRoute>} />
         <Route path="/quotations/new" element={<ProtectedRoute requireTenant><QuotationForm /></ProtectedRoute>} />
         <Route path="/quotations/:id" element={<ProtectedRoute requireTenant><QuotationDetail /></ProtectedRoute>} />

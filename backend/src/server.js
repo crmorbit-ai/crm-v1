@@ -109,6 +109,7 @@ app.use('/api/product-categories', require('./routes/productCategoryRoutes'));
 app.use('/api/product-items', require('./routes/productItems'));
 app.use('/api/field-definitions', require('./routes/fieldDefinitions'));
 app.use('/api/rfi', require('./routes/rfi'));
+app.use('/api/proposals', require('./routes/proposals'));
 app.use('/api/quotations', require('./routes/quotations'));
 app.use('/api/purchase-orders', require('./routes/purchaseOrders'));
 app.use('/api/invoices', require('./routes/invoices'));
@@ -156,11 +157,11 @@ const fixDefaultRoles = async () => {
     const ALL_FEATURES = [
       'user_management', 'role_management', 'group_management',
       'lead_management', 'contact_management', 'account_management',
-      'opportunity_management', 'data_center', 'quotation_management',
-      'invoice_management', 'purchase_order_management', 'rfi_management',
-      'product_management', 'task_management', 'meeting_management',
-      'call_management', 'email_management', 'subscription_management',
-      'field_management', 'audit_logs',
+      'opportunity_management', 'data_center', 'proposal_management',
+      'quotation_management', 'invoice_management', 'purchase_order_management',
+      'rfi_management', 'product_management', 'task_management',
+      'meeting_management', 'call_management', 'email_management',
+      'subscription_management', 'field_management', 'audit_logs',
     ];
 
     const roleConfigs = [

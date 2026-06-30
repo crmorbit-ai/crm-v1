@@ -84,11 +84,12 @@ const ensureSuperAdminRole = async () => {
     const ALL_FEATURES = [
       'user_management', 'role_management', 'group_management',
       'lead_management', 'contact_management', 'account_management',
-      'opportunity_management', 'data_center', 'quotation_management',
-      'invoice_management', 'purchase_order_management', 'rfi_management',
-      'product_management', 'task_management', 'meeting_management',
-      'call_management', 'email_management', 'subscription_management',
-      'field_management', 'audit_logs', 'activity_management', 'report_management',
+      'opportunity_management', 'data_center', 'proposal_management',
+      'quotation_management', 'invoice_management', 'purchase_order_management',
+      'rfi_management', 'product_management', 'task_management',
+      'meeting_management', 'call_management', 'email_management',
+      'subscription_management', 'field_management', 'audit_logs',
+      'activity_management', 'report_management',
     ];
 
     await Role.create({

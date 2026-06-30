@@ -336,8 +336,9 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                 </NavSection>
 
                 {/* Sales & Finance */}
-                <NavSection title="Sales & Finance" section="salesFinance" permissions={['rfi_management', 'quotation_management', 'purchase_order_management', 'invoice_management']}>
+                <NavSection title="Sales & Finance" section="salesFinance" permissions={['rfi_management', 'proposal_management', 'quotation_management', 'purchase_order_management', 'invoice_management']}>
                   <NavItem to="/rfi" label="RFI" permission="rfi_management" />
+                  {/* <NavItem to="/proposals" label="Proposals" permission="proposal_management" /> */}
                   <NavItem to="/quotations" label="Quotations" permission="quotation_management" />
                   <NavItem to="/purchase-orders" label="Purchase Orders" permission="purchase_order_management" />
                   <NavItem to="/invoices" label="Invoices" permission="invoice_management" />
@@ -361,11 +362,6 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   <NavItem to="/document-templates" label="Document Templates" permission="document_templates" />
                   <NavItem to="/email-templates" label="Email Templates" permission="email_templates" />
                   <NavItem to="/social-media" label="Social Media" permission="social_media" />
-                </NavSection>
-
-                {/* System Settings */}
-                <NavSection title="System" section="system" permissions={['system', 'system_settings']}>
-                  <NavItem to="/settings" label="Settings" permission="system" />
                 </NavSection>
 
                 <div className="my-3 border-t sidebar-divider" />
