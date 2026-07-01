@@ -327,7 +327,11 @@ const TeamManagement = () => {
     } catch(e) { if(e?.isPermissionDenied) return; setError('Failed to load data'); }
     finally { setLoading(false); }
   },[]);
-  useEffect(()=>{ loadData(); },[loadData, selectedTenant]);
+  useEffect(()=>{
+    if (user) {
+      loadData();
+    }
+  },[loadData, selectedTenant, user]);
 
   const showMsg = (m,err=false) => { err?setError(m):setSuccess(m); setTimeout(()=>{setError('');setSuccess('');},3000); };
   const closePanel = () => { setShowPanel(false);setEditingItem(null);setShowRoleDD(false);setShowGroupDD(false);setSubmitting(false);setUserStep(1);setSubStep(null); };
