@@ -338,7 +338,7 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                 {/* Sales & Finance */}
                 <NavSection title="Sales & Finance" section="salesFinance" permissions={['rfi_management', 'proposal_management', 'quotation_management', 'purchase_order_management', 'invoice_management']}>
                   <NavItem to="/rfi" label="RFI" permission="rfi_management" />
-                  {/* <NavItem to="/proposals" label="Proposals" permission="proposal_management" /> */}
+                  <NavItem to="/proposals" label="Proposals" permission="proposal_management" />
                   <NavItem to="/quotations" label="Quotations" permission="quotation_management" />
                   <NavItem to="/purchase-orders" label="Purchase Orders" permission="purchase_order_management" />
                   <NavItem to="/invoices" label="Invoices" permission="invoice_management" />
