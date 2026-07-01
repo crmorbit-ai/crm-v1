@@ -233,7 +233,7 @@ function AppRoutes() {
         <Route path="/saas/feedback" element={<ProtectedRoute requireSaas><Feedback /></ProtectedRoute>} />
 
         {/* Settings */}
-        <Route path="/users" element={<ProtectedRoute requireTenant><TeamManagement /></ProtectedRoute>} />
+        <Route path="/users" element={<ProtectedRoute requireTenant><TeamManagement key={user?._id || 'no-user'} /></ProtectedRoute>} />
         <Route path="/org-chart" element={<ProtectedRoute requireTenant><OrgChart /></ProtectedRoute>} />
         <Route path="/org-hierarchy" element={<ProtectedRoute requireTenant><OrgHierarchy /></ProtectedRoute>} />
         <Route path="/role-template" element={<ProtectedRoute requireTenant><RoleTemplateBuilder /></ProtectedRoute>} />
