@@ -7,8 +7,24 @@ const getCalls = async (req, res) => {
   try {
     const { page = 1, limit = 10, search, callType, relatedTo, relatedToId } = req.query;
     let query = { isActive: true };
-    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') query.tenant = req.user.tenant;
-    if (search) query.$or = [{ subject: { $regex: search, $options: 'i' }}];
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      query.tenant = req.user.tenant;
+
+      // TENANT_USER and TENANT_MANAGER can only see calls they created
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+        query.$and = [
+          { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
+        ];
+      }
+    }
+    if (search) {
+      const searchOr = [{ subject: { $regex: search, $options: 'i' }}];
+      if (query.$and) {
+        query.$and.push({ $or: searchOr });
+      } else {
+        query.$or = searchOr;
+      }
+    }
     if (callType) query.callType = callType;
     if (relatedTo) query.relatedTo = relatedTo;
     if (relatedToId) query.relatedToId = relatedToId;

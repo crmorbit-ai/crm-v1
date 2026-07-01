@@ -91,6 +91,11 @@ router.get('/dashboard', async (req, res) => {
     if (type) query.type = type;
     if (department) query.department = department;
 
+    // TENANT_USER and TENANT_MANAGER can only see their own items
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+
     const items = await MasterInventoryItem.find(query);
 
     const byType = {
@@ -117,6 +122,11 @@ router.get('/', async (req, res) => {
     const { page = 1, limit = 50, search, type, department, status } = req.query;
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
     const query = { tenant, isActive: true };
+
+    // TENANT_USER and TENANT_MANAGER can only see their own items
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
 
     if (search) {
       query.$or = [
@@ -159,6 +169,11 @@ router.get('/type/:type', async (req, res) => {
     const { type } = req.params;
     const tenant = req.user.tenant || req.user._id?.toString() || 'default';
     const query = { tenant, type, isActive: true };
+
+    // TENANT_USER and TENANT_MANAGER can only see their own items
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
 
     if (search) {
       query.$or = [

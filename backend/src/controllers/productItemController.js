@@ -112,6 +112,11 @@ const getAllProducts = async (req, res) => {
     // Tenant filtering
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       query.tenant = req.user.tenant;
+
+      // TENANT_USER and TENANT_MANAGER can only see their own products
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+        query.createdBy = req.user._id;
+      }
     } else if (req.query.tenant) {
       query.tenant = req.query.tenant;
     }

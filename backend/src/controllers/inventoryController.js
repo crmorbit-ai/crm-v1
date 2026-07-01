@@ -8,6 +8,11 @@ exports.getInventory = async (req, res) => {
     const { search, stockStatus, category, page = 1, limit = 50 } = req.query;
     const query = { tenant: req.user.tenant, isActive: true };
 
+    // TENANT_USER and TENANT_MANAGER can only see their own inventory
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+
     if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { articleNumber: { $regex: search, $options: 'i' } }];
     if (category) query.category = category;
 
@@ -155,6 +160,12 @@ exports.getTransactions = async (req, res) => {
   try {
     const { productId, type, page = 1, limit = 30 } = req.query;
     const query = { tenant: req.user.tenant };
+
+    // TENANT_USER and TENANT_MANAGER can only see their own transactions
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+
     if (productId) query.product = productId;
     if (type) query.type = type;
 
@@ -175,7 +186,14 @@ exports.getTransactions = async (req, res) => {
 // ─── GET /api/inventory/low-stock ────────────────────────────────────────────
 exports.getLowStock = async (req, res) => {
   try {
-    const products = await ProductItem.find({ tenant: req.user.tenant, isActive: true });
+    const query = { tenant: req.user.tenant, isActive: true };
+
+    // TENANT_USER and TENANT_MANAGER can only see their own products
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+
+    const products = await ProductItem.find(query);
     const lowStockItems = products.filter(p => p.stock <= p.lowStockThreshold);
     res.json({ success: true, data: lowStockItems });
   } catch (error) {
@@ -201,7 +219,11 @@ exports.updateThreshold = async (req, res) => {
 // ─── GET /api/inventory/reports/summary ──────────────────────────────────────
 exports.getStockSummary = async (req, res) => {
   try {
-    const products = await ProductItem.find({ tenant: req.user.tenant, isActive: true });
+    const query = { tenant: req.user.tenant, isActive: true };
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+    const products = await ProductItem.find(query);
 
     const summary = products.map(p => ({
       _id: p._id,
@@ -222,7 +244,11 @@ exports.getStockSummary = async (req, res) => {
     }));
 
     // Enrich with transaction totals
-    const transactions = await StockTransaction.find({ tenant: req.user.tenant });
+    const txQuery = { tenant: req.user.tenant };
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      txQuery.createdBy = req.user._id;
+    }
+    const transactions = await StockTransaction.find(txQuery);
     for (const item of summary) {
       const itemTx = transactions.filter(t => t.product?.toString() === item._id.toString());
       item.stockIn = itemTx.filter(t => t.type === 'stock_in').reduce((s, t) => s + t.quantity, 0);
@@ -238,7 +264,11 @@ exports.getStockSummary = async (req, res) => {
 // ─── GET /api/inventory/reports/valuation ────────────────────────────────────
 exports.getStockValuation = async (req, res) => {
   try {
-    const products = await ProductItem.find({ tenant: req.user.tenant, isActive: true });
+    const query = { tenant: req.user.tenant, isActive: true };
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+    const products = await ProductItem.find(query);
     const totalValue = products.reduce((sum, p) => sum + p.stock * (p.costPrice || p.price), 0);
     const data = products.map(p => ({
       _id: p._id, name: p.name, articleNumber: p.articleNumber, category: p.category,
@@ -256,7 +286,11 @@ exports.getStockValuation = async (req, res) => {
 // ─── GET /api/inventory/reports/abc ──────────────────────────────────────────
 exports.getABCAnalysis = async (req, res) => {
   try {
-    const transactions = await StockTransaction.find({ tenant: req.user.tenant, type: 'stock_out' })
+    const query = { tenant: req.user.tenant, type: 'stock_out' };
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+    const transactions = await StockTransaction.find(query)
       .populate('product', 'name articleNumber category price');
 
     // Group by product
@@ -298,8 +332,16 @@ exports.getABCAnalysis = async (req, res) => {
 // ─── GET /api/inventory/reports/aging ────────────────────────────────────────
 exports.getStockAging = async (req, res) => {
   try {
-    const products = await ProductItem.find({ tenant: req.user.tenant, isActive: true, stock: { $gt: 0 } });
-    const transactions = await StockTransaction.find({ tenant: req.user.tenant, type: 'stock_in' }).sort({ createdAt: 1 });
+    const productQuery = { tenant: req.user.tenant, isActive: true, stock: { $gt: 0 } };
+    const txQuery = { tenant: req.user.tenant, type: 'stock_in' };
+
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      productQuery.createdBy = req.user._id;
+      txQuery.createdBy = req.user._id;
+    }
+
+    const products = await ProductItem.find(productQuery);
+    const transactions = await StockTransaction.find(txQuery).sort({ createdAt: 1 });
 
     const now = new Date();
     const result = products.map(p => {
@@ -331,8 +373,17 @@ exports.getStockAging = async (req, res) => {
 exports.getDashboard = async (req, res) => {
   try {
     const tenant = req.user.tenant;
-    const products = await ProductItem.find({ tenant, isActive: true });
-    const transactions = await StockTransaction.find({ tenant }).sort({ createdAt: -1 });
+    const productQuery = { tenant, isActive: true };
+    const transactionQuery = { tenant };
+
+    // TENANT_USER and TENANT_MANAGER can only see their own inventory
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      productQuery.createdBy = req.user._id;
+      transactionQuery.createdBy = req.user._id;
+    }
+
+    const products = await ProductItem.find(productQuery);
+    const transactions = await StockTransaction.find(transactionQuery).sort({ createdAt: -1 });
 
     // Top selling products
     const soldMap = {};
@@ -348,7 +399,11 @@ exports.getDashboard = async (req, res) => {
       .map(([id, v]) => ({ _id: id, ...v }));
 
     // Pending POs to receive
-    const pendingPOs = await PurchaseOrder.find({ tenant, receiveStatus: { $in: ['pending', 'partially_received'] } })
+    const poQuery = { tenant, receiveStatus: { $in: ['pending', 'partially_received'] } };
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      poQuery.createdBy = req.user._id;
+    }
+    const pendingPOs = await PurchaseOrder.find(poQuery)
       .select('poNumber customerName receiveStatus createdAt').limit(5);
 
     // Low stock - all types

@@ -262,6 +262,16 @@ exports.getAllFeedback = async (req, res, next) => {
     const { page = 1, limit = 100, status, type, category, sentiment, search, days, escalatedOnly } = req.query;
     const filter = {};
 
+    // Tenant filtering
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      filter.tenant = req.user.tenant;
+
+      // TENANT_USER and TENANT_MANAGER can only see their own feedback
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+        filter.submittedBy = req.user._id;
+      }
+    }
+
     if (escalatedOnly === 'true') filter.escalatedToSaas = true;
     if (status)    filter.status    = status;
     if (type)      filter.type      = type;

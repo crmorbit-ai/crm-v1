@@ -58,7 +58,7 @@ const userSchema = new mongoose.Schema({
     },
     actions: [{
       type: String,
-      enum: ['create', 'read', 'update', 'delete', 'manage']
+      enum: ['create', 'read', 'update', 'delete', 'manage', 'import', 'export', 'convert', 'move_to_leads']
     }]
   }],
   isActive: {

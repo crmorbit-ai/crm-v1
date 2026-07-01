@@ -31,6 +31,14 @@ exports.getEmails = async (req, res) => {
       isDeleted: false
     };
 
+    // TENANT_USER and TENANT_MANAGER can only see their own emails
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.$or = [
+        { sender: req.user._id },
+        { createdBy: req.user._id }
+      ];
+    }
+
     console.log('📧 getEmails - User Tenant:', req.user.tenant);
     console.log('📧 getEmails - conversationsOnly:', conversationsOnly);
 

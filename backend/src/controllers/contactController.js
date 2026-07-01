@@ -17,9 +17,9 @@ const getContacts = async (req, res) => {
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       query.tenant = req.user.tenant;
 
-      // TENANT_USER can only see contacts they own or created
-      // TENANT_ADMIN and TENANT_MANAGER see all contacts in their tenant
-      if (req.user.userType === 'TENANT_USER') {
+      // TENANT_USER and TENANT_MANAGER can only see contacts they own or created
+      // TENANT_ADMIN sees all contacts in their tenant
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
         query.$and = [
           { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
         ];
@@ -251,7 +251,16 @@ const deleteContact = async (req, res) => {
 const getContactStats = async (req, res) => {
   try {
     let query = { isActive: true };
-    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') query.tenant = req.user.tenant;
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      query.tenant = req.user.tenant;
+
+      // TENANT_USER and TENANT_MANAGER can only see their own contacts
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+        query.$and = [
+          { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
+        ];
+      }
+    }
     const total = await Contact.countDocuments(query);
     const primaryContacts = await Contact.countDocuments({ ...query, isPrimary: true });
     const withAccount = await Contact.countDocuments({ ...query, account: { $ne: null } });

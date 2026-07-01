@@ -197,13 +197,11 @@ export const AuthProvider = ({ children }) => {
     // TENANT_ADMIN has all permissions within their tenant
     if (user.userType === 'TENANT_ADMIN') return true;
 
-    // Debug log for TENANT_MANAGER
-    if (user.userType === 'TENANT_MANAGER') {
-      console.log('🔍 Permission Check:', { feature, action, userRoles: user.roles, customPerms: user.customPermissions });
-    }
+    // TENANT_MANAGER has all permissions
+    if (user.userType === 'TENANT_MANAGER') return true;
 
-    // Check custom permissions
-    if (user.customPermissions) {
+    // Check custom permissions (highest priority)
+    if (user.customPermissions && Array.isArray(user.customPermissions)) {
       const perm = user.customPermissions.find(p => p.feature === feature);
       if (perm && (perm.actions.includes(action) || perm.actions.includes('manage'))) {
         return true;
@@ -215,6 +213,31 @@ export const AuthProvider = ({ children }) => {
       for (const role of user.roles) {
         if (role.permissions && Array.isArray(role.permissions)) {
           const perm = role.permissions.find(p => p.feature === feature);
+          if (perm && (perm.actions.includes(action) || perm.actions.includes('manage'))) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // Check group permissions
+    if (user.groups && Array.isArray(user.groups)) {
+      for (const group of user.groups) {
+        // Check group's roles
+        if (group.roles && Array.isArray(group.roles)) {
+          for (const role of group.roles) {
+            if (role.permissions && Array.isArray(role.permissions)) {
+              const perm = role.permissions.find(p => p.feature === feature);
+              if (perm && (perm.actions.includes(action) || perm.actions.includes('manage'))) {
+                return true;
+              }
+            }
+          }
+        }
+
+        // Check group's direct permissions (groupPermissions)
+        if (group.groupPermissions && Array.isArray(group.groupPermissions)) {
+          const perm = group.groupPermissions.find(p => p.feature === feature);
           if (perm && (perm.actions.includes(action) || perm.actions.includes('manage'))) {
             return true;
           }

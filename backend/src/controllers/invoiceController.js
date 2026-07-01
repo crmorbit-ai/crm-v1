@@ -102,6 +102,11 @@ exports.getInvoices = async (req, res) => {
 
     const query = { tenant: req.user.tenant };
 
+    // TENANT_USER and TENANT_MANAGER can only see their own invoices
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+
     if (status) {
       query.status = status;
     }
@@ -491,8 +496,15 @@ exports.updateInvoiceStatus = async (req, res) => {
 
 exports.getInvoiceStats = async (req, res) => {
   try {
+    const matchQuery = { tenant: req.user.tenant };
+
+    // TENANT_USER and TENANT_MANAGER can only see their own invoice stats
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      matchQuery.createdBy = req.user._id;
+    }
+
     const stats = await Invoice.aggregate([
-      { $match: { tenant: req.user.tenant } },
+      { $match: matchQuery },
       {
         $group: {
           _id: '$status',
@@ -505,7 +517,7 @@ exports.getInvoiceStats = async (req, res) => {
     ]);
 
     const totalStats = await Invoice.aggregate([
-      { $match: { tenant: req.user.tenant } },
+      { $match: matchQuery },
       {
         $group: {
           _id: null,

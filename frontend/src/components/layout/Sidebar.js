@@ -312,11 +312,11 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                 </NavSection>
 
                 {/* Inventory */}
-                <NavSection title="Inventory" section="inventory" permissions={['data_center']}>
-                  <NavItem to="/inventory/master" label="Master Inventory" permission="data_center" />
-                  <NavItem to="/inventory/products" label="Product Inventory" permission="data_center" />
-                  <NavItem to="/inventory/services" label="Service Inventory" permission="data_center" />
-                  <NavItem to="/inventory/leads" label="Lead Inventory" permission="data_center" />
+                <NavSection title="Inventory" section="inventory" permissions={['inventory_management']}>
+                  <NavItem to="/inventory/master" label="Master Inventory" permission="inventory_management" />
+                  <NavItem to="/inventory/products" label="Product Inventory" permission="inventory_management" />
+                  <NavItem to="/inventory/services" label="Service Inventory" permission="inventory_management" />
+                  <NavItem to="/inventory/leads" label="Lead Inventory" permission="inventory_management" />
                 </NavSection>
 
                 {/* Lead Management */}

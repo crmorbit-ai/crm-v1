@@ -67,6 +67,11 @@ const getCandidates = async (req, res) => {
       status: { $ne: 'Moved to Leads' }  // Hide moved candidates from Data Center
     };
 
+    // TENANT_USER and TENANT_MANAGER can only see their own candidates
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.createdBy = req.user._id;
+    }
+
     // Search by name, email, skills
     if (search) {
       query.$or = [
@@ -337,6 +342,11 @@ const getStats = async (req, res) => {
 
     // 🔒 Tenant Isolation: Add tenant filter to all queries
     const tenantFilter = { tenant: req.user.tenant };
+
+    // TENANT_USER and TENANT_MANAGER can only see their own candidates stats
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      tenantFilter.createdBy = req.user._id;
+    }
 
     const totalCandidates = await DataCenterCandidate.countDocuments({
       isActive: true,

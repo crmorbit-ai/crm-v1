@@ -10,8 +10,22 @@ const WelcomePrompt = ({ user, onClose }) => {
     console.log('🔑 User userType:', user?.userType);
     console.log('🔐 User permissions:', user?.permissions);
     console.log('📂 User roles array:', user?.roles);
+    console.log('📦 Custom Permissions:', user?.customPermissions);
+    console.log('👥 Groups:', user?.groups);
 
-    setTimeout(() => setShow(true), 300);
+    // Don't show prompt if user data isn't loaded
+    if (!user || !user._id) {
+      console.log('⚠️ User not loaded yet');
+      return;
+    }
+
+    // Wait 500ms for sidebar to render AND permissions to load
+    const timer = setTimeout(() => {
+      console.log('✅ Showing welcome prompt now');
+      setShow(true);
+    }, 500);
+
+    return () => clearTimeout(timer);
   }, [user]);
 
   // Auto close after 20 seconds
@@ -42,7 +56,10 @@ const WelcomePrompt = ({ user, onClose }) => {
 
   // Detect available sidebar menu items to show relevant features
   const getAvailableFeatures = () => {
-    // Try multiple selectors to find sidebar
+    // IMPORTANT: Don't rely on DOM - use user permissions instead
+    // Sidebar might not be rendered yet when WelcomePrompt loads
+
+    // Fallback: Try to find sidebar (but don't depend on it)
     let sidebar = document.querySelector('nav[class*="sidebar"]')
                   || document.querySelector('[class*="sidebar"]')
                   || document.querySelector('aside')
@@ -152,33 +169,87 @@ const WelcomePrompt = ({ user, onClose }) => {
       };
     }
 
-    // Default: Tenant User - Build features based on permissions (not sidebar DOM)
+    // Default: Tenant User - Build features based on permissions
     const features = [];
 
-    console.log('🔍 DEBUG - user.roles[0]?.permissions:', user?.roles?.[0]?.permissions);
+    console.log('🔍 DEBUG - user.customPermissions:', user?.customPermissions);
+    console.log('🔍 DEBUG - user.groups:', user?.groups);
+    console.log('🔍 DEBUG - user.roles:', user?.roles);
 
-    // Get permissions - either from user.permissions object OR user.roles[0].permissions array
+    // Get permissions from all sources
     let permissionObj = {};
 
-    if (user?.permissions && typeof user.permissions === 'object' && !Array.isArray(user.permissions)) {
-      // Direct permissions object (e.g., {lead_management: {read: true, ...}})
-      permissionObj = user.permissions;
-      console.log('✅ Using user.permissions object');
-    } else if (user?.roles && Array.isArray(user.roles) && user.roles.length > 0) {
-      // Permissions in roles array (e.g., [{feature: 'rfi_management', actions: ['read', 'create']}])
-      const permArray = user.roles[0].permissions || [];
-      console.log('✅ Using user.roles[0].permissions array, length:', permArray.length);
-      permArray.forEach(p => {
+    // 1. Check customPermissions (highest priority)
+    if (user?.customPermissions && Array.isArray(user.customPermissions)) {
+      user.customPermissions.forEach(p => {
         const actions = p.actions || [];
         permissionObj[p.feature] = {
-          read: actions.includes('read'),
-          create: actions.includes('create'),
-          update: actions.includes('update'),
-          delete: actions.includes('delete')
+          read: actions.includes('read') || actions.includes('manage'),
+          create: actions.includes('create') || actions.includes('manage'),
+          update: actions.includes('update') || actions.includes('manage'),
+          delete: actions.includes('delete') || actions.includes('manage')
         };
       });
-    } else {
-      console.log('❌ NO PERMISSIONS FOUND - will show fallback!');
+      console.log('✅ Added customPermissions');
+    }
+
+    // 2. Check roles
+    if (user?.roles && Array.isArray(user.roles)) {
+      user.roles.forEach(role => {
+        if (role.permissions && Array.isArray(role.permissions)) {
+          role.permissions.forEach(p => {
+            if (!permissionObj[p.feature]) {
+              const actions = p.actions || [];
+              permissionObj[p.feature] = {
+                read: actions.includes('read') || actions.includes('manage'),
+                create: actions.includes('create') || actions.includes('manage'),
+                update: actions.includes('update') || actions.includes('manage'),
+                delete: actions.includes('delete') || actions.includes('manage')
+              };
+            }
+          });
+        }
+      });
+      console.log('✅ Added role permissions');
+    }
+
+    // 3. Check groups
+    if (user?.groups && Array.isArray(user.groups)) {
+      user.groups.forEach(group => {
+        // Check group.groupPermissions
+        if (group.groupPermissions && Array.isArray(group.groupPermissions)) {
+          group.groupPermissions.forEach(p => {
+            if (!permissionObj[p.feature]) {
+              const actions = p.actions || [];
+              permissionObj[p.feature] = {
+                read: actions.includes('read') || actions.includes('manage'),
+                create: actions.includes('create') || actions.includes('manage'),
+                update: actions.includes('update') || actions.includes('manage'),
+                delete: actions.includes('delete') || actions.includes('manage')
+              };
+            }
+          });
+        }
+        // Check group.roles
+        if (group.roles && Array.isArray(group.roles)) {
+          group.roles.forEach(role => {
+            if (role.permissions && Array.isArray(role.permissions)) {
+              role.permissions.forEach(p => {
+                if (!permissionObj[p.feature]) {
+                  const actions = p.actions || [];
+                  permissionObj[p.feature] = {
+                    read: actions.includes('read') || actions.includes('manage'),
+                    create: actions.includes('create') || actions.includes('manage'),
+                    update: actions.includes('update') || actions.includes('manage'),
+                    delete: actions.includes('delete') || actions.includes('manage')
+                  };
+                }
+              });
+            }
+          });
+        }
+      });
+      console.log('✅ Added group permissions');
     }
 
     console.log('🎯 Final permissionObj:', permissionObj);

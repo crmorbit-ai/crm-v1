@@ -391,6 +391,125 @@ const registerTenant = async (req, res) => {
     // ============================================
     await seedStandardFields(tenant._id, adminUser._id);
 
+    // ============================================
+    // 👥 CREATE DEFAULT GROUPS
+    // ============================================
+    const Group = require('../models/Group');
+    const DEFAULT_GROUPS = [
+      {
+        name: 'Lead Management Group',
+        slug: 'lead-management-group',
+        description: 'Manages leads, contacts, accounts, and opportunities',
+        groupPermissions: [
+          { feature: 'lead_management', actions: [] },
+          { feature: 'contact_management', actions: [] },
+          { feature: 'account_management', actions: [] },
+          { feature: 'opportunity_management', actions: [] }
+        ]
+      },
+      {
+        name: 'Task Management Group',
+        slug: 'task-management-group',
+        description: 'Manages tasks, meetings, calls, and emails',
+        groupPermissions: [
+          { feature: 'task_management', actions: [] },
+          { feature: 'meeting_management', actions: [] },
+          { feature: 'call_management', actions: [] },
+          { feature: 'email_management', actions: [] }
+        ]
+      },
+      {
+        name: 'Sales & Finance Group',
+        slug: 'sales-finance-group',
+        description: 'Manages RFI, quotations, purchase orders, and invoices',
+        groupPermissions: [
+          { feature: 'rfi_management', actions: [] },
+          { feature: 'quotation_management', actions: [] },
+          { feature: 'purchase_order_management', actions: [] },
+          { feature: 'invoice_management', actions: [] }
+        ]
+      },
+      {
+        name: 'Inventory Management Group',
+        slug: 'inventory-management-group',
+        description: 'Manages master inventory, product inventory, service inventory, and lead inventory',
+        groupPermissions: [
+          { feature: 'inventory_management', actions: [] }
+        ]
+      },
+      {
+        name: 'Product Management Group',
+        slug: 'product-management-group',
+        description: 'Manages products and marketplace',
+        groupPermissions: [
+          { feature: 'product_management', actions: [] },
+          { feature: 'product_marketplace', actions: [] }
+        ]
+      },
+      {
+        name: 'Access Management Group',
+        slug: 'access-management-group',
+        description: 'Manages users, roles, groups, org chart, and audit logs',
+        groupPermissions: [
+          { feature: 'user_management', actions: [] },
+          { feature: 'org_chart', actions: [] },
+          { feature: 'org_hierarchy', actions: [] },
+          { feature: 'role_template', actions: [] },
+          { feature: 'audit_logs', actions: [] }
+        ]
+      },
+      {
+        name: 'Automation Group',
+        slug: 'automation-group',
+        description: 'Manages templates, document templates, email templates, and social media',
+        groupPermissions: [
+          { feature: 'templates', actions: [] },
+          { feature: 'document_templates', actions: [] },
+          { feature: 'email_templates', actions: [] },
+          { feature: 'social_media', actions: [] }
+        ]
+      },
+      {
+        name: 'Support Group',
+        slug: 'support-group',
+        description: 'Manages support tickets and feedback',
+        groupPermissions: [
+          { feature: 'support_tickets', actions: [] },
+          { feature: 'my_tickets', actions: [] },
+          { feature: 'ticket_management', actions: [] },
+          { feature: 'support_management', actions: [] },
+          { feature: 'feedback', actions: [] },
+          { feature: 'feedback_management', actions: [] }
+        ]
+      },
+      {
+        name: 'Sales Group',
+        slug: 'sales-group',
+        description: 'Manages customer data and inventory',
+        groupPermissions: [
+          { feature: 'data_center', actions: [] }
+        ]
+      }
+    ];
+
+    // Create all default groups
+    const groupCreationPromises = DEFAULT_GROUPS.map(groupData =>
+      Group.create({
+        ...groupData,
+        tenant: tenant._id,
+        members: [],
+        roles: [],
+        isActive: true,
+        createdBy: adminUser._id
+      }).catch(err => {
+        console.error(`Failed to create group ${groupData.name}:`, err.message);
+        return null;
+      })
+    );
+
+    await Promise.all(groupCreationPromises);
+    console.log(`✅ Created ${DEFAULT_GROUPS.length} default groups for tenant: ${tenant.organizationName}`);
+
     // Generate token
     const token = generateToken(adminUser);
 
@@ -433,7 +552,14 @@ const getMe = async (req, res) => {
 
     const user = await User.findById(req.user._id)
       .populate('roles', 'name slug permissions level')
-      .populate('groups', 'name description')
+      .populate({
+        path: 'groups',
+        select: 'name description groupPermissions roles',
+        populate: {
+          path: 'roles',
+          select: 'name slug permissions level'
+        }
+      })
       .populate('tenant', 'organizationId organizationName logo isActive isSuspended subscription.status subscription.planName')
       .select('-password -emailVerificationOTP -emailVerificationOTPExpire -resetPasswordOTP -resetPasswordOTPExpire -viewingPin -viewingPinOTP -viewingPinOTPExpiry');
 
@@ -461,6 +587,7 @@ const getMe = async (req, res) => {
       } : null,
       roles: user.roles || [],
       groups: user.groups || [],
+      customPermissions: user.customPermissions || [],
       saasRole: user.saasRole || null
     };
 

@@ -45,6 +45,13 @@ exports.getRFIs = async (req, res) => {
 
     const query = { tenant: req.user.tenant };
 
+    // TENANT_USER and TENANT_MANAGER can only see their own RFIs
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      query.$and = [
+        { $or: [{ createdBy: req.user._id }, { assignedTo: req.user._id }] }
+      ];
+    }
+
     if (status) {
       query.status = status;
     }

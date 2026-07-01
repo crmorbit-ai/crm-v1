@@ -15,9 +15,9 @@ const getAccounts = async (req, res) => {
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       query.tenant = req.user.tenant;
 
-      // TENANT_USER can only see accounts they own or created
-      // TENANT_ADMIN and TENANT_MANAGER see all accounts in their tenant
-      if (req.user.userType === 'TENANT_USER') {
+      // TENANT_USER and TENANT_MANAGER can only see accounts they own or created
+      // TENANT_ADMIN sees all accounts in their tenant
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
         query.$and = [
           { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
         ];
@@ -247,8 +247,17 @@ const deleteAccount = async (req, res) => {
 
 const getAccountStats = async (req, res) => {
   try {
-    const query = { isActive: true };
-    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') query.tenant = req.user.tenant;
+    let query = { isActive: true };
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      query.tenant = req.user.tenant;
+
+      // TENANT_USER and TENANT_MANAGER can only see their own accounts
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+        query.$and = [
+          { $or: [{ owner: req.user._id }, { createdBy: req.user._id }] }
+        ];
+      }
+    }
     const [totalAccounts, customers, prospects, partners, byType, byIndustry] = await Promise.all([
       Account.countDocuments(query), Account.countDocuments({ ...query, accountType: 'Customer' }),
       Account.countDocuments({ ...query, accountType: 'Prospect' }), Account.countDocuments({ ...query, accountType: 'Partner' }),

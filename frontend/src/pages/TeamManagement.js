@@ -22,6 +22,12 @@ const FEATURES = [
   { slug: 'account_management',        name: 'Accounts',              category: 'CRM' },
   { slug: 'opportunity_management',    name: 'Opportunities',         category: 'CRM' },
 
+  // Inventory (Display names - all use data_center permission in backend)
+  { slug: 'master_inventory',          name: 'Master Inventory',      category: 'Inventory' },
+  { slug: 'product_inventory',         name: 'Product Inventory',     category: 'Inventory' },
+  { slug: 'service_inventory',         name: 'Service Inventory',     category: 'Inventory' },
+  { slug: 'lead_inventory',            name: 'Lead Inventory',        category: 'Inventory' },
+
   // Tasks
   { slug: 'task_management',           name: 'Tasks',                 category: 'Tasks' },
   { slug: 'meeting_management',        name: 'Meetings',              category: 'Tasks' },
@@ -132,7 +138,7 @@ const TeamManagement = () => {
   const [showPwd, setShowPwd] = useState(false);
   const [showPin, setShowPin] = useState(false);
   const [roleForm, setRoleForm]   = useState({ name:'', description:'', permissions:[], forUserTypes:['TENANT_USER','TENANT_MANAGER'] });
-  const [groupForm, setGroupForm] = useState({ name:'', description:'', members:[] });
+  const [groupForm, setGroupForm] = useState({ name:'', description:'', members:[], groupPermissions:[] });
   const [submitting, setSubmitting] = useState(false);
   const [resetModal, setResetModal] = useState({ open:false, userId:null, userName:'' });
   const [credentialsModal, setCredentialsModal] = useState({ open: false, userId: null, userName: '', password: '' });
@@ -144,6 +150,15 @@ const TeamManagement = () => {
   const [dragging, setDragging]       = useState(false);
   const [dragStartX, setDragStartX]   = useState(0);
   const [dragStartW, setDragStartW]   = useState(380);
+
+  // Group Assignment Modal
+  const [assignModal, setAssignModal] = useState({ open: false, user: null });
+  const [selectedGroupForAssign, setSelectedGroupForAssign] = useState(null);
+  const [assignPermissions, setAssignPermissions] = useState([]);
+
+  // Detail Views
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
 
   // SAAS Admin - Tenant selection
   const [tenants, setTenants] = useState([]);
@@ -164,6 +179,64 @@ const TeamManagement = () => {
   const UP  = ALL.map(f=>({ feature:f, actions:['read'] }));
   const MP  = ALL.map(f=>({ feature:f, actions:['create','read','update'] }));
   const AP  = ALL.map(f=>({ feature:f, actions:['create','read','update','delete','manage'] }));
+
+  // Default groups based on sidebar sections
+  const DEFAULT_GROUPS = [
+    {
+      name: 'Lead Management Group',
+      slug: 'lead-management-group',
+      description: 'Manages leads, contacts, accounts, and opportunities',
+      permissions: ['lead_management', 'contact_management', 'account_management', 'opportunity_management']
+    },
+    {
+      name: 'Task Management Group',
+      slug: 'task-management-group',
+      description: 'Manages tasks, meetings, calls, and emails',
+      permissions: ['task_management', 'meeting_management', 'call_management', 'email_management']
+    },
+    {
+      name: 'Sales & Finance Group',
+      slug: 'sales-finance-group',
+      description: 'Manages RFI, quotations, purchase orders, and invoices',
+      permissions: ['rfi_management', 'quotation_management', 'purchase_order_management', 'invoice_management']
+    },
+    {
+      name: 'Inventory Management Group',
+      slug: 'inventory-management-group',
+      description: 'Manages master inventory, product inventory, service inventory, and lead inventory',
+      permissions: ['inventory_management']
+    },
+    {
+      name: 'Product Management Group',
+      slug: 'product-management-group',
+      description: 'Manages products and marketplace',
+      permissions: ['product_management', 'product_marketplace']
+    },
+    {
+      name: 'Access Management Group',
+      slug: 'access-management-group',
+      description: 'Manages users, roles, groups, org chart, and audit logs',
+      permissions: ['user_management', 'org_chart', 'org_hierarchy', 'role_template', 'audit_logs']
+    },
+    {
+      name: 'Automation Group',
+      slug: 'automation-group',
+      description: 'Manages templates, document templates, email templates, and social media',
+      permissions: ['templates', 'document_templates', 'email_templates', 'social_media']
+    },
+    {
+      name: 'Support Group',
+      slug: 'support-group',
+      description: 'Manages support tickets and feedback',
+      permissions: ['support_tickets', 'my_tickets', 'ticket_management', 'support_management', 'feedback', 'feedback_management']
+    },
+    {
+      name: 'Sales Group',
+      slug: 'sales-group',
+      description: 'Manages customer data and inventory',
+      permissions: ['data_center']
+    }
+  ];
 
   // Load tenant list for SAAS Admin
   useEffect(() => {
@@ -200,11 +273,53 @@ const TeamManagement = () => {
       const fg = gr.groups||[];
       const eU=cr.find(r=>r.name==='User'), eM=cr.find(r=>r.name==='Manager'), eA=cr.find(r=>r.name==='Admin');
       const up = (ex,d) => ex ? roleService.updateRole(ex._id,{permissions:d.permissions,forUserTypes:d.forUserTypes,level:d.level}).catch(()=>{}) : roleService.createRole(d).catch(()=>{});
+
+      // Create or update default groups
+      const defaultGroupPromises = DEFAULT_GROUPS.map(async dg => {
+        const existingGroup = fg.find(g => g.slug === dg.slug);
+        const groupPermissions = dg.permissions.map(p => ({ feature: p, actions: [] }));
+
+        if (!existingGroup) {
+          // Create new group
+          return groupService.createGroup({
+            name: dg.name,
+            slug: dg.slug,
+            description: dg.description,
+            members: [],
+            groupPermissions: groupPermissions
+          }).catch(()=>{});
+        } else {
+          // Update existing group if permissions have changed
+          const existingPermFeatures = existingGroup.groupPermissions?.map(gp => gp.feature).sort() || [];
+          const newPermFeatures = dg.permissions.sort();
+
+          // Check if permissions are different
+          const permissionsChanged = JSON.stringify(existingPermFeatures) !== JSON.stringify(newPermFeatures);
+
+          if (permissionsChanged) {
+            console.log(`Updating ${dg.name} permissions...`);
+            return groupService.updateGroup(existingGroup._id, {
+              groupPermissions: groupPermissions
+            }).catch(()=>{});
+          }
+        }
+        return Promise.resolve();
+      });
+
+      // Delete old unwanted groups if they exist
+      const unwantedSlugs = ['data-center-group', 'monitoring-group'];
+      const unwantedGroups = fg.filter(g => unwantedSlugs.includes(g.slug));
+
+      for (const group of unwantedGroups) {
+        console.log(`Deleting ${group.name}...`);
+        await groupService.deleteGroup(group._id).catch(()=>{});
+      }
+
       await Promise.all([
         up(eU,{name:'User',slug:'user',description:'Read-only',permissions:UP,forUserTypes:['TENANT_USER'],level:10}),
         up(eM,{name:'Manager',slug:'manager',description:'Create/read/update',permissions:MP,forUserTypes:['TENANT_USER','TENANT_MANAGER'],level:50}),
         up(eA,{name:'Admin',slug:'admin',description:'Full access',permissions:AP,forUserTypes:['TENANT_USER','TENANT_MANAGER'],level:100}),
-        !fg.some(g=>g.name==='Monitoring Group') && groupService.createGroup({name:'Monitoring Group',slug:'monitoring-group',description:'Default monitoring group',members:[]}).catch(()=>{}),
+        ...defaultGroupPromises,
       ]);
       const [rr2,gr2] = await Promise.all([roleService.getRoles({limit:100}),groupService.getGroups({limit:100})]);
       setRoles((rr2.roles||[]).filter(r=>r.roleType!=='system'));
@@ -227,7 +342,7 @@ const TeamManagement = () => {
     setShowPanel(true);
   };
   const openRolePanel  = (r=null) => { setPanelMode('role');  setEditingItem(r); setRoleForm(r?{name:r.name,description:r.description||'',permissions:r.permissions||[],forUserTypes:r.forUserTypes||['TENANT_USER','TENANT_MANAGER']}:{name:'',description:'',permissions:[],forUserTypes:['TENANT_USER','TENANT_MANAGER']}); setShowPanel(true); };
-  const openGroupPanel = (g=null) => { setPanelMode('group'); setEditingItem(g); setGroupForm(g?{name:g.name,description:g.description||'',members:g.members?.map(m=>m._id)||[]}:{name:'',description:'',members:[]}); setShowPanel(true); };
+  const openGroupPanel = (g=null) => { setPanelMode('group'); setEditingItem(g); setGroupForm(g?{name:g.name,description:g.description||'',members:g.members?.map(m=>m._id)||[],groupPermissions:g.groupPermissions||[]}:{name:'',description:'',members:[],groupPermissions:[]}); setShowPanel(true); };
 
   const handleUserSubmit = async e => {
     e.preventDefault(); if(submitting) return;
@@ -346,14 +461,17 @@ const TeamManagement = () => {
   };
 
   const togglePerm = (form,setForm) => (feature,action) => {
-    setForm(p=>{ const ps=[...p.permissions],i=ps.findIndex(x=>x.feature===feature);
+    setForm(p=>{
+      const permKey = p.groupPermissions !== undefined ? 'groupPermissions' : 'permissions';
+      const ps=[...p[permKey]],i=ps.findIndex(x=>x.feature===feature);
       if(i===-1) ps.push({feature,actions:[action]});
       else{ const a=[...ps[i].actions],ai=a.indexOf(action); if(ai===-1)a.push(action);else a.splice(ai,1); if(!a.length)ps.splice(i,1);else ps[i]={...ps[i],actions:a}; }
-      return{...p,permissions:ps};
+      return{...p,[permKey]:ps};
     });
   };
   const hasPerm  = (f,a) => roleForm.permissions.find(p=>p.feature===f)?.actions?.includes(a)||false;
   const hasQPerm = (f,a) => qRole.permissions.find(p=>p.feature===f)?.actions?.includes(a)||false;
+  const hasGroupPerm = (f,a) => groupForm.groupPermissions.find(p=>p.feature===f)?.actions?.includes(a)||false;
 
   const handleQRole = async e => {
     e.preventDefault();
@@ -1031,7 +1149,7 @@ const TeamManagement = () => {
                 <form onSubmit={handleGroupSubmit}>
                   <div style={{marginBottom:12}}><Label>Group Name *</Label><Inp value={groupForm.name} onChange={e=>setGroupForm({...groupForm,name:e.target.value})} required placeholder="e.g. Sales Team" /></div>
                   <div style={{marginBottom:12}}><Label>Description</Label><Inp value={groupForm.description} onChange={e=>setGroupForm({...groupForm,description:e.target.value})} placeholder="Brief description" /></div>
-                  <div style={{marginBottom:12}}><Label>Members</Label>
+                  <div style={{marginBottom:12}}><Label>Members <span style={{textTransform:'none',fontWeight:400,color:'#94a3b8'}}>— optional, can be added later</span></Label>
                     <div style={{display:'flex',flexWrap:'wrap',gap:6,padding:10,border:'1.5px solid #e2e8f0',borderRadius:9,background:'#fafbff',maxHeight:110,overflowY:'auto'}}>
                       {users.map(u=>(
                         <label key={u._id} style={{padding:'4px 12px',borderRadius:20,fontSize:11,fontWeight:700,cursor:'pointer',background:groupForm.members.includes(u._id)?'#dcfce7':'#fff',border:`1.5px solid ${groupForm.members.includes(u._id)?'#16a34a':'#e2e8f0'}`,color:groupForm.members.includes(u._id)?'#15803d':'#64748b',transition:'all 0.15s'}}>
@@ -1041,12 +1159,124 @@ const TeamManagement = () => {
                       ))}
                     </div>
                   </div>
+                  <div style={{marginBottom:12}}><Label>Group Permissions</Label><PermTable hasP={hasGroupPerm} toggleP={togglePerm(groupForm,setGroupForm)} /></div>
                   <PriBtn type="submit">{editingItem?'Update':'Create'} Group</PriBtn>
                 </form>
               )}
             </div>
           </div>
         )}
+
+        {/* ─── ROLE DETAIL PANEL (left, on row click) ────────── */}
+        {selectedRole&&!showPanel&&activeTab==='roles'&&(()=>{
+          const sr=selectedRole;
+          const permsByCategory = {};
+          sr.permissions?.forEach(p=>{
+            const moduleInfo = FEATURES.find(f=>f.slug===p.feature);
+            const cat = moduleInfo?.category || 'Other';
+            if(!permsByCategory[cat]) permsByCategory[cat]=[];
+            permsByCategory[cat].push({...p, moduleName: moduleInfo?.name||p.feature});
+          });
+          return(
+            <div className="xFadeUp xPanel" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(139,92,246,0.15)',overflow:'hidden',display:'flex',flexDirection:'column',position:'relative',maxHeight:'calc(100vh - 160px)'}}>
+              <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20}} />
+              <div style={{background:'linear-gradient(135deg,#6d28d9 0%,#8b5cf6 60%,#a78bfa 100%)',padding:'14px 18px 12px',position:'relative',overflow:'hidden',flexShrink:0}}>
+                <div style={{position:'absolute',top:-40,right:-20,width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(255,255,255,0.18) 0%,transparent 70%)',pointerEvents:'none'}} />
+                <button onClick={()=>setSelectedRole(null)} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.18)',cursor:'pointer',color:'#fff',fontSize:17,display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+                <div style={{position:'relative',zIndex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{width:40,height:40,borderRadius:11,background:'rgba(255,255,255,0.2)',border:'1px solid rgba(255,255,255,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,flexShrink:0,boxShadow:'0 3px 10px rgba(0,0,0,0.15)'}}>🛡️</div>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:800,color:'#fff',lineHeight:1.2}}>{sr.name}</div>
+                      <div style={{fontSize:10,color:'rgba(255,255,255,0.7)',marginTop:2}}>{sr.description||'No description'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="xScroll" style={{padding:'14px 16px',overflowY:'auto',flex:1}}>
+                <div style={{fontSize:9,fontWeight:800,color:'#6366f1',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8,paddingBottom:4,borderBottom:'1.5px solid #e0e7ff'}}>Permissions Breakdown</div>
+                {Object.keys(permsByCategory).length>0?(
+                  Object.entries(permsByCategory).map(([category,perms])=>(
+                    <div key={category} style={{marginBottom:14}}>
+                      <div style={{fontSize:11,fontWeight:700,color:'#475569',marginBottom:6}}>{category}</div>
+                      {perms.map((p,idx)=>(
+                        <div key={idx} style={{marginBottom:6,padding:8,background:'#faf5ff',border:'1px solid #e9d5ff',borderRadius:8}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'#6d28d9',marginBottom:4}}>{p.moduleName}</div>
+                          <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+                            {p.actions.map(a=><span key={a} style={{fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:5,background:'#f3e8ff',color:'#7e22ce',border:'1px solid #ddd6fe'}}>{a.toUpperCase()}</span>)}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))
+                ):(
+                  <div style={{textAlign:'center',padding:'24px 16px',color:'#94a3b8',fontSize:12}}>No permissions configured</div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* ─── GROUP DETAIL PANEL (left, on row click) ────────── */}
+        {selectedGroup&&!showPanel&&activeTab==='groups'&&(()=>{
+          const sg=selectedGroup;
+          const groupMembers = users.filter(u=>sg.members?.some(m=>(m._id||m)===u._id));
+          return(
+            <div className="xFadeUp xPanel" style={{width:panelWidth,flexShrink:0,background:'#fff',borderRadius:18,border:'1px solid #e8edf5',boxShadow:'0 4px 6px rgba(0,0,0,0.04),0 16px 40px rgba(20,184,166,0.15)',overflow:'hidden',display:'flex',flexDirection:'column',position:'relative',maxHeight:'calc(100vh - 160px)'}}>
+              <div onMouseDown={startDrag} style={{position:'absolute',right:0,top:0,bottom:0,width:5,cursor:'col-resize',zIndex:20}} />
+              <div style={{background:'linear-gradient(135deg,#0f766e 0%,#14b8a6 60%,#5eead4 100%)',padding:'14px 18px 12px',position:'relative',overflow:'hidden',flexShrink:0}}>
+                <div style={{position:'absolute',top:-40,right:-20,width:130,height:130,borderRadius:'50%',background:'radial-gradient(circle,rgba(255,255,255,0.18) 0%,transparent 70%)',pointerEvents:'none'}} />
+                <button onClick={()=>setSelectedGroup(null)} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,0.1)',border:'1px solid rgba(255,255,255,0.18)',cursor:'pointer',color:'#fff',fontSize:17,display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+                <div style={{position:'relative',zIndex:1}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <div style={{width:40,height:40,borderRadius:11,background:'rgba(255,255,255,0.2)',border:'1px solid rgba(255,255,255,0.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:19,flexShrink:0,boxShadow:'0 3px 10px rgba(0,0,0,0.15)'}}>📂</div>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:800,color:'#fff',lineHeight:1.2}}>{sg.name}</div>
+                      <div style={{fontSize:10,color:'rgba(255,255,255,0.7)',marginTop:2}}>{sg.description||'No description'}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="xScroll" style={{padding:'14px 16px',overflowY:'auto',flex:1}}>
+                <div style={{fontSize:9,fontWeight:800,color:'#14b8a6',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8,paddingBottom:4,borderBottom:'1.5px solid #ccfbf1'}}>Group Members ({groupMembers.length})</div>
+                {groupMembers.length>0?(
+                  <div style={{marginBottom:16}}>
+                    {groupMembers.map(u=>(
+                      <div key={u._id} style={{display:'flex',alignItems:'center',gap:8,padding:6,marginBottom:4,background:'#f0fdfa',border:'1px solid #ccfbf1',borderRadius:8}}>
+                        <div style={{width:28,height:28,borderRadius:8,background:avGrad(u.firstName),display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontWeight:900,fontSize:11,flexShrink:0}}>{u.firstName?.[0]}{u.lastName?.[0]}</div>
+                        <div style={{flex:1,minWidth:0}}>
+                          <div style={{fontSize:11,fontWeight:700,color:'#0f766e'}}>{u.firstName} {u.lastName}</div>
+                          <div style={{fontSize:9,color:'#64748b'}}>{u.email}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ):(
+                  <div style={{textAlign:'center',padding:'16px',color:'#94a3b8',fontSize:11,marginBottom:16}}>No members assigned</div>
+                )}
+
+                <div style={{fontSize:9,fontWeight:800,color:'#14b8a6',textTransform:'uppercase',letterSpacing:'1px',marginBottom:8,paddingBottom:4,borderBottom:'1.5px solid #ccfbf1'}}>Module Permissions</div>
+                {sg.groupPermissions?.length>0?(
+                  sg.groupPermissions.map((gp,idx)=>{
+                    const moduleInfo = FEATURES.find(f=>f.slug===gp.feature);
+                    return(
+                      <div key={idx} style={{marginBottom:6,padding:8,background:'#f0fdfa',border:'1px solid #99f6e4',borderRadius:8}}>
+                        <div style={{fontSize:11,fontWeight:700,color:'#0f766e',marginBottom:4}}>{moduleInfo?.name||gp.feature}</div>
+                        <div style={{display:'flex',flexWrap:'wrap',gap:3}}>
+                          {gp.actions.map(a=><span key={a} style={{fontSize:9,fontWeight:700,padding:'2px 7px',borderRadius:5,background:'#ccfbf1',color:'#115e59',border:'1px solid #99f6e4'}}>{a.toUpperCase()}</span>)}
+                        </div>
+                      </div>
+                    );
+                  })
+                ):(
+                  <div style={{textAlign:'center',padding:'24px 16px',color:'#94a3b8',fontSize:12}}>No permissions configured</div>
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* ─── USER DETAIL PANEL (left, on row click) ────────── */}
         {selectedUser&&!showPanel&&(()=>{
@@ -1119,9 +1349,52 @@ const TeamManagement = () => {
 
                     {userGroups.length>0&&(
                       <div style={{marginTop:10}}>
-                        <SLabel>Groups</SLabel>
-                        <div style={{display:'flex',flexWrap:'wrap',gap:4}}>
-                          {userGroups.map(g=><span key={g._id} style={{fontSize:10,fontWeight:700,padding:'3px 9px',borderRadius:20,background:'#ecfdf5',color:'#065f46',border:'1px solid #6ee7b7'}}>{g.name}</span>)}
+                        <SLabel>Groups & Permissions</SLabel>
+                        {userGroups.map(g=>(
+                          <div key={g._id} style={{marginBottom:12,padding:10,background:'#f8fffe',border:'1px solid #d1fae5',borderRadius:8}}>
+                            <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                              <span style={{fontSize:11,fontWeight:800,color:'#065f46'}}>📂 {g.name}</span>
+                              <span style={{fontSize:9,fontWeight:600,color:'#94a3b8'}}>({g.groupPermissions?.length||0} modules)</span>
+                            </div>
+                            {g.groupPermissions?.length>0?(
+                              <div style={{display:'flex',flexDirection:'column',gap:3}}>
+                                {g.groupPermissions.slice(0,3).map((gp,idx)=>{
+                                  const moduleInfo = FEATURES.find(f=>f.slug===gp.feature);
+                                  return(
+                                    <div key={idx} style={{fontSize:10,color:'#047857',display:'flex',alignItems:'center',gap:4}}>
+                                      <span style={{fontWeight:600}}>• {moduleInfo?.name||gp.feature}:</span>
+                                      <div style={{display:'flex',gap:2,flexWrap:'wrap'}}>
+                                        {gp.actions.map(a=><span key={a} style={{padding:'1px 4px',background:'#d1fae5',border:'1px solid #a7f3d0',borderRadius:4,fontSize:9,fontWeight:700}}>{a}</span>)}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                                {g.groupPermissions.length>3&&<div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic'}}>+ {g.groupPermissions.length-3} more modules</div>}
+                              </div>
+                            ):(
+                              <div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic'}}>No permissions configured</div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {su.customPermissions?.length>0&&(
+                      <div style={{marginTop:10}}>
+                        <SLabel>Custom Permissions</SLabel>
+                        <div style={{padding:10,background:'#fef3ff',border:'1px solid #f3e8ff',borderRadius:8}}>
+                          {su.customPermissions.slice(0,3).map((cp,idx)=>{
+                            const moduleInfo = FEATURES.find(f=>f.slug===cp.feature);
+                            return(
+                              <div key={idx} style={{fontSize:10,color:'#7e22ce',display:'flex',alignItems:'center',gap:4,marginBottom:3}}>
+                                <span style={{fontWeight:600}}>• {moduleInfo?.name||cp.feature}:</span>
+                                <div style={{display:'flex',gap:2,flexWrap:'wrap'}}>
+                                  {cp.actions.map(a=><span key={a} style={{padding:'1px 4px',background:'#f3e8ff',border:'1px solid #e9d5ff',borderRadius:4,fontSize:9,fontWeight:700}}>{a}</span>)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          {su.customPermissions.length>3&&<div style={{fontSize:9,color:'#94a3b8',fontStyle:'italic'}}>+ {su.customPermissions.length-3} more</div>}
                         </div>
                       </div>
                     )}
@@ -1275,7 +1548,11 @@ const TeamManagement = () => {
 
                       {/* actions */}
                       <td style={{...TD,textAlign:'right'}}>
-                        <div style={{display:'flex',gap:6,justifyContent:'flex-end'}}>
+                        <div style={{display:'flex',gap:6,justifyContent:'flex-end',flexWrap:'wrap'}}>
+                          {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();setAssignModal({open:true,user:u});setSelectedGroupForAssign(null);setAssignPermissions([]);}} title="Assign Group"
+                            style={{height:26,padding:'0 10px',borderRadius:7,border:'1px solid #d1fae5',background:'#ecfdf5',color:'#059669',cursor:'pointer',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4,transition:'all 0.15s',whiteSpace:'nowrap'}}>
+                            📂 Assign
+                          </button>}
                           {u._id!==user._id&&<button onClick={e=>{e.stopPropagation();openUserPanel(u);}} title="Edit"
                             style={{height:26,padding:'0 10px',borderRadius:7,border:'1px solid #e0e7ff',background:'#eef2ff',color:'#4f46e5',cursor:'pointer',fontSize:11,fontWeight:700,display:'flex',alignItems:'center',gap:4,transition:'all 0.15s',whiteSpace:'nowrap'}}>
                             ✏️ Edit
@@ -1316,9 +1593,12 @@ const TeamManagement = () => {
                 <tbody>
 
                   {/* ── ROLES ──────────────────────────────── */}
-                  {activeTab==='roles'&&roles.map(r=>(
-                    <tr key={r._id} className="xRow" style={{borderBottom:'1px solid #f8fafc'}}>
-                      <td style={TD}>
+                  {activeTab==='roles'&&roles.map(r=>{
+                    const isSelected=selectedRole?._id===r._id;
+                    return(
+                    <tr key={r._id} className="xRow" onClick={()=>setSelectedRole(isSelected?null:r)} style={{borderBottom:'1px solid #f8fafc',cursor:'pointer',background:isSelected?'#faf5ff':'',transition:'all 0.15s',position:'relative'}}>
+                      {isSelected&&<td style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg,#8b5cf6,#a78bfa)',padding:0}} />}
+                      <td style={{...TD,paddingLeft:isSelected?16:TD.padding}}>
                         <div style={{display:'flex',alignItems:'center',gap:10}}>
                           <div style={{width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#4f46e5,#7c3aed)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>🛡️</div>
                           <div>
@@ -1331,32 +1611,45 @@ const TeamManagement = () => {
                       <td style={TD}><span style={{fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,background:'#f5f3ff',color:'#6d28d9',border:'1px solid #ddd6fe'}}>{r.permissions?.length||0} rules</span></td>
                       <td style={{...TD,textAlign:'right'}}>
                         <div className="xActs" style={{display:'flex',gap:5,justifyContent:'flex-end'}}>
-                          <button className="xActBtn" onClick={()=>openRolePanel(r)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#eff6ff',color:'#2563eb',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>✏️</button>
-                          {r.roleType!=='system'&&<button className="xActBtn" onClick={()=>handleDeleteRole(r)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#fff1f2',color:'#e11d48',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>🗑️</button>}
+                          <button className="xActBtn" onClick={e=>{e.stopPropagation();openRolePanel(r);}} style={{width:30,height:30,borderRadius:8,border:'none',background:'#eff6ff',color:'#2563eb',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>✏️</button>
+                          {r.roleType!=='system'&&<button className="xActBtn" onClick={e=>{e.stopPropagation();handleDeleteRole(r);}} style={{width:30,height:30,borderRadius:8,border:'none',background:'#fff1f2',color:'#e11d48',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>🗑️</button>}
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
 
                   {/* ── GROUPS ─────────────────────────────── */}
-                  {activeTab==='groups'&&groups.map(g=>(
-                    <tr key={g._id} className="xRow" style={{borderBottom:'1px solid #f8fafc'}}>
-                      <td style={TD}>
+                  {activeTab==='groups'&&groups.map(g=>{
+                    const isSelected=selectedGroup?._id===g._id;
+                    return(
+                    <tr key={g._id} className="xRow" onClick={()=>setSelectedGroup(isSelected?null:g)} style={{borderBottom:'1px solid #f8fafc',cursor:'pointer',background:isSelected?'#f0fdfa':'',transition:'all 0.15s',position:'relative'}}>
+                      {isSelected&&<td style={{position:'absolute',left:0,top:0,bottom:0,width:3,background:'linear-gradient(180deg,#14b8a6,#5eead4)',padding:0}} />}
+                      <td style={{...TD,paddingLeft:isSelected?16:TD.padding}}>
                         <div style={{display:'flex',alignItems:'center',gap:10}}>
                           <div style={{width:36,height:36,borderRadius:10,background:'linear-gradient(135deg,#0891b2,#38bdf8)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,flexShrink:0}}>📂</div>
-                          <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>{g.name}</div>
+                          <div>
+                            <div style={{fontSize:13,fontWeight:700,color:'#0f172a'}}>{g.name}</div>
+                            {g.groupPermissions?.length>0&&<div style={{fontSize:10,color:'#94a3b8',marginTop:1}}>{g.groupPermissions.length} permissions</div>}
+                          </div>
                         </div>
                       </td>
                       <td style={{...TD,color:'#64748b',fontSize:12}}>{g.description||'—'}</td>
-                      <td style={TD}><span style={{fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,background:'#ecfdf5',color:'#065f46',border:'1px solid #6ee7b7'}}>{g.members?.length||0} members</span></td>
+                      <td style={TD}>
+                        <div style={{display:'flex',gap:4,flexWrap:'wrap'}}>
+                          <span style={{fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,background:'#ecfdf5',color:'#065f46',border:'1px solid #6ee7b7'}}>{g.members?.length||0} members</span>
+                          {g.groupPermissions?.length>0&&<span style={{fontSize:10,fontWeight:700,padding:'3px 10px',borderRadius:20,background:'#f5f3ff',color:'#6d28d9',border:'1px solid #ddd6fe'}}>{g.groupPermissions.length} rules</span>}
+                        </div>
+                      </td>
                       <td style={{...TD,textAlign:'right'}}>
                         <div className="xActs" style={{display:'flex',gap:5,justifyContent:'flex-end'}}>
-                          <button className="xActBtn" onClick={()=>openGroupPanel(g)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#eff6ff',color:'#2563eb',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>✏️</button>
-                          <button className="xActBtn" onClick={()=>handleDeleteGroup(g)} style={{width:30,height:30,borderRadius:8,border:'none',background:'#fff1f2',color:'#e11d48',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>🗑️</button>
+                          <button className="xActBtn" onClick={e=>{e.stopPropagation();openGroupPanel(g);}} style={{width:30,height:30,borderRadius:8,border:'none',background:'#eff6ff',color:'#2563eb',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>✏️</button>
+                          <button className="xActBtn" onClick={e=>{e.stopPropagation();handleDeleteGroup(g);}} style={{width:30,height:30,borderRadius:8,border:'none',background:'#fff1f2',color:'#e11d48',cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',transition:'all 0.15s',fontSize:13}}>🗑️</button>
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  );
+                  })}
 
                 </tbody>
               </table>
@@ -1414,6 +1707,180 @@ const TeamManagement = () => {
           </div>
         </div>
       )}
+
+      {/* ════════════════════════════════════════════
+          GROUP ASSIGNMENT MODAL WITH PERMISSIONS
+      ════════════════════════════════════════════ */}
+      {assignModal.open&&(()=>{
+        const selectedGroup = groups.find(g => g._id === selectedGroupForAssign);
+        const groupModules = selectedGroup?.groupPermissions?.map(gp => gp.feature) || [];
+
+        const togglePermAction = (feature, action) => {
+          setAssignPermissions(prev => {
+            const existing = prev.find(p => p.feature === feature);
+            if (!existing) {
+              return [...prev, { feature, actions: [action] }];
+            }
+            const newActions = existing.actions.includes(action)
+              ? existing.actions.filter(a => a !== action)
+              : [...existing.actions, action];
+            if (newActions.length === 0) {
+              return prev.filter(p => p.feature !== feature);
+            }
+            return prev.map(p => p.feature === feature ? { ...p, actions: newActions } : p);
+          });
+        };
+
+        const toggleAll = (feature) => {
+          setAssignPermissions(prev => {
+            const existing = prev.find(p => p.feature === feature);
+            const allActions = ['create', 'read', 'update', 'delete', 'manage', 'import', 'export'];
+            if (existing && existing.actions.length === allActions.length) {
+              return prev.filter(p => p.feature !== feature);
+            }
+            return prev.filter(p => p.feature !== feature).concat({ feature, actions: allActions });
+          });
+        };
+
+        const hasAction = (feature, action) => {
+          const perm = assignPermissions.find(p => p.feature === feature);
+          return perm?.actions?.includes(action) || false;
+        };
+
+        const hasAllActions = (feature) => {
+          const perm = assignPermissions.find(p => p.feature === feature);
+          const allActions = ['create', 'read', 'update', 'delete', 'manage', 'import', 'export'];
+          return perm?.actions?.length === allActions.length;
+        };
+
+        return(
+          <div style={{position:'fixed',inset:0,background:'rgba(7,4,20,0.75)',backdropFilter:'blur(8px)',WebkitBackdropFilter:'blur(8px)',zIndex:9000,display:'flex',alignItems:'center',justifyContent:'center',padding:20}}>
+            <div className="xModalIn" style={{background:'#fff',borderRadius:20,width:'100%',maxWidth:680,maxHeight:'90vh',boxShadow:'0 30px 80px rgba(0,0,0,0.28)',overflow:'hidden',display:'flex',flexDirection:'column'}}>
+              <div style={{padding:'14px 20px',background:'linear-gradient(135deg,#059669,#10b981)',position:'relative',overflow:'hidden',flexShrink:0}}>
+                <div style={{position:'absolute',top:-30,right:-20,width:120,height:120,borderRadius:'50%',background:'radial-gradient(circle,rgba(255,255,255,0.2) 0%,transparent 70%)',pointerEvents:'none'}} />
+                <button onClick={()=>{setAssignModal({open:false,user:null});setSelectedGroupForAssign(null);setAssignPermissions([]);}} style={{position:'absolute',top:12,right:14,width:26,height:26,borderRadius:7,background:'rgba(255,255,255,.15)',border:'1px solid rgba(255,255,255,.25)',color:'#fff',fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',zIndex:2}}>×</button>
+                <div style={{display:'flex',alignItems:'center',gap:12,position:'relative',zIndex:1}}>
+                  <div style={{width:38,height:38,borderRadius:10,background:'rgba(255,255,255,.2)',border:'1px solid rgba(255,255,255,.3)',display:'flex',alignItems:'center',justifyContent:'center',fontSize:18,flexShrink:0}}>📂</div>
+                  <div>
+                    <div style={{fontSize:15,fontWeight:800,color:'#fff',lineHeight:1.2}}>Assign Group to User</div>
+                    <div style={{fontSize:11,color:'rgba(255,255,255,.7)',marginTop:2}}>
+                      {assignModal.user?.firstName} {assignModal.user?.lastName} <span style={{opacity:0.6}}>({assignModal.user?.email})</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="xScroll" style={{padding:'20px 24px',overflowY:'auto',flex:1}}>
+                <div style={{marginBottom:16}}>
+                  <Label>Select Group *</Label>
+                  <select
+                    value={selectedGroupForAssign||''}
+                    onChange={e=>{setSelectedGroupForAssign(e.target.value);setAssignPermissions([]);}}
+                    style={{width:'100%',padding:'10px 13px',border:'1.5px solid #e2e8f0',borderRadius:10,fontSize:14,color:'#0f172a',background:'#fff',outline:'none',cursor:'pointer'}}
+                    required
+                  >
+                    <option value="">-- Select a group --</option>
+                    {groups.map(g=><option key={g._id} value={g._id}>{g.name} ({g.groupPermissions?.length||0} modules)</option>)}
+                  </select>
+                </div>
+
+                {selectedGroup&&groupModules.length>0&&(
+                  <div>
+                    <Label>Module Permissions</Label>
+                    <div style={{fontSize:11,color:'#64748b',marginBottom:10}}>Select which permissions to grant for each module</div>
+                    <div style={{border:'1.5px solid #e2e8f0',borderRadius:12,overflow:'hidden'}}>
+                      <table style={{width:'100%',borderCollapse:'collapse'}}>
+                        <thead>
+                          <tr style={{background:'#f8fafc'}}>
+                            <th style={{padding:'10px 14px',fontSize:11,fontWeight:800,color:'#475569',textTransform:'uppercase',letterSpacing:'0.5px',textAlign:'left',borderBottom:'1px solid #e2e8f0'}}>Module</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#475569',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0',title:'Create'}}>C</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#475569',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0',title:'Read'}}>R</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#475569',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0',title:'Update'}}>U</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#475569',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0',title:'Delete'}}>D</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#475569',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0',title:'Manage'}}>M</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#475569',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0',title:'Import'}}>I</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#475569',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0',title:'Export'}}>E</th>
+                            <th style={{padding:'10px 7px',fontSize:9,fontWeight:800,color:'#10b981',textTransform:'uppercase',textAlign:'center',borderBottom:'1px solid #e2e8f0'}}>All</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {groupModules.map(moduleSlug=>{
+                            const moduleInfo = FEATURES.find(f=>f.slug===moduleSlug);
+                            return(
+                              <tr key={moduleSlug} style={{borderBottom:'1px solid #f1f5f9'}}>
+                                <td style={{padding:'9px 14px',fontSize:12,fontWeight:600,color:'#334155'}}>{moduleInfo?.name||moduleSlug}</td>
+                                {['create','read','update','delete','manage','import','export'].map(action=>(
+                                  <td key={action} style={{padding:'9px 7px',textAlign:'center'}}>
+                                    <input
+                                      type="checkbox"
+                                      checked={hasAction(moduleSlug,action)}
+                                      onChange={()=>togglePermAction(moduleSlug,action)}
+                                      style={{cursor:'pointer',width:14,height:14,accentColor:'#10b981'}}
+                                    />
+                                  </td>
+                                ))}
+                                <td style={{padding:'9px 8px',textAlign:'center'}}>
+                                  <input
+                                    type="checkbox"
+                                    checked={hasAllActions(moduleSlug)}
+                                    onChange={()=>toggleAll(moduleSlug)}
+                                    style={{cursor:'pointer',width:15,height:15,accentColor:'#10b981'}}
+                                  />
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {selectedGroup&&groupModules.length===0&&(
+                  <div style={{padding:'24px',textAlign:'center',background:'#fffbeb',border:'1.5px solid #fde68a',borderRadius:12}}>
+                    <div style={{fontSize:13,fontWeight:700,color:'#92400e',marginBottom:4}}>⚠️ No modules in this group</div>
+                    <div style={{fontSize:12,color:'#78350f'}}>This group has no modules configured yet. Edit the group to add modules first.</div>
+                  </div>
+                )}
+              </div>
+
+              <div style={{padding:'16px 24px',borderTop:'1px solid #e2e8f0',background:'#f8fafc',flexShrink:0}}>
+                <div style={{display:'flex',gap:10}}>
+                  <button type="button" onClick={()=>{setAssignModal({open:false,user:null});setSelectedGroupForAssign(null);setAssignPermissions([]);}} style={{flex:1,padding:'11px 0',border:'1.5px solid #e2e8f0',borderRadius:10,background:'#fff',color:'#64748b',fontSize:13,fontWeight:700,cursor:'pointer'}}>Cancel</button>
+                  <PriBtn
+                    onClick={async()=>{
+                      if(!selectedGroupForAssign){showMsg('Please select a group',true);return;}
+                      try{
+                        setSubmitting(true);
+                        // Add group to user
+                        await userService.assignGroups(assignModal.user._id, [selectedGroupForAssign]);
+                        // Update custom permissions
+                        if(assignPermissions.length>0){
+                          await userService.updateUser(assignModal.user._id, {customPermissions:assignPermissions});
+                        }
+                        showMsg('Group assigned successfully!');
+                        setAssignModal({open:false,user:null});
+                        setSelectedGroupForAssign(null);
+                        setAssignPermissions([]);
+                        loadData();
+                      }catch(e){
+                        if(e?.isPermissionDenied)return;
+                        showMsg(e.message||'Failed to assign group',true);
+                      }finally{
+                        setSubmitting(false);
+                      }
+                    }}
+                    disabled={!selectedGroupForAssign||submitting}
+                    style={{flex:1,marginTop:0,opacity:!selectedGroupForAssign||submitting?0.5:1}}
+                  >
+                    {submitting?'Assigning...':'Assign Group'}
+                  </PriBtn>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ════════════════════════════════════════════
           TENANT ADMIN PASSWORD VERIFICATION MODAL

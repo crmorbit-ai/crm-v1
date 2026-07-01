@@ -45,8 +45,8 @@ const getLeads = async (req, res) => {
     // Group-based Visibility
     const Group = require('../models/Group');
 
-    if (req.user.userType === 'TENANT_USER') {
-      // TENANT_USER sees only leads they own or are assigned to
+    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+      // TENANT_USER and TENANT_MANAGER see only leads they own or are assigned to
       const userGroups = await Group.find({
         members: req.user._id,
         isActive: true
@@ -57,6 +57,7 @@ const getLeads = async (req, res) => {
         query.$and = [
           { $or: [
             { owner: req.user._id },
+            { createdBy: req.user._id },
             { assignedGroup: { $in: groupIds }, assignedMembers: req.user._id }
           ]}
         ];
@@ -66,7 +67,7 @@ const getLeads = async (req, res) => {
         ];
       }
     }
-    // TENANT_MANAGER and TENANT_ADMIN see all tenant leads (no ownership filter)
+    // TENANT_ADMIN sees all tenant leads (no ownership filter)
 
     // Unassigned filter
     if (unassigned === 'true') {
@@ -182,6 +183,14 @@ const getLeadStats = async (req, res) => {
     // Tenant filtering
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       query.tenant = req.user.tenant;
+
+      // TENANT_USER and TENANT_MANAGER can only see their own leads
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
+        query.$or = [
+          { owner: req.user._id },
+          { createdBy: req.user._id }
+        ];
+      }
     } else if (req.query.tenant) {
       query.tenant = req.query.tenant;
     }

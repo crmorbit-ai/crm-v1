@@ -22,8 +22,9 @@ const getTasks = async (req, res) => {
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       query.tenant = req.user.tenant;
 
-      // TENANT_USER can only see tasks they own, are assigned to, or created
-      if (req.user.userType === 'TENANT_USER') {
+      // TENANT_USER and TENANT_MANAGER can only see tasks they own, are assigned to, or created
+      // TENANT_ADMIN sees all tasks in their tenant
+      if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
         query.$and = [
           { $or: [{ owner: req.user._id }, { assignedTo: req.user._id }, { createdBy: req.user._id }] }
         ];
