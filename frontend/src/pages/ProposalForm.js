@@ -13,6 +13,15 @@ const ProposalForm = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState([]);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  const [newCustomerData, setNewCustomerData] = useState({
+    name: '',
+    customerName: '',
+    email: '',
+    phone: '',
+    address: '',
+    company: ''
+  });
 
   const [formData, setFormData] = useState({
     // Customer Info
@@ -113,6 +122,52 @@ const ProposalForm = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleNewCustomerSave = async () => {
+    try {
+      setLoading(true);
+      // Save to Master Database (DataCenter)
+      const response = await fetch(`${API_URL}/data-center`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          customerName: newCustomerData.customerName,
+          email: newCustomerData.email,
+          phone: newCustomerData.phone,
+          currentLocation: newCustomerData.address,
+          currentCompany: newCustomerData.company
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to create customer');
+
+      const data = await response.json();
+      const newCustomer = data.data;
+
+      // Add to customers list
+      setCustomers(prev => [...prev, newCustomer]);
+
+      // Auto-select new customer
+      setFormData(prev => ({
+        ...prev,
+        customer: newCustomer._id,
+        customerName: newCustomer.customerName || newCustomer.name,
+        customerEmail: newCustomer.email,
+        customerPhone: newCustomer.phone,
+        customerAddress: newCustomer.currentLocation || '',
+        customerCompany: newCustomer.currentCompany || ''
+      }));
+
+      // Close modal and reset
+      setShowNewCustomerModal(false);
+      setNewCustomerData({ name: '', customerName: '', email: '', phone: '', address: '', company: '' });
+      setError('');
+    } catch (err) {
+      setError(err.message || 'Failed to create customer');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCustomerSelect = (e) => {
@@ -314,33 +369,240 @@ const ProposalForm = () => {
               <span style={{ fontSize: '18px' }}>🧑</span> Customer Information
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-              <div>
+            {!showNewCustomerModal ? (
+              <div style={{ marginBottom: '16px' }}>
                 <label style={ls}>Select Customer *</label>
-                <select name="customer" value={formData.customer} onChange={handleCustomerSelect} required style={{ ...is, cursor: 'pointer' }}>
-                  <option value="">-- Select Customer --</option>
-                  {customers.map(c => (
-                    <option key={c._id} value={c._id}>
-                      {c.name || c.customerName || 'Unnamed Customer'}
-                    </option>
-                  ))}
-                </select>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <select name="customer" value={formData.customer} onChange={handleCustomerSelect} required style={{ ...is, cursor: 'pointer', flex: 1 }}>
+                    <option value="">-- Select Customer --</option>
+                    {customers.map(c => (
+                      <option key={c._id} value={c._id}>
+                        {c.name || c.customerName || 'Unnamed Customer'}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCustomerModal(true)}
+                    style={{
+                      padding: '0 20px',
+                      background: 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      boxShadow: '0 2px 8px rgba(79, 70, 229, 0.3)',
+                      transition: 'all 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.target.style.transform = 'translateY(-1px)';
+                      e.target.style.boxShadow = '0 4px 12px rgba(79, 70, 229, 0.4)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.target.style.transform = 'translateY(0)';
+                      e.target.style.boxShadow = '0 2px 8px rgba(79, 70, 229, 0.3)';
+                    }}
+                  >
+                    ➕ Add New
+                  </button>
+                </div>
               </div>
+            ) : (
+              <div style={{
+                border: '2px solid #4f46e5',
+                borderRadius: '12px',
+                padding: '20px',
+                background: 'linear-gradient(to bottom, #f8fafc, #ffffff)',
+                marginBottom: '16px',
+                animation: 'slideDown 0.3s ease'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                  <h4 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#4f46e5' }}>
+                    ➕ Add New Customer
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewCustomerModal(false);
+                      setNewCustomerData({ name: '', customerName: '', email: '', phone: '', address: '', company: '' });
+                    }}
+                    style={{
+                      background: 'rgba(79, 70, 229, 0.1)',
+                      border: 'none',
+                      width: '28px',
+                      height: '28px',
+                      borderRadius: '6px',
+                      fontSize: '18px',
+                      cursor: 'pointer',
+                      color: '#4f46e5',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontWeight: '700'
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
 
-              <div>
-                <label style={ls}>Customer Name *</label>
-                <input type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} required style={is} />
-              </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>
+                      Customer Name <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={newCustomerData.customerName}
+                      onChange={(e) => setNewCustomerData(prev => ({ ...prev, customerName: e.target.value }))}
+                      placeholder="Enter customer name"
+                      style={{
+                        ...is,
+                        border: '2px solid #e2e8f0',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
+                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                  </div>
 
-              <div>
-                <label style={ls}>Email *</label>
-                <input type="email" name="customerEmail" value={formData.customerEmail} onChange={handleInputChange} required style={is} />
-              </div>
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>
+                      Email <span style={{ color: '#ef4444' }}>*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={newCustomerData.email}
+                      onChange={(e) => setNewCustomerData(prev => ({ ...prev, email: e.target.value }))}
+                      placeholder="customer@example.com"
+                      style={{
+                        ...is,
+                        border: '2px solid #e2e8f0',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
+                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                  </div>
 
-              <div>
-                <label style={ls}>Phone</label>
-                <input type="tel" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} style={is} />
+                  <div>
+                    <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>Phone</label>
+                    <input
+                      type="tel"
+                      value={newCustomerData.phone}
+                      onChange={(e) => setNewCustomerData(prev => ({ ...prev, phone: e.target.value }))}
+                      placeholder="+1 234 567 8900"
+                      style={{
+                        ...is,
+                        border: '2px solid #e2e8f0',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
+                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>Company</label>
+                    <input
+                      type="text"
+                      value={newCustomerData.company}
+                      onChange={(e) => setNewCustomerData(prev => ({ ...prev, company: e.target.value }))}
+                      placeholder="Company name"
+                      style={{
+                        ...is,
+                        border: '2px solid #e2e8f0',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
+                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                  </div>
+
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>Address</label>
+                    <textarea
+                      value={newCustomerData.address}
+                      onChange={(e) => setNewCustomerData(prev => ({ ...prev, address: e.target.value }))}
+                      placeholder="Enter full address"
+                      rows="2"
+                      style={{
+                        ...is,
+                        border: '2px solid #e2e8f0',
+                        resize: 'vertical',
+                        transition: 'all 0.2s'
+                      }}
+                      onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
+                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '16px', justifyContent: 'flex-end' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewCustomerModal(false);
+                      setNewCustomerData({ name: '', customerName: '', email: '', phone: '', address: '', company: '' });
+                    }}
+                    style={{
+                      padding: '10px 20px',
+                      background: 'white',
+                      color: '#64748b',
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleNewCustomerSave}
+                    disabled={!newCustomerData.customerName || !newCustomerData.email || loading}
+                    style={{
+                      padding: '10px 24px',
+                      background: (!newCustomerData.customerName || !newCustomerData.email || loading)
+                        ? '#cbd5e1'
+                        : 'linear-gradient(135deg, #4f46e5, #7c3aed)',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '13px',
+                      fontWeight: '600',
+                      cursor: (!newCustomerData.customerName || !newCustomerData.email || loading) ? 'not-allowed' : 'pointer',
+                      boxShadow: (!newCustomerData.customerName || !newCustomerData.email || loading) ? 'none' : '0 2px 8px rgba(79, 70, 229, 0.3)'
+                    }}
+                  >
+                    {loading ? '⏳ Saving...' : '✓ Save Customer'}
+                  </button>
+                </div>
               </div>
+            )}
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+              {!showNewCustomerModal && (
+                <>
+                  <div>
+                    <label style={ls}>Customer Name *</label>
+                    <input type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} required style={is} />
+                  </div>
+
+                  <div>
+                    <label style={ls}>Email *</label>
+                    <input type="email" name="customerEmail" value={formData.customerEmail} onChange={handleInputChange} required style={is} />
+                  </div>
+
+                  <div>
+                    <label style={ls}>Phone</label>
+                    <input type="tel" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} style={is} />
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -670,6 +932,20 @@ const ProposalForm = () => {
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes slideUp {
+          from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
       `}</style>
     </DashboardLayout>
   );

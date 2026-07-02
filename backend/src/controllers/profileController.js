@@ -32,7 +32,7 @@ const getProfile = async (req, res) => {
   try {
     // Get user with populated tenant and roles
     const user = await User.findById(req.user._id)
-      .populate('tenant', 'organizationId organizationName contactEmail contactPhone alternatePhone logo invoiceLogo signature industry businessType subscription settings legalName website socialMedia numberOfEmployees foundedYear gstin panNumber taxId registrationNumber headquarters keyContact bankDetails')
+      .populate('tenant', 'organizationId organizationName contactEmail contactPhone alternatePhone logo invoiceLogo signature industry businessType subscription settings legalName website socialMedia numberOfEmployees foundedYear gstin panNumber cinNumber taxId registrationNumber headquarters keyContact bankDetails address')
       .populate('roles', 'name description')
       .populate('groups', 'name description')
       .select('-password -emailVerificationOTP -emailVerificationOTPExpire -resetPasswordOTP -resetPasswordOTPExpire');
@@ -246,6 +246,7 @@ const updateOrganization = async (req, res) => {
       foundedYear,
       gstin,
       panNumber,
+      cinNumber,
       taxId,
       registrationNumber,
       headquarters,
@@ -292,6 +293,7 @@ const updateOrganization = async (req, res) => {
     if (foundedYear !== undefined) tenant.foundedYear = foundedYear;
     if (gstin !== undefined) tenant.gstin = gstin;
     if (panNumber !== undefined) tenant.panNumber = panNumber;
+    if (cinNumber !== undefined) tenant.cinNumber = cinNumber;
     if (taxId !== undefined) tenant.taxId = taxId;
     if (registrationNumber !== undefined) tenant.registrationNumber = registrationNumber;
 

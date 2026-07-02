@@ -21,19 +21,7 @@ const generateProposalPDF = async (proposal, tenant) => {
     }
   }
 
-  // Download and process signature if URL
-  let signatureBuffer = null;
-  if (tenant.signature && tenant.signature.startsWith('http')) {
-    try {
-      const response = await axios.get(tenant.signature, { responseType: 'arraybuffer' });
-      signatureBuffer = await sharp(Buffer.from(response.data))
-        .resize(180, 60, { fit: 'inside', background: { r: 0, g: 0, b: 0, alpha: 0 } })
-        .png()
-        .toBuffer();
-    } catch (err) {
-      console.log('Signature download error:', err.message);
-    }
-  }
+  // Signature not needed in proposals
 
   return new Promise((resolve, reject) => {
     try {
@@ -62,16 +50,40 @@ const generateProposalPDF = async (proposal, tenant) => {
       };
       const currencySymbol = getCurrencySymbol(proposal.currency);
 
+      // ==================== PAGE BORDER ====================
+      // Draw golden border around page
+      doc.rect(40, 40, 515, 762).strokeColor('#d97706').lineWidth(2).stroke();
+      doc.rect(43, 43, 509, 756).strokeColor('#f59e0b').lineWidth(0.5).stroke();
+
       // ==================== HEADER ====================
-      let yPos = 50;
+      let yPos = 55;
 
-      // Company Name - Left side
-      doc.fontSize(16).font('Helvetica-Bold').fillColor('#1f2937')
-         .text(tenant.organizationName || 'Company Name', 50, yPos, { width: 300 });
+      // Company Name - Left side - Better formatting
+      const companyName = (tenant.organizationName || 'Company Name').toUpperCase();
+      doc.fontSize(16).font('Helvetica-Bold').fillColor('#1e40af')
+         .text(companyName, 55, yPos, { width: 350 });
 
-      // Company Logo - Right side VERY TOP
-      const logoX = 460;
-      const logoY = 30; // Maximum upar
+      yPos += 22;
+
+      // Company Address - Below name
+      if (tenant.headquarters) {
+        const addressParts = [];
+        if (tenant.headquarters.street) addressParts.push(tenant.headquarters.street);
+        if (tenant.headquarters.city) addressParts.push(tenant.headquarters.city);
+        if (tenant.headquarters.state) addressParts.push(tenant.headquarters.state);
+        if (tenant.headquarters.zipCode) addressParts.push(tenant.headquarters.zipCode);
+        if (tenant.headquarters.country) addressParts.push(tenant.headquarters.country);
+
+        const fullAddress = addressParts.join(', ');
+        if (fullAddress) {
+          doc.fontSize(8).font('Helvetica').fillColor('#6b7280')
+             .text(fullAddress, 55, yPos, { width: 350, lineGap: 2 });
+        }
+      }
+
+      // Company Logo - Right side VERY TOP (border ke turant baad)
+      const logoX = 450;
+      const logoY = 20;
       if (logoBuffer) {
         try {
           doc.image(logoBuffer, logoX, logoY, { width: 90 });
@@ -80,64 +92,95 @@ const generateProposalPDF = async (proposal, tenant) => {
         }
       }
 
-      // Date and RFP - Right side, below logo
-      const dateX = 460;
-      const dateY = 95; // Logo ke neeche
-      doc.fontSize(7).font('Helvetica').fillColor('#1f2937');
+      // DEBUG: Check tenant data
+      console.log('📄 PDF Tenant Data:', {
+        cinNumber: tenant.cinNumber,
+        gstin: tenant.gstin,
+        panNumber: tenant.panNumber,
+        headquarters: tenant.headquarters
+      });
 
-      const dateText = `date- ${new Date(proposal.proposalDate).toLocaleDateString('en-GB')}`;
-      doc.text(dateText, dateX, dateY, { width: 95, align: 'left' });
+      // CIN, GST, PAN, Date - Right side BELOW logo with proper spacing
+      const infoX = 350;
+      let infoY = 85; // Logo ke neeche (logo Y=20 + logo display height ~60 = 80 + gap 5)
+      doc.fontSize(7).font('Helvetica-Bold').fillColor('#1f2937');
+
+      if (tenant.cinNumber) {
+        doc.text(`CIN – ${tenant.cinNumber}`, infoX, infoY, { width: 195, align: 'right' });
+        infoY += 10;
+      }
+      if (tenant.gstin) {
+        doc.text(`GST- ${tenant.gstin}`, infoX, infoY, { width: 195, align: 'right' });
+        infoY += 10;
+      }
+      if (tenant.panNumber) {
+        doc.text(`PAN: ${tenant.panNumber}`, infoX, infoY, { width: 195, align: 'right' });
+        infoY += 10;
+      }
+
+      // Date - Right side
+      const dateText = `Date- ${new Date(proposal.proposalDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).replace(/ /g, '- ')}`;
+      doc.text(dateText, infoX, infoY, { width: 195, align: 'right' });
 
       // Clean RFP number
       const rfpText = proposal.rfpNumber ? String(proposal.rfpNumber).replace(/[^a-zA-Z0-9\/\-\s]/g, '').trim() : '';
       if (rfpText) {
-        doc.text(rfpText, dateX, dateY + 9, { width: 95, align: 'left' });
+        infoY += 10;
+        doc.text(`RFP/${rfpText}`, infoX, infoY, { width: 195, align: 'right' });
       }
 
-      yPos = 135;
+      // Header divider line
+      yPos = 145;
+      doc.moveTo(55, yPos).lineTo(540, yPos).strokeColor('#e5e7eb').lineWidth(1).stroke();
+
+      yPos = 160;
 
       // ==================== TITLE ====================
       // Clean title - remove all special/unicode characters except basic punctuation
       const cleanTitle = (proposal.title || 'BUSINESS PROPOSAL').replace(/[^a-zA-Z0-9\s\&\-\,\.]/g, '').trim();
-      doc.fontSize(28).font('Helvetica-Bold').fillColor('#f97316')
-         .text(cleanTitle, 50, yPos, { width: 495 });
+      doc.fontSize(22).font('Helvetica-Bold').fillColor('#f97316')
+         .text(cleanTitle, 55, yPos, { width: 485 });
 
-      yPos += 42;
+      yPos += 32;
 
-      // Info section - compact
-      doc.fontSize(9).font('Helvetica').fillColor('#6b7280');
-      doc.text(`Proposal No: ${proposal.proposalNumber}`, 50, yPos);
-      yPos += 12;
-      doc.text(`Date: ${new Date(proposal.proposalDate).toLocaleDateString('en-IN')}`, 50, yPos);
-      yPos += 12;
+      // Info section - compact in 2 columns
+      doc.fontSize(8).font('Helvetica').fillColor('#6b7280');
+      const col1X = 55;
+      const col2X = 300;
+
+      doc.text(`Proposal No: ${proposal.proposalNumber}`, col1X, yPos);
+      doc.text(`Valid Until: ${new Date(proposal.validUntil).toLocaleDateString('en-IN')}`, col2X, yPos);
+      yPos += 10;
+
       if (rfpText) {
-        doc.text(`RFP/Reference: ${rfpText}`, 50, yPos);
-        yPos += 12;
+        doc.text(`RFP/Reference: ${rfpText}`, col1X, yPos);
+        yPos += 10;
       }
-      doc.text(`Valid Until: ${new Date(proposal.validUntil).toLocaleDateString('en-IN')}`, 50, yPos);
 
-      yPos += 25;
+      yPos += 18;
 
-      // Customer Info Box - compact
-      doc.fontSize(10).font('Helvetica-Bold').fillColor('#1f2937')
-         .text('TO:', 50, yPos);
+      // Customer Info Box - compact with border
+      const boxY = yPos;
+      doc.rect(55, boxY, 240, 55).strokeColor('#e5e7eb').lineWidth(1).stroke();
+      doc.rect(56, boxY + 1, 238, 13).fillColor('#f3f4f6').fill();
 
-      yPos += 15;
-      doc.fontSize(10).font('Helvetica-Bold')
-         .text(proposal.customerName, 50, yPos);
+      doc.fontSize(8).font('Helvetica-Bold').fillColor('#1f2937')
+         .text('TO:', 60, boxY + 4);
 
-      yPos += 13;
+      doc.fontSize(9).font('Helvetica-Bold').fillColor('#1f2937')
+         .text(proposal.customerName, 60, boxY + 20);
+
+      let custY = boxY + 32;
       if (proposal.customerEmail) {
-        doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
-           .text(proposal.customerEmail, 50, yPos);
-        yPos += 11;
+        doc.fontSize(7).font('Helvetica').fillColor('#6b7280')
+           .text(proposal.customerEmail, 60, custY);
+        custY += 9;
       }
       if (proposal.customerPhone) {
-        doc.text(proposal.customerPhone, 50, yPos);
-        yPos += 11;
+        doc.text(proposal.customerPhone, 60, custY);
       }
 
-      yPos += 25;
+      yPos = boxY + 70;
 
       // ==================== SECTIONS ====================
       if (proposal.sections && proposal.sections.length > 0) {
@@ -373,50 +416,32 @@ const generateProposalPDF = async (proposal, tenant) => {
         }
       }
 
-      // ==================== SIGNATURE ====================
-      // Only add if space available on current page
-      const needsSignature = signatureBuffer || tenant.organizationName;
-      const signatureHeight = 100; // Approximate height needed
-
-      if (needsSignature && (yPos + signatureHeight) < 750) {
-        yPos += 20;
-
-        doc.fontSize(10).font('Helvetica-Bold').fillColor('#1f2937')
-           .text('Authorized Signature', 50, yPos);
-
-        yPos += 18;
-
-        if (signatureBuffer) {
-          try {
-            doc.image(signatureBuffer, 50, yPos, { width: 150, height: 50 });
-            yPos += 60;
-          } catch (err) {
-            console.log('Signature render error:', err.message);
-            yPos += 35;
-          }
-        } else {
-          yPos += 35;
-        }
-
-        doc.moveTo(50, yPos).lineTo(200, yPos).strokeColor('#9ca3af').stroke();
-        yPos += 6;
-        doc.fontSize(9).font('Helvetica').fillColor('#6b7280')
-           .text(tenant.organizationName || '', 50, yPos);
-      }
+      // Signature removed - not needed in proposals
 
       // ==================== FOOTER ON ALL PAGES ====================
       const range = doc.bufferedPageRange();
+      console.log(`📄 Total Pages Generated: ${range.count}`);
+
       for (let i = 0; i < range.count; i++) {
         doc.switchToPage(i);
 
-        // Footer text
-        doc.fontSize(8).font('Helvetica').fillColor('#9ca3af')
-           .text(
-             `© ${new Date().getFullYear()} ${tenant.organizationName || 'Company'} | Page ${i + 1} of ${range.count}`,
-             50,
-             doc.page.height - 50,
-             { align: 'center', width: 495 }
-           );
+        const footerY = doc.page.height - 80;
+
+        // Footer divider line
+        doc.moveTo(55, footerY).lineTo(540, footerY).strokeColor('#e5e7eb').lineWidth(1).stroke();
+
+        // Powered by UNIFIED CONSULTANCY (hardcoded)
+        doc.fontSize(7).font('Helvetica-Bold').fillColor('#1f2937')
+           .text('UNIFIED CONSULTANCY SERVICES PRIVATE LIMITED', 55, footerY + 10, { align: 'center', width: 485 });
+
+        doc.fontSize(6).font('Helvetica').fillColor('#6b7280')
+           .text('PROP K-15, 2ND FLOOR R/S KH NO 32, KHIRKI EXTN, MALVIYA NAGAR', 55, footerY + 20, { align: 'center', width: 485 });
+
+        doc.text('DELHI, Delhi 110017, India', 55, footerY + 28, { align: 'center', width: 485 });
+
+        // Page number
+        doc.fontSize(7).fillColor('#9ca3af')
+           .text(`Page ${i + 1} of ${range.count}`, 55, footerY + 40, { align: 'center', width: 485 });
       }
 
       doc.end();

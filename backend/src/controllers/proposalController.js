@@ -232,7 +232,7 @@ const sendProposal = async (req, res) => {
     const { recipients } = req.body;
 
     const proposal = await Proposal.findById(req.params.id)
-      .populate('tenant', 'organizationName email logo');
+      .populate('tenant', 'organizationName email logo invoiceLogo gstin panNumber cinNumber headquarters');
 
     if (!proposal) {
       return errorResponse(res, 404, 'Proposal not found');
@@ -243,20 +243,51 @@ const sendProposal = async (req, res) => {
       return errorResponse(res, 403, 'Access denied');
     }
 
-    // TODO: Implement email sending with PDF attachment
-    // For now, just update status
+    // Generate PDF
+    const pdfBuffer = await generateProposalPDF(proposal, proposal.tenant);
 
+    // Send email with PDF attachment using AWS SES
+    const { sendMailWithAttachment } = require('../utils/emailService');
+    const recipientList = recipients || [proposal.customerEmail];
+
+    for (const email of recipientList) {
+      await sendMailWithAttachment({
+        to: email,
+        fromNoreply: true, // Use no-reply@texora.ai
+        subject: `Proposal: ${proposal.title || proposal.proposalNumber}`,
+        html: `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+            <h2 style="color: #10b981;">New Proposal from ${proposal.tenant.organizationName}</h2>
+            <p>Dear ${proposal.customerName},</p>
+            <p>Please find attached the proposal for <strong>${proposal.title}</strong>.</p>
+            <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+              <p style="margin: 0;"><strong>Proposal Number:</strong> ${proposal.proposalNumber}</p>
+              <p style="margin: 8px 0 0 0;"><strong>Total Amount:</strong> ₹${proposal.totalAmount?.toLocaleString('en-IN') || 0}</p>
+            </div>
+            <p>If you have any questions, please don't hesitate to reach out.</p>
+            <p>Best regards,<br>${proposal.tenant.organizationName}</p>
+          </div>
+        `,
+        attachments: [{
+          filename: `${proposal.proposalNumber || 'proposal'}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }]
+      });
+    }
+
+    // Update status
     proposal.status = 'sent';
     proposal.sentAt = new Date();
-    proposal.sentTo = recipients || [proposal.customerEmail];
+    proposal.sentTo = recipientList;
     proposal.lastModifiedBy = req.user._id;
 
     await proposal.save();
 
-    successResponse(res, 200, 'Proposal sent successfully', proposal);
+    successResponse(res, 200, 'Proposal sent successfully via email', proposal);
   } catch (error) {
     console.error('Send proposal error:', error);
-    errorResponse(res, 500, 'Server error');
+    errorResponse(res, 500, error.message || 'Failed to send proposal');
   }
 };
 
@@ -314,7 +345,7 @@ const cloneProposal = async (req, res) => {
 const generatePDF = async (req, res) => {
   try {
     const proposal = await Proposal.findById(req.params.id)
-      .populate('tenant', 'organizationName legalName email phone address logo invoiceLogo signature')
+      .populate('tenant', 'organizationName legalName email phone headquarters logo invoiceLogo gstin panNumber cinNumber')
       .lean();
 
     if (!proposal) {
@@ -338,6 +369,140 @@ const generatePDF = async (req, res) => {
   }
 };
 
+/**
+ * @desc    Assign proposal to manager
+ * @route   POST /api/proposals/:id/assign
+ * @access  Private
+ */
+const assignProposal = async (req, res) => {
+  try {
+    const { assignedTo } = req.body;
+
+    if (!assignedTo) {
+      return errorResponse(res, 400, 'Manager ID required');
+    }
+
+    const proposal = await Proposal.findById(req.params.id);
+
+    if (!proposal) {
+      return errorResponse(res, 404, 'Proposal not found');
+    }
+
+    // Check access
+    if (proposal.tenant.toString() !== req.user.tenant.toString()) {
+      return errorResponse(res, 403, 'Access denied');
+    }
+
+    // Verify assignedTo user is a manager
+    const User = require('../models/User');
+    const manager = await User.findOne({
+      _id: assignedTo,
+      tenant: req.user.tenant,
+      userType: 'TENANT_MANAGER'
+    });
+
+    if (!manager) {
+      return errorResponse(res, 400, 'Invalid manager ID');
+    }
+
+    proposal.assignedTo = assignedTo;
+    proposal.assignedBy = req.user._id;
+    proposal.assignedAt = new Date();
+    proposal.reviewStatus = 'pending';
+
+    await proposal.save();
+
+    successResponse(res, 200, 'Proposal assigned successfully', proposal);
+  } catch (error) {
+    console.error('Assign proposal error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Get assigned proposals (for managers)
+ * @route   GET /api/proposals/assigned/me
+ * @access  Private
+ */
+const getAssignedProposals = async (req, res) => {
+  try {
+    const proposals = await Proposal.find({
+      tenant: req.user.tenant,
+      assignedTo: req.user._id
+    })
+      .populate('createdBy', 'name email')
+      .populate('assignedBy', 'name email')
+      .sort({ assignedAt: -1 });
+
+    successResponse(res, 200, 'Assigned proposals retrieved', proposals);
+  } catch (error) {
+    console.error('Get assigned proposals error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Review proposal (Approve/Reject)
+ * @route   POST /api/proposals/:id/review
+ * @access  Private (Managers only)
+ */
+const reviewProposal = async (req, res) => {
+  try {
+    const { reviewStatus, reviewNotes } = req.body;
+
+    if (!reviewStatus || !['approved', 'rejected', 'revision_needed'].includes(reviewStatus)) {
+      return errorResponse(res, 400, 'Valid review status required');
+    }
+
+    const proposal = await Proposal.findById(req.params.id);
+
+    if (!proposal) {
+      return errorResponse(res, 404, 'Proposal not found');
+    }
+
+    // Check if user is the assigned manager
+    if (proposal.assignedTo?.toString() !== req.user._id.toString()) {
+      return errorResponse(res, 403, 'Only assigned manager can review');
+    }
+
+    proposal.reviewStatus = reviewStatus;
+    proposal.reviewedBy = req.user._id;
+    proposal.reviewedAt = new Date();
+    proposal.reviewNotes = reviewNotes || '';
+
+    await proposal.save();
+
+    successResponse(res, 200, 'Proposal reviewed successfully', proposal);
+  } catch (error) {
+    console.error('Review proposal error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
+/**
+ * @desc    Get managers list (for assignment dropdown)
+ * @route   GET /api/proposals/managers/list
+ * @access  Private
+ */
+const getManagersList = async (req, res) => {
+  try {
+    const User = require('../models/User');
+
+    const managers = await User.find({
+      tenant: req.user.tenant,
+      userType: 'TENANT_MANAGER',
+      isActive: true
+    })
+      .select('name email userType')
+      .sort({ name: 1 });
+
+    successResponse(res, 200, 'Managers list retrieved', managers);
+  } catch (error) {
+    console.error('Get managers error:', error);
+    errorResponse(res, 500, 'Server error');
+  }
+};
+
 module.exports = {
   getProposals,
   getProposal,
@@ -346,5 +511,9 @@ module.exports = {
   deleteProposal,
   sendProposal,
   cloneProposal,
-  generatePDF
+  generatePDF,
+  assignProposal,
+  getAssignedProposals,
+  reviewProposal,
+  getManagersList
 };

@@ -116,6 +116,11 @@ const tenantSchema = new mongoose.Schema({
       message: 'Invalid PAN format'
     }
   },
+  cinNumber: {
+    type: String,
+    trim: true,
+    uppercase: true
+  },
   stateCode: {
     type: String,
     trim: true,

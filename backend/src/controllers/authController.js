@@ -421,9 +421,10 @@ const registerTenant = async (req, res) => {
       {
         name: 'Sales & Finance Group',
         slug: 'sales-finance-group',
-        description: 'Manages RFI, quotations, purchase orders, and invoices',
+        description: 'Manages proposals, RFI, quotations, purchase orders, and invoices',
         groupPermissions: [
           { feature: 'rfi_management', actions: [] },
+          { feature: 'proposal_management', actions: [] },
           { feature: 'quotation_management', actions: [] },
           { feature: 'purchase_order_management', actions: [] },
           { feature: 'invoice_management', actions: [] }

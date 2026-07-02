@@ -1,4 +1,5 @@
-const { SESClient, SendEmailCommand } = require('@aws-sdk/client-ses');
+const { SESClient, SendEmailCommand, SendRawEmailCommand } = require('@aws-sdk/client-ses');
+const nodemailer = require('nodemailer');
 const cloudinary = require('cloudinary').v2;
 const fs   = require('fs');
 const path = require('path');
@@ -55,6 +56,47 @@ const sesClient = new SESClient({
   },
 });
 
+// Create a virtual transporter that will use SES Raw API
+const createSESRawTransporter = () => {
+  return {
+    sendMail: async (mailOptions) => {
+      // Use nodemailer to build the raw email
+      const nodemailerTransporter = nodemailer.createTransport({
+        streamTransport: true,
+        buffer: true
+      });
+
+      return new Promise((resolve, reject) => {
+        nodemailerTransporter.sendMail(mailOptions, async (err, info) => {
+          if (err) {
+            console.error('❌ Nodemailer build error:', err);
+            return reject(err);
+          }
+
+          try {
+            // info.message is already a Buffer when buffer: true
+            const rawEmail = info.message;
+
+            // Send raw email via SES
+            const rawEmailCommand = new SendRawEmailCommand({
+              RawMessage: { Data: rawEmail }
+            });
+
+            const result = await sesClient.send(rawEmailCommand);
+            console.log('✅ SES raw email sent:', result.MessageId);
+            resolve({ messageId: result.MessageId });
+          } catch (sesError) {
+            console.error('❌ SES send error:', sesError);
+            reject(sesError);
+          }
+        });
+      });
+    }
+  };
+};
+
+const sesTransporter = createSESRawTransporter();
+
 const FROM_ADDRESS = `"${process.env.SES_FROM_NAME || 'Unified CRM'}" <${process.env.SES_FROM_EMAIL || 'no-reply@texora.ai'}>`;
 const FROM_ADDRESS_NOREPLY = `"${process.env.SES_FROM_NAME || 'Unified CRM'}" <no-reply@texora.ai>`;
 const FRONTEND_URL = process.env.FRONTEND_URL || 'https://unifiedcrm.texora.ai';
@@ -86,6 +128,32 @@ const sendMail = async (opts) => {
   const fromAddress = opts.fromNoreply ? FROM_ADDRESS_NOREPLY : FROM_ADDRESS;
   const messageId = await sendViaSES(toArr, opts.subject, opts.html, fromAddress, opts.text || null);
   return { messageId };
+};
+
+// Send email with attachments using nodemailer + SES
+const sendMailWithAttachment = async (opts) => {
+  try {
+    const fromAddress = opts.fromNoreply ? FROM_ADDRESS_NOREPLY : FROM_ADDRESS;
+
+    const mailOptions = {
+      from: fromAddress,
+      to: opts.to,
+      replyTo: 'support@texora.ai',
+      subject: opts.subject,
+      html: opts.html,
+      text: opts.text || opts.html.replace(/<[^>]*>/g, ''),
+      attachments: opts.attachments || []
+    };
+
+    const result = await sesTransporter.sendMail(mailOptions);
+    console.log('✅ SES email with attachment sent:', result.messageId, '→', opts.to);
+    console.log('📧 Subject:', opts.subject);
+    console.log('📎 Attachments:', opts.attachments?.length || 0);
+    return { messageId: result.messageId };
+  } catch (error) {
+    console.error('❌ SES attachment email error:', error);
+    throw error;
+  }
 };
 
 const createTransporter = () => ({ verify: async () => {}, sendMail });
@@ -857,5 +925,6 @@ module.exports = {
   sendPasswordExpiryWarning,
   sendPasswordExpiredEmail,
   sendMail,
+  sendMailWithAttachment,
   createTransporter,
 };

@@ -8,13 +8,38 @@ const {
   deleteProposal,
   sendProposal,
   cloneProposal,
-  generatePDF
+  generatePDF,
+  assignProposal,
+  getAssignedProposals,
+  reviewProposal,
+  getManagersList
 } = require('../controllers/proposalController');
 const { protect } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 
 // All routes require authentication
 router.use(protect);
+
+// Assignment & Review routes (before /:id routes)
+router.get('/managers/list',
+  requirePermission('proposal_management', 'read'),
+  getManagersList
+);
+
+router.get('/assigned/me',
+  requirePermission('proposal_management', 'read'),
+  getAssignedProposals
+);
+
+router.post('/:id/assign',
+  requirePermission('proposal_management', 'update'),
+  assignProposal
+);
+
+router.post('/:id/review',
+  requirePermission('proposal_management', 'update'),
+  reviewProposal
+);
 
 // PDF route (before /:id routes)
 router.get('/:id/pdf',

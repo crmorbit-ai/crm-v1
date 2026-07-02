@@ -77,7 +77,7 @@ const Profile = () => {
   const [editedOrg, setEditedOrg] = useState({
     organizationName: '', contactEmail: '', contactPhone: '', alternatePhone: '',
     industry: '', businessType: '', legalName: '', logo: '', website: '',
-    numberOfEmployees: '', foundedYear: '', gstin: '', panNumber: '', taxId: '', registrationNumber: '',
+    numberOfEmployees: '', foundedYear: '', gstin: '', panNumber: '', cinNumber: '', taxId: '', registrationNumber: '',
     socialMedia: { linkedin: '', twitter: '', facebook: '', instagram: '' },
     headquarters: { street: '', city: '', state: '', country: '', zipCode: '' },
     keyContact: { name: '', designation: '', email: '', phone: '' },
@@ -320,7 +320,7 @@ const Profile = () => {
     industry: t.industry || '', businessType: t.businessType || '',
     legalName: t.legalName || '', logo: t.logo || '', website: t.website || '',
     numberOfEmployees: t.numberOfEmployees || '', foundedYear: t.foundedYear || '',
-    gstin: t.gstin || '', panNumber: t.panNumber || '', taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
+    gstin: t.gstin || '', panNumber: t.panNumber || '', cinNumber: t.cinNumber || '', taxId: t.taxId || '', registrationNumber: t.registrationNumber || '',
     socialMedia: { linkedin: t.socialMedia?.linkedin || '', twitter: t.socialMedia?.twitter || '', facebook: t.socialMedia?.facebook || '', instagram: t.socialMedia?.instagram || '' },
     headquarters: { street: t.headquarters?.street || '', city: t.headquarters?.city || '', state: t.headquarters?.state || '', country: t.headquarters?.country || '', zipCode: t.headquarters?.zipCode || '' },
     keyContact: { name: t.keyContact?.name || '', designation: t.keyContact?.designation || '', email: t.keyContact?.email || '', phone: t.keyContact?.phone || '' },
@@ -1040,6 +1040,20 @@ const Profile = () => {
                   disabled={!isEditingOrg}
                   placeholder="ABCDE1234F"
                   maxLength={10}
+                  style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), textTransform: 'uppercase' }}
+                />
+              </div>
+              <div style={styles.formGroup}>
+                <label style={styles.label}>CIN Number</label>
+                <input
+                  type="text"
+                  name="cinNumber"
+                  value={isEditingOrg ? editedOrg.cinNumber : (tenant.cinNumber || '')}
+                  onKeyDown={e => { if (e.key === 'Enter') e.preventDefault(); }}
+                  onChange={handleOrgInputChange}
+                  disabled={!isEditingOrg}
+                  placeholder="U12345DL2019PTC123456"
+                  maxLength={21}
                   style={{ ...styles.input, ...(!isEditingOrg ? styles.inputDisabled : {}), textTransform: 'uppercase' }}
                 />
               </div>

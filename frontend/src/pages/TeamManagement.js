@@ -36,6 +36,7 @@ const FEATURES = [
 
   // Sales & Finance
   { slug: 'rfi_management',            name: 'RFI',                   category: 'Sales & Finance' },
+  { slug: 'proposal_management',       name: 'Proposals',             category: 'Sales & Finance' },
   { slug: 'quotation_management',      name: 'Quotations',            category: 'Sales & Finance' },
   { slug: 'purchase_order_management', name: 'Purchase Orders',       category: 'Sales & Finance' },
   { slug: 'invoice_management',        name: 'Invoices',              category: 'Sales & Finance' },
@@ -197,8 +198,8 @@ const TeamManagement = () => {
     {
       name: 'Sales & Finance Group',
       slug: 'sales-finance-group',
-      description: 'Manages RFI, quotations, purchase orders, and invoices',
-      permissions: ['rfi_management', 'quotation_management', 'purchase_order_management', 'invoice_management']
+      description: 'Manages proposals, RFI, quotations, purchase orders, and invoices',
+      permissions: ['rfi_management', 'proposal_management', 'quotation_management', 'purchase_order_management', 'invoice_management']
     },
     {
       name: 'Inventory Management Group',

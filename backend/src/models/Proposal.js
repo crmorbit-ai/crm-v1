@@ -165,6 +165,35 @@ const proposalSchema = new mongoose.Schema({
     index: true
   },
 
+  // Assignment & Review
+  assignedTo: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    index: true
+  },
+  assignedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  assignedAt: {
+    type: Date
+  },
+  reviewStatus: {
+    type: String,
+    enum: ['pending', 'approved', 'rejected', 'revision_needed'],
+    index: true
+  },
+  reviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  reviewedAt: {
+    type: Date
+  },
+  reviewNotes: {
+    type: String
+  },
+
   // Content Sections (flexible, can add multiple sections)
   sections: [sectionSchema],
 

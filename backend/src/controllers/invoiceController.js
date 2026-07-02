@@ -285,41 +285,50 @@ exports.sendInvoice = async (req, res) => {
       });
     }
 
-    const emailService = require('../services/emailService');
+    const { sendMailWithAttachment } = require('../utils/emailService');
+    const fs = require('fs');
+
     const emailSubject = subject || `Invoice ${invoice.invoiceNumber} from ${tenant.companyName || 'Unified CRM'}`;
-    const emailMessage = message || `
-      Dear ${invoice.customerName},
-
-      Please find attached your invoice.
-
-      Invoice Number: ${invoice.invoiceNumber}
-      Invoice Date: ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}
-      Due Date: ${new Date(invoice.dueDate).toLocaleDateString('en-IN')}
-      Total Amount: ₹${invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-      Amount Paid: ₹${(invoice.paidAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-      Balance Due: ₹${((invoice.totalAmount || 0) - (invoice.paidAmount || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
-
-      If you have any questions, please don't hesitate to contact us.
-
-      Best regards,
-      ${tenant.companyName || 'Unified CRM'}
+    const emailHTML = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #3b82f6;">Invoice from ${tenant.companyName || 'Unified CRM'}</h2>
+        <p>Dear ${invoice.customerName},</p>
+        <p>Please find attached your invoice.</p>
+        <div style="background: #f3f4f6; padding: 16px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 0;"><strong>Invoice Number:</strong> ${invoice.invoiceNumber}</p>
+          <p style="margin: 8px 0 0 0;"><strong>Invoice Date:</strong> ${new Date(invoice.invoiceDate).toLocaleDateString('en-IN')}</p>
+          <p style="margin: 8px 0 0 0;"><strong>Due Date:</strong> ${new Date(invoice.dueDate).toLocaleDateString('en-IN')}</p>
+          <p style="margin: 8px 0 0 0;"><strong>Total Amount:</strong> ₹${invoice.totalAmount.toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <p style="margin: 8px 0 0 0;"><strong>Amount Paid:</strong> ₹${(invoice.paidAmount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+          <p style="margin: 8px 0 0 0;"><strong>Balance Due:</strong> ₹${((invoice.totalAmount || 0) - (invoice.paidAmount || 0)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}</p>
+        </div>
+        <p>If you have any questions, please don't hesitate to contact us.</p>
+        <p>Best regards,<br>${tenant.companyName || 'Unified CRM'}</p>
+      </div>
     `;
 
+    // Read PDF file as buffer
+    const pdfBuffer = fs.readFileSync(pdfResult.filePath);
+
     for (const email of emailList) {
-      await emailService.sendEmail(
-        req.user.id,
-        {
-          to: email,
-          subject: emailSubject,
-          text: emailMessage,
-          html: emailMessage.replace(/\n/g, '<br>'),
-          attachments: [{
-            filename: pdfResult.fileName,
-            path: pdfResult.filePath
-          }]
-        },
-        req.user.tenant
-      );
+      await sendMailWithAttachment({
+        to: email,
+        fromNoreply: true,
+        subject: emailSubject,
+        html: emailHTML,
+        attachments: [{
+          filename: pdfResult.fileName,
+          content: pdfBuffer,
+          contentType: 'application/pdf'
+        }]
+      });
+    }
+
+    // Clean up temp PDF file
+    try {
+      fs.unlinkSync(pdfResult.filePath);
+    } catch (err) {
+      console.log('⚠️  Could not delete temp PDF:', err.message);
     }
 
     invoice.status = 'sent';
