@@ -287,13 +287,42 @@ proposalSchema.pre('save', async function(next) {
     const Counter = mongoose.model('Counter');
     const currentYear = new Date().getFullYear();
 
-    const counter = await Counter.findOneAndUpdate(
-      { name: 'Proposal', tenant: this.tenant, year: currentYear },
-      { $inc: { sequence: 1 } },
-      { new: true, upsert: true }
-    );
+    // Retry logic for race conditions
+    let attempts = 0;
+    const maxAttempts = 5;
 
-    this.proposalNumber = `PROP-${String(counter.sequence).padStart(4, '0')}`;
+    while (attempts < maxAttempts) {
+      try {
+        const counter = await Counter.findOneAndUpdate(
+          { name: 'Proposal', tenant: this.tenant, year: currentYear },
+          { $inc: { sequence: 1 } },
+          { new: true, upsert: true }
+        );
+
+        const proposalNumber = `PROP-${currentYear}-${String(counter.sequence).padStart(4, '0')}`;
+
+        // Check if this number already exists
+        const existing = await mongoose.model('Proposal').findOne({
+          proposalNumber,
+          tenant: this.tenant
+        });
+
+        if (!existing) {
+          this.proposalNumber = proposalNumber;
+          break;
+        }
+
+        attempts++;
+        if (attempts >= maxAttempts) {
+          throw new Error('Unable to generate unique proposal number after multiple attempts');
+        }
+      } catch (error) {
+        if (attempts >= maxAttempts - 1) {
+          throw error;
+        }
+        attempts++;
+      }
+    }
   }
 
   // Calculate totals
