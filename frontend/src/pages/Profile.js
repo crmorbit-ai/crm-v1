@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import Cropper from 'react-easy-crop';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import profileService from '../services/profileService';
 import notificationService from '../services/notificationService';
@@ -87,6 +88,52 @@ const Profile = () => {
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingInvoiceLogo, setUploadingInvoiceLogo] = useState(false);
   const [uploadingSignature, setUploadingSignature] = useState(false);
+  const [showLogoCropModal, setShowLogoCropModal] = useState(false);
+  const [logoPreviewSrc, setLogoPreviewSrc] = useState(null);
+  const [logoFile, setLogoFile] = useState(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState(null);
+
+  const onCropComplete = useCallback((croppedArea, croppedAreaPixels) => {
+    setCroppedAreaPixels(croppedAreaPixels);
+  }, []);
+
+  const createImage = (url) =>
+    new Promise((resolve, reject) => {
+      const image = new Image();
+      image.addEventListener('load', () => resolve(image));
+      image.addEventListener('error', (error) => reject(error));
+      image.src = url;
+    });
+
+  const getCroppedImg = async (imageSrc, pixelCrop) => {
+    const image = await createImage(imageSrc);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = pixelCrop.width;
+    canvas.height = pixelCrop.height;
+
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      pixelCrop.width,
+      pixelCrop.height
+    );
+
+    return new Promise((resolve) => {
+      canvas.toBlob((blob) => {
+        resolve(blob);
+      }, 'image/png');
+    });
+  };
+
   const [verifyingGST, setVerifyingGST] = useState(false);
   const [gstVerifyMessage, setGstVerifyMessage] = useState(null);
   const signatureInputRef = useRef(null);
@@ -424,17 +471,34 @@ const Profile = () => {
     if (!file.type.startsWith('image/')) { alert('Please upload an image file'); return; }
     if (file.size > 5 * 1024 * 1024) { alert('Image size should be less than 5MB'); return; }
 
+    // Show crop modal
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setLogoPreviewSrc(event.target.result);
+      setLogoFile(file);
+      setShowLogoCropModal(true);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ''; // Reset input
+  };
+
+  const handleConfirmLogoUpload = async () => {
+    if (!logoPreviewSrc || !croppedAreaPixels) return;
+
     try {
       setUploadingLogo(true);
-      // Show instant preview using object URL (no base64)
-      const previewUrl = URL.createObjectURL(file);
-      setEditedOrg(prev => ({ ...prev, _logoPreview: previewUrl }));
 
-      // Upload as multipart/form-data — no base64, no payload size issue
-      const response = await profileService.uploadLogo(file);
+      // Get cropped image as blob
+      const croppedBlob = await getCroppedImg(logoPreviewSrc, croppedAreaPixels);
+      const croppedFile = new File([croppedBlob], logoFile.name, { type: 'image/png' });
+
+      setShowLogoCropModal(false);
+
+      // Upload cropped image
+      const response = await profileService.uploadLogo(croppedFile);
       const savedLogoPath = response.data?.data?.logo || response.data?.logo;
 
-      setEditedOrg(prev => ({ ...prev, logo: savedLogoPath, _logoPreview: null }));
+      setEditedOrg(prev => ({ ...prev, logo: savedLogoPath }));
       setTenant(prev => ({ ...prev, logo: savedLogoPath }));
       if (savedLogoPath && authUser) {
         setAuthUser(prev => ({ ...prev, tenant: { ...prev.tenant, logo: savedLogoPath } }));
@@ -443,9 +507,13 @@ const Profile = () => {
     } catch (err) {
       console.error('Logo upload error:', err);
       alert(err.response?.data?.message || 'Error uploading logo');
-      setEditedOrg(prev => ({ ...prev, _logoPreview: null }));
     } finally {
       setUploadingLogo(false);
+      setLogoPreviewSrc(null);
+      setLogoFile(null);
+      setCrop({ x: 0, y: 0 });
+      setZoom(1);
+      setCroppedAreaPixels(null);
     }
   };
 
@@ -766,7 +834,7 @@ const Profile = () => {
     badge: { display: 'inline-flex', alignItems: 'center', padding: '2px 8px', borderRadius: '9999px', fontSize: '11px', fontWeight: '500' },
     badgeSuccess: { background: '#dcfce7', color: '#16a34a' },
     badgeWarning: { background: '#fef3c7', color: '#d97706' },
-    sideInfo: { display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: '12px' },
+    sideInfo: { display: 'flex', alignItems: 'center', gap: '12px', padding: '6px 0', borderBottom: '1px solid #f3f4f6', fontSize: '12px' },
   };
 
   return (
@@ -1754,6 +1822,131 @@ const Profile = () => {
                   </div>
                 </>
               )}
+            </div>
+          </div>
+        )}
+
+        {/* Logo Crop Modal */}
+        {showLogoCropModal && (
+          <div style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '500px',
+              width: '90%',
+              maxHeight: '90vh',
+              overflow: 'auto'
+            }}>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: '700', color: '#0f172a' }}>Crop Logo</h3>
+
+              {/* Crop Area */}
+              <div style={{
+                position: 'relative',
+                width: '100%',
+                height: '400px',
+                background: '#000',
+                borderRadius: '8px',
+                marginBottom: '16px',
+                overflow: 'hidden'
+              }}>
+                {logoPreviewSrc && (
+                  <Cropper
+                    image={logoPreviewSrc}
+                    crop={crop}
+                    zoom={zoom}
+                    aspect={1}
+                    onCropChange={setCrop}
+                    onCropComplete={onCropComplete}
+                    onZoomChange={setZoom}
+                  />
+                )}
+              </div>
+
+              {/* Zoom Control */}
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#374151', marginBottom: '8px' }}>
+                  🔍 Zoom: {Math.round(zoom * 100)}%
+                </label>
+                <input
+                  type="range"
+                  value={zoom}
+                  min={1}
+                  max={3}
+                  step={0.1}
+                  onChange={(e) => setZoom(Number(e.target.value))}
+                  style={{
+                    width: '100%',
+                    height: '6px',
+                    borderRadius: '3px',
+                    outline: 'none',
+                    background: 'linear-gradient(90deg, #6366f1, #4f46e5)'
+                  }}
+                />
+              </div>
+
+              <div style={{
+                background: '#dbeafe',
+                border: '1px solid #60a5fa',
+                borderRadius: '6px',
+                padding: '12px',
+                marginBottom: '16px'
+              }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#1e40af' }}>
+                  💡 <strong>Instructions:</strong> Drag to reposition • Pinch/scroll to zoom • Square crop (1:1 ratio) for best results
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  onClick={() => {
+                    setShowLogoCropModal(false);
+                    setLogoPreviewSrc(null);
+                    setLogoFile(null);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: '#f1f5f9',
+                    color: '#64748b',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConfirmLogoUpload}
+                  disabled={uploadingLogo}
+                  style={{
+                    flex: 1,
+                    padding: '10px',
+                    background: uploadingLogo ? '#cbd5e1' : 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '600',
+                    cursor: uploadingLogo ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {uploadingLogo ? 'Uploading...' : '✓ Confirm Upload'}
+                </button>
+              </div>
             </div>
           </div>
         )}

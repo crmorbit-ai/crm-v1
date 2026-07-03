@@ -197,6 +197,7 @@ const EmailCompose = ({
       onClick={onClose}
     >
       <div
+        className="email-compose-modal"
         style={{
           background: 'white',
           borderRadius: '8px',
@@ -304,7 +305,9 @@ const EmailCompose = ({
             display: 'flex',
             padding: '8px 16px',
             borderBottom: '1px solid #f0f0f0',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}>
             <span style={{
               fontSize: '13px',
@@ -312,7 +315,7 @@ const EmailCompose = ({
               minWidth: '70px',
               fontWeight: '500'
             }}>To</span>
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '8px', minWidth: '200px' }}>
               {recipients && recipients.length > 0 ? (
                 <div style={{
                   fontSize: '14px',
@@ -555,13 +558,15 @@ const EmailCompose = ({
         </div>
 
         {/* Footer - Send Button */}
-        <div style={{
+        <div className="email-compose-footer" style={{
           padding: '12px 16px',
           borderTop: '1px solid #e5e7eb',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          background: '#f8f9fa'
+          background: '#f8f9fa',
+          flexWrap: 'wrap',
+          gap: '8px'
         }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button
@@ -600,6 +605,32 @@ const EmailCompose = ({
           </div>
         </div>
       </div>
+
+      <style>{`
+        .email-compose-modal input[type="text"],
+        .email-compose-modal textarea {
+          min-width: 0 !important;
+        }
+        .email-compose-footer {
+          flex-wrap: nowrap !important;
+        }
+        .email-compose-footer > div {
+          flex-shrink: 0;
+        }
+        @media (max-width: 768px) {
+          .email-compose-modal {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            border-radius: 0 !important;
+          }
+          .email-compose-footer {
+            flex-direction: row !important;
+            flex-wrap: nowrap !important;
+          }
+        }
+      `}</style>
     </div>,
     document.body
   );

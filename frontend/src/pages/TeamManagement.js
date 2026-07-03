@@ -205,7 +205,7 @@ const TeamManagement = () => {
       name: 'Inventory Management Group',
       slug: 'inventory-management-group',
       description: 'Manages master inventory, product inventory, service inventory, and lead inventory',
-      permissions: ['inventory_management']
+      permissions: ['master_inventory', 'product_inventory', 'service_inventory', 'lead_inventory']
     },
     {
       name: 'Product Management Group',
@@ -229,7 +229,7 @@ const TeamManagement = () => {
       name: 'Support Group',
       slug: 'support-group',
       description: 'Manages support tickets and feedback',
-      permissions: ['support_tickets', 'my_tickets', 'ticket_management', 'support_management', 'feedback', 'feedback_management']
+      permissions: ['my_tickets', 'feedback']
     },
     {
       name: 'Sales Group',
@@ -1857,20 +1857,22 @@ const TeamManagement = () => {
                       if(!selectedGroupForAssign){showMsg('Please select a group',true);return;}
                       try{
                         setSubmitting(true);
-                        // Add group to user
-                        await userService.assignGroups(assignModal.user._id, [selectedGroupForAssign]);
-                        // Update custom permissions
+                        // Only update custom permissions (don't assign full group)
                         if(assignPermissions.length>0){
                           await userService.updateUser(assignModal.user._id, {customPermissions:assignPermissions});
+                        } else {
+                          showMsg('Please select at least one permission', true);
+                          setSubmitting(false);
+                          return;
                         }
-                        showMsg('Group assigned successfully!');
+                        showMsg('Permissions assigned successfully!');
                         setAssignModal({open:false,user:null});
                         setSelectedGroupForAssign(null);
                         setAssignPermissions([]);
                         loadData();
                       }catch(e){
                         if(e?.isPermissionDenied)return;
-                        showMsg(e.message||'Failed to assign group',true);
+                        showMsg(e.message||'Failed to assign permissions',true);
                       }finally{
                         setSubmitting(false);
                       }

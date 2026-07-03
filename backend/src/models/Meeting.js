@@ -81,6 +81,39 @@ const meetingSchema = new mongoose.Schema({
     trim: true
   },
 
+  // Attachments
+  attachments: [{
+    filename: String,
+    path: String,
+    mimetype: String,
+    size: Number,
+    uploadedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+    uploadedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+
+  // Notes
+  notes: [{
+    note: {
+      type: String,
+      required: true
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+
   // Meeting Type
   meetingType: {
     type: String,

@@ -150,8 +150,42 @@ const RFIs = () => {
 
         {/* Split panel — form left, table right */}
         <div id="rfi-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+
+          {/* Mobile overlay backdrop */}
+          {showCreateForm && window.innerWidth <= 768 && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.5)',
+                zIndex: 999,
+                backdropFilter: 'blur(4px)'
+              }}
+              onClick={() => setShowCreateForm(false)}
+            />
+          )}
+
           {showCreateForm && (
-            <div className="rfi-panel-form" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="rfi-panel-form" style={{
+              flex: window.innerWidth <= 768 ? 'none' : `0 0 ${panelWidth}%`,
+              position: window.innerWidth <= 768 ? 'fixed' : 'relative',
+              top: window.innerWidth <= 768 ? 0 : 'auto',
+              left: window.innerWidth <= 768 ? 0 : 'auto',
+              right: window.innerWidth <= 768 ? 0 : 'auto',
+              bottom: window.innerWidth <= 768 ? 0 : 'auto',
+              width: window.innerWidth <= 768 ? '100%' : 'auto',
+              height: window.innerWidth <= 768 ? '100%' : 'auto',
+              zIndex: window.innerWidth <= 768 ? 1000 : 'auto',
+              background: 'white',
+              borderRight: window.innerWidth <= 768 ? 'none' : '1px solid #e0e0e0',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              minWidth: 0
+            }}>
               <RFIForm embedded onClose={() => setShowCreateForm(false)} onSuccess={() => { setShowCreateForm(false); fetchRFIs(); }} />
             </div>
           )}
@@ -166,11 +200,11 @@ const RFIs = () => {
           <div style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '0 16px 16px 12px' }}>
           {/* Table Card */}
           <div style={{ background: 'white', borderRadius: '14px', border: '1px solid #f1f5f9', boxShadow: '0 2px 12px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: '800px', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
-                    {['RFI #','Customer','Title','Priority','Created','Due Date','Status','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}
+                    {['RFI #','Customer','Title','Priority','Created','Due Date','Status','Actions'].map(h => <th key={h} style={{...thStyle, whiteSpace: 'nowrap'}}>{h}</th>)}
                   </tr>
                 </thead>
                 <tbody>

@@ -1798,6 +1798,30 @@
   .auth-card-centered { padding: 0 4px; }
 }
 
+.calls-span2 {
+  grid-column: span 2;
+}
+
+@media (max-width: 768px) {
+  .resp-grid-4  { grid-template-columns: 1fr !important; gap: 12px; }
+  .resp-grid-3  { grid-template-columns: 1fr !important; gap: 12px; }
+  .resp-grid-2  { grid-template-columns: 1fr !important; gap: 12px; }
+  .resp-grid-6  { grid-template-columns: 1fr !important; gap: 10px; }
+  .resp-form-grid-3 { grid-template-columns: 1fr !important; }
+  .resp-form-grid-2 { grid-template-columns: 1fr !important; }
+  .calls-span2 { grid-column: span 1 !important; }
+}
+
+@media (max-width: 480px) {
+  .resp-grid-4  { grid-template-columns: 1fr !important; gap: 12px; }
+  .resp-grid-3  { grid-template-columns: 1fr !important; gap: 12px; }
+  .resp-grid-2  { grid-template-columns: 1fr !important; gap: 12px; }
+  .resp-grid-6  { grid-template-columns: 1fr !important; gap: 10px; }
+  .resp-form-grid-3 { grid-template-columns: 1fr !important; }
+  .resp-form-grid-2 { grid-template-columns: 1fr !important; }
+  .calls-span2 { grid-column: span 1 !important; }
+}
+
 @media (max-width: 480px) {
   .resp-grid-4  { grid-template-columns: 1fr 1fr; gap: 6px; }
   .resp-grid-3  { grid-template-columns: 1fr 1fr; gap: 6px; }

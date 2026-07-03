@@ -250,7 +250,7 @@ router.post('/', async (req, res) => {
       ...req.body,
       serialNumber,
       tenant: req.user.tenant || req.user._id?.toString() || 'default',
-      createdBy: req.user.email || 'system'
+      createdBy: req.user._id || req.user.email || 'system'
     };
     const item = new MasterInventoryItem(itemData);
     await item.save();

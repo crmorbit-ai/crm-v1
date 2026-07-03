@@ -88,6 +88,10 @@ export default function LeadInventory({ fromTab }) {
           const cleanPhone = value.replace(/\D/g, '');
           if (cleanPhone.length !== 10) {
             errors.leadPhone = 'Please enter a valid 10-digit phone number';
+          } else if (/^0+$/.test(cleanPhone)) {
+            errors.leadPhone = 'Phone number cannot be all zeros';
+          } else if (/^(.)\1{9}$/.test(cleanPhone)) {
+            errors.leadPhone = 'Phone number cannot have all same digits';
           } else {
             delete errors.leadPhone;
           }
@@ -170,6 +174,24 @@ export default function LeadInventory({ fromTab }) {
       err('Name is required');
       return;
     }
+
+    // Validate phone if provided
+    if (editData.leadPhone && editData.leadPhone.trim()) {
+      const cleanPhone = editData.leadPhone.replace(/\D/g, '');
+      if (cleanPhone.length !== 10) {
+        err('Please enter a valid 10-digit phone number');
+        return;
+      }
+      if (/^0+$/.test(cleanPhone)) {
+        err('Phone number cannot be all zeros');
+        return;
+      }
+      if (/^(.)\1{9}$/.test(cleanPhone)) {
+        err('Phone number cannot have all same digits');
+        return;
+      }
+    }
+
     try {
       await masterInventoryService.update(editingId, editData);
       ok('Lead updated');
@@ -371,7 +393,7 @@ export default function LeadInventory({ fromTab }) {
           .li-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; order: 2 !important; }
         }
       `}</style>
-      <div className="li-container" style={{ display: 'flex', height: 'calc(100vh - 200px)', gap: '0' }}>
+      <div className="li-container" style={{ display: 'flex', minHeight: 'calc(100vh - 200px)', gap: '0' }}>
         {/* LEFT: Detail Panel */}
         {(selectedItem || isAddingNew) && (
           <div className="li-detail-panel" style={{ flex: '0 0 35%', background: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -487,11 +509,12 @@ export default function LeadInventory({ fromTab }) {
                   type="tel"
                   value={formData.leadPhone}
                   onChange={(e) => {
-                    const val = e.target.value;
+                    const val = e.target.value.replace(/\D/g, ''); // Only numbers
                     setFormData({...formData, leadPhone: val});
                     validateField('leadPhone', val);
                   }}
                   placeholder="10-digit phone number"
+                  maxLength="10"
                   style={{
                     width: '100%',
                     padding: '6px',
@@ -597,7 +620,7 @@ export default function LeadInventory({ fromTab }) {
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Phone</label>
-                <input type="tel" value={editData.leadPhone} onChange={(e) => setEditData({...editData, leadPhone: e.target.value})} style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
+                <input type="tel" value={editData.leadPhone} onChange={(e) => setEditData({...editData, leadPhone: e.target.value.replace(/\D/g, '')})} maxLength="10" style={{ width: '100%', padding: '6px', border: '1px solid #e2e8f0', borderRadius: '4px', fontSize: '12px', boxSizing: 'border-box', marginTop: '4px' }} />
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600' }}>Source</label>
@@ -847,7 +870,7 @@ export default function LeadInventory({ fromTab }) {
         )}
 
         {/* Content Panel - Search, Filters & Table */}
-        <div className="li-content-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+        <div className="li-content-panel" style={{ display: 'flex', flexDirection: 'column', padding: '0' }}>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add Lead</button>
@@ -862,7 +885,7 @@ export default function LeadInventory({ fromTab }) {
         </div>
 
 
-        <div style={{ overflowX: 'auto', padding: '0 20px', flex: 1 }}>
+        <div style={{ overflowX: 'auto', padding: '0 20px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>

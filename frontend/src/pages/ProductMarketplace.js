@@ -178,26 +178,32 @@ const ProductMarketplace = () => {
       {/* Tabs */}
       <div style={{
         display: 'flex',
-        gap: '12px',
+        gap: '8px',
         marginBottom: '24px',
         borderBottom: '2px solid #e5e7eb',
-        paddingBottom: '0'
+        paddingBottom: '0',
+        overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch',
+        scrollbarWidth: 'none',
+        msOverflowStyle: 'none'
       }}>
         {['marketplace', 'my-products', 'usage'].map((tab) => (
           <button
             key={tab}
             onClick={() => setSelectedTab(tab)}
             style={{
-              padding: '12px 24px',
+              padding: '12px 20px',
               background: 'none',
               border: 'none',
               borderBottom: selectedTab === tab ? '3px solid #4A90E2' : '3px solid transparent',
               color: selectedTab === tab ? '#4A90E2' : '#64748b',
               fontWeight: selectedTab === tab ? '700' : '500',
-              fontSize: '15px',
+              fontSize: '14px',
               cursor: 'pointer',
               transition: 'all 0.2s',
-              textTransform: 'capitalize'
+              textTransform: 'capitalize',
+              whiteSpace: 'nowrap',
+              flexShrink: 0
             }}
           >
             {tab.replace('-', ' ')}
@@ -637,11 +643,36 @@ const ProductMarketplace = () => {
             <div style={{
               padding: '24px',
               borderBottom: '2px solid #f1f5f9',
-              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)'
+              background: 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
             }}>
               <h3 style={{ margin: 0, fontSize: '24px', fontWeight: '800', color: 'white' }}>
                 {getProductIcon(selectedProduct.type)} Purchase {selectedProduct.displayName}
               </h3>
+              <button
+                onClick={() => setShowPurchaseModal(false)}
+                style={{
+                  background: 'rgba(255,255,255,0.2)',
+                  border: 'none',
+                  borderRadius: '50%',
+                  width: '32px',
+                  height: '32px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'white',
+                  fontSize: '20px',
+                  fontWeight: '700',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+                onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              >
+                ×
+              </button>
             </div>
 
             <div style={{ padding: '24px' }}>

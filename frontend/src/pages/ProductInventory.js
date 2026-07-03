@@ -367,7 +367,7 @@ export default function ProductInventory({ fromTab }) {
           .pi-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; order: 2 !important; }
         }
       `}</style>
-      <div className="pi-container" style={{ display: 'flex', height: 'calc(100vh - 200px)', gap: '0' }}>
+      <div className="pi-container" style={{ display: 'flex', minHeight: 'calc(100vh - 200px)', gap: '0' }}>
         {/* LEFT: Detail Panel */}
         {(selectedItem || isAddingNew) && (
           <div className="pi-detail-panel" style={{ flex: '0 0 35%', background: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -812,7 +812,7 @@ export default function ProductInventory({ fromTab }) {
         )}
 
         {/* Content Panel - Search, Filters & Table */}
-        <div className="pi-content-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+        <div className="pi-content-panel" style={{ display: 'flex', flexDirection: 'column', padding: '0' }}>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add Product</button>
@@ -827,7 +827,7 @@ export default function ProductInventory({ fromTab }) {
         </div>
 
 
-        <div style={{ overflowX: 'auto', padding: '0 20px', flex: 1 }}>
+        <div style={{ overflowX: 'auto', padding: '0 20px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid #334155', background: '#1e293b' }}>

@@ -593,9 +593,42 @@ const Products = () => {
         {/* Split panel */}
         <div id="products-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
+          {/* Mobile overlay backdrop */}
+          {showCreateForm && window.innerWidth <= 768 && (
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.5)',
+                zIndex: 999,
+                backdropFilter: 'blur(4px)'
+              }}
+              onClick={() => { setShowCreateForm(false); resetForm(); }}
+            />
+          )}
+
           {/* Left: Create/Edit Product Form */}
           {showCreateForm && (
-            <div style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div style={{
+              flex: window.innerWidth <= 768 ? 'none' : `0 0 ${panelWidth}%`,
+              position: window.innerWidth <= 768 ? 'fixed' : 'relative',
+              top: window.innerWidth <= 768 ? 0 : 'auto',
+              left: window.innerWidth <= 768 ? 0 : 'auto',
+              right: window.innerWidth <= 768 ? 0 : 'auto',
+              bottom: window.innerWidth <= 768 ? 0 : 'auto',
+              width: window.innerWidth <= 768 ? '100%' : 'auto',
+              height: window.innerWidth <= 768 ? '100%' : 'auto',
+              zIndex: window.innerWidth <= 768 ? 1000 : 'auto',
+              background: 'white',
+              borderRight: window.innerWidth <= 768 ? 'none' : '1px solid #e0e0e0',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              minWidth: 0
+            }}>
               {/* Form header */}
               <div style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #3730a3 100%)', flexShrink: 0, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>

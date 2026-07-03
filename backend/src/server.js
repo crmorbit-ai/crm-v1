@@ -117,7 +117,8 @@ app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/master-inventory', require('./routes/masterInventory'));
 app.use('/api/user-settings', require('./routes/userSettings'));
 app.use('/api/support-tickets', require('./routes/supportTickets'));
-app.use('/api/ai', require('./routes/ai'));
+// Old AI features removed - using new Sales AI Assistant
+// app.use('/api/ai', require('./routes/ai'));
 app.use('/api/saas-admins', require('./routes/saasAdmins'));
 app.use('/api/contact-inquiries', require('./routes/contactInquiry'));
 app.use('/api/viewing-pin', require('./routes/viewingPin'));

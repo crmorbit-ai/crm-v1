@@ -306,11 +306,177 @@ const resendInvitation = async (req, res) => {
   }
 };
 
-module.exports = { 
-  getMeetings, 
-  getMeeting, 
-  createMeeting, 
-  updateMeeting, 
+// Add participant
+const addParticipant = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { email } = req.body;
+
+    if (!email || !email.trim()) {
+      return errorResponse(res, 'Email is required', 400);
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return errorResponse(res, 'Invalid email format', 400);
+    }
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      return errorResponse(res, 'Meeting not found', 404);
+    }
+
+    // Check tenant match
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      if (meeting.tenant.toString() !== req.user.tenant.toString()) {
+        return errorResponse(res, 'Unauthorized', 403);
+      }
+    }
+
+    // Check if participant already exists
+    if (meeting.participants && meeting.participants.includes(email.trim())) {
+      return errorResponse(res, 'Participant already added', 400);
+    }
+
+    // Add participant
+    if (!meeting.participants) {
+      meeting.participants = [];
+    }
+    meeting.participants.push(email.trim());
+
+    await meeting.save();
+
+    await logActivity({
+      user: req.user._id,
+      tenant: req.user.tenant,
+      action: 'ADD_PARTICIPANT',
+      resourceType: 'Meeting',
+      resourceId: meeting._id,
+      details: { participantEmail: email }
+    });
+
+    return successResponse(res, meeting, 'Participant added successfully');
+  } catch (error) {
+    console.error('Add participant error:', error);
+    return errorResponse(res, 'Failed to add participant', 500);
+  }
+};
+
+// Add note
+const addNote = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note } = req.body;
+
+    if (!note || !note.trim()) {
+      return errorResponse(res, 'Note content is required', 400);
+    }
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      return errorResponse(res, 'Meeting not found', 404);
+    }
+
+    // Check tenant match
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      if (meeting.tenant.toString() !== req.user.tenant.toString()) {
+        return errorResponse(res, 'Unauthorized', 403);
+      }
+    }
+
+    // Add note
+    const newNote = {
+      note: note.trim(),
+      createdBy: req.user._id,
+      createdAt: new Date()
+    };
+
+    if (!meeting.notes) {
+      meeting.notes = [];
+    }
+    meeting.notes.push(newNote);
+
+    await meeting.save();
+
+    await logActivity({
+      user: req.user._id,
+      tenant: req.user.tenant,
+      action: 'ADD_NOTE',
+      resourceType: 'Meeting',
+      resourceId: meeting._id,
+      details: { notePreview: note.substring(0, 50) }
+    });
+
+    return successResponse(res, meeting, 'Note added successfully');
+  } catch (error) {
+    console.error('Add note error:', error);
+    return errorResponse(res, 'Failed to add note', 500);
+  }
+};
+
+// Upload attachment
+const uploadAttachment = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!req.file) {
+      return errorResponse(res, 'No file uploaded', 400);
+    }
+
+    const meeting = await Meeting.findById(id);
+    if (!meeting) {
+      return errorResponse(res, 'Meeting not found', 404);
+    }
+
+    // Check tenant match
+    if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
+      if (meeting.tenant.toString() !== req.user.tenant.toString()) {
+        return errorResponse(res, 'Unauthorized', 403);
+      }
+    }
+
+    // Add attachment info
+    const attachment = {
+      filename: req.file.originalname,
+      path: req.file.path,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      uploadedBy: req.user._id,
+      uploadedAt: new Date()
+    };
+
+    if (!meeting.attachments) {
+      meeting.attachments = [];
+    }
+    meeting.attachments.push(attachment);
+
+    await meeting.save();
+
+    await logActivity({
+      user: req.user._id,
+      tenant: req.user.tenant,
+      action: 'UPLOAD_ATTACHMENT',
+      resourceType: 'Meeting',
+      resourceId: meeting._id,
+      details: { filename: req.file.originalname }
+    });
+
+    return successResponse(res, meeting, 'File uploaded successfully');
+  } catch (error) {
+    console.error('Upload attachment error:', error);
+    return errorResponse(res, 'Failed to upload file', 500);
+  }
+};
+
+module.exports = {
+  getMeetings,
+  getMeeting,
+  createMeeting,
+  updateMeeting,
   deleteMeeting,
-  resendInvitation // NEW
+  resendInvitation,
+  addParticipant,
+  addNote,
+  uploadAttachment
 };

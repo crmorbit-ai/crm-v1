@@ -41,6 +41,7 @@ const getGroups = async (req, res) => {
       .skip((page - 1) * limit)
       .sort({ createdAt: -1 });
 
+
     successResponse(res, 200, 'Groups retrieved successfully', {
       groups,
       pagination: {

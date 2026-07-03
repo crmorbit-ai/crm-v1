@@ -16,6 +16,12 @@ const MeetingDetail = () => {
   const [success, setSuccess] = useState('');
   const [showEditForm, setShowEditForm] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = React.useRef(null);
+  const [showAddNote, setShowAddNote] = useState(false);
+  const [newNote, setNewNote] = useState('');
+  const [showAddParticipant, setShowAddParticipant] = useState(false);
+  const [participantEmail, setParticipantEmail] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -78,6 +84,115 @@ const MeetingDetail = () => {
     }
   };
 
+  const handleAddParticipant = async () => {
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!participantEmail.trim()) {
+      setError('Email cannot be empty');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+    if (!emailRegex.test(participantEmail)) {
+      setError('Please enter a valid email address');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    // Check if already exists
+    if (meeting.participants && meeting.participants.includes(participantEmail)) {
+      setError('Participant already added');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/meetings/${id}/participants`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email: participantEmail })
+      });
+
+      if (response.ok) {
+        setSuccess('Participant added successfully!');
+        setParticipantEmail('');
+        setShowAddParticipant(false);
+        loadMeeting();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Failed to add participant');
+        setTimeout(() => setError(''), 3000);
+      }
+    } catch (err) {
+      setError('Failed to add participant');
+      setTimeout(() => setError(''), 3000);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!newNote.trim()) {
+      setError('Note cannot be empty');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_URL}/meetings/${id}/notes`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ note: newNote })
+      });
+
+      if (response.ok) {
+        setSuccess('Note added successfully!');
+        setNewNote('');
+        setShowAddNote(false);
+        loadMeeting();
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError('Failed to add note');
+      }
+    } catch (err) {
+      setError('Failed to add note');
+    }
+  };
+
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    try {
+      setUploading(true);
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch(`${API_URL}/meetings/${id}/attachments`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${sessionStorage.getItem('token') || localStorage.getItem('token')}` },
+        body: formData
+      });
+
+      if (response.ok) {
+        setSuccess('File uploaded successfully!');
+        loadMeeting(); // Reload to show new attachment
+        setTimeout(() => setSuccess(''), 3000);
+      } else {
+        setError('Failed to upload file');
+      }
+    } catch (err) {
+      setError('Failed to upload file');
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const handleDelete = async () => {
     try {
       const response = await fetch(`${API_URL}/meetings/${id}`, {
@@ -98,18 +213,151 @@ const MeetingDetail = () => {
       <DashboardLayout title="Meeting Details">
       <style>{`
   /* ── RESPONSIVE ────────────────── */
+  .meeting-detail-container {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Section headers - desktop horizontal, mobile vertical */
+  .section-header-mobile {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .section-header-mobile h3 {
+    margin: 0 !important;
+  }
+
+  .section-header-mobile button {
+    width: auto !important;
+  }
+
   @media(max-width:768px){
+    /* Mobile: headers vertical */
+    .section-header-mobile {
+      display: block !important;
+    }
+
+    .section-header-mobile h3 {
+      margin: 0 0 8px 0 !important;
+    }
+
+    .section-header-mobile button {
+      width: 100% !important;
+      display: block !important;
+    }
+
+    /* Attachment items vertical on mobile */
+    .attachment-item-mobile {
+      display: block !important;
+    }
+
+    .attachment-item-mobile > div:first-child {
+      margin-bottom: 8px !important;
+    }
+
+    .attachment-item-mobile a[download] {
+      width: 100% !important;
+      display: block !important;
+      text-align: center !important;
+    }
+    .meeting-detail-container {
+      overflow-x: hidden !important;
+      width: 100% !important;
+      padding: 0 !important;
+    }
+
     .meetingd-grid4,.meetingd-grid3{grid-template-columns:repeat(2,1fr)!important;}
     .meetingd-grid2{grid-template-columns:1fr!important;}
-    .meetingd-split{flex-direction:column!important;}
-    .meetingd-sidebar{width:100%!important;min-width:unset!important;max-width:unset!important;}
-    .meetingd-panel{width:100%!important;}
+
+    .meetingd-split{
+      grid-template-columns:1fr!important;
+      display:flex!important;
+      flex-direction:column!important;
+      width: 100% !important;
+    }
+
+    .meetingd-sidebar{
+      width:100%!important;
+      min-width:unset!important;
+      max-width:unset!important;
+      order:2!important;
+    }
+
+    .meetingd-panel{
+      width:100%!important;
+      max-width: 100% !important;
+      order:1!important;
+    }
+
     .meetingd-table{overflow-x:auto;-webkit-overflow-scrolling:touch;}
     .meetingd-form-row{grid-template-columns:1fr!important;}
     .meetingd-hide{display:none!important;}
+
+    .crm-card{
+      margin-bottom:12px!important;
+      overflow:visible!important;
+      width: 100% !important;
+      max-width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    .crm-card > div {
+      padding: 12px !important;
+      box-sizing: border-box !important;
+      width: 100% !important;
+      overflow: visible !important;
+      display: flex !important;
+      flex-wrap: wrap !important;
+      gap: 8px !important;
+    }
+
+    /* All buttons visible and no shrink */
+    .crm-btn,
+    .crm-btn-primary,
+    .crm-btn-sm,
+    button {
+      font-size:12px!important;
+      padding:6px 10px!important;
+      white-space:nowrap!important;
+      flex-shrink: 0 !important;
+      display: inline-block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      position: relative !important;
+      z-index: 10 !important;
+    }
+
+    /* Headers don't hide buttons */
+    .crm-card h3 {
+      flex: 0 1 auto !important;
+      font-size: 14px !important;
+      margin-right: auto !important;
+    }
+
+    /* Download links */
+    .crm-card a,
+    a[download] {
+      flex-shrink: 0 !important;
+      display: inline-block !important;
+      visibility: visible !important;
+      white-space: nowrap !important;
+    }
+
+    /* Header responsive */
+    .crm-card h1 {
+      font-size: 18px !important;
+    }
   }
+
   @media(max-width:480px){
     .meetingd-grid4,.meetingd-grid3,.meetingd-grid2{grid-template-columns:1fr!important;}
+
+    .crm-btn{
+      font-size:12px!important;
+      padding:6px 10px!important;
+    }
   }
 `}</style>
         <div style={{ padding: '40px', textAlign: 'center' }}>Loading...</div>
@@ -134,6 +382,7 @@ const MeetingDetail = () => {
 
   return (
     <DashboardLayout title="Meeting Details">
+      <div className="meeting-detail-container" style={{ width: '100%', maxWidth: '100%', overflowX: 'hidden' }}>
       {success && <div style={{ padding: '16px', background: '#DCFCE7', color: '#166534', borderRadius: '8px', marginBottom: '20px' }}>{success}</div>}
       {error && <div style={{ padding: '16px', background: '#FEE2E2', color: '#991B1B', borderRadius: '8px', marginBottom: '20px' }}>{error}</div>}
 
@@ -146,31 +395,49 @@ const MeetingDetail = () => {
           </div>
           <form onSubmit={handleUpdate}>
             <div style={{ padding: '20px' }}>
-              <div className="resp-grid-4">
-                <div style={{ gridColumn: 'span 2' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : 'repeat(4, 1fr)',
+                gap: '16px'
+              }}>
+                <div style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Title *</label>
                   <input type="text" className="crm-form-input" value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })} required style={{ width: '100%' }} />
                 </div>
-                <div>
+                <div style={{ gridColumn: 'span 1' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>From *</label>
-                  <input type="datetime-local" className="crm-form-input" value={formData.from}
-                    onChange={(e) => setFormData({ ...formData, from: e.target.value })} required />
+                  <input
+                    type="datetime-local"
+                    className="crm-form-input"
+                    value={formData.from}
+                    min={new Date().toISOString().slice(0, 16)}
+                    onChange={(e) => setFormData({ ...formData, from: e.target.value })}
+                    required
+                    style={{ width: '100%' }}
+                  />
                 </div>
-                <div>
+                <div style={{ gridColumn: 'span 1' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>To *</label>
-                  <input type="datetime-local" className="crm-form-input" value={formData.to}
-                    onChange={(e) => setFormData({ ...formData, to: e.target.value })} required />
+                  <input
+                    type="datetime-local"
+                    className="crm-form-input"
+                    value={formData.to}
+                    min={formData.from || new Date().toISOString().slice(0, 16)}
+                    onChange={(e) => setFormData({ ...formData, to: e.target.value })}
+                    required
+                    style={{ width: '100%' }}
+                  />
                 </div>
-                <div style={{ gridColumn: 'span 2' }}>
+                <div style={{ gridColumn: window.innerWidth <= 768 ? 'span 1' : 'span 2' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Location</label>
                   <input type="text" className="crm-form-input" value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })} />
+                    onChange={(e) => setFormData({ ...formData, location: e.target.value })} style={{ width: '100%' }} />
                 </div>
-                <div>
+                <div style={{ gridColumn: 'span 1' }}>
                   <label style={{ display: 'block', marginBottom: '6px', fontSize: '13px', fontWeight: '600', color: '#374151' }}>Meeting Type</label>
                   <select className="crm-form-select" value={formData.meetingType}
-                    onChange={(e) => setFormData({ ...formData, meetingType: e.target.value })}>
+                    onChange={(e) => setFormData({ ...formData, meetingType: e.target.value })} style={{ width: '100%' }}>
                     <option value="Online">Online</option>
                     <option value="In-Person">In-Person</option>
                     <option value="Phone">Phone</option>
@@ -212,8 +479,8 @@ const MeetingDetail = () => {
       {/* Header */}
       <div className="crm-card" style={{ marginBottom: '20px' }}>
         <div style={{ padding: '24px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ minWidth: '250px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                 <div style={{
                   width: '48px',
@@ -237,14 +504,14 @@ const MeetingDetail = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button className="crm-btn crm-btn-secondary" onClick={() => navigate('/meetings')}>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button className="crm-btn crm-btn-secondary" onClick={() => navigate('/meetings')} style={{ fontSize: '14px', padding: '8px 16px' }}>
                 ← Back
               </button>
-              <button className="crm-btn crm-btn-primary" onClick={() => { setShowDeleteConfirm(false); setShowEditForm(true); }}>
+              <button className="crm-btn crm-btn-primary" onClick={() => { setShowDeleteConfirm(false); setShowEditForm(true); }} style={{ fontSize: '14px', padding: '8px 16px' }}>
                 Edit
               </button>
-              <button className="crm-btn crm-btn-danger" onClick={() => { setShowEditForm(false); setShowDeleteConfirm(true); }}>
+              <button className="crm-btn crm-btn-danger" onClick={() => { setShowEditForm(false); setShowDeleteConfirm(true); }} style={{ fontSize: '14px', padding: '8px 16px' }}>
                 Delete
               </button>
             </div>
@@ -339,16 +606,20 @@ const MeetingDetail = () => {
       </div>
 
       {/* Main Content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+      <div style={{
+        display: window.innerWidth <= 768 ? 'block' : 'grid',
+        gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '2fr 1fr',
+        gap: '20px'
+      }}>
         {/* Left Column */}
-        <div>
+        <div style={{ width: '100%', maxWidth: '100%' }}>
           {/* Meeting Information */}
           <div className="crm-card" style={{ marginBottom: '20px' }}>
             <div style={{ padding: '20px', borderBottom: '1px solid #E5E7EB' }}>
               <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Meeting Information</h3>
             </div>
             <div style={{ padding: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div className="meetingd-grid2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '12px', color: '#6B7280', display: 'block', marginBottom: '4px' }}>Title</label>
                   <p style={{ fontSize: '14px', fontWeight: '500' }}>{meeting.title}</p>
@@ -389,10 +660,73 @@ const MeetingDetail = () => {
 
           {/* Participants */}
           <div className="crm-card" style={{ marginBottom: '20px' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Participants</h3>
-              <button className="crm-btn crm-btn-sm crm-btn-primary">+ Add</button>
+            <div style={{ padding: '12px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 10px 0', display: 'block' }}>Participants</h3>
+              <button
+                onClick={() => setShowAddParticipant(!showAddParticipant)}
+                style={{
+                  fontSize: '13px',
+                  padding: '8px 16px',
+                  width: '100%',
+                  display: 'block',
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                {showAddParticipant ? '✕ Cancel' : '+ Add Participant'}
+              </button>
             </div>
+
+            {/* Add Participant Form */}
+            {showAddParticipant && (
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', background: '#f9fafb' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '8px', color: '#374151' }}>
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  value={participantEmail}
+                  onChange={(e) => setParticipantEmail(e.target.value)}
+                  placeholder="Enter participant email (e.g., user@example.com)"
+                  style={{
+                    width: '100%',
+                    padding: '10px 12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontFamily: 'inherit',
+                    marginBottom: '12px'
+                  }}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleAddParticipant();
+                    }
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button
+                    className="crm-btn crm-btn-sm crm-btn-outline"
+                    onClick={() => {
+                      setShowAddParticipant(false);
+                      setParticipantEmail('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="crm-btn crm-btn-sm crm-btn-primary"
+                    onClick={handleAddParticipant}
+                    disabled={!participantEmail.trim()}
+                  >
+                    Add Participant
+                  </button>
+                </div>
+              </div>
+            )}
             <div style={{ padding: '20px' }}>
               {meeting.participants && meeting.participants.length > 0 ? (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -441,42 +775,221 @@ const MeetingDetail = () => {
 
           {/* Notes */}
           <div className="crm-card" style={{ marginBottom: '20px' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Notes</h3>
-              <button className="crm-btn crm-btn-sm crm-btn-primary">+ Add Note</button>
+            <div style={{ padding: '12px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 10px 0', display: 'block' }}>Notes</h3>
+              <button
+                onClick={() => setShowAddNote(!showAddNote)}
+                style={{
+                  fontSize: '13px',
+                  padding: '8px 16px',
+                  width: '100%',
+                  display: 'block',
+                  background: '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                {showAddNote ? '✕ Cancel' : '+ Add Note'}
+              </button>
             </div>
-            <div style={{ padding: '20px' }}>
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>
-                  {meeting.owner?.firstName?.charAt(0)}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>Meeting details</div>
-                  <div style={{ fontSize: '13px', color: '#666', lineHeight: '1.5' }}>
-                    {meeting.description || 'No notes added yet'}
-                  </div>
-                  <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
-                    {new Date(meeting.createdAt).toLocaleString()}
-                  </div>
+
+            {/* Add Note Form */}
+            {showAddNote && (
+              <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', background: '#f9fafb' }}>
+                <textarea
+                  value={newNote}
+                  onChange={(e) => setNewNote(e.target.value)}
+                  placeholder="Write your note here..."
+                  style={{
+                    width: '100%',
+                    minHeight: '100px',
+                    padding: '12px',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    resize: 'vertical',
+                    fontFamily: 'inherit',
+                    marginBottom: '12px'
+                  }}
+                />
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button
+                    className="crm-btn crm-btn-sm crm-btn-outline"
+                    onClick={() => {
+                      setShowAddNote(false);
+                      setNewNote('');
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="crm-btn crm-btn-sm crm-btn-primary"
+                    onClick={handleAddNote}
+                    disabled={!newNote.trim()}
+                  >
+                    Save Note
+                  </button>
                 </div>
               </div>
+            )}
+
+            <div style={{ padding: '20px' }}>
+              {/* Description as initial note */}
+              {meeting.description && (
+                <div style={{ display: 'flex', gap: '12px', marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #f0f0f0' }}>
+                  <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#E5E7EB', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                    {meeting.owner?.firstName?.charAt(0) || 'M'}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>Meeting description</div>
+                    <div style={{ fontSize: '13px', color: '#666', lineHeight: '1.5' }}>
+                      {meeting.description}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                      {new Date(meeting.createdAt).toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Display notes list */}
+              {meeting.notes && meeting.notes.length > 0 ? (
+                meeting.notes.map((note, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: '12px', marginBottom: idx < meeting.notes.length - 1 ? '16px' : '0', paddingBottom: idx < meeting.notes.length - 1 ? '16px' : '0', borderBottom: idx < meeting.notes.length - 1 ? '1px solid #f0f0f0' : 'none' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#3b82f6', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', flexShrink: 0 }}>
+                      {note.createdBy?.firstName?.charAt(0) || user?.firstName?.charAt(0) || 'U'}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: '600', fontSize: '14px', marginBottom: '4px' }}>
+                        {note.createdBy?.firstName || user?.firstName || 'User'} {note.createdBy?.lastName || user?.lastName || ''}
+                      </div>
+                      <div style={{ fontSize: '13px', color: '#666', lineHeight: '1.5' }}>
+                        {note.note || note.content}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#999', marginTop: '8px' }}>
+                        {new Date(note.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                !meeting.description && (
+                  <div style={{ textAlign: 'center', color: '#999', padding: '20px' }}>
+                    No notes added yet
+                  </div>
+                )
+              )}
             </div>
           </div>
 
           {/* Attachments */}
           <div className="crm-card">
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E5E7EB', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '16px', fontWeight: '600', margin: 0 }}>Attachments</h3>
-              <button className="crm-btn crm-btn-sm crm-btn-primary">+ Attach</button>
+            <div style={{ padding: '12px', borderBottom: '1px solid #E5E7EB', background: '#fff' }}>
+              <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 10px 0', display: 'block' }}>Attachments</h3>
+              <input
+                ref={fileInputRef}
+                type="file"
+                onChange={handleFileUpload}
+                style={{ display: 'none' }}
+              />
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                style={{
+                  fontSize: '13px',
+                  padding: '8px 16px',
+                  width: '100%',
+                  display: 'block',
+                  background: uploading ? '#9ca3af' : '#3b82f6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                {uploading ? '⏳ Uploading...' : '+ Attach File'}
+              </button>
             </div>
-            <div style={{ padding: '20px', textAlign: 'center', color: '#666' }}>
-              No Attachment
+            <div style={{ padding: meeting.attachments && meeting.attachments.length > 0 ? '0' : '20px', textAlign: meeting.attachments && meeting.attachments.length > 0 ? 'left' : 'center', color: '#666' }}>
+              {meeting.attachments && meeting.attachments.length > 0 ? (
+                <div>
+                  {meeting.attachments.map((att, idx) => (
+                    <div key={idx} className="attachment-item-mobile" style={{
+                      padding: '12px 16px',
+                      borderBottom: idx < meeting.attachments.length - 1 ? '1px solid #f0f0f0' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '12px'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                        <span style={{ fontSize: '20px', flexShrink: 0 }}>
+                          {att.mimetype?.includes('pdf') ? '📄' :
+                           att.mimetype?.includes('image') ? '🖼️' :
+                           att.mimetype?.includes('word') || att.mimetype?.includes('doc') ? '📝' :
+                           att.mimetype?.includes('excel') || att.mimetype?.includes('spreadsheet') ? '📊' : '📎'}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{
+                            fontSize: '14px',
+                            fontWeight: '500',
+                            color: '#1e3c72',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            {att.filename || att.name || 'Attachment'}
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#94a3b8', marginTop: '2px' }}>
+                            {att.size ? `${(att.size / 1024).toFixed(1)} KB` : ''}
+                            {att.uploadedAt ? ` • ${new Date(att.uploadedAt).toLocaleDateString()}` : ''}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+                        <a
+                          href={`${API_URL.replace('/api', '')}/uploads/meetings/${att.path?.split('/').pop() || att.filename}`}
+                          download={att.filename}
+                          style={{
+                            padding: '6px 12px',
+                            fontSize: '12px',
+                            color: '#10b981',
+                            border: '1px solid #10b981',
+                            borderRadius: '4px',
+                            textDecoration: 'none',
+                            cursor: 'pointer',
+                            background: 'white',
+                            transition: 'all 0.2s',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onMouseEnter={(e) => {
+                            e.target.style.background = '#10b981';
+                            e.target.style.color = 'white';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.target.style.background = 'white';
+                            e.target.style.color = '#10b981';
+                          }}
+                        >
+                          ⬇️ Download
+                        </a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                'No Attachment'
+              )}
             </div>
           </div>
         </div>
 
         {/* Right Sidebar */}
-        <div>
+        <div style={{ width: '100%', maxWidth: '100%' }}>
           {/* Related To - Only show if meeting is linked to an entity */}
           {meeting.relatedTo && (
             <div className="crm-card" style={{ marginBottom: '20px' }}>
@@ -519,6 +1032,7 @@ const MeetingDetail = () => {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </DashboardLayout>
   );

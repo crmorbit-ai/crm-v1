@@ -8,11 +8,6 @@ exports.getInventory = async (req, res) => {
     const { search, stockStatus, category, page = 1, limit = 50 } = req.query;
     const query = { tenant: req.user.tenant, isActive: true };
 
-    // TENANT_USER and TENANT_MANAGER can only see their own inventory
-    if (req.user.userType === 'TENANT_USER' || req.user.userType === 'TENANT_MANAGER') {
-      query.createdBy = req.user._id;
-    }
-
     if (search) query.$or = [{ name: { $regex: search, $options: 'i' } }, { articleNumber: { $regex: search, $options: 'i' } }];
     if (category) query.category = category;
 

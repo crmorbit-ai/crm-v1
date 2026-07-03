@@ -8,6 +8,15 @@ const { errorResponse } = require('../utils/response');
  */
 const requirePermission = (feature, action) => {
   return (req, res, next) => {
+    // Support array of features (any one of them)
+    if (Array.isArray(feature)) {
+      const hasAny = feature.some(f => hasPermission(req.user, f, action));
+      if (!hasAny) {
+        return errorResponse(res, 403, `Permission denied: requires one of [${feature.join(', ')}].${action}`);
+      }
+      return next();
+    }
+
     // Build context from request body OR query params for contextual permissions
     const context = {
       relatedTo: req.body?.relatedTo || req.query?.relatedTo,

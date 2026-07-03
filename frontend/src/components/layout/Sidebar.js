@@ -311,13 +311,19 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   <NavItem to="/data-center" label="Customers" permission="data_center" />
                 </NavSection>
 
-                {/* Inventory */}
-                <NavSection title="Inventory" section="inventory" permissions={['inventory_management']}>
-                  <NavItem to="/inventory/master" label="Master Inventory" permission="inventory_management" />
-                  <NavItem to="/inventory/products" label="Product Inventory" permission="inventory_management" />
-                  <NavItem to="/inventory/services" label="Service Inventory" permission="inventory_management" />
-                  <NavItem to="/inventory/leads" label="Lead Inventory" permission="inventory_management" />
-                </NavSection>
+                {/* Inventory - Only show if user has at least one inventory permission */}
+                {(hasPermission('master_inventory', 'read') ||
+                  hasPermission('product_inventory', 'read') ||
+                  hasPermission('service_inventory', 'read') ||
+                  hasPermission('lead_inventory', 'read') ||
+                  hasPermission('inventory_management', 'read')) && (
+                  <NavSection title="Inventory" section="inventory">
+                    <NavItem to="/inventory/master" label="Master Inventory" permission="master_inventory" />
+                    <NavItem to="/inventory/products" label="Product Inventory" permission="product_inventory" />
+                    <NavItem to="/inventory/services" label="Service Inventory" permission="service_inventory" />
+                    <NavItem to="/inventory/leads" label="Lead Inventory" permission="lead_inventory" />
+                  </NavSection>
+                )}
 
                 {/* Lead Management */}
                 <NavSection title="Lead Management" section="leadManagement" permissions={['lead_management', 'contact_management', 'account_management', 'opportunity_management']}>

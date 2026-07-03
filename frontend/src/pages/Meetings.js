@@ -256,8 +256,36 @@ const Meetings = () => {
         <div id="meetings-split-container" className="meetings-split-container" style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
 
           {/* Left: Create Form */}
+          {showCreateForm && window.innerWidth <= 768 && (
+            <div style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0,0,0,0.5)',
+              zIndex: 998,
+              backdropFilter: 'blur(2px)'
+            }} onClick={() => { setShowCreateForm(false); resetForm(); }} />
+          )}
           {showCreateForm && (
-            <div className="meetings-form-panel" style={{ flex: `0 0 ${panelWidth}%`, background: 'white', borderRight: '1px solid #e0e0e0', display: 'flex', flexDirection: 'column', overflow: 'hidden', minWidth: 0 }}>
+            <div className="meetings-form-panel" style={{
+              flex: window.innerWidth <= 768 ? 'none' : `0 0 ${panelWidth}%`,
+              position: window.innerWidth <= 768 ? 'fixed' : 'relative',
+              top: window.innerWidth <= 768 ? 0 : 'auto',
+              left: window.innerWidth <= 768 ? 0 : 'auto',
+              right: window.innerWidth <= 768 ? 0 : 'auto',
+              bottom: window.innerWidth <= 768 ? 0 : 'auto',
+              width: window.innerWidth <= 768 ? '100%' : 'auto',
+              height: window.innerWidth <= 768 ? '100%' : 'auto',
+              zIndex: window.innerWidth <= 768 ? 999 : 'auto',
+              background: 'white',
+              borderRight: window.innerWidth <= 768 ? 'none' : '1px solid #e0e0e0',
+              display: 'flex',
+              flexDirection: 'column',
+              overflow: 'hidden',
+              minWidth: 0
+            }}>
               {/* Form header */}
               <div style={{ background: 'linear-gradient(135deg, #2e1065 0%, #4c1d95 100%)', flexShrink: 0, padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -334,13 +362,24 @@ const Meetings = () => {
                   </div>
 
                   {/* From + To */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr',
+                    gap: '10px',
+                    marginBottom: '12px'
+                  }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>From *</label>
-                      <input type="datetime-local" value={formData.from} onChange={e => setFormData({...formData, from: e.target.value})} required
+                      <input
+                        type="datetime-local"
+                        value={formData.from}
+                        min={new Date().toISOString().slice(0, 16)}
+                        onChange={e => setFormData({...formData, from: e.target.value})}
+                        required
                         style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '12px', boxSizing: 'border-box', outline: 'none' }}
                         onFocus={e => e.target.style.borderColor = '#8b5cf6'}
-                        onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                        onBlur={e => e.target.style.borderColor = '#e2e8f0'}
+                      />
                     </div>
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>To *</label>
@@ -353,7 +392,12 @@ const Meetings = () => {
                   </div>
 
                   {/* Location + Type */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: window.innerWidth <= 768 ? '1fr' : '1fr 1fr',
+                    gap: '10px',
+                    marginBottom: '12px'
+                  }}>
                     <div>
                       <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Location</label>
                       <input type="text" value={formData.location} onChange={e => setFormData({...formData, location: e.target.value})}

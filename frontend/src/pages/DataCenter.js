@@ -1377,8 +1377,8 @@ const DataCenter = () => {
               <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: '0 4px' }}>
                   <thead>
-                    <tr>
-                      <th style={{ width: '80px', padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
+                    <tr style={{ background: 'linear-gradient(135deg, #1e293b, #334155)', borderBottom: '2px solid #475569' }}>
+                      <th style={{ width: '80px', padding: '10px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#e2e8f0', textTransform: 'uppercase' }}>
                         <label style={{ display: 'flex', alignItems: 'center', gap: '5px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
                           <input type="checkbox"
                             checked={selectAllPages || (candidates.length > 0 && candidates.every(c => selectedCandidates.includes(c._id)))}
@@ -1392,12 +1392,12 @@ const DataCenter = () => {
                               }
                             }}
                             style={{ width: '14px', height: '14px', cursor: 'pointer' }} />
-                          <span style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '600' }} title="Select All Records">All</span>
+                          <span style={{ fontSize: '10px', color: '#cbd5e1', fontWeight: '600' }} title="Select All Records">All</span>
                         </label>
                       </th>
-                      <th style={{ padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Customer ID</th>
+                      <th style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#e2e8f0', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Customer ID</th>
                       {displayColumns.map((column) => (
-                        <th key={column} style={{ padding: '8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{formatFieldName(column)}</th>
+                        <th key={column} style={{ padding: '10px 8px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#e2e8f0', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>{formatFieldName(column)}</th>
                       ))}
                     </tr>
                   </thead>

@@ -449,13 +449,13 @@ export default function Inventory() {
           <span style={{marginLeft:'auto',fontSize:10,color:'#94a3b8',fontWeight:600}}>{summary.totalProducts||0} products</span>
         </div>
 
-        <div style={{overflowX:'auto',borderRadius:'0 0 8px 8px',border:'1px solid #d1d5db',background:'#fff',flex:1}}>
+        <div style={{overflowX:'auto',borderRadius:'0 0 8px 8px',border:'1px solid #d1d5db',background:'#fff',flex:1,WebkitOverflowScrolling:'touch'}}>
           {loading ? <Spin /> : products.length===0 ? <Empty text="No products found" /> : (
-            <table style={{width:'100%',borderCollapse:'collapse'}}>
+            <table style={{width:'100%',minWidth:'800px',borderCollapse:'collapse'}}>
               <thead>
                 <tr>
-                  {['#','Product','Article #','On Hand','Committed','Available','Value','Status','Actions'].map(h=>(
-                    <th key={h} className="xTh" style={{padding:'7px 10px'}}>{h}</th>
+                  {['#','Product','Article #','On Hand','Committed','Available','Value','Status','Created By','Actions'].map(h=>(
+                    <th key={h} className="xTh" style={{padding:'7px 10px',whiteSpace:'nowrap'}}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -484,6 +484,9 @@ export default function Inventory() {
                       <td className="xTd" style={{fontWeight:700,color:'#6366f1',fontSize:12}}>{fmtCur(p.stock*(p.costPrice||p.price))}</td>
                       <td className="xTd">
                         <span style={{fontSize:10,fontWeight:700,padding:'2px 7px',borderRadius:4,background:sc.bg,color:sc.color}}>{sc.label}</span>
+                      </td>
+                      <td className="xTd" style={{fontSize:11,color:'#64748b'}}>
+                        {p.createdBy ? `${p.createdBy.firstName || ''} ${p.createdBy.lastName || ''}`.trim() : '—'}
                       </td>
                       <td className="xTd" onClick={e=>e.stopPropagation()}>
                         <div style={{display:'flex',gap:4}}>
@@ -871,12 +874,12 @@ export default function Inventory() {
       </div>
 
       {/* Stat cards */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(6,1fr)',gap:8,marginBottom:10}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:8,marginBottom:10}}>
         {STAT_CARDS(dashboard?.summary||summary, filt, setFilt, setTab, tab).map((s,i)=>(
           <div key={i} onClick={s.f||undefined} className="sStat"
-            style={{background:s.grad,boxShadow:s.act?'0 4px 18px rgba(0,0,0,0.3)':'0 2px 8px rgba(0,0,0,0.15)',outline:s.act?'2px solid rgba(255,255,255,0.5)':'none',outlineOffset:3,cursor:s.f?'pointer':'default'}}>
+            style={{background:s.grad,boxShadow:s.act?'0 4px 18px rgba(0,0,0,0.3)':'0 2px 8px rgba(0,0,0,0.15)',outline:s.act?'2px solid rgba(255,255,255,0.5)':'none',outlineOffset:3,cursor:s.f?'pointer':'default',minWidth:0}}>
             <div style={{fontSize:22,fontWeight:900,color:'#fff',lineHeight:1,marginBottom:4,textShadow:'0 1px 3px rgba(0,0,0,0.2)'}}>{s.val}</div>
-            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.85)',textTransform:'uppercase',letterSpacing:'0.5px'}}>{s.label}</div>
+            <div style={{fontSize:10,fontWeight:700,color:'rgba(255,255,255,0.85)',textTransform:'uppercase',letterSpacing:'0.5px',wordBreak:'break-word'}}>{s.label}</div>
             {s.sub&&<div style={{fontSize:9,color:'rgba(255,255,255,0.6)',marginTop:2}}>{s.sub}</div>}
             {s.act&&<div style={{width:20,height:2,background:'rgba(255,255,255,0.6)',borderRadius:1,marginTop:5}} />}
           </div>
@@ -887,10 +890,10 @@ export default function Inventory() {
       {error  &&<div style={{background:'#fef2f2',border:'1px solid #fca5a5',color:'#dc2626', padding:'9px 14px',borderRadius:7,marginBottom:10,fontSize:12,fontWeight:600,display:'flex',alignItems:'center',gap:7}}><AlertTriangle style={{width:13}} /> {error}</div>}
 
       {/* Tab bar */}
-      <div style={{display:'flex',gap:2,background:'#f1f5f9',borderRadius:8,padding:3,marginBottom:10,border:'1px solid #e2e8f0',overflowX:'auto'}}>
+      <div style={{display:'flex',gap:2,background:'#f1f5f9',borderRadius:8,padding:3,marginBottom:10,border:'1px solid #e2e8f0',overflowX:'auto',WebkitOverflowScrolling:'touch',scrollbarWidth:'none',msOverflowStyle:'none'}}>
         {TABS.map(t=>(
           <button key={t.key} onClick={()=>setTab(t.key)}
-            style={{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:6,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',transition:'all 0.15s',
+            style={{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:6,border:'none',fontSize:12,fontWeight:700,cursor:'pointer',whiteSpace:'nowrap',transition:'all 0.15s',flexShrink:0,
               background:tab===t.key?'#fff':'transparent',
               color:tab===t.key?'#0f172a':'#94a3b8',
               boxShadow:tab===t.key?'0 1px 6px rgba(0,0,0,0.1)':'none',

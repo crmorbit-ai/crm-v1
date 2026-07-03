@@ -13,6 +13,7 @@ export default function ServiceInventory({ fromTab }) {
   const [items, setItems] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [pag, setPag] = useState({ page: 1, pages: 1, total: 0 });
+  const [limit, setLimit] = useState(20);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
 
@@ -123,7 +124,7 @@ export default function ServiceInventory({ fromTab }) {
   const loadItems = useCallback(async (page = 1) => {
     setLoading(true);
     try {
-      const params = { page, limit: 50, search, type: 'service' };
+      const params = { page, limit, search, type: 'service' };
       if (deptFilter) params.department = deptFilter;
       const r = await masterInventoryService.getAll(params);
       if (r?.data) {
@@ -132,7 +133,7 @@ export default function ServiceInventory({ fromTab }) {
       }
     } catch { err('Failed to load items'); }
     finally { setLoading(false); }
-  }, [search, deptFilter]);
+  }, [search, deptFilter, limit]);
 
   useEffect(() => {
     loadDashboard();
@@ -141,7 +142,7 @@ export default function ServiceInventory({ fromTab }) {
 
   useEffect(() => {
     loadItems();
-  }, [search, deptFilter, loadItems]);
+  }, [search, deptFilter, limit, loadItems]);
 
   const handleSelectItem = (item) => {
     setSelectedItem(item);
@@ -348,7 +349,7 @@ export default function ServiceInventory({ fromTab }) {
           .si-detail-panel { flex: 0 0 100% !important; border-right: none !important; border-bottom: 1px solid #e2e8f0 !important; order: 2 !important; }
         }
       `}</style>
-      <div className="si-container" style={{ display: 'flex', height: 'calc(100vh - 200px)', gap: '0' }}>
+      <div className="si-container" style={{ display: 'flex', minHeight: 'calc(100vh - 200px)', gap: '0' }}>
         {/* LEFT: Detail Panel */}
         {(selectedItem || isAddingNew) && (
           <div className="si-detail-panel" style={{ flex: '0 0 35%', background: '#f8fafc', borderRight: '1px solid #e2e8f0', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
@@ -817,7 +818,7 @@ export default function ServiceInventory({ fromTab }) {
         )}
 
         {/* Content Panel - Search, Filters & Table */}
-        <div className="si-content-panel" style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+        <div className="si-content-panel" style={{ display: 'flex', flexDirection: 'column', padding: '0' }}>
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: 'linear-gradient(135deg,#6366f1,#4f46e5)', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 2px 8px rgba(99,102,241,0.3)' }}>+ Add Service</button>
@@ -833,7 +834,7 @@ export default function ServiceInventory({ fromTab }) {
         </div>
 
 
-        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', padding: '0 20px', flex: 1 }}>
+        <div style={{ overflowX: 'auto', borderRadius: '8px', border: '1px solid #d1d5db', background: '#fff', padding: '0 20px' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#1e293b' }}>
@@ -875,13 +876,79 @@ export default function ServiceInventory({ fromTab }) {
           </table>
         </div>
 
-        {pag.pages > 1 && (
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '20px', padding: '0 20px' }}>
-            <button onClick={() => loadItems(pag.page - 1)} disabled={pag.page === 1} style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: pag.page === 1 ? 'default' : 'pointer', opacity: pag.page === 1 ? 0.5 : 1 }}>Prev</button>
-            <div style={{ padding: '6px 12px', fontSize: '12px' }}>Page {pag.page} of {pag.pages}</div>
-            <button onClick={() => loadItems(pag.page + 1)} disabled={pag.page === pag.pages} style={{ padding: '6px 12px', fontSize: '12px', border: '1px solid #e2e8f0', borderRadius: '4px', cursor: pag.page === pag.pages ? 'default' : 'pointer', opacity: pag.page === pag.pages ? 0.5 : 1 }}>Next</button>
+        {/* Pagination */}
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: '16px 20px',
+          borderTop: '1px solid #e2e8f0',
+          background: '#fafafa',
+          marginTop: '20px'
+        }}>
+          {/* Left: Count & Rows per page */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <span style={{ fontSize: '13px', color: '#64748b', fontWeight: '500' }}>
+              Showing <strong>{((pag.page - 1) * limit) + 1}-{Math.min(pag.page * limit, pag.total)}</strong> of <strong>{pag.total}</strong>
+            </span>
+            <select
+              value={limit}
+              onChange={(e) => { setLimit(Number(e.target.value)); setPag(p => ({ ...p, page: 1 })); }}
+              style={{
+                padding: '6px 10px',
+                fontSize: '12px',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                background: '#fff',
+                cursor: 'pointer',
+                outline: 'none'
+              }}
+            >
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+              <option value={100}>100 / page</option>
+            </select>
           </div>
-        )}
+
+          {/* Right: Page controls */}
+          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              onClick={() => loadItems(pag.page - 1)}
+              disabled={pag.page === 1}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                background: pag.page === 1 ? '#f8fafc' : '#fff',
+                color: pag.page === 1 ? '#cbd5e1' : '#475569',
+                cursor: pag.page === 1 ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              ◄ Previous
+            </button>
+            <button
+              onClick={() => loadItems(pag.page + 1)}
+              disabled={pag.page === pag.pages}
+              style={{
+                padding: '8px 16px',
+                fontSize: '13px',
+                fontWeight: '600',
+                border: '1px solid #e2e8f0',
+                borderRadius: '6px',
+                background: pag.page === pag.pages ? '#f8fafc' : '#fff',
+                color: pag.page === pag.pages ? '#cbd5e1' : '#475569',
+                cursor: pag.page === pag.pages ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              Next ►
+            </button>
+          </div>
+        </div>
         </div>
         </div>
       </div>

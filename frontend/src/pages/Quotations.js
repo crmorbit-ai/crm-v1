@@ -202,10 +202,10 @@ const Quotations = () => {
                       <td style={tdStyle}>{badge(q.status)}</td>
                       <td style={tdStyle}>
                         <div style={{ display: 'flex', gap: '5px' }}>
-                          <button onClick={() => navigate(`/quotations/${q._id}`)} title="View" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: '13px' }}>👁️</button>
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/quotations/${q._id}`); }} title="View" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: '13px' }}>👁️</button>
                           {q.status === 'draft' && <>
-                            <button onClick={() => navigate(`/quotations/${q._id}/edit`)} title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: '13px' }}>✏️</button>
-                            <button onClick={() => handleDelete(q._id, q.quotationNumber)} title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fff5f5', cursor: 'pointer', fontSize: '13px' }}>🗑️</button>
+                            <button onClick={(e) => { e.stopPropagation(); navigate(`/quotations/${q._id}/edit`); }} title="Edit" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: '13px' }}>✏️</button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(q._id, q.quotationNumber); }} title="Delete" style={{ width: '28px', height: '28px', borderRadius: '6px', border: '1px solid #fecaca', background: '#fff5f5', cursor: 'pointer', fontSize: '13px' }}>🗑️</button>
                           </>}
                         </div>
                       </td>

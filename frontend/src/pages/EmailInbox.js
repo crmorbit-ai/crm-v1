@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import '../styles/crm.css';
 
 const emailResponsiveCss = `
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     .email-layout { flex-direction: column !important; height: auto !important; overflow: visible !important; }
     .email-sidebar { display: none !important; }
     .email-list { flex: 1 1 100% !important; width: 100% !important; }
@@ -36,6 +36,7 @@ const EmailInbox = () => {
   const [showCompose, setShowCompose] = useState(false);
   const [composeMode, setComposeMode] = useState('new'); // 'new', 'reply', 'forward'
   const [replyToEmail, setReplyToEmail] = useState(null);
+  const [showMobileSidebar, setShowMobileSidebar] = useState(false);
 
   useEffect(() => {
     fetchEmails();
@@ -429,6 +430,24 @@ const EmailInbox = () => {
             alignItems: 'center',
             gap: '12px'
           }}>
+            {/* Mobile Menu Button */}
+            <button
+              className="mobile-menu-btn"
+              onClick={() => {
+                console.log('Menu clicked');
+                setShowMobileSidebar(true);
+              }}
+              style={{
+                padding: '8px',
+                background: 'none',
+                border: 'none',
+                fontSize: '20px',
+                cursor: 'pointer',
+                color: '#666'
+              }}
+            >
+              ☰
+            </button>
             <input
               type="text"
               placeholder="Search emails..."
@@ -723,6 +742,196 @@ const EmailInbox = () => {
             </div>
           </div>
         )}
+
+        {/* Mobile Sidebar Drawer */}
+        {showMobileSidebar && (
+          <>
+            <div
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.5)',
+                zIndex: 998,
+                backdropFilter: 'blur(2px)'
+              }}
+              onClick={() => setShowMobileSidebar(false)}
+            />
+            <div
+              className="mobile-sidebar-drawer"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                bottom: 0,
+                width: '280px',
+                backgroundColor: 'white',
+                display: 'flex',
+                flexDirection: 'column',
+                padding: '12px',
+                overflow: 'auto',
+                zIndex: 999,
+                boxShadow: '2px 0 12px rgba(0,0,0,0.15)',
+                animation: 'slideIn 0.3s ease'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h3 style={{ margin: 0, fontSize: '18px', color: '#333' }}>Email Menu</h3>
+                <button
+                  onClick={() => setShowMobileSidebar(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: '24px',
+                    cursor: 'pointer',
+                    color: '#666'
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Compose Button */}
+              <button
+                onClick={() => {
+                  setComposeMode('new');
+                  setReplyToEmail(null);
+                  setShowCompose(true);
+                  setShowMobileSidebar(false);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#1976d2',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  fontSize: '15px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '10px',
+                  marginBottom: '20px',
+                  width: '100%',
+                  justifyContent: 'center'
+                }}
+              >
+                <span style={{ fontSize: '18px' }}>✏️</span>
+                Compose
+              </button>
+
+              {/* Sync Button */}
+              <button
+                onClick={() => { handleSync(); setShowMobileSidebar(false); }}
+                disabled={syncing}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: syncing ? '#f5f5f5' : 'white',
+                  color: syncing ? '#999' : '#666',
+                  border: '1px solid #e0e0e0',
+                  borderRadius: '20px',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  cursor: syncing ? 'not-allowed' : 'pointer',
+                  marginBottom: '20px',
+                  width: '100%'
+                }}
+              >
+                {syncing ? '⏳ Syncing...' : '🔄 Sync Emails'}
+              </button>
+
+              {/* Folders */}
+              <div>
+                {folders.map((folder) => (
+                  <div
+                    key={folder.id}
+                    onClick={() => { setActiveFolder(folder.id); setShowMobileSidebar(false); }}
+                    style={{
+                      padding: '12px 16px',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      marginBottom: '4px',
+                      backgroundColor: activeFolder === folder.id ? '#e3f2fd' : 'transparent',
+                      color: activeFolder === folder.id ? '#1976d2' : '#5f6368',
+                      fontWeight: activeFolder === folder.id ? 600 : 500,
+                      fontSize: '14px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '18px' }}>{folder.icon}</span>
+                      <span>{folder.label}</span>
+                    </div>
+                    {folder.count > 0 && (
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        padding: '2px 8px',
+                        borderRadius: '12px',
+                        backgroundColor: activeFolder === folder.id ? '#1976d2' : '#e0e0e0',
+                        color: activeFolder === folder.id ? 'white' : '#666'
+                      }}>
+                        {folder.count}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Mobile Floating Compose Button */}
+        <button
+          className="mobile-compose-btn"
+          onClick={() => {
+            setComposeMode('new');
+            setReplyToEmail(null);
+            setShowCompose(true);
+          }}
+          style={{
+            display: 'none',
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            background: 'linear-gradient(135deg, #1976d2, #1565c0)',
+            color: 'white',
+            border: 'none',
+            fontSize: '24px',
+            cursor: 'pointer',
+            boxShadow: '0 4px 12px rgba(25, 118, 210, 0.4)',
+            zIndex: 100,
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}
+        >
+          ✏️
+        </button>
+
+        <style>{`
+          .mobile-menu-btn {
+            display: none;
+          }
+          @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+          }
+          @media (max-width: 1024px) {
+            .mobile-compose-btn {
+              display: flex !important;
+            }
+            .mobile-menu-btn {
+              display: block !important;
+            }
+          }
+        `}</style>
       </div>
     </DashboardLayout>
   );

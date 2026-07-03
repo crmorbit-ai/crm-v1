@@ -15,6 +15,7 @@ const Calls = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCall, setSelectedCall] = useState(null);
   const [showDetailPanel, setShowDetailPanel] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
 
   // Related records for dropdown
   const [relatedRecords, setRelatedRecords] = useState([]);
@@ -99,8 +100,56 @@ const Calls = () => {
     }
   };
 
+  const validateField = (name, value) => {
+    const errors = { ...validationErrors };
+
+    if (name === 'subject') {
+      // Must contain at least one letter
+      if (!value || value.trim().length === 0) {
+        errors.subject = 'Subject is required';
+      } else if (!/[a-zA-Z]/.test(value)) {
+        errors.subject = 'Subject must contain at least one letter';
+      } else if (/^[0-9]+$/.test(value.trim())) {
+        errors.subject = 'Subject cannot be only numbers';
+      } else if (value.trim().length < 3) {
+        errors.subject = 'Subject must be at least 3 characters';
+      } else {
+        delete errors.subject;
+      }
+    }
+
+    if (name === 'description') {
+      // If filled, must contain at least one letter
+      if (value && value.trim().length > 0) {
+        if (!/[a-zA-Z]/.test(value)) {
+          errors.description = 'Description must contain at least one letter';
+        } else if (/^[0-9@#$%^&*()]+$/.test(value.trim())) {
+          errors.description = 'Description cannot be only numbers or symbols';
+        } else {
+          delete errors.description;
+        }
+      } else {
+        delete errors.description;
+      }
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
+
+    // Validate all fields
+    const subjectValid = validateField('subject', formData.subject);
+    const descValid = validateField('description', formData.description);
+
+    if (!subjectValid || !descValid) {
+      setError('Please fix validation errors');
+      setTimeout(() => setError(''), 3000);
+      return;
+    }
+
     try {
       const response = await fetch(`${API_URL}/calls`, {
         method: 'POST',
@@ -162,17 +211,69 @@ const Calls = () => {
 
       {/* Inline Create Call Form */}
       {showCreateForm && (
-        <div className="crm-card" style={{ marginBottom: '16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
-            <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Log New Call</h3>
-            <button onClick={() => setShowCreateForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }} title="Close">✕</button>
-          </div>
-          <div style={{ padding: '16px' }}>
+        <>
+          {/* Mobile backdrop */}
+          {window.innerWidth <= 768 && (
+            <div
+              className="calls-form-backdrop"
+              style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: 'rgba(0,0,0,0.5)',
+                zIndex: 998,
+                backdropFilter: 'blur(2px)'
+              }}
+              onClick={() => setShowCreateForm(false)}
+            />
+          )}
+          <div
+            className="crm-card calls-form-panel"
+            style={{
+              marginBottom: '16px',
+              ...(window.innerWidth <= 768 ? {
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                width: '100%',
+                height: '100%',
+                margin: 0,
+                borderRadius: 0,
+                zIndex: 999,
+                overflowY: 'auto',
+                maxHeight: '100vh'
+              } : {})
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid #e5e7eb' }}>
+              <h3 style={{ margin: 0, fontSize: '16px', fontWeight: '700', color: '#1e3c72' }}>Log New Call</h3>
+              <button onClick={() => setShowCreateForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748b' }} title="Close">✕</button>
+            </div>
+            <div style={{ padding: '16px' }}>
             <form onSubmit={handleCreate}>
               <div className="resp-grid-4">
-                <div className="calls-span2" style={{ gridColumn: 'span 2' }}>
+                <div className="calls-span2">
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Subject *</label>
-                  <input type="text" className="crm-form-input" value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} required style={{ padding: '8px 10px', fontSize: '13px' }} />
+                  <input
+                    type="text"
+                    className="crm-form-input"
+                    value={formData.subject}
+                    onChange={(e) => {
+                      setFormData({ ...formData, subject: e.target.value });
+                      validateField('subject', e.target.value);
+                    }}
+                    required
+                    style={{ padding: '8px 10px', fontSize: '13px', borderColor: validationErrors.subject ? '#dc2626' : undefined }}
+                  />
+                  {validationErrors.subject && (
+                    <div style={{ color: '#dc2626', fontSize: '11px', marginTop: '4px' }}>
+                      {validationErrors.subject}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Call Time *</label>
@@ -231,7 +332,21 @@ const Calls = () => {
                 </div>
                 <div className="calls-span4" style={{ gridColumn: 'span 4' }}>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Description</label>
-                  <textarea className="crm-form-input" rows="2" value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical' }} />
+                  <textarea
+                    className="crm-form-input"
+                    rows="2"
+                    value={formData.description}
+                    onChange={(e) => {
+                      setFormData({ ...formData, description: e.target.value });
+                      validateField('description', e.target.value);
+                    }}
+                    style={{ padding: '8px 10px', fontSize: '13px', resize: 'vertical', borderColor: validationErrors.description ? '#dc2626' : undefined }}
+                  />
+                  {validationErrors.description && (
+                    <div style={{ color: '#dc2626', fontSize: '11px', marginTop: '4px' }}>
+                      {validationErrors.description}
+                    </div>
+                  )}
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #e5e7eb' }}>
@@ -241,7 +356,30 @@ const Calls = () => {
             </form>
           </div>
         </div>
+        </>
       )}
+
+      <style>{`
+        @media (max-width: 768px) {
+          .calls-form-backdrop {
+            display: block !important;
+          }
+          .calls-form-panel {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            z-index: 999 !important;
+            overflow-y: auto !important;
+            max-height: 100vh !important;
+          }
+        }
+      `}</style>
 
       <div className="crm-card">
         <div className="crm-card-header">
@@ -253,7 +391,8 @@ const Calls = () => {
         ) : calls.length === 0 ? (
           <div style={{ padding: '40px', textAlign: 'center' }}>No calls found</div>
         ) : (
-          <table className="crm-table">
+          <div className="crm-table-wrap">
+            <table className="crm-table" style={{ minWidth: '800px' }}>
             <thead>
               <tr>
                 <th>Subject</th>
@@ -303,6 +442,7 @@ const Calls = () => {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 
