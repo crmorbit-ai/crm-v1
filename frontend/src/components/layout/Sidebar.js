@@ -329,7 +329,7 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                 <NavSection title="Lead Management" section="leadManagement" permissions={['lead_management', 'contact_management', 'account_management', 'opportunity_management']}>
                   <NavItem to="/leads" label="Leads" permission="lead_management" />
                   <NavItem to="/contacts" label="Contacts" permission="contact_management" />
-                  <NavItem to="/accounts" label="Account" permission="account_management" />
+                  <NavItem to="/accounts" label="Accounts" permission="account_management" />
                   <NavItem to="/opportunities" label="Opportunities" permission="opportunity_management" />
                 </NavSection>
 

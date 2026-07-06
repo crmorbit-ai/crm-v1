@@ -10,7 +10,37 @@ import '../styles/crm.css';
 const tasksResponsiveCss = `
   @media (max-width: 768px) {
     .tasks-split-container { flex-direction: column !important; overflow: visible !important; }
-    .tasks-form-panel { flex: none !important; width: 100% !important; max-height: none !important; border-right: none !important; border-bottom: 1px solid #e0e0e0 !important; }
+
+    /* Full screen form on mobile */
+    .tasks-form-panel {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      height: 100vh !important;
+      max-height: 100vh !important;
+      flex: none !important;
+      z-index: 1000 !important;
+      border: none !important;
+      display: flex !important;
+      flex-direction: column !important;
+      overflow: hidden !important;
+    }
+
+    .tasks-form-body {
+      flex: 1 !important;
+      overflow-y: auto !important;
+      -webkit-overflow-scrolling: touch !important;
+      padding: 16px !important;
+    }
+
+    /* Hide kanban when form is open on mobile */
+    .tasks-form-panel ~ .tasks-kanban-panel {
+      display: none !important;
+    }
+
     .tasks-divider { display: none !important; }
     .tasks-kanban-panel { flex: none !important; width: 100% !important; overflow-x: auto !important; }
   }
@@ -121,15 +151,28 @@ const Tasks = () => {
     setSubjectError('');
     setDescriptionError('');
 
-    // Validate subject must contain letters
-    if (!/[a-zA-Z]/.test(formData.subject.trim())) {
-      setSubjectError('Subject must contain descriptive text letters');
+    // Subject validation
+    if (!formData.subject || formData.subject.trim().length === 0) {
+      setSubjectError('Subject is required');
       return;
     }
 
-    // Validate subject character limit
-    if (formData.subject.length > 100) {
-      setSubjectError('Subject cannot exceed 100 characters');
+    if (formData.subject.length > 200) {
+      setSubjectError('Subject cannot exceed 200 characters');
+      return;
+    }
+
+    // Must contain meaningful text (at least 3 alphanumeric)
+    const letterCount = (formData.subject.match(/[a-zA-Z0-9]/g) || []).length;
+    if (letterCount < 3) {
+      setSubjectError('Subject must contain at least 3 letters or numbers');
+      return;
+    }
+
+    // Check excessive special characters (max 30%)
+    const specialCharCount = formData.subject.replace(/[a-zA-Z0-9\s\-_,.()#]/g, '').length;
+    if (specialCharCount > formData.subject.length * 0.3) {
+      setSubjectError('Subject contains too many special characters - use descriptive text');
       return;
     }
 
@@ -176,6 +219,53 @@ const Tasks = () => {
     try { await taskService.updateTask(draggedItem._id, { status: targetStatus }); }
     catch { loadTasks(); }
     setDraggedItem(null);
+  };
+
+  // Touch support for mobile drag-and-drop
+  const [touchStartY, setTouchStartY] = useState(0);
+  const [touchCurrentTarget, setTouchCurrentTarget] = useState(null);
+
+  const handleTouchStart = (e, task) => {
+    setDraggedItem(task);
+    setTouchStartY(e.touches[0].clientY);
+    e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleTouchMove = (e) => {
+    if (!draggedItem) return;
+
+    const touch = e.touches[0];
+    const element = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    // Find column under touch
+    const column = element?.closest('[data-status-column]');
+    if (column) {
+      setTouchCurrentTarget(column.getAttribute('data-status-column'));
+      // Visual feedback
+      document.querySelectorAll('[data-status-column]').forEach(col => {
+        col.style.background = col === column ? '#f0f9ff' : '';
+      });
+    }
+  };
+
+  const handleTouchEnd = async (e) => {
+    if (!draggedItem) return;
+
+    e.currentTarget.style.opacity = '1';
+
+    // Clear visual feedback
+    document.querySelectorAll('[data-status-column]').forEach(col => {
+      col.style.background = '';
+    });
+
+    if (touchCurrentTarget && touchCurrentTarget !== draggedItem.status) {
+      setTasks(prev => prev.map(t => t._id === draggedItem._id ? { ...t, status: touchCurrentTarget } : t));
+      try { await taskService.updateTask(draggedItem._id, { status: touchCurrentTarget }); }
+      catch { loadTasks(); }
+    }
+
+    setDraggedItem(null);
+    setTouchCurrentTarget(null);
   };
 
   const getTasksByStatus = (s) => tasks.filter(t => t.status === s);
@@ -260,7 +350,7 @@ const Tasks = () => {
               </div>
 
               {/* Form body */}
-              <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
+              <div className="tasks-form-body" style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
                 <form onSubmit={handleCreate}>
 
                   {/* Template selector — always shown at top */}
@@ -324,12 +414,59 @@ const Tasks = () => {
                         {/* Required empty fields */}
                         {!formData.subject && (
                           <div style={{ marginBottom: '14px' }}>
-                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>Subject *</label>
-                            <input type="text" value={formData.subject} onChange={e => setFormData({...formData, subject: e.target.value})} required
+                            <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '5px' }}>
+                              Subject *
+                              {formData.subject && (
+                                <span style={{fontSize: '10px', color: '#94a3b8', marginLeft: '8px', textTransform: 'none'}}>
+                                  {formData.subject.length}/200 characters
+                                </span>
+                              )}
+                            </label>
+                            <input
+                              type="text"
+                              value={formData.subject}
+                              onChange={e => {
+                                const value = e.target.value;
+                                setFormData({...formData, subject: value});
+
+                                // Clear previous error
+                                setSubjectError('');
+
+                                // Real-time validation
+                                if (value.length > 200) {
+                                  setSubjectError('Subject cannot exceed 200 characters');
+                                } else if (value.length > 0) {
+                                  const letterCount = (value.match(/[a-zA-Z0-9]/g) || []).length;
+                                  if (letterCount < 3) {
+                                    setSubjectError('Subject must contain at least 3 letters/numbers');
+                                  }
+
+                                  const specialCharCount = value.replace(/[a-zA-Z0-9\s\-_,.()#]/g, '').length;
+                                  if (specialCharCount > value.length * 0.3) {
+                                    setSubjectError('Too many special characters - use letters and numbers');
+                                  }
+                                }
+                              }}
+                              required
                               placeholder="Enter task subject..."
-                              style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', fontSize: '13px', boxSizing: 'border-box', outline: 'none', fontFamily: 'inherit' }}
-                              onFocus={e => e.target.style.borderColor = '#3b82f6'}
-                              onBlur={e => e.target.style.borderColor = '#e2e8f0'} />
+                              style={{
+                                width: '100%',
+                                padding: '9px 12px',
+                                borderRadius: '8px',
+                                border: `1.5px solid ${subjectError ? '#ef4444' : '#e2e8f0'}`,
+                                fontSize: '13px',
+                                boxSizing: 'border-box',
+                                outline: 'none',
+                                fontFamily: 'inherit'
+                              }}
+                              onFocus={e => e.target.style.borderColor = subjectError ? '#ef4444' : '#3b82f6'}
+                              onBlur={e => e.target.style.borderColor = subjectError ? '#ef4444' : '#e2e8f0'}
+                            />
+                            {subjectError && (
+                              <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                                ⚠️ {subjectError}
+                              </div>
+                            )}
                           </div>
                         )}
                         {!formData.dueDate && (
@@ -544,8 +681,11 @@ const Tasks = () => {
               {statuses.map(status => {
                 const statusTasks = getTasksByStatus(status.name);
                 return (
-                  <div key={status.name} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, status.name)}
-                    style={{ minWidth: '230px', maxWidth: '230px', background: '#f8fafc', borderRadius: '12px', padding: '10px', display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
+                  <div key={status.name}
+                    data-status-column={status.name}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, status.name)}
+                    style={{ minWidth: '230px', maxWidth: '230px', background: '#f8fafc', borderRadius: '12px', padding: '10px', display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', transition: 'background 0.2s' }}>
                     {/* Column header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: `2px solid ${status.color}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -562,8 +702,13 @@ const Tasks = () => {
                         </div>
                       ) : (
                         statusTasks.map(task => (
-                          <div key={task._id} draggable onDragStart={(e) => handleDragStart(e, task)}
-                            style={{ background: 'white', borderRadius: '10px', padding: '10px 11px', cursor: 'grab', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'all 0.15s' }}
+                          <div key={task._id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, task)}
+                            onTouchStart={(e) => handleTouchStart(e, task)}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                            style={{ background: 'white', borderRadius: '10px', padding: '10px 11px', cursor: 'grab', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'all 0.15s', touchAction: 'none' }}
                             onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.14)'; e.currentTarget.style.borderColor = '#93c5fd'; }}
                             onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
                             {/* Priority bar */}

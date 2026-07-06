@@ -103,8 +103,8 @@ const proposalSchema = new mongoose.Schema({
   // Auto-generated Proposal Number
   proposalNumber: {
     type: String,
-    unique: true,
     index: true
+    // Unique constraint is applied via compound index with tenant below
   },
 
   // Relations
@@ -276,7 +276,8 @@ const proposalSchema = new mongoose.Schema({
 });
 
 // Indexes
-proposalSchema.index({ tenant: 1, proposalNumber: 1 });
+// Compound unique index: proposalNumber is unique per tenant
+proposalSchema.index({ tenant: 1, proposalNumber: 1 }, { unique: true });
 proposalSchema.index({ tenant: 1, status: 1 });
 proposalSchema.index({ tenant: 1, customer: 1 });
 proposalSchema.index({ tenant: 1, createdAt: -1 });

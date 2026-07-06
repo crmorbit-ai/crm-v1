@@ -143,6 +143,27 @@ const createTask = async (req, res) => {
       return errorResponse(res, 400, 'Please provide subject and dueDate');
     }
 
+    // Subject validation
+    if (subject.trim().length === 0) {
+      return errorResponse(res, 400, 'Subject cannot be empty');
+    }
+
+    if (subject.length > 200) {
+      return errorResponse(res, 400, 'Subject cannot exceed 200 characters');
+    }
+
+    // Must contain meaningful text
+    const letterCount = (subject.match(/[a-zA-Z0-9]/g) || []).length;
+    if (letterCount < 3) {
+      return errorResponse(res, 400, 'Subject must contain at least 3 letters or numbers');
+    }
+
+    // Check excessive special characters
+    const specialCharCount = subject.replace(/[a-zA-Z0-9\s\-_,.()#]/g, '').length;
+    if (specialCharCount > subject.length * 0.3) {
+      return errorResponse(res, 400, 'Subject contains too many special characters');
+    }
+
     let tenant;
     if (req.user.userType === 'SAAS_OWNER' || req.user.userType === 'SAAS_ADMIN') {
       tenant = req.body.tenant;
@@ -220,6 +241,27 @@ const updateTask = async (req, res) => {
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       if (task.tenant.toString() !== req.user.tenant.toString()) {
         return errorResponse(res, 403, 'Access denied');
+      }
+    }
+
+    // Subject validation if being updated
+    if (req.body.subject !== undefined) {
+      if (req.body.subject.trim().length === 0) {
+        return errorResponse(res, 400, 'Subject cannot be empty');
+      }
+
+      if (req.body.subject.length > 200) {
+        return errorResponse(res, 400, 'Subject cannot exceed 200 characters');
+      }
+
+      const letterCount = (req.body.subject.match(/[a-zA-Z0-9]/g) || []).length;
+      if (letterCount < 3) {
+        return errorResponse(res, 400, 'Subject must contain at least 3 letters or numbers');
+      }
+
+      const specialCharCount = req.body.subject.replace(/[a-zA-Z0-9\s\-_,.()#]/g, '').length;
+      if (specialCharCount > req.body.subject.length * 0.3) {
+        return errorResponse(res, 400, 'Subject contains too many special characters');
       }
     }
 

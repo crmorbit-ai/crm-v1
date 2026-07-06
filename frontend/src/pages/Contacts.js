@@ -8,12 +8,36 @@ import { accountService } from '../services/accountService';
 import { taskService } from '../services/taskService';
 import { noteService } from '../services/noteService';
 import fieldDefinitionService from '../services/fieldDefinitionService';
+import { showSuccessToast, showErrorToast } from '../utils/toast';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
 import { Mail, Phone, Building2, Briefcase, X, Edit, Trash2, FileText, CheckCircle2, Calendar, Star, User, Settings, List, LayoutGrid } from 'lucide-react';
 import ManageFieldsPanel from '../components/ManageFieldsPanel';
 import BulkUploadForm from '../components/BulkUploadForm';
 import '../styles/crm.css';
+
+// Account default fields for inline creation
+const DEFAULT_ACCOUNT_FIELDS = [
+  { fieldName: 'accountName', label: 'Account Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 1 },
+  { fieldName: 'accountType', label: 'Account Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Vendor', value: 'Vendor' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'contactPerson', label: 'Contact Person', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 3 },
+  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 4 },
+  { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 5 },
+  { fieldName: 'website', label: 'Website', fieldType: 'url', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 6 },
+  { fieldName: 'industry', label: 'Industry', fieldType: 'dropdown', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 10, options: [{ label: 'Agriculture', value: 'Agriculture' }, { label: 'Automotive', value: 'Automotive' }, { label: 'Banking & Finance', value: 'Banking & Finance' }, { label: 'Construction', value: 'Construction' }, { label: 'Consulting', value: 'Consulting' }, { label: 'Education', value: 'Education' }, { label: 'Energy & Power', value: 'Energy & Power' }, { label: 'Food & Beverage', value: 'Food & Beverage' }, { label: 'Government', value: 'Government' }, { label: 'Healthcare', value: 'Healthcare' }, { label: 'Hospitality', value: 'Hospitality' }, { label: 'IT & Technology', value: 'IT & Technology' }, { label: 'Insurance', value: 'Insurance' }, { label: 'Logistics & Transport', value: 'Logistics & Transport' }, { label: 'Manufacturing', value: 'Manufacturing' }, { label: 'Media & Entertainment', value: 'Media & Entertainment' }, { label: 'Pharma & Life Sciences', value: 'Pharma & Life Sciences' }, { label: 'Real Estate', value: 'Real Estate' }, { label: 'Retail', value: 'Retail' }, { label: 'Telecom', value: 'Telecom' }, { label: 'Textile & Apparel', value: 'Textile & Apparel' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'annualRevenue', label: 'Annual Revenue', fieldType: 'currency', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 11 },
+  { fieldName: 'numberOfEmployees', label: 'No. of Employees', fieldType: 'number', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 12 },
+  { fieldName: 'leadSource', label: 'Lead Source', fieldType: 'dropdown', section: 'Business Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 13, options: [{ label: 'Website', value: 'Website' }, { label: 'Social Media', value: 'Social Media' }, { label: 'Referral', value: 'Referral' }, { label: 'Campaign', value: 'Campaign' }, { label: 'Cold Call', value: 'Cold Call' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'billingStreet', label: 'Street', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 20 },
+  { fieldName: 'billingCity', label: 'City', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 21 },
+  { fieldName: 'billingState', label: 'State', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 22 },
+  { fieldName: 'billingCountry', label: 'Country', fieldType: 'text', section: 'Billing Address', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 23 },
+  { fieldName: 'description', label: 'Description', fieldType: 'textarea', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 30 },
+  { fieldName: 'gstNumber', label: 'GST Number', fieldType: 'text', section: 'Additional Information', isRequired: false, isStandardField: true, showInCreate: true, isActive: true, displayOrder: 31 }
+];
+
+const ACCT_DISABLED_KEY = 'crm_acct_std_disabled';
+const getAcctDisabled = () => { try { return JSON.parse(localStorage.getItem(ACCT_DISABLED_KEY) || '[]'); } catch { return []; } };
 
 const DEFAULT_CONTACT_FIELDS = [
   { fieldName: 'firstName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
@@ -273,6 +297,12 @@ const Contacts = () => {
   const [stats, setStats] = useState({ total: 0, primary: 0, withAccount: 0, recent: 0 });
   const [globalStats, setGlobalStats] = useState({ total: 0, primary: 0, withAccount: 0 });
 
+  // Inline Account Creation
+  const [showInlineAccountForm, setShowInlineAccountForm] = useState(false);
+  const [inlineAccountData, setInlineAccountData] = useState({});
+  const [accountFieldDefs, setAccountFieldDefs] = useState([]);
+  const [inlineAccountErrors, setInlineAccountErrors] = useState({});
+
   // Manage Fields
   const [showManageFields, setShowManageFields] = useState(false);
   const [customFieldDefs, setCustomFieldDefs] = useState([]);
@@ -301,6 +331,8 @@ const Contacts = () => {
 
   // Detail Panel Form Data
   const [detailEditData, setDetailEditData] = useState({});
+  const [originalEditData, setOriginalEditData] = useState({}); // Track original values
+  const [isFormDirty, setIsFormDirty] = useState(false); // Track if form changed
   const [detailTaskData, setDetailTaskData] = useState(() => ({
     subject: '',
     dueDate: getTodayDateString(),
@@ -319,6 +351,108 @@ const Contacts = () => {
   }, [pagination.page, filters.search, filters.account, filters.title, filters.isPrimary, filters.hasAccount]);
 
   useEffect(() => { refreshGlobalStats(); }, []);
+
+  // Load Account field definitions - function for reuse
+  const loadAccountFields = async () => {
+    console.log('🚀 loadAccountFields CALLED');
+
+    try {
+      console.log('📡 Calling API: fieldDefinitionService.getFieldDefinitions("Account")');
+
+      // Try to load ALL fields from API (standard + custom)
+      const response = await fieldDefinitionService.getFieldDefinitions('Account');
+
+      console.log('📥 API Response received:', response);
+      console.log('📥 Response.data:', response?.data);
+
+      // Handle different response structures
+      const fields = response?.data || response || [];
+
+      // Separate custom fields from API response
+      const customFieldsFromAPI = fields.filter(f => !f.isStandardField);
+      const standardFieldsFromAPI = fields.filter(f => f.isStandardField);
+
+      // Get disabled standard fields from localStorage
+      const disabledFields = getAcctDisabled();
+
+      // Use default standard fields (filtered by disabled list)
+      const activeStandardFields = DEFAULT_ACCOUNT_FIELDS
+        .filter(f => !disabledFields.includes(f.fieldName))
+        .map(f => ({ ...f, isActive: true }));
+
+      // Merge: Standard (defaults) + Custom (from API)
+      const mergedFields = [...activeStandardFields, ...customFieldsFromAPI];
+
+      console.log('✅ Fields merged successfully');
+      console.log('📦 Standard fields (defaults):', activeStandardFields.length);
+      console.log('🆕 Custom fields (API):', customFieldsFromAPI.length);
+      console.log('📊 Total merged:', mergedFields.length);
+
+      // Log custom field details
+      if (customFieldsFromAPI.length > 0) {
+        console.log('🆕 Custom fields from API:');
+        customFieldsFromAPI.forEach(f => {
+          console.log(`  - ${f.fieldName}: active=${f.isActive}, showInCreate=${f.showInCreate}`);
+        });
+      }
+
+      console.log('💾 Setting accountFieldDefs with', mergedFields.length, 'fields');
+      setAccountFieldDefs(mergedFields);
+
+      // Skip the else block since we always have at least defaults
+      return;
+
+      if (false) {
+        // API returned empty - use defaults with disabled check
+        console.warn('⚠️ API returned no fields, using defaults');
+        const disabledFields = getAcctDisabled();
+        const activeDefaults = DEFAULT_ACCOUNT_FIELDS
+          .filter(f => !disabledFields.includes(f.fieldName))
+          .map(f => ({ ...f, isActive: true }));
+
+        console.log('💾 Setting accountFieldDefs with', activeDefaults.length, 'default fields');
+        setAccountFieldDefs(activeDefaults);
+      }
+    } catch (err) {
+      console.error('❌ API failed, using default fields:', err);
+      console.error('❌ Error details:', err.message);
+      console.error('❌ Error stack:', err.stack);
+
+      // API failed - use defaults with disabled check
+      const disabledFields = getAcctDisabled();
+      const activeDefaults = DEFAULT_ACCOUNT_FIELDS
+        .filter(f => !disabledFields.includes(f.fieldName))
+        .map(f => ({ ...f, isActive: true }));
+
+      console.log('💾 Setting accountFieldDefs with', activeDefaults.length, 'default fields (after error)');
+      setAccountFieldDefs(activeDefaults);
+    }
+
+    console.log('✔️ loadAccountFields COMPLETED');
+  };
+
+  // Load on mount
+  useEffect(() => {
+    loadAccountFields();
+  }, []);
+
+  // Reload when inline form opens
+  useEffect(() => {
+    console.log('🔔 useEffect triggered - showInlineAccountForm:', showInlineAccountForm);
+    if (showInlineAccountForm) {
+      console.log('🔄 Inline form opened - reloading account fields...');
+      console.log('⏰ Timestamp:', new Date().toISOString());
+      loadAccountFields();
+    }
+  }, [showInlineAccountForm]);
+
+  // Debug: Log whenever accountFieldDefs changes
+  useEffect(() => {
+    if (accountFieldDefs.length > 0) {
+      console.log('📦 accountFieldDefs updated:', accountFieldDefs.length, 'fields');
+      console.log('Custom fields:', accountFieldDefs.filter(f => !f.isStandardField));
+    }
+  }, [accountFieldDefs]);
 
   // Reset wizard step when field definitions change (to avoid out-of-bounds index)
   useEffect(() => {
@@ -511,7 +645,7 @@ const Contacts = () => {
     setShowBulkUploadForm(false);
     await loadContacts();
     refreshGlobalStats();
-    setSuccess('✅ Bulk upload completed successfully!');
+    showSuccessToast(setSuccess, '✅ Bulk upload completed successfully!');
   };
 
   const handleExportContacts = () => {
@@ -673,6 +807,80 @@ const Contacts = () => {
     setPagination(prev => ({ ...prev, page: 1 }));
   };
 
+  // === Inline Account Creation ===
+  const handleCreateInlineAccount = async () => {
+    console.log('🔵 Create account clicked');
+    console.log('📝 Inline account data:', inlineAccountData);
+
+    // Validate required fields
+    const errors = {};
+
+    // Account Name is always required
+    if (!inlineAccountData.accountName || inlineAccountData.accountName.trim().length < 2) {
+      errors.accountName = 'Account Name must be at least 2 characters';
+    }
+
+    // Check other required fields from definitions
+    accountFieldDefs.forEach(field => {
+      if (field.isRequired && field.isActive && field.fieldName !== 'accountName' && !inlineAccountData[field.fieldName]) {
+        errors[field.fieldName] = `${field.label} is required`;
+      }
+    });
+
+    console.log('❌ Validation errors:', errors);
+
+    if (Object.keys(errors).length > 0) {
+      setInlineAccountErrors(errors);
+      setError('Please fill all required fields');
+      setTimeout(() => setError(''), 5000);
+      return;
+    }
+
+    try {
+      // Separate standard and custom fields
+      const standardFields = {};
+      const customFields = {};
+
+      accountFieldDefs.forEach(field => {
+        const value = inlineAccountData[field.fieldName];
+        if (value !== undefined && value !== '') {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+          } else {
+            customFields[field.fieldName] = value;
+          }
+        }
+      });
+
+      const accountPayload = {
+        ...standardFields,
+        customFields: Object.keys(customFields).length > 0 ? customFields : undefined
+      };
+
+      const response = await accountService.createAccount(accountPayload);
+      const newAccount = response.data;
+
+      // Add to accounts list
+      setAccounts(prev => [...prev, newAccount]);
+
+      // Select the newly created account
+      setFormData(prev => ({ ...prev, account: newAccount._id }));
+
+      // Close inline form and reset
+      setShowInlineAccountForm(false);
+      setInlineAccountData({});
+      setInlineAccountErrors({});
+
+      console.log('✅ Account created successfully:', newAccount);
+      showSuccessToast(setSuccess, `✅ Account "${newAccount.accountName}" created!`);
+    } catch (err) {
+      console.error('❌ Create account error:', err);
+      console.error('Error response:', err.response?.data);
+      setError(err.response?.data?.message || 'Failed to create account');
+      setTimeout(() => setError(''), 5000);
+    }
+  };
+
   // === Split View Functions ===
   const loadContactDetails = async (contactId) => {
     setSelectedContactId(contactId);
@@ -803,6 +1011,8 @@ const Contacts = () => {
     });
 
     setDetailEditData(editData);
+    setOriginalEditData(JSON.parse(JSON.stringify(editData))); // Deep copy for comparison
+    setIsFormDirty(false); // Reset dirty flag
     closeDetailForms();
     setShowDetailEditForm(true);
   };
@@ -845,7 +1055,17 @@ const Contacts = () => {
 
   const handleDetailEditChange = (e) => {
     const { name, value } = e.target;
-    setDetailEditData(prev => ({ ...prev, [name]: value }));
+    setDetailEditData(prev => {
+      const updated = { ...prev, [name]: value };
+
+      // Check if form is dirty (any field changed from original)
+      const isDirty = Object.keys(updated).some(key => {
+        return String(updated[key] || '') !== String(originalEditData[key] || '');
+      });
+
+      setIsFormDirty(isDirty);
+      return updated;
+    });
   };
 
   const handleDetailDeleteContact = async () => {
@@ -1000,10 +1220,194 @@ const Contacts = () => {
                       {step.includeAccount && (
                         <div style={{ marginBottom: '12px' }}>
                           <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>🏢 Account</label>
-                          <select name="account" className="crm-form-select" style={{ padding: '9px 12px', fontSize: '13px', width: '100%', borderRadius: '8px' }} value={formData.account} onChange={handleChange}>
-                            <option value="">— Select Account —</option>
-                            {accounts.map(a => <option key={a._id} value={a._id}>{a.accountName}</option>)}
-                          </select>
+                          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <select
+                              name="account"
+                              className="crm-form-select"
+                              style={{ flex: 1, padding: '9px 12px', fontSize: '13px', borderRadius: '8px' }}
+                              value={formData.account}
+                              onChange={handleChange}>
+                              <option value="">— Select Account —</option>
+                              {accounts.map(a => <option key={a._id} value={a._id}>{a.accountName}</option>)}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                console.log('🔵 + Add New button clicked');
+
+                                // Directly call loadAccountFields
+                                await loadAccountFields();
+
+                                // Then open form
+                                setShowInlineAccountForm(true);
+                              }}
+                              style={{
+                                padding: '9px 14px',
+                                borderRadius: '8px',
+                                border: '1.5px solid #3b82f6',
+                                background: 'white',
+                                color: '#3b82f6',
+                                fontSize: '12px',
+                                fontWeight: '700',
+                                cursor: 'pointer',
+                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '4px',
+                                transition: 'all 0.2s'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = '#3b82f6';
+                                e.currentTarget.style.color = 'white';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'white';
+                                e.currentTarget.style.color = '#3b82f6';
+                              }}>
+                              + Add New
+                            </button>
+                          </div>
+
+                          {/* Inline Account Creation Form */}
+                          {showInlineAccountForm && (
+                            <div style={{ marginTop: '12px', padding: '14px', background: '#f8fafc', borderRadius: '10px', border: '1.5px solid #3b82f6', maxHeight: '400px', overflowY: 'auto' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', position: 'sticky', top: 0, background: '#f8fafc', paddingBottom: '8px', borderBottom: '1px solid #e2e8f0' }}>
+                                <div>
+                                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#1e40af' }}>
+                                    ✨ Create New Account
+                                    <span style={{ color: '#ef4444', marginLeft: '8px' }}>
+                                      (Fields: {accountFieldDefs.length})
+                                    </span>
+                                  </div>
+                                  {accountFieldDefs.length > 0 && (
+                                    <div style={{ fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                                      {accountFieldDefs.filter(f => f.isActive && f.showInCreate).length} fields available
+                                    </div>
+                                  )}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setShowInlineAccountForm(false);
+                                    setInlineAccountData({});
+                                    setInlineAccountErrors({});
+                                  }}
+                                  style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', fontSize: '16px', lineHeight: 1 }}>
+                                  ✕
+                                </button>
+                              </div>
+
+                              {/* Render account fields */}
+                              <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>
+                                  Account Name <span style={{ color: '#ef4444' }}>*</span>
+                                </label>
+                                <input
+                                  type="text"
+                                  value={inlineAccountData.accountName || ''}
+                                  onChange={(e) => {
+                                    setInlineAccountData(prev => ({ ...prev, accountName: e.target.value }));
+                                    setInlineAccountErrors(prev => {
+                                      const newErrors = { ...prev };
+                                      delete newErrors.accountName;
+                                      return newErrors;
+                                    });
+                                  }}
+                                  placeholder="Enter company name"
+                                  style={{
+                                    width: '100%',
+                                    padding: '8px 10px',
+                                    borderRadius: '6px',
+                                    border: inlineAccountErrors.accountName ? '1px solid #ef4444' : '1px solid #e2e8f0',
+                                    fontSize: '12px',
+                                    boxSizing: 'border-box'
+                                  }}
+                                />
+                                {inlineAccountErrors.accountName && (
+                                  <div style={{ fontSize: '10px', color: '#ef4444', marginTop: '4px' }}>
+                                    {inlineAccountErrors.accountName}
+                                  </div>
+                                )}
+                              </div>
+
+                              <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Phone</label>
+                                <input
+                                  type="tel"
+                                  value={inlineAccountData.phone || ''}
+                                  onChange={(e) => setInlineAccountData(prev => ({ ...prev, phone: e.target.value }))}
+                                  placeholder="Optional"
+                                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', boxSizing: 'border-box' }}
+                                />
+                              </div>
+
+                              <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Email</label>
+                                <input
+                                  type="email"
+                                  value={inlineAccountData.email || ''}
+                                  onChange={(e) => setInlineAccountData(prev => ({ ...prev, email: e.target.value }))}
+                                  placeholder="Optional"
+                                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', boxSizing: 'border-box' }}
+                                />
+                              </div>
+
+                              <div style={{ marginBottom: '12px' }}>
+                                <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', color: '#475569', marginBottom: '4px' }}>Website</label>
+                                <input
+                                  type="url"
+                                  value={inlineAccountData.website || ''}
+                                  onChange={(e) => setInlineAccountData(prev => ({ ...prev, website: e.target.value }))}
+                                  placeholder="Optional"
+                                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '12px', boxSizing: 'border-box' }}
+                                />
+                              </div>
+
+                              {/* Show additional fields if loaded */}
+                              {(() => {
+                                const additionalFields = accountFieldDefs.filter(field =>
+                                  field &&
+                                  field.fieldName &&
+                                  field.isActive &&
+                                  field.showInCreate &&
+                                  !['accountName', 'phone', 'email', 'website'].includes(field.fieldName)
+                                );
+
+                                console.log('🔍 Additional fields to render:', additionalFields.length);
+                                console.log('📋 Fields:', additionalFields.map(f => f.fieldName));
+
+                                return additionalFields
+                                  .sort((a, b) => (a.displayOrder || 999) - (b.displayOrder || 999))
+                                  .map(field => {
+                                    if (!field || !field.fieldName) {
+                                      console.error('⚠️ Invalid field:', field);
+                                      return null;
+                                    }
+                                    return (
+                                      <div key={field.fieldName} style={{ marginBottom: '12px' }}>
+                                        <DynamicField
+                                          fieldDefinition={field}
+                                          value={inlineAccountData[field.fieldName] || ''}
+                                          onChange={(value) => {
+                                            setInlineAccountData(prev => ({ ...prev, [field.fieldName]: value }));
+                                          }}
+                                          error={inlineAccountErrors[field.fieldName]}
+                                        />
+                                      </div>
+                                    );
+                                  })
+                                  .filter(Boolean);
+                              })()}
+
+                              <button
+                                type="button"
+                                onClick={handleCreateInlineAccount}
+                                style={{ width: '100%', padding: '10px', borderRadius: '7px', border: 'none', background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: 'white', fontSize: '13px', fontWeight: '700', cursor: 'pointer', marginTop: '8px' }}>
+                                ✓ Create Account
+                              </button>
+                            </div>
+                          )}
+
                           {formData.account && (
                             <label style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '10px', padding: '10px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', cursor: 'pointer' }}>
                               <input
@@ -1210,7 +1614,22 @@ const Contacts = () => {
                                         )}
                                         {field.fieldType === 'checkbox' && (
                                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', color: '#374151' }}>
-                                            <input type="checkbox" name={field.fieldName} checked={detailEditData[field.fieldName] || false} onChange={(e) => setDetailEditData(prev => ({ ...prev, [field.fieldName]: e.target.checked }))} />
+                                            <input
+                                              type="checkbox"
+                                              name={field.fieldName}
+                                              checked={detailEditData[field.fieldName] || false}
+                                              onChange={(e) => {
+                                                setDetailEditData(prev => {
+                                                  const updated = { ...prev, [field.fieldName]: e.target.checked };
+                                                  // Check dirty state
+                                                  const isDirty = Object.keys(updated).some(key => {
+                                                    return String(updated[key] || '') !== String(originalEditData[key] || '');
+                                                  });
+                                                  setIsFormDirty(isDirty);
+                                                  return updated;
+                                                });
+                                              }}
+                                            />
                                             {field.label}
                                           </label>
                                         )}
@@ -1224,7 +1643,19 @@ const Contacts = () => {
                         </div>
                         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
                           <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => setShowDetailEditForm(false)}>Cancel</button>
-                          <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }}>Update</button>
+                          <button
+                            type="submit"
+                            className="crm-btn crm-btn-primary crm-btn-sm"
+                            style={{
+                              fontSize: '11px',
+                              padding: '4px 10px',
+                              opacity: isFormDirty ? 1 : 0.5,
+                              cursor: isFormDirty ? 'pointer' : 'not-allowed'
+                            }}
+                            disabled={!isFormDirty}
+                          >
+                            Update
+                          </button>
                         </div>
                       </form>
                     </div>
@@ -1746,13 +2177,41 @@ const Contacts = () => {
                           render: c => {
                             const val = c.customFields?.[f.fieldName];
                             if (!val) return '';
+
                             // Format based on field type
                             if (f.fieldType === 'currency') return `₹${Number(val).toLocaleString()}`;
+
                             if (f.fieldType === 'date') {
                               try { return new Date(val).toLocaleDateString(); }
                               catch(e) { return val; }
                             }
+
                             if (f.fieldType === 'checkbox') return val ? 'Yes' : 'No';
+
+                            // URL field - render as clickable link
+                            if (f.fieldType === 'url') {
+                              return (
+                                <a
+                                  href={val.startsWith('http') ? val : `https://${val}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                  style={{
+                                    color: '#2563eb',
+                                    textDecoration: 'none',
+                                    fontSize: '12px',
+                                    display: 'block',
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap'
+                                  }}
+                                  title={val}
+                                >
+                                  {val}
+                                </a>
+                              );
+                            }
+
                             return val;
                           },
                           cellStyle: () => ({})

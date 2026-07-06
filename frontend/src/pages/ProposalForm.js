@@ -10,6 +10,20 @@ const ProposalForm = () => {
   const { id } = useParams();
   const isEdit = Boolean(id);
 
+  // Smart price formatter - shows Cr/L/K for large numbers
+  const formatPrice = (amount) => {
+    if (!amount || amount === 0) return '0';
+    const num = parseFloat(amount);
+    if (num >= 10000000) { // >= 1 Crore
+      return `${(num / 10000000).toFixed(2)} Cr`;
+    } else if (num >= 100000) { // >= 1 Lakh
+      return `${(num / 100000).toFixed(2)} L`;
+    } else if (num >= 1000) { // >= 1 Thousand
+      return `${(num / 1000).toFixed(2)} K`;
+    }
+    return num.toLocaleString();
+  };
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [customers, setCustomers] = useState([]);
@@ -303,6 +317,102 @@ const ProposalForm = () => {
       setLoading(true);
       setError('');
 
+      // Title validation
+      if (!formData.title || formData.title.trim().length < 5) {
+        setError('❌ Proposal Title must be at least 5 characters');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      if (formData.title.length > 150) {
+        setError(`❌ Proposal Title cannot exceed 150 characters (currently ${formData.title.length})`);
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Check if title has meaningful content (not just special characters)
+      const alphanumericCount = (formData.title.match(/[a-zA-Z0-9]/g) || []).length;
+      if (alphanumericCount < 3) {
+        setError('❌ Proposal Title must contain meaningful text, not just special characters');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Check for dangerous characters
+      if (formData.title.match(/[<>]/g)) {
+        setError('❌ Proposal Title cannot contain < or > characters');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Customer name validation
+      if (!formData.customerName || formData.customerName.trim().length < 2) {
+        setError('❌ Customer Name must be at least 2 characters');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      if (formData.customerName.length > 100) {
+        setError('❌ Customer Name cannot exceed 100 characters');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      const nameLetters = (formData.customerName.match(/[a-zA-Z]/g) || []).length;
+      if (nameLetters < 2) {
+        setError('❌ Customer Name must contain at least 2 letters');
+        setLoading(false);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+
+      // Phone validation
+      if (formData.customerPhone) {
+        const phoneDigits = formData.customerPhone.replace(/[^\d]/g, '');
+        if (phoneDigits.length > 0 && phoneDigits.length < 10) {
+          setError('❌ Phone number must be at least 10 digits');
+          setLoading(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+        if (phoneDigits.length > 15) {
+          setError('❌ Phone number cannot exceed 15 digits');
+          setLoading(false);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          return;
+        }
+      }
+
+      // Date validation
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const proposalDate = new Date(formData.proposalDate);
+      const validUntil = new Date(formData.validUntil);
+
+      if (proposalDate < today) {
+        setError('Proposal Date cannot be in the past');
+        setLoading(false);
+        return;
+      }
+
+      if (validUntil <= proposalDate) {
+        setError('Valid Until date must be after Proposal Date');
+        setLoading(false);
+        return;
+      }
+
+      if (validUntil < today) {
+        setError('Valid Until date cannot be in the past');
+        setLoading(false);
+        return;
+      }
+
       const submitData = {
         ...formData,
         subtotal: formData.resources.reduce((sum, r) => sum + (r.total || 0), 0),
@@ -452,20 +562,49 @@ const ProposalForm = () => {
                   <div style={{ gridColumn: '1 / -1' }}>
                     <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>
                       Customer Name <span style={{ color: '#ef4444' }}>*</span>
+                      {newCustomerData.customerName && (
+                        <span style={{fontSize: '10px', color: '#94a3b8', marginLeft: '8px'}}>
+                          {newCustomerData.customerName.length}/100 characters
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
                       value={newCustomerData.customerName}
-                      onChange={(e) => setNewCustomerData(prev => ({ ...prev, customerName: e.target.value }))}
-                      placeholder="Enter customer name"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const sanitized = value.replace(/[^a-zA-Z\s\-\.']/g, '');
+                        setNewCustomerData(prev => ({ ...prev, customerName: sanitized }));
+                      }}
+                      maxLength={100}
+                      placeholder="e.g., John Smith"
                       style={{
                         ...is,
                         border: '2px solid #e2e8f0',
+                        borderColor: newCustomerData.customerName && (
+                          newCustomerData.customerName.length < 2 ||
+                          newCustomerData.customerName.length > 100 ||
+                          (newCustomerData.customerName.match(/[a-zA-Z]/g) || []).length < 2
+                        ) ? '#ef4444' : '#e2e8f0',
                         transition: 'all 0.2s'
                       }}
                       onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
-                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                      onBlur={(e) => e.target.style.borderColor = newCustomerData.customerName && (
+                        newCustomerData.customerName.length < 2 ||
+                        newCustomerData.customerName.length > 100 ||
+                        (newCustomerData.customerName.match(/[a-zA-Z]/g) || []).length < 2
+                      ) ? '#ef4444' : '#e2e8f0'}
                     />
+                    {newCustomerData.customerName && newCustomerData.customerName.length > 0 && newCustomerData.customerName.length < 2 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px'}}>
+                        ⚠️ Name must be at least 2 characters
+                      </div>
+                    )}
+                    {newCustomerData.customerName && (newCustomerData.customerName.match(/[a-zA-Z]/g) || []).length < 2 && newCustomerData.customerName.length >= 2 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px'}}>
+                        ⚠️ Name must contain at least 2 letters
+                      </div>
+                    )}
                   </div>
 
                   <div style={{ gridColumn: '1 / -1' }}>
@@ -488,20 +627,48 @@ const ProposalForm = () => {
                   </div>
 
                   <div>
-                    <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>Phone</label>
+                    <label style={{ ...ls, marginBottom: '6px', display: 'block' }}>
+                      Phone
+                      {newCustomerData.phone && (
+                        <span style={{fontSize: '10px', color: '#94a3b8', marginLeft: '8px'}}>
+                          {newCustomerData.phone.replace(/[^\d]/g, '').length} digits
+                        </span>
+                      )}
+                    </label>
                     <input
                       type="tel"
                       value={newCustomerData.phone}
-                      onChange={(e) => setNewCustomerData(prev => ({ ...prev, phone: e.target.value }))}
-                      placeholder="+1 234 567 8900"
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        const sanitized = value.replace(/[^\d+\-\s]/g, '');
+                        setNewCustomerData(prev => ({ ...prev, phone: sanitized }));
+                      }}
+                      placeholder="+91 98765 43210"
                       style={{
                         ...is,
                         border: '2px solid #e2e8f0',
+                        borderColor: newCustomerData.phone && (
+                          newCustomerData.phone.replace(/[^\d]/g, '').length < 10 ||
+                          newCustomerData.phone.replace(/[^\d]/g, '').length > 15
+                        ) ? '#ef4444' : '#e2e8f0',
                         transition: 'all 0.2s'
                       }}
                       onFocus={(e) => e.target.style.borderColor = '#4f46e5'}
-                      onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                      onBlur={(e) => e.target.style.borderColor = newCustomerData.phone && (
+                        newCustomerData.phone.replace(/[^\d]/g, '').length < 10 ||
+                        newCustomerData.phone.replace(/[^\d]/g, '').length > 15
+                      ) ? '#ef4444' : '#e2e8f0'}
                     />
+                    {newCustomerData.phone && newCustomerData.phone.replace(/[^\d]/g, '').length > 0 && newCustomerData.phone.replace(/[^\d]/g, '').length < 10 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px'}}>
+                        ⚠️ Phone must be at least 10 digits
+                      </div>
+                    )}
+                    {newCustomerData.phone && newCustomerData.phone.replace(/[^\d]/g, '').length > 15 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px'}}>
+                        ⚠️ Phone cannot exceed 15 digits
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -588,8 +755,51 @@ const ProposalForm = () => {
               {!showNewCustomerModal && (
                 <>
                   <div>
-                    <label style={ls}>Customer Name *</label>
-                    <input type="text" name="customerName" value={formData.customerName} onChange={handleInputChange} required style={is} />
+                    <label style={ls}>
+                      Customer Name *
+                      {formData.customerName && (
+                        <span style={{fontSize: '10px', color: '#94a3b8', marginLeft: '8px'}}>
+                          {formData.customerName.length}/100 characters
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="text"
+                      name="customerName"
+                      value={formData.customerName}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow letters, spaces, hyphens, periods, apostrophes
+                        const sanitized = value.replace(/[^a-zA-Z\s\-\.']/g, '');
+                        handleInputChange({ target: { name: 'customerName', value: sanitized }});
+                      }}
+                      maxLength={100}
+                      required
+                      placeholder="e.g., John Smith"
+                      style={{
+                        ...is,
+                        borderColor: formData.customerName && (
+                          formData.customerName.length < 2 ||
+                          formData.customerName.length > 100 ||
+                          (formData.customerName.match(/[a-zA-Z]/g) || []).length < 2
+                        ) ? '#ef4444' : '#e2e8f0'
+                      }}
+                    />
+                    {formData.customerName && formData.customerName.length > 0 && formData.customerName.length < 2 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                        ⚠️ Name must be at least 2 characters
+                      </div>
+                    )}
+                    {formData.customerName && formData.customerName.length > 100 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                        ⚠️ Name cannot exceed 100 characters
+                      </div>
+                    )}
+                    {formData.customerName && (formData.customerName.match(/[a-zA-Z]/g) || []).length < 2 && formData.customerName.length >= 2 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                        ⚠️ Name must contain at least 2 letters
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -598,8 +808,43 @@ const ProposalForm = () => {
                   </div>
 
                   <div>
-                    <label style={ls}>Phone</label>
-                    <input type="tel" name="customerPhone" value={formData.customerPhone} onChange={handleInputChange} style={is} />
+                    <label style={ls}>
+                      Phone
+                      {formData.customerPhone && (
+                        <span style={{fontSize: '10px', color: '#94a3b8', marginLeft: '8px'}}>
+                          {formData.customerPhone.replace(/[^\d]/g, '').length} digits
+                        </span>
+                      )}
+                    </label>
+                    <input
+                      type="tel"
+                      name="customerPhone"
+                      value={formData.customerPhone}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        // Allow only numbers, +, -, and spaces
+                        const sanitized = value.replace(/[^\d+\-\s]/g, '');
+                        handleInputChange({ target: { name: 'customerPhone', value: sanitized }});
+                      }}
+                      placeholder="+91 98765 43210"
+                      style={{
+                        ...is,
+                        borderColor: formData.customerPhone && (
+                          formData.customerPhone.replace(/[^\d]/g, '').length < 10 ||
+                          formData.customerPhone.replace(/[^\d]/g, '').length > 15
+                        ) ? '#ef4444' : '#e2e8f0'
+                      }}
+                    />
+                    {formData.customerPhone && formData.customerPhone.replace(/[^\d]/g, '').length > 0 && formData.customerPhone.replace(/[^\d]/g, '').length < 10 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                        ⚠️ Phone number must be at least 10 digits
+                      </div>
+                    )}
+                    {formData.customerPhone && formData.customerPhone.replace(/[^\d]/g, '').length > 15 && (
+                      <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                        ⚠️ Phone number cannot exceed 15 digits
+                      </div>
+                    )}
                   </div>
                 </>
               )}
@@ -612,35 +857,95 @@ const ProposalForm = () => {
               <span style={{ fontSize: '18px' }}>📄</span> Proposal Details
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-              <div style={{ gridColumn: 'span 2' }}>
-                <label style={ls}>Proposal Title *</label>
-                <input type="text" name="title" value={formData.title} onChange={handleInputChange} required placeholder="e.g., Website Development Project" style={is} />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+              <div style={{ gridColumn: window.innerWidth < 768 ? '1' : 'span 2' }}>
+                <label style={ls}>
+                  Proposal Title *
+                  <span style={{fontSize: '10px', color: '#94a3b8', marginLeft: '8px'}}>
+                    {formData.title.length}/150 characters
+                  </span>
+                </label>
+                <input
+                  type="text"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleInputChange}
+                  maxLength={150}
+                  required
+                  placeholder="e.g., Website Development Project"
+                  style={{
+                    ...is,
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    borderColor: (formData.title.length > 150 || (formData.title.length > 0 && formData.title.length < 5) || (formData.title.length > 0 && (formData.title.match(/[a-zA-Z0-9]/g) || []).length < 3)) ? '#ef4444' : '#e2e8f0'
+                  }}
+                />
+                {formData.title.length > 0 && formData.title.length < 5 && (
+                  <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                    ⚠️ Title must be at least 5 characters
+                  </div>
+                )}
+                {formData.title.length > 150 && (
+                  <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                    ⚠️ Title cannot exceed 150 characters ({formData.title.length - 150} over limit)
+                  </div>
+                )}
+                {formData.title.length > 0 && (formData.title.match(/[a-zA-Z0-9]/g) || []).length < 3 && (
+                  <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                    ⚠️ Title must contain meaningful text (at least 3 letters/numbers)
+                  </div>
+                )}
+                {formData.title.match(/[<>]/g) && (
+                  <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px', fontWeight: '600'}}>
+                    ⚠️ Special characters like {"<"} {">"} are not allowed
+                  </div>
+                )}
               </div>
 
               <div>
                 <label style={ls}>RFP/Reference Number</label>
-                <input type="text" name="rfpNumber" value={formData.rfpNumber} onChange={handleInputChange} placeholder="e.g., RFP/2024/001" style={is} />
+                <input type="text" name="rfpNumber" value={formData.rfpNumber} onChange={handleInputChange} placeholder="e.g., RFP/2024/001" style={{...is, width: '100%', boxSizing: 'border-box'}} />
               </div>
 
               <div>
                 <label style={ls}>Currency</label>
-                <select name="currency" value={formData.currency} onChange={handleInputChange} style={{ ...is, cursor: 'pointer' }}>
-                  <option value="INR">₹ INR (Indian Rupee)</option>
-                  <option value="USD">$ USD (US Dollar)</option>
-                  <option value="EUR">€ EUR (Euro)</option>
-                  <option value="GBP">£ GBP (British Pound)</option>
+                <select name="currency" value={formData.currency} onChange={handleInputChange} style={{ ...is, cursor: 'pointer', width: '100%', boxSizing: 'border-box' }}>
+                  <option value="INR">₹ INR</option>
+                  <option value="USD">$ USD</option>
+                  <option value="EUR">€ EUR</option>
+                  <option value="GBP">£ GBP</option>
                 </select>
               </div>
 
               <div>
                 <label style={ls}>Proposal Date *</label>
-                <input type="date" name="proposalDate" value={formData.proposalDate} onChange={handleInputChange} required style={is} />
+                <input
+                  type="date"
+                  name="proposalDate"
+                  value={formData.proposalDate}
+                  onChange={handleInputChange}
+                  min={new Date().toISOString().split('T')[0]}
+                  required
+                  style={{...is, width: '100%', boxSizing: 'border-box'}}
+                />
               </div>
 
               <div>
                 <label style={ls}>Valid Until *</label>
-                <input type="date" name="validUntil" value={formData.validUntil} onChange={handleInputChange} required style={is} />
+                <input
+                  type="date"
+                  name="validUntil"
+                  value={formData.validUntil}
+                  onChange={handleInputChange}
+                  min={formData.proposalDate || new Date().toISOString().split('T')[0]}
+                  required
+                  style={{...is, width: '100%', boxSizing: 'border-box'}}
+                />
+                {formData.validUntil && formData.proposalDate && new Date(formData.validUntil) <= new Date(formData.proposalDate) && (
+                  <div style={{fontSize: '11px', color: '#ef4444', marginTop: '4px'}}>
+                    ⚠️ Valid Until must be after Proposal Date
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -757,13 +1062,13 @@ const ProposalForm = () => {
               </button>
             </div>
 
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+              <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', fontSize: '13px', tableLayout: 'fixed' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                     <th style={{ padding: '10px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>Role/Resource</th>
-                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '100px' }}>Count</th>
-                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '140px' }}>Rate ({currencySymbol})</th>
+                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '80px' }}>Count</th>
+                    <th style={{ padding: '10px', textAlign: 'left', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '120px' }}>Rate ({currencySymbol})</th>
                     <th style={{ padding: '10px', textAlign: 'right', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '140px' }}>Total ({currencySymbol})</th>
                     <th style={{ padding: '10px', textAlign: 'center', fontSize: '11px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', width: '80px' }}>Action</th>
                   </tr>
@@ -780,26 +1085,26 @@ const ProposalForm = () => {
                           style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
                         />
                       </td>
-                      <td style={{ padding: '10px' }}>
+                      <td style={{ padding: '10px', maxWidth: '80px' }}>
                         <input
                           type="number"
                           min="1"
                           value={resource.count}
                           onChange={(e) => updateResource(index, 'count', parseInt(e.target.value) || 1)}
-                          style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                          style={{ width: '100%', maxWidth: '80px', padding: '6px 10px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '6px', boxSizing: 'border-box' }}
                         />
                       </td>
-                      <td style={{ padding: '10px' }}>
+                      <td style={{ padding: '10px', maxWidth: '120px' }}>
                         <input
                           type="number"
                           min="0"
                           value={resource.rate}
                           onChange={(e) => updateResource(index, 'rate', parseFloat(e.target.value) || 0)}
-                          style={{ width: '100%', padding: '6px 10px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '6px' }}
+                          style={{ width: '100%', maxWidth: '120px', padding: '6px 10px', fontSize: '13px', border: '1px solid #e2e8f0', borderRadius: '6px', boxSizing: 'border-box' }}
                         />
                       </td>
-                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#059669' }}>
-                        {resource.total.toLocaleString()}
+                      <td style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#059669', fontSize: '12px' }}>
+                        {currencySymbol}{formatPrice(resource.total)}
                       </td>
                       <td style={{ padding: '10px', textAlign: 'center' }}>
                         <button type="button" onClick={() => removeResource(index)} style={{ padding: '4px 8px', borderRadius: '4px', border: '1px solid #fecaca', background: '#fee2e2', color: '#dc2626', fontSize: '11px', cursor: 'pointer' }}>
@@ -810,7 +1115,7 @@ const ProposalForm = () => {
                   ))}
                   <tr style={{ background: '#f0fdf4', fontWeight: '700' }}>
                     <td colSpan="3" style={{ padding: '12px', textAlign: 'right', fontSize: '14px', color: '#0f172a' }}>Total Project Cost:</td>
-                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '16px', color: '#059669' }}>{currencySymbol}{subtotal.toLocaleString()}</td>
+                    <td style={{ padding: '12px', textAlign: 'right', fontSize: '16px', color: '#059669', fontWeight: '700' }}>{currencySymbol}{formatPrice(subtotal)}</td>
                     <td></td>
                   </tr>
                 </tbody>

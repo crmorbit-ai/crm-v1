@@ -281,6 +281,10 @@ export default function RoleTemplateBuilder() {
   const [loading, setLoading]     = useState(false);
   const [toast, setToast]         = useState('');
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const showToast = (m) => { setToast(m); setTimeout(() => setToast(''), 3000); };
 
   // Load existing template on mount
@@ -484,13 +488,115 @@ export default function RoleTemplateBuilder() {
             </div>
           )}
 
-          {/* Role list */}
-          {roles.map((role, idx) => (
-            <RoleRow key={role.roleId} role={role} index={idx} total={roles.length} allRoles={roles}
-              onChange={(k, v) => upd(idx, k, v)}
-              onDelete={() => del(idx)}
-              onMoveUp={() => up(idx)} onMoveDown={() => down(idx)} />
-          ))}
+          {/* Role list with pagination */}
+          {(() => {
+            const startIdx = (currentPage - 1) * itemsPerPage;
+            const endIdx = startIdx + itemsPerPage;
+            const paginatedRoles = roles.slice(startIdx, endIdx);
+            const totalPages = Math.ceil(roles.length / itemsPerPage);
+
+            return (
+              <>
+                {paginatedRoles.map((role, paginatedIdx) => {
+                  const actualIdx = startIdx + paginatedIdx;
+                  return (
+                    <RoleRow
+                      key={role.roleId}
+                      role={role}
+                      index={actualIdx}
+                      total={roles.length}
+                      allRoles={roles}
+                      onChange={(k, v) => upd(actualIdx, k, v)}
+                      onDelete={() => del(actualIdx)}
+                      onMoveUp={() => up(actualIdx)}
+                      onMoveDown={() => down(actualIdx)}
+                    />
+                  );
+                })}
+
+                {/* Pagination controls */}
+                {roles.length > 0 && (
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginTop: 20,
+                    padding: '16px',
+                    background: '#f8fafc',
+                    borderRadius: '12px',
+                    border: '1px solid #e2e8f0'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
+                        Showing {startIdx + 1}-{Math.min(endIdx, roles.length)} of {roles.length}
+                      </span>
+                      <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                          setItemsPerPage(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          color: '#1e293b',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value={10}>10 per page</option>
+                        <option value={25}>25 per page</option>
+                        <option value={50}>50 per page</option>
+                        <option value={100}>100 per page</option>
+                      </select>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          background: currentPage === 1 ? '#f1f5f9' : 'white',
+                          color: currentPage === 1 ? '#94a3b8' : '#1e293b',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        ← Previous
+                      </button>
+
+                      <span style={{ fontSize: '13px', fontWeight: 700, color: '#1e293b' }}>
+                        Page {currentPage} of {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                        style={{
+                          padding: '6px 12px',
+                          borderRadius: '6px',
+                          border: '1px solid #e2e8f0',
+                          background: currentPage === totalPages ? '#f1f5f9' : 'white',
+                          color: currentPage === totalPages ? '#94a3b8' : '#1e293b',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Next →
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
 
           {roles.length > 0 && (
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:20 }}>

@@ -95,8 +95,61 @@ const createProposal = async (req, res) => {
   try {
     console.log('📝 Creating proposal with data:', JSON.stringify(req.body, null, 2));
 
+    // Title validation and sanitization
+    if (!req.body.title || req.body.title.trim().length < 5) {
+      return errorResponse(res, 400, 'Proposal Title must be at least 5 characters');
+    }
+
+    if (req.body.title.length > 150) {
+      return errorResponse(res, 400, 'Proposal Title cannot exceed 150 characters');
+    }
+
+    // Sanitize title - remove potentially harmful characters
+    const sanitizedTitle = req.body.title
+      .replace(/[<>]/g, '') // Remove angle brackets (XSS prevention)
+      .replace(/[^\w\s\-_,.&()]/g, '') // Only allow alphanumeric, spaces, and basic punctuation
+      .trim();
+
+    // Check meaningful content
+    const alphanumericCount = (sanitizedTitle.match(/[a-zA-Z0-9]/g) || []).length;
+    if (alphanumericCount < 3) {
+      return errorResponse(res, 400, 'Proposal Title must contain meaningful text');
+    }
+
+    // Customer name validation
+    if (req.body.customerName) {
+      if (req.body.customerName.trim().length < 2) {
+        return errorResponse(res, 400, 'Customer Name must be at least 2 characters');
+      }
+      if (req.body.customerName.length > 100) {
+        return errorResponse(res, 400, 'Customer Name cannot exceed 100 characters');
+      }
+
+      // Sanitize - only letters, spaces, hyphens, periods, apostrophes
+      req.body.customerName = req.body.customerName.replace(/[^a-zA-Z\s\-\.']/g, '').trim();
+
+      const nameLetters = (req.body.customerName.match(/[a-zA-Z]/g) || []).length;
+      if (nameLetters < 2) {
+        return errorResponse(res, 400, 'Customer Name must contain at least 2 letters');
+      }
+    }
+
+    // Phone validation
+    if (req.body.customerPhone) {
+      const phoneDigits = req.body.customerPhone.replace(/[^\d]/g, '');
+      if (phoneDigits.length > 0 && phoneDigits.length < 10) {
+        return errorResponse(res, 400, 'Phone number must be at least 10 digits');
+      }
+      if (phoneDigits.length > 15) {
+        return errorResponse(res, 400, 'Phone number cannot exceed 15 digits');
+      }
+      // Sanitize phone - only keep numbers, +, -, and spaces
+      req.body.customerPhone = req.body.customerPhone.replace(/[^\d+\-\s]/g, '');
+    }
+
     const proposalData = {
       ...req.body,
+      title: sanitizedTitle, // Use sanitized title
       tenant: req.user.tenant,
       createdBy: req.user._id,
       lastModifiedBy: req.user._id
@@ -107,6 +160,24 @@ const createProposal = async (req, res) => {
       const validUntil = new Date();
       validUntil.setDate(validUntil.getDate() + 30);
       proposalData.validUntil = validUntil;
+    }
+
+    // Date validation
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const proposalDate = new Date(proposalData.proposalDate);
+    const validUntil = new Date(proposalData.validUntil);
+
+    if (proposalDate < today) {
+      return errorResponse(res, 400, 'Proposal Date cannot be in the past');
+    }
+
+    if (validUntil <= proposalDate) {
+      return errorResponse(res, 400, 'Valid Until date must be after Proposal Date');
+    }
+
+    if (validUntil < today) {
+      return errorResponse(res, 400, 'Valid Until date cannot be in the past');
     }
 
     console.log('📝 Final proposal data:', JSON.stringify(proposalData, null, 2));
@@ -156,6 +227,66 @@ const updateProposal = async (req, res) => {
     // Prevent editing accepted/rejected proposals
     if (['accepted', 'rejected'].includes(proposal.status) && req.body.status !== proposal.status) {
       return errorResponse(res, 400, 'Cannot modify accepted/rejected proposals');
+    }
+
+    // Title validation if being updated
+    if (req.body.title !== undefined) {
+      if (!req.body.title || req.body.title.trim().length < 5) {
+        return errorResponse(res, 400, 'Proposal Title must be at least 5 characters');
+      }
+      if (req.body.title.length > 150) {
+        return errorResponse(res, 400, 'Proposal Title cannot exceed 150 characters');
+      }
+
+      // Sanitize title
+      req.body.title = req.body.title
+        .replace(/[<>]/g, '')
+        .replace(/[^\w\s\-_,.&()]/g, '')
+        .trim();
+
+      const alphanumericCount = (req.body.title.match(/[a-zA-Z0-9]/g) || []).length;
+      if (alphanumericCount < 3) {
+        return errorResponse(res, 400, 'Proposal Title must contain meaningful text');
+      }
+    }
+
+    // Customer name validation if being updated
+    if (req.body.customerName !== undefined) {
+      if (req.body.customerName.trim().length < 2) {
+        return errorResponse(res, 400, 'Customer Name must be at least 2 characters');
+      }
+      if (req.body.customerName.length > 100) {
+        return errorResponse(res, 400, 'Customer Name cannot exceed 100 characters');
+      }
+
+      req.body.customerName = req.body.customerName.replace(/[^a-zA-Z\s\-\.']/g, '').trim();
+
+      const nameLetters = (req.body.customerName.match(/[a-zA-Z]/g) || []).length;
+      if (nameLetters < 2) {
+        return errorResponse(res, 400, 'Customer Name must contain at least 2 letters');
+      }
+    }
+
+    // Phone validation if being updated
+    if (req.body.customerPhone !== undefined) {
+      const phoneDigits = req.body.customerPhone.replace(/[^\d]/g, '');
+      if (phoneDigits.length > 0 && phoneDigits.length < 10) {
+        return errorResponse(res, 400, 'Phone number must be at least 10 digits');
+      }
+      if (phoneDigits.length > 15) {
+        return errorResponse(res, 400, 'Phone number cannot exceed 15 digits');
+      }
+      req.body.customerPhone = req.body.customerPhone.replace(/[^\d+\-\s]/g, '');
+    }
+
+    // Date validation if dates are being updated
+    if (req.body.proposalDate || req.body.validUntil) {
+      const proposalDate = new Date(req.body.proposalDate || proposal.proposalDate);
+      const validUntil = new Date(req.body.validUntil || proposal.validUntil);
+
+      if (validUntil <= proposalDate) {
+        return errorResponse(res, 400, 'Valid Until date must be after Proposal Date');
+      }
     }
 
     // Update fields

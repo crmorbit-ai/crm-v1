@@ -36,6 +36,7 @@ const Opportunities = () => {
   const [formData, setFormData] = useState(emptyForm);
   const [formSubmitting, setFormSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
+  const [dealNameError, setDealNameError] = useState('');
   const [accounts, setAccounts] = useState([]);
   const [users, setUsers] = useState([]);
   const fileInputRef = useRef(null);
@@ -118,20 +119,37 @@ const Opportunities = () => {
   const handleFormSubmit = async (e) => {
     e.preventDefault();
     setFormError('');
+    setDealNameError('');
 
+    // Deal name validation
     if (!formData.opportunityName.trim()) {
-      setFormError('Deal name is required.');
+      setFormError('Deal name is required');
+      setDealNameError('Deal name is required');
       scrollToError(opportunityNameRef);
       return;
     }
+
     if (formData.opportunityName.trim().length > 80) {
-      setFormError('Deal name must be 80 characters or less.');
+      setFormError('Deal name must be 80 characters or less');
+      setDealNameError('Deal name cannot exceed 80 characters');
       scrollToError(opportunityNameRef);
       return;
     }
-    // Check if deal name contains at least one letter
-    if (!/[a-zA-Z]/.test(formData.opportunityName.trim())) {
-      setFormError('Deal name must contain letters describing the opportunity.');
+
+    // Must contain meaningful text (at least 3 alphanumeric)
+    const letterCount = (formData.opportunityName.match(/[a-zA-Z0-9]/g) || []).length;
+    if (letterCount < 3) {
+      setFormError('Deal name must contain at least 3 letters or numbers');
+      setDealNameError('Deal name must contain at least 3 letters/numbers');
+      scrollToError(opportunityNameRef);
+      return;
+    }
+
+    // Check excessive special characters (max 30%)
+    const specialCharCount = formData.opportunityName.replace(/[a-zA-Z0-9\s\-_,.()#&]/g, '').length;
+    if (specialCharCount > formData.opportunityName.length * 0.3) {
+      setFormError('Deal name contains too many special characters');
+      setDealNameError('Too many special characters - use descriptive text');
       scrollToError(opportunityNameRef);
       return;
     }
@@ -311,6 +329,20 @@ const Opportunities = () => {
       .opp-form-modal { width: calc(100vw - 32px) !important; max-width: 100% !important; padding: 18px !important; }
       .opp-kanban-wrap { gap: 10px !important; padding-bottom: 12px !important; }
       .opp-kanban-col { min-width: 240px !important; max-width: 240px !important; }
+
+      /* Deal detail drawer full screen on mobile */
+      .deal-detail-drawer {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        height: 100vh !important;
+        max-height: 100vh !important;
+        border-radius: 0 !important;
+        transform: none !important;
+      }
     }
     @media (max-width: 480px) {
       .opp-stats-grid { grid-template-columns: 1fr 1fr !important; gap: 6px !important; }
@@ -411,11 +443,47 @@ const Opportunities = () => {
                 </label>
                 <input
                   ref={opportunityNameRef}
-                  type="text" name="opportunityName" value={formData.opportunityName}
-                  onChange={handleFormChange} placeholder="Enter deal name"
+                  type="text"
+                  name="opportunityName"
+                  value={formData.opportunityName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({...formData, opportunityName: value});
+
+                    // Clear previous error
+                    setDealNameError('');
+
+                    // Real-time validation
+                    if (value.length > 80) {
+                      setDealNameError('Deal name cannot exceed 80 characters');
+                    } else if (value.length > 0) {
+                      const letterCount = (value.match(/[a-zA-Z0-9]/g) || []).length;
+                      if (letterCount < 3) {
+                        setDealNameError('Deal name must contain at least 3 letters/numbers');
+                      }
+
+                      const specialCharCount = value.replace(/[a-zA-Z0-9\s\-_,.()#&]/g, '').length;
+                      if (specialCharCount > value.length * 0.3) {
+                        setDealNameError('Too many special characters - use descriptive text');
+                      }
+                    }
+                  }}
+                  placeholder="Enter deal name"
                   maxLength={80}
-                  style={{width:'100%',padding:'8px 10px',border:'1px solid #D1D5DB',borderRadius:'6px',fontSize:'13px',boxSizing:'border-box'}}
+                  style={{
+                    width:'100%',
+                    padding:'8px 10px',
+                    border: `1px solid ${dealNameError ? '#ef4444' : '#D1D5DB'}`,
+                    borderRadius:'6px',
+                    fontSize:'13px',
+                    boxSizing:'border-box'
+                  }}
                 />
+                {dealNameError && (
+                  <div style={{fontSize:'11px',color:'#ef4444',marginTop:'4px',fontWeight:'600'}}>
+                    ⚠️ {dealNameError}
+                  </div>
+                )}
                 <div style={{textAlign:'right',fontSize:'11px',marginTop:'3px',color: formData.opportunityName.length > 72 ? '#ef4444' : '#9ca3af'}}>
                   {formData.opportunityName.length}/80
                 </div>
@@ -820,15 +888,19 @@ const Opportunities = () => {
       {/* Deal Detail Side Panel - Clean & Simple */}
       {showDetailPanel && selectedDeal && (
         <div
+          className="deal-detail-drawer"
           style={{
             position: 'fixed',
-            top: '50%',
-            left: '280px',
-            transform: 'translateY(-50%)',
-            width: '420px',
-            maxHeight: '85vh',
+            top: window.innerWidth <= 768 ? '0' : '50%',
+            left: window.innerWidth <= 768 ? '0' : '280px',
+            right: window.innerWidth <= 768 ? '0' : 'auto',
+            bottom: window.innerWidth <= 768 ? '0' : 'auto',
+            transform: window.innerWidth <= 768 ? 'none' : 'translateY(-50%)',
+            width: window.innerWidth <= 768 ? '100%' : '420px',
+            maxHeight: window.innerWidth <= 768 ? '100vh' : '85vh',
+            height: window.innerWidth <= 768 ? '100vh' : 'auto',
             background: 'white',
-            borderRadius: '16px',
+            borderRadius: window.innerWidth <= 768 ? '0' : '16px',
             boxShadow: '0 20px 60px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.1)',
             zIndex: 1000,
             display: 'flex',

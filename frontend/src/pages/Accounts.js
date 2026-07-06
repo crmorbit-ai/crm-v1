@@ -9,6 +9,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import DynamicField from '../components/DynamicField';
 import { Phone, Globe, Building2, X, Edit, Users, DollarSign, MapPin, Briefcase, Settings, List, LayoutGrid } from 'lucide-react';
 import ManageFieldsPanel from '../components/ManageFieldsPanel';
+import { showSuccessToast } from '../utils/toast';
 import '../styles/crm.css';
 
 const DEFAULT_ACCOUNT_FIELDS = [
@@ -267,6 +268,21 @@ const Accounts = () => {
   // Detail Panel Forms
   const [showDetailEditForm, setShowDetailEditForm] = useState(false);
   const [showDetailDeleteConfirm, setShowDetailDeleteConfirm] = useState(false);
+
+  // Clear error/success messages on component mount and unmount
+  useEffect(() => {
+    // Clear on mount (when user navigates to this page)
+    setError('');
+    setSuccess('');
+    setFieldErrors({});
+
+    // Cleanup on unmount (when user navigates away)
+    return () => {
+      setError('');
+      setSuccess('');
+      setFieldErrors({});
+    };
+  }, []);
   const [detailEditData, setDetailEditData] = useState({});
 
   useEffect(() => {
@@ -438,6 +454,42 @@ const Accounts = () => {
     setCreating(true);
     try {
       setError('');
+
+      // Validate ALL required fields before submission
+      const newFieldErrors = {};
+      let hasError = false;
+      let firstErrorStep = -1;
+
+      fieldDefinitions.forEach(field => {
+        if (field.isRequired && field.isActive && !fieldValues[field.fieldName]) {
+          newFieldErrors[field.fieldName] = `${field.label} is required`;
+          hasError = true;
+
+          // Find which step contains this field
+          if (firstErrorStep === -1) {
+            const stepIndex = activeWizardSteps.findIndex(step =>
+              step.sections.includes(field.section || 'Additional Information')
+            );
+            if (stepIndex !== -1) {
+              firstErrorStep = stepIndex;
+            }
+          }
+        }
+      });
+
+      if (hasError) {
+        setFieldErrors(newFieldErrors);
+        setError('Please fill all required fields before saving');
+        setCreating(false);
+
+        // Navigate to first step with error
+        if (firstErrorStep !== -1) {
+          setWizardStep(firstErrorStep);
+        }
+
+        return;
+      }
+
       const standardFields = {};
       const customFields = {};
       fieldDefinitions.forEach(field => {
@@ -457,13 +509,12 @@ const Accounts = () => {
 
       const accountData = { ...standardFields, customFields: Object.keys(customFields).length > 0 ? customFields : undefined };
       await accountService.createAccount(accountData);
-      setSuccess('Account created successfully!');
+      showSuccessToast(setSuccess, 'Account created successfully!');
       setShowCreateForm(false);
       setWizardStep(0);
       resetForm();
       loadAccounts();
       loadStats(); // Reload global stats after create
-      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       if (err?.isPermissionDenied) return;
       // Check for field-level error
@@ -490,7 +541,15 @@ const Accounts = () => {
           window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 100);
       } else {
-        setError(err.response?.data?.message || 'Failed to create account');
+        // Provide clear, specific error message
+        const errorMsg = err.response?.data?.message || err.message || 'Failed to create account';
+        setError(errorMsg);
+
+        // Scroll form to top to show error
+        const formElement = document.querySelector('.wizard-form, form');
+        if (formElement) {
+          formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
       }
     }
     finally { setCreating(false); }
@@ -499,6 +558,8 @@ const Accounts = () => {
   const resetForm = () => {
     setFieldValues({});
     setFieldErrors({});
+    setError('');
+    setSuccess('');
     setSelectedCountryIso('');
     setSelectedStateIso('');
   };
@@ -658,9 +719,10 @@ const Accounts = () => {
   return (
     <DashboardLayout title="Account">
 
+      {/* Success message at page level (after create/update) */}
       {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
-      {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
+      {/* Error only shown inside form modal, not here to avoid duplication */}
 
       {/* ── WIZARD OVERLAY ── */}
 
@@ -775,6 +837,19 @@ const Accounts = () => {
               </div>
             </div>
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              {/* Error Message at TOP */}
+              {error && (
+                <div style={{ padding: '14px 18px', background: '#FEE2E2', borderBottom: '3px solid #ef4444', borderTop: '1px solid #FCA5A5' }}>
+                  <div style={{ fontSize: '13px', color: '#991B1B', fontWeight: '600', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                    <span style={{ fontSize: '18px', flexShrink: 0 }}>⚠️</span>
+                    <div>
+                      <div style={{ fontWeight: '700', marginBottom: '2px' }}>Failed to Create Account</div>
+                      <div style={{ fontSize: '12px', fontWeight: '500', color: '#dc2626' }}>{error}</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
                 <div style={{ marginBottom: '14px', paddingBottom: '10px', borderBottom: '1px solid #f1f5f9' }}>
                   <h4 style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: '700', color: '#0f172a' }}>{activeWizardSteps[wizardStep]?.icon} {activeWizardSteps[wizardStep]?.label}</h4>
@@ -803,15 +878,7 @@ const Accounts = () => {
                 })()}
               </div>
 
-              {/* Error/Success Messages */}
-              {error && (
-                <div style={{ padding: '12px 16px', background: '#FEE2E2', borderTop: '2px solid #FCA5A5' }}>
-                  <div style={{ fontSize: '12px', color: '#991B1B', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '16px' }}>⚠️</span>
-                    {error}
-                  </div>
-                </div>
-              )}
+              {/* Success message only (error moved to top) */}
               {success && (
                 <div style={{ padding: '12px 16px', background: '#DCFCE7', borderTop: '2px solid #86EFAC' }}>
                   <div style={{ fontSize: '12px', color: '#166534', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -832,7 +899,33 @@ const Accounts = () => {
                   ))}
                 </div>
                 {wizardStep < activeWizardSteps.length - 1 ? (
-                  <button type="button" onClick={() => setWizardStep(s => s + 1)}
+                  <button type="button" onClick={() => {
+                    // Validate current step before moving to next
+                    const step = activeWizardSteps[wizardStep];
+                    const grouped = groupFieldsBySection(fieldDefinitions);
+                    let hasError = false;
+                    const newFieldErrors = { ...fieldErrors };
+
+                    // Check required fields in current step
+                    step.sections.forEach(sectionName => {
+                      const fields = grouped[sectionName] || [];
+                      fields.forEach(field => {
+                        if (field.isRequired && !fieldValues[field.fieldName]) {
+                          newFieldErrors[field.fieldName] = `${field.label} is required`;
+                          hasError = true;
+                        }
+                      });
+                    });
+
+                    if (hasError) {
+                      setFieldErrors(newFieldErrors);
+                      setError('Please fill all required fields before continuing');
+                    } else {
+                      setFieldErrors({});
+                      setError('');
+                      setWizardStep(s => s + 1);
+                    }
+                  }}
                     style={{ padding: '7px 18px', borderRadius: '8px', border: 'none', background: 'linear-gradient(135deg,#1e3c72 0%,#3b82f6 100%)', color: '#fff', fontSize: '13px', fontWeight: '600', cursor: 'pointer', boxShadow: '0 2px 8px rgba(30,60,114,0.25)' }}>
                     Next →
                   </button>

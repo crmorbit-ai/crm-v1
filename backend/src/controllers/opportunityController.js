@@ -85,6 +85,26 @@ const createOpportunity = async (req, res) => {
 console.log("REQ USER:", req.user);
     const { opportunityName, amount, closeDate, stage, probability, type, leadSource, account, contact, nextStep, description, campaignSource, contactRole, accountManager } = req.body;
     if (!opportunityName || !closeDate || !account) return errorResponse(res, 400, 'Please provide opportunityName, closeDate, and account');
+
+    // Opportunity name validation
+    if (opportunityName.trim().length === 0) {
+      return errorResponse(res, 400, 'Deal name cannot be empty');
+    }
+
+    if (opportunityName.length > 80) {
+      return errorResponse(res, 400, 'Deal name cannot exceed 80 characters');
+    }
+
+    const letterCount = (opportunityName.match(/[a-zA-Z0-9]/g) || []).length;
+    if (letterCount < 3) {
+      return errorResponse(res, 400, 'Deal name must contain at least 3 letters or numbers');
+    }
+
+    const specialCharCount = opportunityName.replace(/[a-zA-Z0-9\s\-_,.()#&]/g, '').length;
+    if (specialCharCount > opportunityName.length * 0.3) {
+      return errorResponse(res, 400, 'Deal name contains too many special characters');
+    }
+
     const accountExists = await Account.findById(account);
     console.log("Account Found:", accountExists?._id);
     if (!accountExists) return errorResponse(res, 404, 'Account not found');
@@ -157,6 +177,28 @@ const updateOpportunity = async (req, res) => {
     if (req.user.userType !== 'SAAS_OWNER' && req.user.userType !== 'SAAS_ADMIN') {
       if (opportunity.tenant.toString() !== req.user.tenant.toString()) return errorResponse(res, 403, 'Access denied');
     }
+
+    // Opportunity name validation if being updated
+    if (req.body.opportunityName !== undefined) {
+      if (req.body.opportunityName.trim().length === 0) {
+        return errorResponse(res, 400, 'Deal name cannot be empty');
+      }
+
+      if (req.body.opportunityName.length > 80) {
+        return errorResponse(res, 400, 'Deal name cannot exceed 80 characters');
+      }
+
+      const letterCount = (req.body.opportunityName.match(/[a-zA-Z0-9]/g) || []).length;
+      if (letterCount < 3) {
+        return errorResponse(res, 400, 'Deal name must contain at least 3 letters or numbers');
+      }
+
+      const specialCharCount = req.body.opportunityName.replace(/[a-zA-Z0-9\s\-_,.()#&]/g, '').length;
+      if (specialCharCount > req.body.opportunityName.length * 0.3) {
+        return errorResponse(res, 400, 'Deal name contains too many special characters');
+      }
+    }
+
     const allowedFields = ['opportunityName', 'amount', 'closeDate', 'stage', 'probability', 'type', 'leadSource', 'account', 'contact', 'nextStep', 'description', 'campaignSource', 'contactRole', 'owner', 'accountManager', 'tags'];
     const prevStage = opportunity.stage;
     allowedFields.forEach(field => { if (req.body[field] !== undefined) opportunity[field] = req.body[field]; });

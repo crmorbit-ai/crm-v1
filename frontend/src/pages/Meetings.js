@@ -548,8 +548,8 @@ const Meetings = () => {
                   <div style={{ fontSize: '12px', color: '#94a3b8' }}>Click "+ New Meeting" to schedule your first one</div>
                 </div>
               ) : (
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <div style={{ overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch', maxHeight: 'calc(100vh - 250px)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', minWidth: '800px' }}>
                     <thead>
                       <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
                         {['Title','From','To','Type','Related To','Host','Status','Actions'].map(h => <th key={h} style={thStyle}>{h}</th>)}
