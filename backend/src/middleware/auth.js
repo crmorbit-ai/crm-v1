@@ -3,6 +3,7 @@ const { errorResponse } = require('../utils/response');
 const User = require('../models/User');
 const Reseller = require('../models/Reseller');
 const BlacklistedToken = require('../models/BlacklistedToken');
+const Tenant = require('../models/Tenant');
 
 /**
  * Protect routes - verify JWT token
@@ -112,6 +113,46 @@ const protect = async (req, res, next) => {
         user.userType = 'TENANT_ADMIN'; // Downgrade to tenant admin
         await user.save();
         console.log(`🔒 User ${user.email} downgraded from SAAS_OWNER (removed from .env whitelist)`);
+      }
+    }
+    // ============================================
+
+    // ============================================
+    // 🔐 TRIAL/SUBSCRIPTION CHECK
+    // ============================================
+    // Skip subscription check for SAAS_OWNER and SAAS_ADMIN
+    if (user.userType !== 'SAAS_OWNER' && user.userType !== 'SAAS_ADMIN' && user.tenant) {
+      try {
+        const tenant = await Tenant.findById(user.tenant);
+
+        if (tenant) {
+          // Check if trial is expired
+          if (tenant.subscription && tenant.subscription.isTrialActive) {
+            const trialEndDate = new Date(tenant.subscription.trialEndDate);
+            const now = new Date();
+
+            if (now > trialEndDate) {
+              // Trial expired
+              return errorResponse(res, 403, 'Your trial period has expired. Please subscribe to continue using the service.');
+            }
+          }
+
+          // Check if subscription is active (for paid accounts)
+          if (tenant.subscription && tenant.subscription.status === 'active') {
+            const endDate = tenant.subscription.endDate;
+            if (endDate && new Date() > new Date(endDate)) {
+              return errorResponse(res, 403, 'Your subscription has expired. Please renew to continue.');
+            }
+          }
+
+          // Check if subscription is cancelled or expired
+          if (tenant.subscription && ['cancelled', 'expired'].includes(tenant.subscription.status)) {
+            return errorResponse(res, 403, 'Your subscription is not active. Please contact support or renew your subscription.');
+          }
+        }
+      } catch (tenantError) {
+        console.error('Tenant subscription check error:', tenantError);
+        // Don't block if tenant check fails - log and continue
       }
     }
     // ============================================
