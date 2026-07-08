@@ -71,6 +71,7 @@ import Subscription from './pages/Subscription';
 import Monetization from './pages/Monetization';
 import TenantMonetization from './pages/TenantMonetization';
 import Billings from './pages/Billings';
+import CouponManagement from './pages/CouponManagement';
 import Support from './pages/Support';
 import SupportAdmin from './pages/SupportAdmin';
 import Feedback from './pages/Feedback';
@@ -262,6 +263,7 @@ function AppRoutes() {
         <Route path="/saas/monetization" element={<ProtectedRoute requireSaas><Monetization /></ProtectedRoute>} />
         <Route path="/saas/resellers" element={<ProtectedRoute requireSaas><ResellerManagement /></ProtectedRoute>} />
         <Route path="/saas/billings" element={<ProtectedRoute requireSaas><Billings /></ProtectedRoute>} />
+        <Route path="/saas/coupons" element={<ProtectedRoute requireSaas><CouponManagement /></ProtectedRoute>} />
         <Route path="/saas/refunds" element={<ProtectedRoute requireSaas><SaasRefunds /></ProtectedRoute>} />
         <Route path="/saas/admins" element={<ProtectedRoute requireSaas><SaasAdmins /></ProtectedRoute>} />
         <Route path="/saas/notifications" element={<ProtectedRoute requireSaas><SaasNotifications /></ProtectedRoute>} />

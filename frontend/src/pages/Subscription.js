@@ -4,6 +4,7 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 import { subscriptionService } from '../services/subscriptionService';
 import { openSubscriptionCheckout } from '../utils/razorpay';
 import { useAuth } from '../context/AuthContext';
+import ApplyCoupon from '../components/ApplyCoupon';
 
 const Subscription = () => {
   const navigate = useNavigate();
@@ -360,7 +361,10 @@ const Subscription = () => {
         background: '#f8f9fa',
         minHeight: '100vh'
       }}>
-        
+
+        {/* Apply Coupon Section */}
+        <ApplyCoupon />
+
         {/* Current Subscription Card */}
         <div style={{
           ...glassStyles.glassCard
@@ -685,29 +689,32 @@ const Subscription = () => {
           )}
         </div>
 
-        {/* Billing Cycle Toggle */}
-        <div style={{
-          textAlign: 'center',
-          margin: '32px 0',
-          padding: '28px',
-          background: '#ffffff',
-          borderRadius: '12px',
-          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-          border: '1px solid #e5e7eb'
-        }}>
-          <h3 style={{
-            fontSize: '18px',
-            fontWeight: '700',
-            marginBottom: '16px',
-            color: '#1f2937',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px'
-          }}>
-            <span style={{ fontSize: '20px' }}>🔄</span>
-            Choose Billing Cycle
-          </h3>
+        {/* Hide Billing & Plans for Lifetime License Users */}
+        {!currentSubscription?.status?.hasLifetimeLicense && (
+          <>
+            {/* Billing Cycle Toggle */}
+            <div style={{
+              textAlign: 'center',
+              margin: '32px 0',
+              padding: '28px',
+              background: '#ffffff',
+              borderRadius: '12px',
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+              border: '1px solid #e5e7eb'
+            }}>
+              <h3 style={{
+                fontSize: '18px',
+                fontWeight: '700',
+                marginBottom: '16px',
+                color: '#1f2937',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '20px' }}>🔄</span>
+                Choose Billing Cycle
+              </h3>
           <div className="sub-toggle" style={glassStyles.toggle}>
             <button
               onClick={() => setBillingCycle('monthly')}
@@ -925,26 +932,26 @@ const Subscription = () => {
         </div>
 
 
-        {/* Responsive Grid for smaller screens */}
-       <style>{`
-  @media (min-width: 1200px) {
-    .plans-grid {
-      grid-template-columns: repeat(4, 1fr) !important; /* ← 4 columns */
-    }
-  }
-  @media (max-width: 1199px) and (min-width: 769px) {
-    .plans-grid {
-      grid-template-columns: repeat(2, 1fr) !important; /* ← 2 columns tablet */
-    }
-  }
-  @media (max-width: 768px) {
-    .plans-grid {
-      grid-template-columns: 1fr !important; /* ← 1 column mobile */
-    }
-  }
-`}</style>
-
-      </div>
+            {/* Responsive Grid for smaller screens */}
+            <style>{`
+              @media (min-width: 1200px) {
+                .plans-grid {
+                  grid-template-columns: repeat(4, 1fr) !important;
+                }
+              }
+              @media (max-width: 1199px) and (min-width: 769px) {
+                .plans-grid {
+                  grid-template-columns: repeat(2, 1fr) !important;
+                }
+              }
+              @media (max-width: 768px) {
+                .plans-grid {
+                  grid-template-columns: 1fr !important;
+                }
+              }
+            `}</style>
+          </>
+        )}
 
       {/* ── Upgrade Plan Modal ── */}
       {upgradeTarget && (
@@ -1120,6 +1127,7 @@ const Subscription = () => {
         </div>
       )}
 
+      </div>
     </DashboardLayout>
   );
 };

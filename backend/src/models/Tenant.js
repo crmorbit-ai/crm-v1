@@ -206,7 +206,32 @@ const tenantSchema = new mongoose.Schema({
     renewalDate: {
       type: Date
     },
-    
+
+    // Lifetime License (via coupon)
+    lifetimeLicense: {
+      enabled: {
+        type: Boolean,
+        default: false
+      },
+      couponCode: {
+        type: String
+      },
+      coupon: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Coupon'
+      },
+      activatedAt: {
+        type: Date
+      },
+      activatedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      notes: {
+        type: String
+      }
+    },
+
     // Billing
     billingCycle: {
       type: String,
@@ -417,10 +442,15 @@ tenantSchema.methods.isTrialExpired = function() {
 
 // Check if subscription is active
 tenantSchema.methods.hasActiveSubscription = function() {
+  // Lifetime license - always active
+  if (this.subscription.lifetimeLicense && this.subscription.lifetimeLicense.enabled) {
+    return true;
+  }
+
   if (this.subscription.isTrialActive && !this.isTrialExpired()) {
     return true;
   }
-  return this.subscription.status === 'active' && 
+  return this.subscription.status === 'active' &&
          (!this.subscription.endDate || new Date() < this.subscription.endDate);
 };
 

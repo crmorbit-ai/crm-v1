@@ -81,7 +81,8 @@ const getCurrentSubscription = async (req, res) => {
         isActive: hasActiveSubscription,
         isTrialActive: tenant.subscription?.isTrialActive || false,
         isTrialExpired: isTrialExpired,
-        trialDaysRemaining: trialDaysRemaining
+        trialDaysRemaining: trialDaysRemaining,
+        hasLifetimeLicense: tenant.subscription?.lifetimeLicense?.enabled || false
       },
       payments: payments
     };

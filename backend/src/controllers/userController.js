@@ -249,17 +249,23 @@ const createUser = async (req, res) => {
         isActive: true
       });
 
-      // Check if limit is reached
-      const userLimit = plan.limits.users;
-      if (userLimit !== -1 && currentUserCount >= userLimit) {
-        return errorResponse(
-          res,
-          403,
-          `❌ User limit reached! Your ${plan.displayName || plan.name} plan allows maximum ${userLimit} users. You currently have ${currentUserCount} active users. Please upgrade your plan to add more users.`
-        );
-      }
+      // 🎟️ Check for Premium Access (Lifetime License) - Unlimited users
+      if (tenantData.subscription?.lifetimeLicense?.enabled) {
+        console.log('👑 Premium Access detected - Unlimited users allowed');
+        // Skip limit check - unlimited users
+      } else {
+        // Check if limit is reached
+        const userLimit = plan.limits.users;
+        if (userLimit !== -1 && currentUserCount >= userLimit) {
+          return errorResponse(
+            res,
+            403,
+            `❌ User limit reached! Your ${plan.displayName || plan.name} plan allows maximum ${userLimit} users. You currently have ${currentUserCount} active users. Please upgrade your plan to add more users.`
+          );
+        }
 
-      console.log(`✅ User limit check passed: ${currentUserCount}/${userLimit === -1 ? 'Unlimited' : userLimit} users`);
+        console.log(`✅ User limit check passed: ${currentUserCount}/${userLimit === -1 ? 'Unlimited' : userLimit} users`);
+      }
 
       // Update tenant usage count
       tenantData.usage.users = currentUserCount + 1;
@@ -747,13 +753,20 @@ const bulkCreateUsers = async (req, res) => {
     if (!tenantData.subscription || !['active', 'trial'].includes(tenantData.subscription.status)) {
       return errorResponse(res, 403, 'No active subscription');
     }
-    let plan = tenantData.subscription.plan;
-    if (!plan || !plan.limits) plan = await SubscriptionPlan.findById(tenantData.subscription.plan);
-    const currentCount = await User.countDocuments({ tenant: tenantId, isActive: true });
-    const maxUsers = plan?.limits?.users ?? Infinity;
-    const slotsLeft = maxUsers === -1 ? Infinity : maxUsers - currentCount;
-    if (slotsLeft < usersData.length) {
-      return errorResponse(res, 403, `Only ${slotsLeft} user slot(s) remaining in your plan`);
+
+    // 👑 Premium Access (Lifetime License) - Skip all limits
+    if (tenantData.subscription?.lifetimeLicense?.enabled) {
+      console.log('👑 Bulk Import: Premium Access - Unlimited users');
+      // Skip limit check
+    } else {
+      let plan = tenantData.subscription.plan;
+      if (!plan || !plan.limits) plan = await SubscriptionPlan.findById(tenantData.subscription.plan);
+      const currentCount = await User.countDocuments({ tenant: tenantId, isActive: true });
+      const maxUsers = plan?.limits?.users ?? Infinity;
+      const slotsLeft = maxUsers === -1 ? Infinity : maxUsers - currentCount;
+      if (slotsLeft < usersData.length) {
+        return errorResponse(res, 403, `Only ${slotsLeft} user slot(s) remaining in your plan`);
+      }
     }
 
     const results = [];

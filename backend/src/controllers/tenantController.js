@@ -131,7 +131,9 @@ const getTenant = async (req, res) => {
     const tenant = await Tenant.findById(req.params.id)
       .populate('reseller', 'firstName lastName email')
       .populate('assignedManager', 'firstName lastName email')
-      .populate('assignedManagerBy', 'firstName lastName email');
+      .populate('assignedManagerBy', 'firstName lastName email')
+      .populate('subscription.lifetimeLicense.coupon', 'code description')
+      .populate('subscription.lifetimeLicense.activatedBy', 'firstName lastName email');
 
     if (!tenant) {
       return errorResponse(res, 404, 'Tenant not found');
@@ -140,11 +142,27 @@ const getTenant = async (req, res) => {
     // Get additional stats
     const userCount = await User.countDocuments({ tenant: tenant._id });
     const adminUser = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' })
-      .select('firstName lastName email');
+      .select('firstName lastName email phone');
+
+    // Get usage stats from other models
+    const Lead = require('../models/Lead');
+    const Contact = require('../models/Contact');
+    const Account = require('../models/Account');
+
+    const [leadsCount, contactsCount, accountsCount] = await Promise.all([
+      Lead.countDocuments({ tenant: tenant._id }),
+      Contact.countDocuments({ tenant: tenant._id }),
+      Account.countDocuments({ tenant: tenant._id })
+    ]);
 
     const tenantData = {
       ...tenant.toObject(),
-      userCount,
+      stats: {
+        users: userCount,
+        leads: leadsCount,
+        contacts: contactsCount,
+        accounts: accountsCount
+      },
       adminUser
     };
 

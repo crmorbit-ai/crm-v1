@@ -98,6 +98,7 @@ const SaasLayout = ({ children, title }) => {
     { path: '/saas/plans', label: 'Plans' },
     { path: '/saas/monetization', label: 'Monetization' },
     { path: '/saas/billings', label: 'Billings' },
+    { path: '/saas/coupons', label: 'Premium Coupons' },
     { path: '/saas/refunds',  label: 'Refunds' },
     { path: '/saas/resellers', label: 'Resellers' },
     { path: '/saas/admins', label: 'Admins' },

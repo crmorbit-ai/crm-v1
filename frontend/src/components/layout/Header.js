@@ -14,6 +14,7 @@ import {
 import { Menu, User, KeyRound, LogOut, ChevronDown } from 'lucide-react';
 import { API_URL } from '../../config/api.config';
 import NotificationBell from '../notifications/NotificationBell';
+import LifetimeLicenseBadge from '../LifetimeLicenseBadge';
 
 const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
   const navigate = useNavigate();
@@ -60,6 +61,9 @@ const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
         {actionButton && !isMobile && (
           <div className="flex-shrink-0">{actionButton}</div>
         )}
+
+        {/* Lifetime License Badge */}
+        <LifetimeLicenseBadge />
 
         {/* Last Login - First */}
         {user?.lastLogin && !isMobile && (

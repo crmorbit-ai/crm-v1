@@ -87,6 +87,7 @@ app.use('/api/roles', require('./routes/roles'));
 app.use('/api/groups', require('./routes/groups'));
 app.use('/api/features', require('./routes/features'));
 app.use('/api/subscriptions', require('./routes/subscriptions'));
+app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/billings', require('./routes/billings'));
 app.use('/api/activity-logs', require('./routes/activityLogs'));
 app.use('/api/resellers', require('./routes/resellers'));

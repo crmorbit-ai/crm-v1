@@ -3,6 +3,7 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import PasswordExpiryBanner from '../PasswordExpiryBanner';
 import WelcomePrompt from '../WelcomePrompt';
+import LifetimeLicenseBadge from '../LifetimeLicenseBadge';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
 

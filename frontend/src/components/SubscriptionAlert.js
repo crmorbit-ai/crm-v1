@@ -26,6 +26,11 @@ const SubscriptionAlert = () => {
 
   if (loading || !subscriptionStatus) return null;
 
+  // Hide all alerts for lifetime license users
+  if (subscriptionStatus.hasLifetimeLicense) {
+    return null;
+  }
+
   // Show alert if trial is ending soon (5 days or less)
   if (
     subscriptionStatus.isTrialActive && 

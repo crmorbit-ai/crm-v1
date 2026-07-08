@@ -117,6 +117,9 @@ const protect = async (req, res, next) => {
     }
     // ============================================
 
+    // Attach user to request FIRST (before subscription check)
+    req.user = user;
+
     // ============================================
     // 🔐 TRIAL/SUBSCRIPTION CHECK
     // ============================================
@@ -126,28 +129,37 @@ const protect = async (req, res, next) => {
         const tenant = await Tenant.findById(user.tenant);
 
         if (tenant) {
-          // Check if trial is expired
-          if (tenant.subscription && tenant.subscription.isTrialActive) {
-            const trialEndDate = new Date(tenant.subscription.trialEndDate);
-            const now = new Date();
+          // 🎟️ LIFETIME LICENSE CHECK - Skip all other checks if enabled
+          if (tenant.subscription && tenant.subscription.lifetimeLicense && tenant.subscription.lifetimeLicense.enabled) {
+            // Lifetime license - unlimited access, no expiry
+            // Allow all requests
+            req.user.hasLifetimeLicense = true;
+          } else {
+            // Regular trial/subscription checks
 
-            if (now > trialEndDate) {
-              // Trial expired
-              return errorResponse(res, 403, 'Your trial period has expired. Please subscribe to continue using the service.');
+            // Check if trial is expired
+            if (tenant.subscription && tenant.subscription.isTrialActive) {
+              const trialEndDate = new Date(tenant.subscription.trialEndDate);
+              const now = new Date();
+
+              if (now > trialEndDate) {
+                // Trial expired
+                return errorResponse(res, 403, 'Your trial period has expired. Please subscribe to continue using the service.');
+              }
             }
-          }
 
-          // Check if subscription is active (for paid accounts)
-          if (tenant.subscription && tenant.subscription.status === 'active') {
-            const endDate = tenant.subscription.endDate;
-            if (endDate && new Date() > new Date(endDate)) {
-              return errorResponse(res, 403, 'Your subscription has expired. Please renew to continue.');
+            // Check if subscription is active (for paid accounts)
+            if (tenant.subscription && tenant.subscription.status === 'active') {
+              const endDate = tenant.subscription.endDate;
+              if (endDate && new Date() > new Date(endDate)) {
+                return errorResponse(res, 403, 'Your subscription has expired. Please renew to continue.');
+              }
             }
-          }
 
-          // Check if subscription is cancelled or expired
-          if (tenant.subscription && ['cancelled', 'expired'].includes(tenant.subscription.status)) {
-            return errorResponse(res, 403, 'Your subscription is not active. Please contact support or renew your subscription.');
+            // Check if subscription is cancelled or expired
+            if (tenant.subscription && ['cancelled', 'expired'].includes(tenant.subscription.status)) {
+              return errorResponse(res, 403, 'Your subscription is not active. Please contact support or renew your subscription.');
+            }
           }
         }
       } catch (tenantError) {
@@ -157,8 +169,6 @@ const protect = async (req, res, next) => {
     }
     // ============================================
 
-    // Attach user to request
-    req.user = user;
     next();
   } catch (error) {
     console.error('Auth middleware error:', error);
