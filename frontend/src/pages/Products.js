@@ -276,17 +276,56 @@ const Products = () => {
   };
 
   const handleCreateCategory = async (e) => {
-    e.preventDefault();
-    if (!newCategoryName.trim()) { setError('Category name is required'); return; }
+    if (e) e.preventDefault();
+
+    // Clear previous messages
+    setError('');
+    setSuccess('');
+
+    // Trim and validate
+    const trimmedName = newCategoryName.trim();
+
+    if (!trimmedName) {
+      setError('⚠️ Category name is required');
+      return;
+    }
+
+    // Check length
+    if (trimmedName.length < 2) {
+      setError('⚠️ Category name must be at least 2 characters long');
+      return;
+    }
+
+    if (trimmedName.length > 50) {
+      setError('❌ Category name must be less than 50 characters');
+      return;
+    }
+
+    // Alphanumeric + spaces validation
+    const alphanumericRegex = /^[a-zA-Z0-9\s\-&]+$/;
+    if (!alphanumericRegex.test(trimmedName)) {
+      setError('❌ Category name can only contain letters, numbers, spaces, hyphens and ampersands');
+      return;
+    }
+
+    // Check if mostly alphanumeric (at least 50% letters/numbers)
+    const alphanumericCount = (trimmedName.match(/[a-zA-Z0-9]/g) || []).length;
+    if (alphanumericCount / trimmedName.length < 0.5) {
+      setError('❌ Category name should contain meaningful text, not just symbols');
+      return;
+    }
+
     try {
-      await productCategoryService.createCategory({ name: newCategoryName, isActive: true });
-      setSuccess('Category created!');
+      await productCategoryService.createCategory({ name: trimmedName, isActive: true });
+      setSuccess('✓ Category created successfully!');
       setNewCategoryName('');
       setShowCreateCategoryForm(false);
       await loadCategories();
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to create category');
+      const errorMsg = err.response?.data?.message || 'Failed to create category';
+      setError(`❌ ${errorMsg}`);
+      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -348,10 +387,12 @@ const Products = () => {
     switch (field.fieldName) {
       case 'name':
         return (
-          <div key="name">
-            <label style={{...lStyle, display:'flex', justifyContent:'space-between', alignItems:'center', minHeight:'18px', marginBottom:'6px'}}>
-              <span>Product Name {field.required && <span style={{ color: '#ef4444' }}>*</span>}</span>
-              <span style={{fontSize:11, fontWeight:400, color:'#94a3b8'}}>(max 100 chars)</span>
+          <div key="name" style={{display:'flex', flexDirection:'column'}}>
+            <label style={{...lStyle, display:'flex', justifyContent:'space-between', alignItems:'center', height:'20px', marginBottom:'6px', gap:'4px'}}>
+              <span style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:'0 1 auto'}}>
+                Product Name {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+              </span>
+              <span style={{fontSize:9, fontWeight:500, color:'#94a3b8', whiteSpace:'nowrap', flexShrink:0}}>(max 100)</span>
             </label>
             <input
               type="text"
@@ -380,11 +421,11 @@ const Products = () => {
                 }
               }}
               required
-              style={{...iStyle, borderColor: nameError ? '#ef4444' : '#e2e8f0'}}
+              style={{...iStyle, borderColor: nameError ? '#ef4444' : '#e2e8f0', height:'38px', boxSizing:'border-box'}}
               onFocus={e => e.target.style.borderColor = nameError ? '#ef4444' : '#6366f1'}
               onBlur={e => e.target.style.borderColor = nameError ? '#ef4444' : '#e2e8f0'}
             />
-            <div style={{minHeight:'20px',marginTop:'4px'}}>
+            <div style={{minHeight:'24px',marginTop:'4px', display:'flex', alignItems:'flex-start'}}>
               {nameError && (
                 <div style={{fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
                   <span>⚠️</span>
@@ -396,10 +437,12 @@ const Products = () => {
         );
       case 'articleNumber':
         return (
-          <div key="articleNumber">
-            <label style={{...lStyle, display:'flex', justifyContent:'space-between', alignItems:'center', minHeight:'18px', marginBottom:'6px'}}>
-              <span>SKU / Article Number {field.required && <span style={{ color: '#ef4444' }}>*</span>}</span>
-              <span style={{fontSize:11, fontWeight:400, color:'#94a3b8'}}>(8-20 alphanumeric)</span>
+          <div key="articleNumber" style={{display:'flex', flexDirection:'column'}}>
+            <label style={{...lStyle, display:'flex', justifyContent:'space-between', alignItems:'center', height:'20px', marginBottom:'6px', gap:'4px'}}>
+              <span style={{whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', flex:'0 1 auto'}}>
+                SKU / Article # {field.required && <span style={{ color: '#ef4444' }}>*</span>}
+              </span>
+              <span style={{fontSize:9, fontWeight:500, color:'#94a3b8', whiteSpace:'nowrap', flexShrink:0}}>(8-20)</span>
             </label>
             <input
               type="text"
@@ -408,12 +451,12 @@ const Products = () => {
               maxLength={20}
               onChange={handleChange}
               required
-              style={{...iStyle, textTransform: 'uppercase'}}
+              style={{...iStyle, textTransform: 'uppercase', height:'38px', boxSizing:'border-box'}}
               onFocus={e => e.target.style.borderColor='#6366f1'}
               onBlur={e => e.target.style.borderColor='#e2e8f0'}
               placeholder="e.g., LAP-001, PHONE2024"
             />
-            <div style={{minHeight:'20px',marginTop:'4px'}}>
+            <div style={{minHeight:'24px',marginTop:'4px', display:'flex', alignItems:'flex-start'}}>
               {skuError && (
                 <div style={{fontSize:11,color:'#ef4444',fontWeight:600,display:'flex',alignItems:'center',gap:4}}>
                   <span>⚠️</span>
@@ -449,19 +492,87 @@ const Products = () => {
               </select>
               {canManageCategories && <button type="button" onClick={() => setShowCreateCategoryForm(!showCreateCategoryForm)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1.5px solid #e2e8f0', background: showCreateCategoryForm ? '#6366f1' : '#f8fafc', color: showCreateCategoryForm ? 'white' : '#6366f1', cursor: 'pointer', fontSize: '14px', fontWeight: '700', transition: 'all 0.2s' }}>{showCreateCategoryForm ? '✕' : '+'}</button>}
             </div>
-            {showCreateCategoryForm && (
-              <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px', border: '1.5px solid #e2e8f0', marginBottom: '4px' }}>
-                <div style={{ fontSize: '10px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>🏷️ Add New Category</div>
-                <div style={{ display: 'flex', gap: '6px' }}>
-                  <input type="text" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)} placeholder="Category name..." autoFocus
-                    style={{ flex: 1, padding: '7px 9px', borderRadius: '6px', border: '1.5px solid #e2e8f0', fontSize: '12px', outline: 'none' }}
-                    onFocus={e => e.target.style.borderColor='#6366f1'} onBlur={e => e.target.style.borderColor='#e2e8f0'}
-                    onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory(); } }} />
-                  <button type="button" onClick={handleCreateCategory}
-                    style={{ padding: '7px 12px', borderRadius: '6px', border: 'none', background: '#6366f1', color: 'white', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}>Add</button>
+            {showCreateCategoryForm && (() => {
+              const trimmed = newCategoryName.trim();
+              const hasSpecialChars = trimmed && !/^[a-zA-Z0-9\s\-&]+$/.test(trimmed);
+              const tooShort = trimmed.length > 0 && trimmed.length < 2;
+              const tooLong = trimmed.length > 50;
+              const hasError = hasSpecialChars || tooShort || tooLong;
+
+              return (
+                <div style={{ background: '#f8fafc', borderRadius: '8px', padding: '10px', border: '1.5px solid #e2e8f0', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '6px' }}>🏷️ Add New Category</div>
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'flex-start', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                      <div style={{ flex: 1, position: 'relative' }}>
+                        <input
+                          type="text"
+                          value={newCategoryName}
+                          onChange={e => setNewCategoryName(e.target.value)}
+                          placeholder="e.g. Electronics, Home & Garden..."
+                          autoFocus
+                          maxLength={55}
+                          style={{
+                            width: '100%',
+                            padding: '7px 9px',
+                            borderRadius: '6px',
+                            border: `1.5px solid ${hasError ? '#ef4444' : '#e2e8f0'}`,
+                            fontSize: '12px',
+                            outline: 'none',
+                            background: hasError ? '#fef2f2' : 'white',
+                            boxSizing: 'border-box'
+                          }}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleCreateCategory(e); } }}
+                        />
+                        {/* Inline validation messages */}
+                        {hasSpecialChars && (
+                          <div style={{ fontSize: '10px', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>❌</span>
+                            <span>Special characters not allowed (only letters, numbers, spaces, hyphens & ampersands)</span>
+                          </div>
+                        )}
+                        {!hasSpecialChars && tooShort && (
+                          <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>⚠️</span>
+                            <span>Too short - need {2 - trimmed.length} more character{2 - trimmed.length > 1 ? 's' : ''}</span>
+                          </div>
+                        )}
+                        {!hasSpecialChars && !tooShort && tooLong && (
+                          <div style={{ fontSize: '10px', color: '#ef4444', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>❌</span>
+                            <span>Too long - maximum 50 characters allowed</span>
+                          </div>
+                        )}
+                        {!hasError && trimmed.length >= 2 && (
+                          <div style={{ fontSize: '10px', color: '#10b981', marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>✓</span>
+                            <span>Valid category name ({trimmed.length}/50 characters)</span>
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCreateCategory}
+                        disabled={hasError || !trimmed}
+                        style={{
+                          padding: '7px 12px',
+                          borderRadius: '6px',
+                          border: 'none',
+                          background: (hasError || !trimmed) ? '#cbd5e1' : '#6366f1',
+                          color: 'white',
+                          fontSize: '11px',
+                          fontWeight: '700',
+                          cursor: (hasError || !trimmed) ? 'not-allowed' : 'pointer',
+                          opacity: (hasError || !trimmed) ? 0.6 : 1
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
             <div style={{minHeight:'20px',marginTop:'4px'}}></div>
           </div>
         );

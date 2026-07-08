@@ -214,6 +214,8 @@ const Accounts = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [viewMode, setViewMode] = useState('table');
+  const [selectedAccounts, setSelectedAccounts] = useState([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
 
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, pages: 0 });
   const [filters, setFilters] = useState({ search: '', accountType: searchParams.get('type') || '', industry: '' });
@@ -705,6 +707,51 @@ const Accounts = () => {
       loadStats(); // Reload global stats after delete
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) { if (err?.isPermissionDenied) return; setError(err.message || 'Failed to delete account'); }
+  };
+
+  // Bulk selection handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedAccounts(accounts.map(acc => acc._id));
+    } else {
+      setSelectedAccounts([]);
+    }
+  };
+
+  const handleSelectAccount = (accountId) => {
+    setSelectedAccounts(prev => {
+      if (prev.includes(accountId)) {
+        return prev.filter(id => id !== accountId);
+      } else {
+        return [...prev, accountId];
+      }
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (!canDeleteAccount) {
+      setError('Access Restricted: You do not have permission to delete accounts.');
+      return;
+    }
+
+    try {
+      setError('');
+      setSuccess('');
+
+      // Delete all selected accounts
+      await Promise.all(selectedAccounts.map(id => accountService.deleteAccount(id)));
+
+      setSuccess(`✓ ${selectedAccounts.length} account(s) deleted successfully!`);
+      setSelectedAccounts([]);
+      setShowBulkDeleteConfirm(false);
+      loadAccounts();
+      loadStats();
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      if (err?.isPermissionDenied) return;
+      setError(err.message || 'Failed to delete accounts');
+      setTimeout(() => setError(''), 5000);
+    }
   };
 
   const canCreateAccount = hasPermission('account_management', 'create');
@@ -1386,6 +1433,31 @@ const Accounts = () => {
                   if (!canCreateAccount) { setError('Access Restricted: You do not have permission to create accounts.'); return; }
                   closeAllForms(); setSelectedAccountId(null); setSelectedAccountData(null); setDetailExpanded(false); resetForm(); setShowCreateForm(true);
                 }}>+ New Account</button>
+
+                {/* Bulk Delete Button */}
+                {selectedAccounts.length > 0 && (
+                  <button
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 16px',
+                      fontWeight: '600',
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)',
+                      animation: 'fadeIn 0.2s ease'
+                    }}
+                  >
+                    🗑️ Delete Selected ({selectedAccounts.length})
+                  </button>
+                )}
+
                 <div style={{ marginLeft: 'auto', display: 'flex', background: '#f1f5f9', borderRadius: '10px', padding: '3px', border: '1.5px solid #e2e8f0' }}>
                   {[['table', <List className="h-3.5 w-3.5" />, 'List'], ['grid', <LayoutGrid className="h-3.5 w-3.5" />, 'Grid']].map(([mode, icon, lbl]) => (
                     <button key={mode} onClick={() => setViewMode(mode)}
@@ -1558,7 +1630,7 @@ const Accounts = () => {
                         cellStyle: () => ({})
                       };
                     });
-                  const totalW = 36 + activeCols.reduce((s,c) => s+c.width, 0);
+                  const totalW = 40 + 36 + activeCols.reduce((s,c) => s+c.width, 0); // Added 40 for checkbox column
 
                   return (
                     <div style={{ overflowX:'auto', overflowY:'auto', maxHeight:'60vh' }}>
@@ -1572,24 +1644,44 @@ const Accounts = () => {
                       `}</style>
                       <table style={{ borderCollapse:'collapse', tableLayout:'fixed', width:totalW }}>
                         <colgroup>
+                          <col style={{width:40}}/>
                           <col style={{width:36}}/>
                           {activeCols.map(c => <col key={c.key} style={{width:c.width}}/>)}
                         </colgroup>
                         <thead>
                           <tr>
-                            <th className="xl-th xl-num">#</th>
+                            <th className="xl-th" style={{width:40,textAlign:'center',position:'sticky',left:0,zIndex:3,background:'#f0f2f5'}}>
+                              <input
+                                type="checkbox"
+                                checked={selectedAccounts.length === accounts.length && accounts.length > 0}
+                                onChange={handleSelectAll}
+                                style={{cursor:'pointer',width:15,height:15}}
+                                title="Select All"
+                              />
+                            </th>
+                            <th className="xl-th xl-num" style={{left:40}}>#</th>
                             {activeCols.map(c => <th key={c.key} className="xl-th">{c.label}</th>)}
                           </tr>
                         </thead>
                         <tbody>
                           {accounts.map((account, i) => {
                             const isSel = selectedAccountId === account._id;
+                            const isChecked = selectedAccounts.includes(account._id);
                             return (
                               <tr key={account._id}
                                 className={`xl-row${isSel?' xl-sel':''}`}
                                 style={{background: isSel?'#dbeafe': i%2===0?'#fff':'#f8fafc'}}
                                 onClick={() => handleAccountClick(account._id)}>
-                                <td className="xl-td xl-num">{(pagination.page-1)*pagination.limit+i+1}</td>
+                                <td className="xl-td" style={{width:40,textAlign:'center',position:'sticky',left:0,zIndex:1,background:isSel?'#dbeafe':i%2===0?'#fff':'#f8fafc'}}
+                                  onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => handleSelectAccount(account._id)}
+                                    style={{cursor:'pointer',width:15,height:15}}
+                                  />
+                                </td>
+                                <td className="xl-td xl-num" style={{left:40}}>{(pagination.page-1)*pagination.limit+i+1}</td>
                                 {activeCols.map(c => {
                                   const cb = c.cellBg ? c.cellBg(account) : null;
                                   return (
@@ -1623,6 +1715,110 @@ const Accounts = () => {
         </div>
 
       </div>
+
+      {/* Bulk Delete Confirmation Modal */}
+      {showBulkDeleteConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            padding: '20px'
+          }}
+          onClick={() => setShowBulkDeleteConfirm(false)}
+        >
+          <div
+            style={{
+              background: '#fff',
+              borderRadius: '16px',
+              padding: '28px',
+              width: '400px',
+              maxWidth: '95vw',
+              boxShadow: '0 24px 64px rgba(0, 0, 0, 0.28)',
+              animation: 'fadeInUp 0.2s ease'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div
+              style={{
+                width: '48px',
+                height: '48px',
+                borderRadius: '12px',
+                background: '#fef2f2',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '22px',
+                margin: '0 auto 16px'
+              }}
+            >
+              🗑️
+            </div>
+            <h3
+              style={{
+                margin: '0 0 8px',
+                fontSize: '18px',
+                fontWeight: '800',
+                color: '#0f172a',
+                textAlign: 'center'
+              }}
+            >
+              Delete {selectedAccounts.length} Account{selectedAccounts.length > 1 ? 's' : ''}?
+            </h3>
+            <p
+              style={{
+                margin: '0 0 24px',
+                fontSize: '14px',
+                color: '#64748b',
+                textAlign: 'center',
+                lineHeight: '1.5'
+              }}
+            >
+              This will permanently delete the selected account{selectedAccounts.length > 1 ? 's' : ''}. This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <button
+                onClick={handleBulkDelete}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #dc2626, #b91c1c)',
+                  color: '#fff',
+                  fontSize: '14px',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.3)'
+                }}
+              >
+                Delete
+              </button>
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderRadius: '10px',
+                  border: '1.5px solid #e2e8f0',
+                  background: '#fff',
+                  color: '#374151',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 };

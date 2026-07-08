@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const {
   getMeetings,
   getMeeting,
@@ -16,10 +17,27 @@ const {
 const { protect } = require('../middleware/auth');
 const { requirePermission } = require('../middleware/rbac');
 
+// Determine upload directory based on environment
+// In serverless (Vercel), use /tmp which is writable
+const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+const uploadDir = isServerless
+  ? '/tmp/uploads/meetings'
+  : path.join(__dirname, '../../uploads/meetings');
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/meetings/');
+    // Create directory lazily when a file is uploaded
+    if (!fs.existsSync(uploadDir)) {
+      try {
+        fs.mkdirSync(uploadDir, { recursive: true });
+        console.log('✅ Created upload directory:', uploadDir);
+      } catch (error) {
+        console.error('❌ Error creating upload directory:', error);
+        return cb(error);
+      }
+    }
+    cb(null, uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);

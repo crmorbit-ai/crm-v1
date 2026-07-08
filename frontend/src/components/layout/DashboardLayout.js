@@ -62,7 +62,7 @@ const formatPermissionMessage = (raw) => {
 const DashboardLayout = ({ children, title, actionButton }) => {
   const { user: authUser } = useAuth(); // Get user from AuthContext
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [sidebarOpen, setSidebarOpen] = useState(true); // desktop: open by default
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768); // Immediate evaluation, no flicker
   const [permissionToast, setPermissionToast] = useState(null);
   const [showWelcome, setShowWelcome] = useState(false);
 
@@ -85,6 +85,7 @@ const DashboardLayout = ({ children, title, actionButton }) => {
       const mobile = window.innerWidth <= 768;
       setIsMobile(mobile);
       if (mobile) setSidebarOpen(false);
+      else setSidebarOpen(true); // Auto-open on desktop
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
@@ -150,7 +151,26 @@ const DashboardLayout = ({ children, title, actionButton }) => {
           >×</button>
         </div>
       )}
-      <style>{`@keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }`}</style>
+      <style>{`
+        @keyframes slideInRight { from { transform: translateX(110%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        @media(max-width: 768px) {
+          body, html {
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            width: 100vw !important;
+            position: relative !important;
+          }
+          #root {
+            overflow-x: hidden !important;
+            max-width: 100vw !important;
+            width: 100vw !important;
+          }
+          .min-h-screen {
+            overflow-x: hidden !important;
+          }
+        }
+      `}</style>
 
       {/* Mobile Overlay */}
       {isMobile && sidebarOpen && (
@@ -172,7 +192,10 @@ const DashboardLayout = ({ children, title, actionButton }) => {
         transition: 'margin-left 0.3s ease',
         minHeight: '100vh',
         display: 'flex',
-        flexDirection: 'column'
+        flexDirection: 'column',
+        width: isMobile ? '100%' : 'auto',
+        maxWidth: '100vw',
+        overflowX: 'hidden'
       }}>
         <Header
           title={title}
@@ -182,10 +205,12 @@ const DashboardLayout = ({ children, title, actionButton }) => {
         />
         <main style={{
           background: '#f8fafc',
-          padding: '1rem 1.5rem',
+          padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
           flex: '1 1 auto',
           overflowY: 'auto',
-          overflowX: 'hidden'
+          overflowX: 'hidden',
+          width: '100%',
+          maxWidth: '100%'
         }}>
           {children}
         </main>

@@ -346,13 +346,21 @@
   text-align: left;
   font-size: 12px;
   font-weight: 800;
-  color: #64748b;
+  color: #1e293b;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
+  min-width: 100px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-bottom: 2px solid #cbd5e1;
 }
 
 .crm-table td {
   padding: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 250px;
 }
 
 .crm-table tbody tr {

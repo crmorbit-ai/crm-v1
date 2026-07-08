@@ -131,7 +131,9 @@ const getAllProducts = async (req, res) => {
     }
 
     if (category) query.category = category;
-    if (isActive !== undefined) query.isActive = isActive === 'true';
+    if (isActive !== undefined && isActive !== '' && isActive !== null) {
+      query.isActive = isActive === 'true';
+    }
 
     const total = await ProductItem.countDocuments(query);
 

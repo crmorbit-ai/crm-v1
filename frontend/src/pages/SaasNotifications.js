@@ -119,7 +119,14 @@ export default function SaasNotifications() {
 
   const markAll  = async () => { await notificationService.markAllAsRead(); setNotifs(p => p.map(n => ({ ...n, isRead: true }))); };
   const markOne  = async (e, id) => { e.stopPropagation(); setBusyId(id); await notificationService.markAsRead(id); setNotifs(p => p.map(n => n._id === id ? { ...n, isRead: true } : n)); setBusyId(null); };
-  const delNotif = async (e, id) => { e.stopPropagation(); setBusyId(id); await notificationService.deleteNotification(id); setNotifs(p => p.filter(n => n._id !== id)); setBusyId(null); };
+  const delNotif = async (e, id) => {
+    e.stopPropagation();
+    setBusyId(id);
+    await notificationService.deleteNotification(id);
+    setNotifs(p => p.filter(n => n._id !== id));
+    setPag(prev => ({ ...prev, total: Math.max(0, (prev.total || 0) - 1) })); // Update total count
+    setBusyId(null);
+  };
 
   const approve = async (id, name) => {
     if (!window.confirm(`Approve deletion for "${name}"? Data will be permanently deleted after 45 days.`)) return;

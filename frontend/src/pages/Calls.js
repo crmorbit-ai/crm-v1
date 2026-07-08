@@ -187,6 +187,46 @@ const Calls = () => {
   };
 
   const mobileCSS = `
+    /* Desktop table fixes */
+    .crm-table {
+      table-layout: auto;
+      width: 100%;
+    }
+
+    .crm-table th {
+      white-space: nowrap !important;
+      min-width: 100px;
+    }
+
+    .crm-table td {
+      white-space: nowrap;
+      padding: 12px 16px;
+    }
+
+    /* Badge columns - wider */
+    .crm-table th:nth-child(4),
+    .crm-table th:nth-child(5) {
+      min-width: 120px;
+    }
+
+    .crm-table td:nth-child(4),
+    .crm-table td:nth-child(5) {
+      min-width: 120px;
+    }
+
+    /* Actions column */
+    .crm-table th:last-child,
+    .crm-table td:last-child {
+      min-width: 100px;
+    }
+
+    /* Subject column - allow longer text */
+    .crm-table td:first-child {
+      max-width: 300px;
+      white-space: normal;
+      word-wrap: break-word;
+    }
+
     @media(max-width:768px){
       .resp-grid-4 { grid-template-columns: 1fr 1fr !important; }
       .calls-span2 { grid-column: span 1 !important; }
