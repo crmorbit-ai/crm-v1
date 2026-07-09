@@ -1093,18 +1093,20 @@ const Leads = () => {
             hasError = true;
           }
         }
-        // BUG-156: customerName — no special chars, max 100
+        // BUG-156: customerName — required, no special chars, max 100
         if (field.fieldName === 'customerName') {
           const val = String(fieldValues['customerName'] || '').trim();
-          if (val && /^[^a-zA-Z0-9]+$/.test(val)) {
+          // ✅ Check if empty (required field)
+          if (!val || val === '') {
+            errors['customerName'] = 'Customer Name is required';
+            hasError = true;
+          } else if (/^[^a-zA-Z0-9]+$/.test(val)) {
             errors['customerName'] = 'Please enter a valid Customer Name using letters only.';
             hasError = true;
-          }
-          if (val && /[0-9]/.test(val)) {
+          } else if (/[0-9]/.test(val)) {
             errors['customerName'] = 'Customer Name cannot contain numbers.';
             hasError = true;
-          }
-          if (val && val.length > 100) {
+          } else if (val.length > 100) {
             errors['customerName'] = 'Customer Name must not exceed 100 characters.';
             hasError = true;
           }

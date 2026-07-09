@@ -83,10 +83,13 @@ couponSchema.index({ createdBy: 1 });
 
 // Method to check if coupon is valid for use
 couponSchema.methods.isValidForUse = function() {
-  if (!this.isActive) return { valid: false, reason: 'Coupon is deactivated' };
-  if (this.status !== 'active') return { valid: false, reason: `Coupon is ${this.status}` };
-  if (this.usedBy) return { valid: false, reason: 'Coupon already used' };
-  if (this.expiresAt && new Date() > this.expiresAt) return { valid: false, reason: 'Coupon expired' };
+  if (!this.isActive) return { valid: false, reason: 'This coupon has been deactivated. Please contact support.' };
+  if (this.status === 'used') return { valid: false, reason: 'This coupon has already been used and cannot be applied again.' };
+  if (this.status === 'revoked') return { valid: false, reason: 'This coupon has been revoked and is no longer valid.' };
+  if (this.status === 'expired') return { valid: false, reason: 'This coupon has expired and can no longer be used.' };
+  if (this.status !== 'active') return { valid: false, reason: `This coupon is ${this.status} and cannot be applied.` };
+  if (this.usedBy) return { valid: false, reason: 'This coupon has already been redeemed by another account.' };
+  if (this.expiresAt && new Date() > this.expiresAt) return { valid: false, reason: 'This coupon has expired. Please use a valid coupon code.' };
   return { valid: true };
 };
 

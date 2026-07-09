@@ -82,13 +82,13 @@ exports.validateCoupon = async (req, res) => {
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
     if (!coupon) {
-      return errorResponse(res, 404, 'Coupon not found');
+      return errorResponse(res, 'Invalid coupon code. Please check and try again.', 404);
     }
 
     const validation = coupon.isValidForUse();
 
     if (!validation.valid) {
-      return errorResponse(res, 400, validation.reason);
+      return errorResponse(res, validation.reason, 400);
     }
 
     return successResponse(res, 200, 'Coupon is valid', {
@@ -98,7 +98,7 @@ exports.validateCoupon = async (req, res) => {
     });
   } catch (error) {
     console.error('Validate coupon error:', error);
-    return errorResponse(res, 500, error.message || 'Failed to validate coupon');
+    return errorResponse(res, error.message || 'Failed to validate coupon', 500);
   }
 };
 
@@ -113,31 +113,31 @@ exports.applyCoupon = async (req, res) => {
     const tenantId = req.user.tenant;
 
     if (!tenantId) {
-      return errorResponse(res, 400, 'User is not associated with a tenant');
+      return errorResponse(res, 'User is not associated with a tenant', 400);
     }
 
     // Find coupon
     const coupon = await Coupon.findOne({ code: code.toUpperCase() });
 
     if (!coupon) {
-      return errorResponse(res, 404, 'Invalid coupon code');
+      return errorResponse(res, 'Invalid coupon code. Please check and try again.', 404);
     }
 
     // Validate coupon
     const validation = coupon.isValidForUse();
     if (!validation.valid) {
-      return errorResponse(res, 400, validation.reason);
+      return errorResponse(res, validation.reason, 400);
     }
 
     // Get tenant
     const tenant = await Tenant.findById(tenantId);
     if (!tenant) {
-      return errorResponse(res, 404, 'Tenant not found');
+      return errorResponse(res, 'Tenant not found', 404);
     }
 
     // Check if tenant already has lifetime license
     if (tenant.subscription.lifetimeLicense && tenant.subscription.lifetimeLicense.enabled) {
-      return errorResponse(res, 400, 'Tenant already has a lifetime license');
+      return errorResponse(res, 'Your account already has a lifetime license activated.', 400);
     }
 
     // Apply lifetime license
@@ -172,7 +172,7 @@ exports.applyCoupon = async (req, res) => {
     });
   } catch (error) {
     console.error('Apply coupon error:', error);
-    return errorResponse(res, 500, error.message || 'Failed to apply coupon');
+    return errorResponse(res, error.message || 'Failed to apply coupon', 500);
   }
 };
 

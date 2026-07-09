@@ -52,7 +52,24 @@ const ApplyCoupon = () => {
         window.location.reload();
       }, 2000);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to apply coupon');
+      // ✅ Debug: Log complete error
+      console.error('🔍 Apply coupon error - Full object:', err);
+      console.error('🔍 Response:', err.response);
+      console.error('🔍 Response data:', err.response?.data);
+      console.error('🔍 Response message:', err.response?.data?.message);
+
+      // ✅ Show specific backend error message or helpful fallback
+      const errorMessage = err.response?.data?.message ||
+                          err.response?.data?.error ||
+                          err.message ||
+                          'Unable to apply coupon. Please check the code and try again.';
+      setError(errorMessage);
+      console.error('📢 Final error shown to user:', errorMessage);
+
+      // ✅ Auto-dismiss error after 5 seconds
+      setTimeout(() => {
+        setError('');
+      }, 5000);
     } finally {
       setApplying(false);
     }
@@ -220,10 +237,31 @@ const ApplyCoupon = () => {
           fontWeight: 600,
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
           gap: '10px'
         }}>
-          <X size={18} />
-          {error}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flex: 1 }}>
+            <X size={18} />
+            {error}
+          </div>
+          <button
+            onClick={() => setError('')}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#991b1b',
+              cursor: 'pointer',
+              padding: '4px',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '18px',
+              fontWeight: 'bold',
+              lineHeight: 1
+            }}
+            title="Dismiss"
+          >
+            ×
+          </button>
         </div>
       )}
 

@@ -299,6 +299,14 @@ const createLead = async (req, res) => {
     console.log('✅ Tenant:', tenant);
     console.log('User:', req.user._id, req.user.userType);
 
+    // ✅ Validate required field: Customer Name
+    const customerName = otherFields.customerName || otherFields['Customer Name'];
+    if (!customerName || customerName.trim() === '') {
+      console.log('❌ Customer Name is required');
+      return errorResponse(res, 400, 'Customer Name is required');
+    }
+    console.log('✅ Customer Name provided:', customerName);
+
     // Check for duplicate email (flexible field name)
     const email = otherFields.email || otherFields.Email;
     if (email) {

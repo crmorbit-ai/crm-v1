@@ -65,13 +65,40 @@ const Header = ({ title, actionButton, onMenuClick, isMobile }) => {
         {/* Lifetime License Badge */}
         <LifetimeLicenseBadge />
 
-        {/* Last Login - First */}
-        {user?.lastLogin && !isMobile && (
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg text-xs">
-            <span>🕐</span>
-            <div className="flex flex-col">
-              <span className="text-muted-foreground">Last Login</span>
-              <span className="font-medium text-foreground">
+        {/* Last Login - Mobile & Desktop */}
+        {user?.lastLogin && (
+          <div
+            className="items-center gap-1 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 bg-muted rounded-lg text-xs"
+            style={{
+              display: 'flex',
+              minWidth: isMobile ? '100px' : '140px',
+              flexShrink: 0
+            }}
+          >
+            <span style={{ flexShrink: 0, fontSize: isMobile ? '12px' : '14px' }}>🕐</span>
+            <div style={{
+              display: 'flex',
+              flexDirection: 'column',
+              minWidth: 0
+            }}>
+              <span
+                className="text-muted-foreground"
+                style={{
+                  whiteSpace: 'nowrap',
+                  fontSize: isMobile ? '9px' : '11px',
+                  lineHeight: 1.2
+                }}
+              >
+                {isMobile ? 'Login' : 'Last Login'}
+              </span>
+              <span
+                className="font-medium text-foreground"
+                style={{
+                  whiteSpace: 'nowrap',
+                  fontSize: isMobile ? '9px' : '11px',
+                  lineHeight: 1.2
+                }}
+              >
                 {new Date(user.lastLogin).toLocaleString('en-IN', {
                   month: 'short',
                   day: 'numeric',

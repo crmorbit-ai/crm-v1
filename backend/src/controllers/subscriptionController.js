@@ -43,6 +43,20 @@ const getCurrentSubscription = async (req, res) => {
       return errorResponse(res, 404, 'Tenant not found');
     }
 
+    // ✅ REAL-TIME USAGE COUNT (Fix for data mismatch)
+    const Lead = require('../models/Lead');
+    const Contact = require('../models/Contact');
+    const Opportunity = require('../models/Opportunity');
+    const User = require('../models/User');
+
+    const actualUsage = {
+      leads: await Lead.countDocuments({ tenant: tenantId, isActive: true }),
+      contacts: await Contact.countDocuments({ tenant: tenantId, isActive: true }),
+      deals: await Opportunity.countDocuments({ tenant: tenantId, isActive: true }),
+      users: await User.countDocuments({ tenant: tenantId, isActive: true }),
+      storage: tenant.usage?.storage || 0
+    };
+
     console.log('🔍 Tenant Subscription Debug:');
     console.log('   Organization:', tenant.organizationName);
     console.log('   Plan Name (direct):', tenant.subscription?.planName);
@@ -50,13 +64,14 @@ const getCurrentSubscription = async (req, res) => {
     console.log('   Plan Populated:', tenant.subscription?.plan ? 'Yes' : 'No');
     console.log('   Plan Display Name:', tenant.subscription?.plan?.displayName);
     console.log('   Plan Limits:', tenant.subscription?.plan?.limits);
-    console.log('   📊 ALL USAGE DATA:', {
+    console.log('   📊 CACHED USAGE:', {
       users: tenant.usage?.users || 0,
       leads: tenant.usage?.leads || 0,
       contacts: tenant.usage?.contacts || 0,
       deals: tenant.usage?.deals || 0,
       storage: tenant.usage?.storage || 0
     });
+    console.log('   ✅ ACTUAL USAGE (Real-time):', actualUsage);
 
     // Calculate trial days remaining
     const trialDaysRemaining = tenant.getTrialDaysRemaining ? tenant.getTrialDaysRemaining() : 0;
@@ -76,7 +91,7 @@ const getCurrentSubscription = async (req, res) => {
     const subscriptionData = {
       organization: tenant.organizationName,
       subscription: tenant.subscription,
-      usage: tenant.usage,
+      usage: actualUsage,  // ✅ Use real-time count instead of cached
       status: {
         isActive: hasActiveSubscription,
         isTrialActive: tenant.subscription?.isTrialActive || false,

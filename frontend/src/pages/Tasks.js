@@ -42,7 +42,45 @@ const tasksResponsiveCss = `
     }
 
     .tasks-divider { display: none !important; }
-    .tasks-kanban-panel { flex: none !important; width: 100% !important; overflow-x: auto !important; }
+    .tasks-kanban-panel {
+      flex: none !important;
+      width: 100% !important;
+      overflow-x: auto !important;
+      height: calc(100vh - 200px) !important;
+      max-height: calc(100vh - 200px) !important;
+    }
+
+    /* Kanban column scroll fix for mobile - ULTRA SPECIFIC */
+    div[data-status-column] {
+      height: calc(100vh - 200px) !important;
+      max-height: calc(100vh - 200px) !important;
+      overflow: hidden !important;
+      display: flex !important;
+      flex-direction: column !important;
+    }
+
+    /* Column header - don't scroll */
+    div[data-status-column] > div:first-child {
+      flex-shrink: 0 !important;
+    }
+
+    /* Cards container - THIS scrolls - VERY SPECIFIC SELECTOR */
+    div[data-status-column] > div.kanban-cards-container {
+      flex: 1 1 0% !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      height: auto !important;
+      overflow-y: scroll !important;
+      overflow-x: hidden !important;
+      -webkit-overflow-scrolling: touch !important;
+      overscroll-behavior: contain !important;
+      padding-bottom: 120px !important;
+    }
+
+    div[data-status-column] > div.kanban-cards-container > div {
+      touch-action: auto !important;
+      pointer-events: auto !important;
+    }
   }
 `;
 
@@ -54,6 +92,7 @@ const Tasks = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [draggedItem, setDraggedItem] = useState(null);
   const [panelWidth, setPanelWidth] = useState(36);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
   const [formData, setFormData] = useState({
     subject: '', dueDate: '', status: 'Not Started', priority: 'Normal', description: ''
@@ -86,6 +125,15 @@ const Tasks = () => {
   useEffect(() => {
     loadTasks();
     templateService.getTemplates('task').then(r => setTaskTemplates(r?.data || [])).catch(() => {});
+  }, []);
+
+  // Mobile detection with resize handling
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const loadTasks = async () => {
@@ -676,8 +724,8 @@ const Tasks = () => {
           )}
 
           {/* Right: Kanban Board */}
-          <div className="tasks-kanban-panel" style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'auto', padding: '8px 16px 16px 12px' }}>
-            <div style={{ display: 'flex', gap: '12px', minHeight: 'calc(100vh - 330px)', overflowX: 'auto', paddingBottom: '8px' }}>
+          <div className="tasks-kanban-panel" style={{ flex: showCreateForm ? `0 0 ${100 - panelWidth}%` : '1 1 100%', minWidth: 0, overflowY: 'hidden', padding: '8px 16px 16px 12px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', gap: '12px', height: isMobile ? 'calc(100vh - 280px)' : 'calc(100vh - 330px)', overflowX: 'auto', paddingBottom: '8px' }}>
               {statuses.map(status => {
                 const statusTasks = getTasksByStatus(status.name);
                 return (
@@ -685,7 +733,20 @@ const Tasks = () => {
                     data-status-column={status.name}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, status.name)}
-                    style={{ minWidth: '230px', maxWidth: '230px', background: '#f8fafc', borderRadius: '12px', padding: '10px', display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', boxShadow: '0 1px 4px rgba(0,0,0,0.04)', transition: 'background 0.2s' }}>
+                    style={{
+                      minWidth: '230px',
+                      maxWidth: '230px',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      padding: '10px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+                      transition: 'background 0.2s',
+                      height: '100%',
+                      alignSelf: 'stretch'
+                    }}>
                     {/* Column header */}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', paddingBottom: '8px', borderBottom: `2px solid ${status.color}` }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -695,7 +756,25 @@ const Tasks = () => {
                       <span style={{ fontSize: '10px', fontWeight: '700', color: 'white', background: status.color, padding: '2px 7px', borderRadius: '10px' }}>{statusTasks.length}</span>
                     </div>
                     {/* Cards */}
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
+                    <div
+                      className="kanban-cards-container"
+                      style={{
+                        flex: '1 1 auto',
+                        minHeight: 0,
+                        overflowY: 'scroll',
+                        overflowX: 'hidden',
+                        WebkitOverflowScrolling: 'touch',
+                        scrollbarWidth: 'thin',
+                        touchAction: 'pan-y'
+                      }}
+                      onTouchStart={(e) => e.stopPropagation()}
+                    >
+                      <div style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        paddingBottom: isMobile ? '500px' : '20px'
+                      }}>
                       {statusTasks.length === 0 ? (
                         <div style={{ padding: '20px 10px', textAlign: 'center', color: '#94a3b8', fontSize: '11px', border: '2px dashed #e2e8f0', borderRadius: '8px', background: 'white' }}>
                           Drop tasks here
@@ -703,12 +782,23 @@ const Tasks = () => {
                       ) : (
                         statusTasks.map(task => (
                           <div key={task._id}
-                            draggable
+                            draggable={!isMobile}
                             onDragStart={(e) => handleDragStart(e, task)}
-                            onTouchStart={(e) => handleTouchStart(e, task)}
-                            onTouchMove={handleTouchMove}
-                            onTouchEnd={handleTouchEnd}
-                            style={{ background: 'white', borderRadius: '10px', padding: '10px 11px', cursor: 'grab', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'all 0.15s', touchAction: 'none' }}
+                            onTouchStart={isMobile ? undefined : (e) => handleTouchStart(e, task)}
+                            onTouchMove={isMobile ? undefined : handleTouchMove}
+                            onTouchEnd={isMobile ? undefined : handleTouchEnd}
+                            onClick={() => {
+                              setFormData({
+                                subject: task.subject || '',
+                                dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '',
+                                status: task.status || 'Not Started',
+                                priority: task.priority || 'Normal',
+                                description: task.description || '',
+                                _id: task._id
+                              });
+                              setShowCreateForm(true);
+                            }}
+                            style={{ background: 'white', borderRadius: '10px', padding: '10px 11px', cursor: 'pointer', border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', transition: 'all 0.15s', touchAction: isMobile ? 'auto' : 'none' }}
                             onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 12px rgba(59,130,246,0.14)'; e.currentTarget.style.borderColor = '#93c5fd'; }}
                             onMouseLeave={e => { e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; e.currentTarget.style.borderColor = '#e2e8f0'; }}>
                             {/* Priority bar */}
@@ -737,6 +827,7 @@ const Tasks = () => {
                           </div>
                         ))
                       )}
+                      </div>
                     </div>
                   </div>
                 );
