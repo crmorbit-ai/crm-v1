@@ -512,6 +512,17 @@ const moveToLeads = async (req, res) => {
           tags.push(...skillsArray.slice(0, 3));
         }
 
+        // 🔥 Generate unique lead number and formatted lead ID
+        const lastLead = await Lead.findOne({ tenant: targetTenant }).sort({ leadNumber: -1 }).select('leadNumber');
+        const nextLeadNumber = (lastLead?.leadNumber || 0) + 1;
+
+        // Get organization name for formatted lead ID
+        const Tenant = require('../models/Tenant');
+        const tenantDoc = await Tenant.findById(targetTenant).select('organizationName');
+        const orgName = tenantDoc?.organizationName || 'ORG';
+        const orgPrefix = orgName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase() || 'OR';
+        const formattedLeadId = `L${orgPrefix}${String(nextLeadNumber).padStart(5, '0')}`;
+
         // 🔥 Create lead with ALL candidate fields + system fields
         const newLead = await Lead.create({
           ...candidateData,  // All candidate fields copied directly
@@ -522,7 +533,9 @@ const moveToLeads = async (req, res) => {
           tenant: targetTenant,
           tags,
           dataCenterCandidateId: candidate._id,  // Track source candidate
-          createdBy: req.user._id
+          createdBy: req.user._id,
+          leadNumber: nextLeadNumber,  // 🆕 Sequential number
+          leadId: formattedLeadId       // 🆕 Formatted display ID
         });
 
         // Update candidate status
@@ -585,6 +598,16 @@ const bulkImportCandidates = async (req, res, isInternal = false) => {
       duplicates: []
     };
 
+    // 🆕 Get tenant info for customer ID generation
+    const Tenant = require('../models/Tenant');
+    const tenantDoc = await Tenant.findById(req.user?.tenant).select('organizationName');
+    const orgName = tenantDoc?.organizationName || 'ORG';
+    const orgPrefix = orgName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase() || 'OR';
+
+    // 🆕 Get the starting customer number (max + 1)
+    const lastCustomer = await DataCenterCandidate.findOne({ tenant: req.user?.tenant }).sort({ customerNumber: -1 }).select('customerNumber');
+    let currentCustomerNumber = (lastCustomer?.customerNumber || 0);
+
     for (const candidateData of candidates) {
       try {
         // 🔒 Tenant Isolation: Check for duplicate based on any email field
@@ -608,13 +631,19 @@ const bulkImportCandidates = async (req, res, isInternal = false) => {
           continue;
         }
 
+        // 🔥 Generate unique customer number and formatted customer ID
+        currentCustomerNumber++;
+        const formattedCustomerId = `C${orgPrefix}${String(currentCustomerNumber).padStart(5, '0')}`;
+
         // 🔥 Create candidate with ALL fields at root level + system fields
         const candidate = await DataCenterCandidate.create({
           ...candidateData,  // All Excel columns go directly to root
           importedBy: req.user?._id,
           importedAt: new Date(),
           tenant: req.user?.tenant,  // 🔒 Add tenant
-          isActive: true
+          isActive: true,
+          customerNumber: currentCustomerNumber,  // 🆕 Sequential number
+          customerId: formattedCustomerId         // 🆕 Formatted display ID
         });
 
         results.success.push({

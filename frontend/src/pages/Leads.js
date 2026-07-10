@@ -770,12 +770,22 @@ const Leads = () => {
   };
 
   const handleAddCustomFieldFromPanel = async (fieldData) => {
-    const created = await fieldDefinitionService.createFieldDefinition({
-      entityType: 'Lead', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData,
-    });
-    const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
-    setCustomFieldDefs(updated);
-    setFieldDefinitions(buildFieldDefinitions(disabledStdFields, updated));
+    try {
+      const created = await fieldDefinitionService.createFieldDefinition({
+        entityType: 'Lead',
+        isStandardField: false,
+        showInCreate: true,
+        showInEdit: true,
+        showInDetail: true,
+        ...fieldData,
+      });
+      const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
+      setCustomFieldDefs(updated);
+      setFieldDefinitions(buildFieldDefinitions(disabledStdFields, updated));
+    } catch (error) {
+      // Re-throw error so ManageFieldsPanel can show inline error message
+      throw error;
+    }
   };
 
   const handleDeleteCustomField = async (field) => {
@@ -1041,6 +1051,12 @@ const Leads = () => {
     e.preventDefault();
     if (wizardStep !== activeWizardSteps.length - 1) return; // only submit on last step
     if (creating) return;
+
+    // 🔥 Validate current step before submitting
+    if (!validateCurrentStep()) {
+      return; // Validation failed - inline errors already shown via fieldErrors
+    }
+
     setCreating(true);
     try {
       setError('');
@@ -1920,7 +1936,8 @@ const Leads = () => {
     <DashboardLayout title="Leads">
 
       {success && <Alert variant="success" className="mb-4"><AlertDescription>{success}</AlertDescription></Alert>}
-      {error && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
+      {/* 🔥 Only show global error when form is NOT open (to avoid duplicate error display) */}
+      {error && !showCreateForm && <Alert variant="destructive" className="mb-4"><AlertDescription>{error}</AlertDescription></Alert>}
 
       {/* Stats - Clickable */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -2042,6 +2059,17 @@ const Leads = () => {
 
             {/* Form body */}
             <form onSubmit={handleCreateLead} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              {/* 🔥 Error alert inside form panel - contextual scope */}
+              {error && showCreateForm && (
+                <div style={{ margin: '10px 16px 0', padding: '10px 12px', background: '#fef2f2', border: '1.5px solid #fca5a5', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '16px' }}>❌</span>
+                  <div style={{ flex: 1, fontSize: '12px', color: '#dc2626', fontWeight: '600', lineHeight: '1.4' }}>{error}</div>
+                  <button type="button" onClick={() => setError('')}
+                    style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '14px', padding: '2px 6px', borderRadius: '4px' }}
+                    onMouseEnter={e => e.currentTarget.style.background = '#fee2e2'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}>✕</button>
+                </div>
+              )}
               <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px' }}>
 
                 {/* Template Selector — shown only on step 0 */}

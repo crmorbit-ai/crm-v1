@@ -36,6 +36,9 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
   const [dragOverField, setDragOverField] = useState(null);
   const [formWidth, setFormWidth] = useState(280);
 
+  // 🆕 Error state for inline error message
+  const [formError, setFormError] = useState('');
+
   const handlePanelDividerDrag = (e) => {
     e.preventDefault();
     const startX = e.clientX;
@@ -77,24 +80,47 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.label.trim()) return;
+
+    // Clear previous error
+    setFormError('');
     setSaving(true);
-    const fieldsInSection = allFieldDefs.filter(f => f.section === form.section);
-    let displayOrder = fieldsInSection.length > 0 ? Math.max(...fieldsInSection.map(f => f.displayOrder)) + 1 : 1000;
-    if (form.afterField && form.afterField !== '__end__') {
-      const after = allFieldDefs.find(f => (f._id || f.fieldName) === form.afterField);
-      if (after) displayOrder = after.displayOrder + 0.5;
+
+    try {
+      const fieldsInSection = allFieldDefs.filter(f => f.section === form.section);
+      let displayOrder = fieldsInSection.length > 0 ? Math.max(...fieldsInSection.map(f => f.displayOrder)) + 1 : 1000;
+      if (form.afterField && form.afterField !== '__end__') {
+        const after = allFieldDefs.find(f => (f._id || f.fieldName) === form.afterField);
+        if (after) displayOrder = after.displayOrder + 0.5;
+      }
+
+      await onAdd({
+        label: form.label.trim(),
+        fieldName: form.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
+        fieldType: form.fieldType,
+        section: form.section,
+        isRequired: form.isRequired,
+        displayOrder,
+      });
+
+      // Success - reset form and error
+      setForm({ label: '', fieldType: 'text', section: sections[0] || 'Additional Information', isRequired: false, afterField: '__end__' });
+      setFormError('');
+      setShowAddForm(false);
+    } catch (error) {
+      // Show inline error message
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to create field';
+
+      if (errorMessage.toLowerCase().includes('already exists') || errorMessage.toLowerCase().includes('duplicate')) {
+        setFormError('This field name already exists. Please choose a unique name.');
+      } else {
+        setFormError(errorMessage);
+      }
+
+      console.error('Failed to create field:', error);
+    } finally {
+      // Always stop loading, whether success or error
+      setSaving(false);
     }
-    await onAdd({
-      label: form.label.trim(),
-      fieldName: form.label.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, ''),
-      fieldType: form.fieldType,
-      section: form.section,
-      isRequired: form.isRequired,
-      displayOrder,
-    });
-    setForm({ label: '', fieldType: 'text', section: sections[0] || 'Additional Information', isRequired: false, afterField: '__end__' });
-    setShowAddForm(false);
-    setSaving(false);
   };
 
   const handleConfirmDelete = async () => {
@@ -220,6 +246,39 @@ const ManageFieldsPanel = ({ allFieldDefs, togglingField, onToggle, onClose, onA
                 <input type="checkbox" checked={form.isRequired} onChange={e => setForm(p => ({ ...p, isRequired: e.target.checked }))} style={{ width: '13px', height: '13px', accentColor: '#3b82f6' }} />
                 Required field
               </label>
+
+              {/* 🆕 Inline Error Message */}
+              {formError && (
+                <div style={{
+                  padding: '8px 10px',
+                  background: '#fef2f2',
+                  border: '1px solid #fca5a5',
+                  borderRadius: '6px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '6px',
+                  marginTop: '4px'
+                }}>
+                  <span style={{ fontSize: '14px', lineHeight: 1 }}>❌</span>
+                  <div style={{ flex: 1, fontSize: '11px', color: '#dc2626', fontWeight: '600', lineHeight: '1.4' }}>
+                    {formError}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormError('')}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#dc2626',
+                      cursor: 'pointer',
+                      fontSize: '12px',
+                      padding: '0 2px',
+                      lineHeight: 1
+                    }}
+                  >×</button>
+                </div>
+              )}
+
               <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
                 <button type="button" onClick={() => setShowAddForm(false)} style={{ flex: 1, padding: '6px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', color: '#64748b', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>Cancel</button>
                 <button type="submit" disabled={saving} style={{ flex: 1, padding: '6px', borderRadius: '6px', border: 'none', background: saving ? '#94a3b8' : 'linear-gradient(135deg, #4A90E2 0%, #2c5364 100%)', color: '#fff', fontSize: '11px', fontWeight: '600', cursor: saving ? 'not-allowed' : 'pointer' }}>

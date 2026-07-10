@@ -421,10 +421,22 @@ const DataCenter = () => {
   };
 
   const handleAddCustomField = async (fieldData) => {
-    const created = await fieldDefinitionService.createFieldDefinition({ entityType: 'Candidate', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData });
-    const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
-    setCustomFieldDefs(updated);
-    setFieldDefinitions(buildCustFields(disabledStdFields, updated));
+    try {
+      const created = await fieldDefinitionService.createFieldDefinition({
+        entityType: 'Candidate',
+        isStandardField: false,
+        showInCreate: true,
+        showInEdit: true,
+        showInDetail: true,
+        ...fieldData
+      });
+      const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
+      setCustomFieldDefs(updated);
+      setFieldDefinitions(buildCustFields(disabledStdFields, updated));
+    } catch (error) {
+      // Re-throw error so ManageFieldsPanel can show inline error message
+      throw error;
+    }
   };
 
   const groupFieldsBySection = (fields) => {
@@ -1037,7 +1049,7 @@ const DataCenter = () => {
                     if (wizardStep === 0) {
                       const name = (fieldValues['customerName'] || '').trim();
                       if (!name) {
-                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name is required to build a database profile.' }));
+                        setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name is required' }));
                         return;
                       }
                       if (!/^[a-zA-Z\s.\-']+$/.test(name)) {

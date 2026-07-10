@@ -25,6 +25,9 @@ export default function MasterInventory({ fromTab }) {
   const [editData, setEditData] = useState(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
 
+  // 🆕 Bulk selection states
+  const [selectedItems, setSelectedItems] = useState([]);
+
   // Assign & Relocate modals
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showRelocateModal, setShowRelocateModal] = useState(false);
@@ -104,6 +107,21 @@ export default function MasterInventory({ fromTab }) {
     setEditData(null);
   };
 
+  // 🆕 Bulk selection handlers
+  const handleToggleSelectItem = (itemId) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems(items.map(item => item._id));
+    }
+  };
+
   const handleStartEdit = () => {
     if (selectedItem) {
       setEditingId(selectedItem._id);
@@ -147,6 +165,31 @@ export default function MasterInventory({ fromTab }) {
       }
       loadItems();
     } catch { err('Failed to delete'); }
+  };
+
+  // 🆕 Bulk delete selected items
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) {
+      err('No items selected');
+      return;
+    }
+
+    if (!window.confirm(`Delete ${selectedItems.length} selected item${selectedItems.length > 1 ? 's' : ''}?`)) {
+      return;
+    }
+
+    try {
+      await Promise.all(selectedItems.map(id => masterInventoryService.delete(id)));
+      ok(`${selectedItems.length} item${selectedItems.length > 1 ? 's' : ''} deleted successfully`);
+      setSelectedItems([]);
+      if (selectedItem && selectedItems.includes(selectedItem._id)) {
+        setSelectedItem(null);
+        setEditingId(null);
+      }
+      loadItems();
+    } catch (error) {
+      err('Failed to delete some items');
+    }
   };
 
   const loadGroups = async () => {
@@ -947,6 +990,20 @@ export default function MasterInventory({ fromTab }) {
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add Item</button>
+
+          {/* 🆕 Bulk Delete Button */}
+          {selectedItems.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              style={{ padding: '8px 16px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#dc2626'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#ef4444'}
+            >
+              <Trash2 size={14} />
+              Delete ({selectedItems.length})
+            </button>
+          )}
+
           <div style={{ flex: 1, minWidth: '200px' }}>
             <input type="text" placeholder="Search all items..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px' }} />
           </div>
@@ -969,6 +1026,16 @@ export default function MasterInventory({ fromTab }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#1e293b', border: '1px solid #334155' }}>
+                {/* 🆕 Select All Checkbox */}
+                <th style={{ padding: '7px 12px', textAlign: 'center', width: '40px' }}>
+                  <input
+                    type="checkbox"
+                    checked={items.length > 0 && selectedItems.length === items.length}
+                    onChange={handleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                    title="Select All"
+                  />
+                </th>
                 <th style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Serial No.</th>
                 <th style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Type</th>
                 <th style={{ padding: '7px 12px', textAlign: 'left', fontSize: 10, fontWeight: '700', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
@@ -980,12 +1047,22 @@ export default function MasterInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No items found</td></tr>
+                <tr><td colSpan="8" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No items found</td></tr>
               ) : (
                 items.map((item, i) => {
                   const isSelected = selectedItem?._id === item._id;
                   return (
                     <tr key={item._id} style={{ borderBottom: '1px solid #e2e8f0', background: isSelected ? '#e0e7ff' : i % 2 === 0 ? '#fff' : '#f9fafb', cursor: 'pointer', transition: 'background 0.1s' }} onMouseEnter={(e) => !isSelected && (e.currentTarget.style.background = '#eff6ff')} onMouseLeave={(e) => !isSelected && (e.currentTarget.style.background = i % 2 === 0 ? '#fff' : '#f9fafb')}>
+                      {/* 🆕 Row checkbox */}
+                      <td style={{ padding: '12px', textAlign: 'center' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.includes(item._id)}
+                          onChange={() => handleToggleSelectItem(item._id)}
+                          onClick={(e) => e.stopPropagation()}
+                          style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                        />
+                      </td>
                       <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', cursor: 'pointer', fontFamily: 'monospace', fontSize: 11, fontWeight: '700', color: '#6366f1' }}>
                         {item.serialNumber || '—'}
                       </td>

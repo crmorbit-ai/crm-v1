@@ -1230,6 +1230,15 @@ const bulkUploadLeads = async (req, res) => {
 
     const createdLeads = [];
 
+    // 🆕 Get tenant info for lead ID generation
+    const tenantDoc = await Tenant.findById(tenant).select('organizationName');
+    const orgName = tenantDoc?.organizationName || 'ORG';
+    const orgPrefix = orgName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase() || 'OR';
+
+    // 🆕 Get the starting lead number (max + 1)
+    const lastLead = await Lead.findOne({ tenant }).sort({ leadNumber: -1 }).select('leadNumber');
+    let currentLeadNumber = (lastLead?.leadNumber || 0);
+
     // Common column header → standard Lead field name mapping
     const STANDARD_FIELD_MAP = {
       'name':            'name',
@@ -1419,8 +1428,8 @@ const bulkUploadLeads = async (req, res) => {
 
         // Check for duplicate email if email provided
         if (leadData.email) {
-          const existingLead = await Lead.findOne({ 
-            email: leadData.email, 
+          const existingLead = await Lead.findOne({
+            email: leadData.email,
             tenant,
             isActive: true,
             isConverted: false
@@ -1435,6 +1444,12 @@ const bulkUploadLeads = async (req, res) => {
             continue;
           }
         }
+
+        // 🔥 Generate unique lead number and formatted lead ID for each lead
+        currentLeadNumber++;
+        const formattedLeadId = `L${orgPrefix}${String(currentLeadNumber).padStart(5, '0')}`;
+        leadData.leadNumber = currentLeadNumber;
+        leadData.leadId = formattedLeadId;
 
         // Create lead
         const lead = await Lead.create(leadData);

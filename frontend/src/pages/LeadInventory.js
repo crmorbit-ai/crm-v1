@@ -24,6 +24,9 @@ export default function LeadInventory({ fromTab }) {
   const [editData, setEditData] = useState(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
 
+  // 🆕 Bulk selection states
+  const [selectedItems, setSelectedItems] = useState([]);
+
   // Assign & Relocate modals
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showRelocateModal, setShowRelocateModal] = useState(false);
@@ -160,6 +163,21 @@ export default function LeadInventory({ fromTab }) {
     setSelectedItem(item);
     setEditingId(null);
     setEditData(null);
+  };
+
+  // 🆕 Bulk selection handlers
+  const handleToggleSelectItem = (itemId) => {
+    setSelectedItems(prev =>
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.length === items.length) {
+      setSelectedItems([]); // Deselect all
+    } else {
+      setSelectedItems(items.map(item => item._id)); // Select all
+    }
   };
 
   const handleStartEdit = () => {
@@ -302,6 +320,40 @@ export default function LeadInventory({ fromTab }) {
       loadItems();
       loadDashboard();
     } catch { err('Failed to delete'); }
+  };
+
+  // 🆕 Bulk delete selected items
+  const handleBulkDelete = async () => {
+    if (selectedItems.length === 0) {
+      err('No items selected');
+      return;
+    }
+
+    if (!window.confirm(`Delete ${selectedItems.length} selected lead${selectedItems.length > 1 ? 's' : ''}?`)) {
+      return;
+    }
+
+    try {
+      // Delete each selected item
+      await Promise.all(selectedItems.map(id => masterInventoryService.delete(id)));
+
+      ok(`${selectedItems.length} lead${selectedItems.length > 1 ? 's' : ''} deleted successfully`);
+
+      // Clear selection
+      setSelectedItems([]);
+
+      // Clear detail panel if deleted item was selected
+      if (selectedItem && selectedItems.includes(selectedItem._id)) {
+        setSelectedItem(null);
+        setEditingId(null);
+      }
+
+      // Reload data
+      loadItems();
+      loadDashboard();
+    } catch (error) {
+      err('Failed to delete some items');
+    }
   };
 
   const loadGroups = async () => {
@@ -874,6 +926,33 @@ export default function LeadInventory({ fromTab }) {
         <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', marginTop: '8px', flexWrap: 'wrap', alignItems: 'center', padding: '0 20px' }}>
           {success && <div style={{ background: '#f0fdf4', border: '1px solid #86efac', color: '#16a34a', padding: '10px', borderRadius: '4px', marginBottom: '15px', width: '100%' }}>✓ {success}</div>}
           <button onClick={() => setIsAddingNew(true)} style={{ padding: '8px 16px', background: '#3b82f6', color: '#fff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>+ Add Lead</button>
+
+          {/* 🆕 Bulk Delete Button - shows when items are selected */}
+          {selectedItems.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              style={{
+                padding: '8px 16px',
+                background: '#ef4444',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '13px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#dc2626'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#ef4444'}
+            >
+              <Trash2 size={14} />
+              Delete ({selectedItems.length})
+            </button>
+          )}
+
           <div style={{ flex: 1, minWidth: '200px' }}>
             <input type="text" placeholder="Search leads..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ width: '100%', padding: '8px 12px', border: '1px solid #e2e8f0', borderRadius: '6px', fontSize: '13px' }} />
           </div>
@@ -889,6 +968,16 @@ export default function LeadInventory({ fromTab }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#1e293b', borderBottom: '1px solid #334155' }}>
+                {/* 🆕 Select All Checkbox */}
+                <th style={{ padding: '10px 12px', textAlign: 'center', width: '40px' }}>
+                  <input
+                    type="checkbox"
+                    checked={items.length > 0 && selectedItems.length === items.length}
+                    onChange={handleSelectAll}
+                    style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                    title="Select All"
+                  />
+                </th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Serial No.</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Name</th>
                 <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: '700', color: '#94a3b8', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Email</th>
@@ -900,10 +989,20 @@ export default function LeadInventory({ fromTab }) {
             </thead>
             <tbody>
               {items.length === 0 ? (
-                <tr><td colSpan="7" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No leads found</td></tr>
+                <tr><td colSpan="8" style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No leads found</td></tr>
               ) : (
                 items.map((item, idx) => (
                   <tr key={item._id} style={{ background: idx % 2 === 0 ? '#fff' : '#f9fafb', borderBottom: '1px solid #e2e8f0', cursor: 'pointer' }} onMouseEnter={(e) => e.currentTarget.style.background = '#eff6ff'} onMouseLeave={(e) => e.currentTarget.style.background = idx % 2 === 0 ? '#fff' : '#f9fafb'}>
+                    {/* 🆕 Row checkbox */}
+                    <td style={{ padding: '12px', textAlign: 'center' }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.includes(item._id)}
+                        onChange={() => handleToggleSelectItem(item._id)}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                      />
+                    </td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#6366f1', fontSize: '11px', fontFamily: 'monospace', cursor: 'pointer', fontWeight: '700' }}>{item.serialNumber || '—'}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', cursor: 'pointer', fontWeight: '500' }}>{item.name}</td>
                     <td onClick={() => handleSelectItem(item)} style={{ padding: '12px', color: '#0f172a', fontSize: '12px', cursor: 'pointer' }}>{item.leadEmail || '-'}</td>
