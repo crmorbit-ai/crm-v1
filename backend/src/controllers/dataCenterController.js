@@ -291,6 +291,81 @@ const createCandidate = async (req, res) => {
 };
 
 /**
+ * @desc    Update a candidate
+ * @route   PUT /api/data-center/:id
+ * @access  Private
+ */
+const updateCandidate = async (req, res) => {
+  try {
+    const DataCenterCandidate = getDataCenterModel();
+    const { id } = req.params;
+
+    // Find candidate and verify tenant ownership
+    const candidate = await DataCenterCandidate.findOne({
+      _id: id,
+      tenant: req.user.tenant,
+      isActive: true
+    });
+
+    if (!candidate) {
+      return errorResponse(res, 'Candidate not found', 404);
+    }
+
+    // Check for duplicate email if email is being updated
+    const emailValue = req.body.email || req.body.Email;
+    if (emailValue && emailValue !== (candidate.email || candidate.Email)) {
+      const existingCandidate = await DataCenterCandidate.findOne({
+        $or: [
+          { email: emailValue },
+          { Email: emailValue }
+        ],
+        tenant: req.user.tenant,
+        _id: { $ne: id }
+      });
+
+      if (existingCandidate) {
+        return errorResponse(res, 'Candidate with this email already exists', 400);
+      }
+    }
+
+    // Build update data
+    const updateData = { ...req.body };
+
+    // Merge custom fields if present
+    if (req.body.customFields && typeof req.body.customFields === 'object') {
+      updateData.customFields = { ...candidate.customFields, ...req.body.customFields };
+    }
+
+    console.log('=== BACKEND UPDATE DEBUG ===');
+    console.log('Candidate ID:', id);
+    console.log('Update Data:', updateData);
+
+    // Update candidate using findOneAndUpdate with tenant filter
+    const updatedCandidate = await DataCenterCandidate.findOneAndUpdate(
+      { _id: id, tenant: req.user.tenant, isActive: true },
+      { $set: updateData },
+      { new: true, runValidators: false, strict: false }
+    );
+
+    console.log('Updated Candidate:', updatedCandidate);
+
+    // Log activity
+    const candidateName = updatedCandidate.name || updatedCandidate.Name ||
+                         `${updatedCandidate.firstName || updatedCandidate.FirstName || ''} ${updatedCandidate.lastName || updatedCandidate.LastName || ''}`.trim() ||
+                         'Unknown';
+    await logActivity(req, 'datacenter.update_candidate', 'Candidate', updatedCandidate._id, {
+      candidateName
+    });
+
+    return successResponse(res, updatedCandidate, 'Candidate updated successfully', 200);
+
+  } catch (error) {
+    console.error('Error updating candidate:', error);
+    return errorResponse(res, error.message || 'Error updating candidate', 500);
+  }
+};
+
+/**
  * @desc    Delete candidates (soft delete by setting isActive to false)
  * @route   DELETE /api/data-center
  * @access  Private
@@ -1322,6 +1397,7 @@ module.exports = {
   getCandidates,
   getCandidate,
   createCandidate,
+  updateCandidate,
   deleteCandidates,
   getStats,
   moveToLeads,

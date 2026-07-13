@@ -71,13 +71,13 @@ import {
 
 // Standard lead fields — hardcoded, no seed needed
 const DEFAULT_LEAD_FIELDS = [
-  { fieldName: 'customerName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'customerName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1, validations: { maxLength: 100 }, helpText: 'Letters only, max 100 characters' },
   { fieldName: 'customerType', label: 'Customer Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Other', value: 'Other' }] },
   { fieldName: 'email', label: 'Personal Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3 },
   { fieldName: 'companyEmail', label: 'Company Email', fieldType: 'email', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3.5 },
   { fieldName: 'phone', label: 'Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
   { fieldName: 'alternatePhone', label: 'Alternate Phone', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5 },
-  { fieldName: 'company', label: 'Company', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 6 },
+  { fieldName: 'company', label: 'Company', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 6, validations: { maxLength: 100 }, helpText: 'Must contain at least one letter (max 100 characters)' },
   { fieldName: 'jobTitle', label: 'Job Title', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 7 },
   { fieldName: 'website', label: 'Website', fieldType: 'url', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 8 },
   { fieldName: 'leadStatus', label: 'Lead Status', fieldType: 'dropdown', section: 'Lead Details', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'New', value: 'New' }, { label: 'Contacted', value: 'Contacted' }, { label: 'Qualified', value: 'Qualified' }, { label: 'Unqualified', value: 'Unqualified' }, { label: 'Lost', value: 'Lost' }, { label: 'Converted', value: 'Converted' }] },
@@ -918,7 +918,56 @@ const Leads = () => {
 
   const handleFieldChange = (fieldName, value) => {
     setFieldValues(prev => ({ ...prev, [fieldName]: value }));
-    setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+
+    // Validate customerName field
+    if (fieldName === 'customerName') {
+      const val = String(value || '').trim();
+      if (val && val.length > 0) {
+        if (/^[^a-zA-Z0-9]+$/.test(val)) {
+          setFieldErrors(prev => ({ ...prev, customerName: 'Please enter a valid Customer Name using letters only' }));
+        } else if (/[0-9]/.test(val)) {
+          setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name cannot contain numbers' }));
+        } else if (val.length > 100) {
+          setFieldErrors(prev => ({ ...prev, customerName: 'Customer Name must not exceed 100 characters' }));
+        } else {
+          setFieldErrors(prev => ({ ...prev, customerName: null }));
+        }
+      } else {
+        setFieldErrors(prev => ({ ...prev, customerName: null }));
+      }
+    }
+    // Validate company field
+    else if (fieldName === 'company') {
+      if (value && value.trim().length > 0) {
+        // Must contain at least one letter
+        if (!/[a-zA-Z]/.test(value)) {
+          setFieldErrors(prev => ({ ...prev, company: 'Company name must contain at least one letter' }));
+        } else if (/^[0-9@#$%^&*()!+=\-_~`\[\]{};:'"<>,.?/\\|]+$/.test(value.trim())) {
+          setFieldErrors(prev => ({ ...prev, company: 'Company name cannot contain only special characters and numbers' }));
+        } else {
+          setFieldErrors(prev => ({ ...prev, company: null }));
+        }
+      } else {
+        setFieldErrors(prev => ({ ...prev, company: null }));
+      }
+    }
+    // Validate email fields (Personal Email, Company Email)
+    else if (fieldName === 'email' || fieldName === 'companyEmail') {
+      if (value && value.trim().length > 0) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value.trim())) {
+          setFieldErrors(prev => ({ ...prev, [fieldName]: 'Please enter a valid email address (e.g., user@example.com)' }));
+        } else {
+          setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+        }
+      } else {
+        setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+      }
+    }
+    else {
+      setFieldErrors(prev => ({ ...prev, [fieldName]: null }));
+    }
+
     if (fieldName === 'email') debouncedEmailVerify(value);
     else if (fieldName === 'phone') debouncedPhoneVerify(value);
   };
@@ -1125,6 +1174,33 @@ const Leads = () => {
           } else if (val.length > 100) {
             errors['customerName'] = 'Customer Name must not exceed 100 characters.';
             hasError = true;
+          }
+        }
+
+        // Company field validation - must contain at least one letter
+        if (field.fieldName === 'company') {
+          const val = String(fieldValues['company'] || '').trim();
+          if (val && val !== '') {
+            if (!/[a-zA-Z]/.test(val)) {
+              errors['company'] = 'Company name must contain at least one letter';
+              hasError = true;
+            } else if (/^[0-9@#$%^&*()!+=\-_~`\[\]{};:'"<>,.?/\\|]+$/.test(val)) {
+              errors['company'] = 'Company name cannot contain only special characters and numbers';
+              hasError = true;
+            }
+          }
+        }
+
+        // Email field validation - must have valid format
+        if (field.fieldType === 'email' || field.fieldName === 'email' || field.fieldName === 'companyEmail') {
+          const val = String(fieldValues[field.fieldName] || '').trim();
+          if (val && val !== '') {
+            // Basic email format validation
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(val)) {
+              errors[field.fieldName] = 'Please enter a valid email address (e.g., user@example.com)';
+              hasError = true;
+            }
           }
         }
       });

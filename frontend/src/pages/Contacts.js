@@ -318,6 +318,10 @@ const Contacts = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailActiveTab, setDetailActiveTab] = useState('overview');
 
+  // Bulk selection states
+  const [selectedContactIds, setSelectedContactIds] = useState([]);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+
   // Detail Panel Data
   const [detailTasks, setDetailTasks] = useState([]);
   const [detailNotes, setDetailNotes] = useState([]);
@@ -348,6 +352,8 @@ const Contacts = () => {
     loadContacts();
     loadAccounts();
     loadCustomFields();
+    // Clear selection when page/filters change
+    setSelectedContactIds([]);
   }, [pagination.page, filters.search, filters.account, filters.title, filters.isPrimary, filters.hasAccount]);
 
   useEffect(() => { refreshGlobalStats(); }, []);
@@ -481,6 +487,13 @@ const Contacts = () => {
       const response = await contactService.getContacts({ page: pagination.page, limit: pagination.limit, ...filters });
       if (response.success && response.data) {
         const contactsData = response.data.contacts || [];
+        console.log('📋 Contacts loaded:', contactsData.length);
+        if (contactsData.length > 0) {
+          console.log('👤 Sample contact FULL OBJECT:', JSON.stringify(contactsData[0], null, 2));
+          console.log('🏷️ Job Title field:', contactsData[0].jobTitle);
+          console.log('🏷️ Title field:', contactsData[0].title);
+          console.log('🔑 All keys:', Object.keys(contactsData[0]));
+        }
         setContacts(contactsData);
         setPagination(prev => ({ ...prev, total: response.data.pagination?.total || 0, pages: response.data.pagination?.pages || 0 }));
         setStats(prev => ({ ...prev, recent: contactsData.length }));
@@ -554,10 +567,15 @@ const Contacts = () => {
   };
 
   const handleAddCustomField = async (fieldData) => {
-    const created = await fieldDefinitionService.createFieldDefinition({ entityType: 'Contact', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData });
-    const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
-    setCustomFieldDefs(updated);
-    setFieldDefinitions(buildContFields(disabledStdFields, updated));
+    try {
+      const created = await fieldDefinitionService.createFieldDefinition({ entityType: 'Contact', isStandardField: false, showInCreate: true, showInEdit: true, showInDetail: true, ...fieldData });
+      const updated = [...customFieldDefs, { ...created, isActive: true }].sort((a, b) => a.displayOrder - b.displayOrder);
+      setCustomFieldDefs(updated);
+      setFieldDefinitions(buildContFields(disabledStdFields, updated));
+    } catch (error) {
+      // Re-throw the error so ManageFieldsPanel can catch and display it
+      throw error;
+    }
   };
 
   const handleDeleteCustomField = async (field) => {
@@ -705,6 +723,22 @@ const Contacts = () => {
     try {
       setError('');
 
+      // Check if Customer Name (firstName) field is enabled
+      const firstNameField = fieldDefinitions.find(f => f.fieldName === 'firstName');
+      if (!firstNameField || !firstNameField.isActive) {
+        setError('Configuration Error: Customer Name field must be enabled to create a contact. Please enable it in Manage Fields.');
+        setCreating(false);
+        return;
+      }
+
+      // Check if Customer Name value is provided
+      const customerNameValue = fieldValues['firstName'] || formData.firstName;
+      if (!customerNameValue || customerNameValue.trim().length === 0) {
+        setFieldErrors({ firstName: 'Customer Name is required' });
+        setCreating(false);
+        return;
+      }
+
       // Validate phone fields before submission
       let hasError = false;
       const newErrors = {};
@@ -730,6 +764,7 @@ const Contacts = () => {
 
       if (hasError) {
         setFieldErrors(newErrors);
+        setError(''); // Clear global error, show only field-level errors
         setCreating(false);
         return;
       }
@@ -749,10 +784,26 @@ const Contacts = () => {
       setShowCreateForm(false);
       setWizardStep(0);
       resetForm();
-      loadContacts();
+
+      // Reset to first page and reload to show new contact
+      setPagination(prev => ({ ...prev, page: 1 }));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      // Wait a bit for backend to process, then reload
+      await new Promise(resolve => setTimeout(resolve, 300));
+      await loadContacts();
       refreshGlobalStats();
+
       setTimeout(() => setSuccess(''), 3000);
-    } catch (err) { if (err?.isPermissionDenied) return; setError(err.response?.data?.message || 'Failed to create contact'); }
+    } catch (err) {
+      if (err?.isPermissionDenied) return;
+      const errorMessage = err.response?.data?.message || 'Failed to create contact';
+      setError(errorMessage);
+      // Don't auto-dismiss for critical errors
+      if (!errorMessage.includes('Configuration Error')) {
+        setTimeout(() => setError(''), 5000);
+      }
+    }
     finally { setCreating(false); }
   };
 
@@ -808,6 +859,53 @@ const Contacts = () => {
   };
 
   // === Inline Account Creation ===
+  // Bulk selection handlers
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      const allIds = contacts.map(c => c._id);
+      setSelectedContactIds(allIds);
+    } else {
+      setSelectedContactIds([]);
+    }
+  };
+
+  const handleSelectContact = (contactId, e) => {
+    e.stopPropagation();
+    setSelectedContactIds(prev => {
+      if (prev.includes(contactId)) {
+        return prev.filter(id => id !== contactId);
+      } else {
+        return [...prev, contactId];
+      }
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedContactIds.length === 0) return;
+
+    try {
+      setLoading(true);
+      const token = sessionStorage.getItem('token') || localStorage.getItem('token');
+
+      // Delete contacts one by one
+      const deletePromises = selectedContactIds.map(id =>
+        contactService.deleteContact(id, token)
+      );
+
+      await Promise.all(deletePromises);
+
+      showSuccessToast(setSuccess, `Successfully deleted ${selectedContactIds.length} contact(s)`);
+      setSelectedContactIds([]);
+      setShowBulkDeleteConfirm(false);
+      loadContacts();
+    } catch (err) {
+      console.error('Bulk delete failed:', err);
+      showErrorToast(setError, 'Failed to delete some contacts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCreateInlineAccount = async () => {
     console.log('🔵 Create account clicked');
     console.log('📝 Inline account data:', inlineAccountData);
@@ -831,8 +929,7 @@ const Contacts = () => {
 
     if (Object.keys(errors).length > 0) {
       setInlineAccountErrors(errors);
-      setError('Please fill all required fields');
-      setTimeout(() => setError(''), 5000);
+      // Don't set global error - field-level errors are enough
       return;
     }
 
@@ -1087,8 +1184,8 @@ const Contacts = () => {
   return (
     <DashboardLayout title="Contacts">
 
-      {success && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
-      {error && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
+      {success && !showCreateForm && <div style={{ padding: '16px 20px', background: '#DCFCE7', color: '#166534', borderRadius: '12px', marginBottom: '24px', border: '2px solid #86EFAC', fontWeight: '600' }}>{success}</div>}
+      {error && !showCreateForm && <div style={{ padding: '16px 20px', background: '#FEE2E2', color: '#991B1B', borderRadius: '12px', marginBottom: '24px', border: '2px solid #FCA5A5', fontWeight: '600' }}>{error}</div>}
 
       {/* ── WIZARD OVERLAY ── */}
 
@@ -1558,7 +1655,15 @@ const Contacts = () => {
                     </div>
                     {/* Action Buttons */}
                     <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                      {canUpdateContact && <button className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={openDetailEditForm}><Edit className="h-3 w-3 mr-1" />Edit</button>}
+                      <button
+                        className="crm-btn crm-btn-primary crm-btn-sm"
+                        style={{ fontSize: '11px', padding: '4px 10px' }}
+                        onClick={canUpdateContact ? openDetailEditForm : () => alert('You do not have permission to edit contacts')}
+                        disabled={!canUpdateContact}
+                        title={canUpdateContact ? 'Edit contact' : 'No permission to edit'}
+                      >
+                        <Edit className="h-3 w-3 mr-1" />Edit
+                      </button>
                       {canDeleteContact && <button className="crm-btn crm-btn-danger crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => { closeDetailForms(); setShowDetailDeleteConfirm(true); }}>Delete</button>}
                       {selectedContactData.phone && <button className="crm-btn crm-btn-outline crm-btn-sm" style={{ fontSize: '11px', padding: '4px 10px' }} onClick={() => window.location.href = `tel:${selectedContactData.phone}`}><Phone className="h-3 w-3 mr-1" />Call</button>}
                     </div>
@@ -1954,6 +2059,16 @@ const Contacts = () => {
                 >
                   📥 Export
                 </button>
+                {selectedContactIds.length > 0 && (
+                  <button
+                    className="crm-btn"
+                    onClick={() => setShowBulkDeleteConfirm(true)}
+                    title={`Delete ${selectedContactIds.length} selected contact(s)`}
+                    style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#ef4444', color: 'white', border: 'none' }}
+                  >
+                    🗑️ Delete ({selectedContactIds.length})
+                  </button>
+                )}
                 <button className="crm-btn crm-btn-primary" onClick={() => {
                   if (!canCreateContact) { setError('Access Restricted: You do not have permission to create contacts.'); return; }
                   closeAllForms(); setSelectedContactId(null); setSelectedContactData(null); setDetailExpanded(false); resetForm(); setShowCreateForm(true);
@@ -2109,7 +2224,7 @@ const Contacts = () => {
                         );
                       }, cellStyle: () => ({})
                     },
-                    title:     { label:'Job Title',   width:140, render:c=>c.title||'', cellStyle:()=>({}) },
+                    title:     { label:'Job Title',   width:140, render:c=>c.title||c.jobTitle||'', cellStyle:()=>({}) },
                     email:     { label:'Email',       width:190,
                       render: c => c.email
                         ? <a href={`mailto:${c.email}`} onClick={e=>e.stopPropagation()} style={{color:'#2563eb',textDecoration:'none',fontSize:13}}>{c.email}</a>
@@ -2232,11 +2347,20 @@ const Contacts = () => {
                       `}</style>
                       <table style={{ borderCollapse:'collapse', tableLayout:'fixed', width:totalW }}>
                         <colgroup>
+                          <col style={{width:40}}/>
                           <col style={{width:36}}/>
                           {activeCols.map(c=><col key={c.key} style={{width:c.width}}/>)}
                         </colgroup>
                         <thead>
                           <tr>
+                            <th className="xl-th" style={{width:40, textAlign:'center', padding:'8px'}}>
+                              <input
+                                type="checkbox"
+                                checked={selectedContactIds.length > 0 && selectedContactIds.length === contacts.length}
+                                onChange={handleSelectAll}
+                                style={{cursor:'pointer', width:'16px', height:'16px'}}
+                              />
+                            </th>
                             <th className="xl-th xl-num">#</th>
                             {activeCols.map(c=><th key={c.key} className="xl-th">{c.label}</th>)}
                           </tr>
@@ -2244,10 +2368,19 @@ const Contacts = () => {
                         <tbody>
                           {contacts.map((contact,i) => {
                             const isSel = selectedContactId===contact._id;
+                            const isChecked = selectedContactIds.includes(contact._id);
                             return (
                               <tr key={contact._id} className={`xl-row${isSel?' xl-sel':''}`}
                                 style={{background: isSel?'#dbeafe': i%2===0?'#fff':'#f8fafc'}}
                                 onClick={()=>handleContactClick(contact._id)}>
+                                <td className="xl-td" style={{width:40, textAlign:'center', padding:'8px'}} onClick={(e) => e.stopPropagation()}>
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={(e) => handleSelectContact(contact._id, e)}
+                                    style={{cursor:'pointer', width:'16px', height:'16px'}}
+                                  />
+                                </td>
                                 <td className="xl-td xl-num">{(pagination.page-1)*pagination.limit+i+1}</td>
                                 {activeCols.map(c => {
                                   const extraStyle = c.cellStyle ? c.cellStyle(contact) : {};
@@ -2286,6 +2419,65 @@ const Contacts = () => {
         </div>
 
       </div>
+
+      {/* Bulk Delete Confirmation Dialog */}
+      {showBulkDeleteConfirm && (
+        <>
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.5)',
+              zIndex: 9998,
+              backdropFilter: 'blur(2px)'
+            }}
+            onClick={() => setShowBulkDeleteConfirm(false)}
+          />
+          <div
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: 'white',
+              borderRadius: '12px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '90%',
+              zIndex: 9999,
+              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            }}
+          >
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', fontWeight: '700', color: '#1e3c72' }}>
+              Confirm Bulk Delete
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748b' }}>
+              Are you sure you want to delete <strong>{selectedContactIds.length}</strong> contact{selectedContactIds.length > 1 ? 's' : ''}?
+              This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+              <button
+                className="crm-btn crm-btn-outline"
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                disabled={loading}
+              >
+                Cancel
+              </button>
+              <button
+                className="crm-btn"
+                onClick={handleBulkDelete}
+                disabled={loading}
+                style={{ background: '#ef4444', color: 'white', border: 'none' }}
+              >
+                {loading ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
     </DashboardLayout>
   );

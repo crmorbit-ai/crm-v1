@@ -272,7 +272,7 @@ const DataCenterDetail = () => {
 
   return (
     <DashboardLayout title="Customer Details">
-      {/* Header with Back and Move buttons */}
+      {/* Header with Back, Edit and Move buttons */}
       <div style={{ marginBottom: '24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <button
           className="crm-btn crm-btn-secondary"
@@ -280,13 +280,22 @@ const DataCenterDetail = () => {
         >
           ← Back to List
         </button>
-        <button
-          className="crm-btn crm-btn-primary"
-          onClick={() => setShowMoveModal(true)}
-          disabled={candidate.status === 'Moved to Leads'}
-        >
-          Move to Leads
-        </button>
+        <div style={{ display: 'flex', gap: '12px' }}>
+          <button
+            className="crm-btn crm-btn-outline"
+            onClick={() => navigate(`/data-center/${id}/edit`)}
+            style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+          >
+            ✏️ Edit
+          </button>
+          <button
+            className="crm-btn crm-btn-primary"
+            onClick={() => setShowMoveModal(true)}
+            disabled={candidate.status === 'Moved to Leads'}
+          >
+            Move to Leads
+          </button>
+        </div>
       </div>
 
       {/* Status Badge if moved */}

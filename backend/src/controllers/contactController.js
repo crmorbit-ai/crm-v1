@@ -37,7 +37,7 @@ const getContacts = async (req, res) => {
       }
     }
     if (account) query.account = account;
-    if (title) query.title = { $regex: title, $options: 'i' };
+    if (title) query.jobTitle = { $regex: title, $options: 'i' };
     if (isPrimary === 'true') query.isPrimary = true;
     if (hasAccount === 'true') query.account = { $ne: null };
     const total = await Contact.countDocuments(query);
@@ -120,7 +120,7 @@ const createContact = async (req, res) => {
       if (existingContact) return errorResponse(res, 400, 'Contact with this email already exists for this account');
     }
     const contact = await Contact.create({
-      firstName, lastName: lastName || '', email: email || '', phone, mobile, account: account || undefined, title, department, reportsTo: reportsTo || null, leadSource,
+      firstName, lastName: lastName || '', email: email || '', phone, mobile, account: account || undefined, jobTitle: title, department, reportsTo: reportsTo || null, leadSource,
       isPrimary: isPrimary || false, doNotCall: doNotCall || false, emailOptOut: emailOptOut || false,
       mailingAddress: { street: mailingStreet, city: mailingCity, state: mailingState, country: mailingCountry, zipCode: mailingZipCode },
       description, customFields: customFields || {}, owner: req.body.owner || req.user._id, tenant, createdBy: req.user._id, lastModifiedBy: req.user._id
@@ -182,7 +182,7 @@ const updateContact = async (req, res) => {
     if (req.body.email) contact.email = req.body.email;
     if (req.body.phone !== undefined) contact.phone = req.body.phone;
     if (req.body.mobile !== undefined) contact.mobile = req.body.mobile;
-    if (req.body.title !== undefined) contact.title = req.body.title;
+    if (req.body.title !== undefined) contact.jobTitle = req.body.title;
     if (req.body.department !== undefined) contact.department = req.body.department;
     if (req.body.reportsTo !== undefined) contact.reportsTo = req.body.reportsTo;
     if (req.body.isPrimary !== undefined) contact.isPrimary = req.body.isPrimary;

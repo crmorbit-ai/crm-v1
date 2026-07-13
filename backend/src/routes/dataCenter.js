@@ -4,6 +4,7 @@ const {
   getCandidates,
   getCandidate,
   createCandidate,
+  updateCandidate,
   deleteCandidates,
   getStats,
   moveToLeads,
@@ -90,7 +91,8 @@ router.route('/')
 
 // Dynamic /:id routes (LAST)
 router.route('/:id')
-  .get(requirePermission('data_center', 'read'), getCandidate);
+  .get(requirePermission('data_center', 'read'), getCandidate)
+  .put(requirePermission('data_center', 'update'), updateCandidate);
 
 module.exports = router;
 

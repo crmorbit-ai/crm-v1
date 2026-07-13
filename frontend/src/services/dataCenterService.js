@@ -22,6 +22,13 @@ export const createCandidate = async (data) => {
 };
 
 /**
+ * Update a candidate
+ */
+export const updateCandidate = async (id, data) => {
+  return await api.put(`/data-center/${id}`, data);
+};
+
+/**
  * Delete candidates
  */
 export const deleteCandidates = async (candidateIds) => {
@@ -123,6 +130,7 @@ const dataCenterService = {
   getCandidates,
   getCandidate,
   createCandidate,
+  updateCandidate,
   deleteCandidates,
   getStats,
   moveToLeads,

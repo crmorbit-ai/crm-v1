@@ -259,6 +259,18 @@ const LeadDetail = () => {
     e.preventDefault();
     try {
       setError('');
+
+      // Validate that "To" date is after "From" date
+      if (meetingData.from && meetingData.to) {
+        const fromDate = new Date(meetingData.from);
+        const toDate = new Date(meetingData.to);
+        if (toDate <= fromDate) {
+          setError('End date cannot be before or equal to start date');
+          setTimeout(() => setError(''), 3000);
+          return;
+        }
+      }
+
       const response = await fetch(`${API_URL}/meetings`, {
         method: 'POST',
         headers: {
@@ -1233,11 +1245,24 @@ const LeadDetail = () => {
                         </div>
                         <div>
                           <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>From *</label>
-                          <input type="datetime-local" className="crm-form-input" value={meetingData.from} onChange={(e) => setMeetingData({ ...meetingData, from: e.target.value })} required />
+                          <input
+                            type="datetime-local"
+                            className="crm-form-input"
+                            value={meetingData.from}
+                            onChange={(e) => setMeetingData({ ...meetingData, from: e.target.value })}
+                            required
+                          />
                         </div>
                         <div>
                           <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>To *</label>
-                          <input type="datetime-local" className="crm-form-input" value={meetingData.to} onChange={(e) => setMeetingData({ ...meetingData, to: e.target.value })} required />
+                          <input
+                            type="datetime-local"
+                            className="crm-form-input"
+                            value={meetingData.to}
+                            onChange={(e) => setMeetingData({ ...meetingData, to: e.target.value })}
+                            min={meetingData.from || undefined}
+                            required
+                          />
                         </div>
                         <div>
                           <label style={{ display: 'block', marginBottom: '4px', fontSize: '12px', fontWeight: '600' }}>Location</label>

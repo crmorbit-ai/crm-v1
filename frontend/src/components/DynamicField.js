@@ -22,7 +22,14 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
   const [gstError, setGstError] = useState('');
 
   const handleChange = (e) => {
-    const newValue = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    let newValue = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+
+    // Phone field validation - only allow numbers, +, -, spaces, and ()
+    if (fieldType === 'phone' && typeof newValue === 'string') {
+      // Remove any characters that are not digits, +, -, spaces, or ()
+      newValue = newValue.replace(/[^0-9+\-\s()]/g, '');
+    }
+
     onChange(fieldName, newValue);
 
     // Reset GST verification when value changes
@@ -254,6 +261,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
             placeholder={placeholder || ''}
             className={baseClass}
             style={inputStyle}
+            maxLength={validations?.maxLength || undefined}
           />
         );
 
@@ -273,6 +281,7 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
             className={baseClass}
             style={inputStyle}
             inputMode={fieldType === 'phone' ? 'numeric' : undefined}
+            maxLength={validations?.maxLength || undefined}
           />
         );
 
@@ -511,11 +520,20 @@ const DynamicField = ({ fieldDefinition, value, onChange, error, disabled = fals
     );
   }
 
+  const currentLength = (value || '').toString().length;
+  const maxLength = validations?.maxLength;
+  const showCounter = maxLength && (fieldType === 'text' || fieldType === 'email' || fieldType === 'textarea' || fieldType === 'phone');
+
   return (
     <div>
       <label htmlFor={fieldName} style={lStyle}>
         {label}
         {isRequired && <span style={{ color: '#ef4444', marginLeft: '2px' }}>*</span>}
+        {showCounter && (
+          <span style={{ float: 'right', fontSize: '11px', color: currentLength > maxLength * 0.9 ? '#ef4444' : '#94a3b8', fontWeight: 'normal' }}>
+            {currentLength}/{maxLength}
+          </span>
+        )}
       </label>
       {renderField()}
       {helpText && !error && <p style={{ fontSize: '11px', color: '#94a3b8', marginTop: '3px' }}>{helpText}</p>}

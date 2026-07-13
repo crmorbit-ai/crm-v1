@@ -189,12 +189,12 @@ const DCCitySelect = ({ value, countryIso, stateIso, onChange }) => {
 };
 
 const DEFAULT_CUSTOMER_FIELDS = [
-  { fieldName: 'customerName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1 },
+  { fieldName: 'customerName', label: 'Customer Name', fieldType: 'text', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 1, validations: { maxLength: 100 } },
   { fieldName: 'customerType', label: 'Customer Type', fieldType: 'dropdown', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 2, options: [{ label: 'Customer', value: 'Customer' }, { label: 'Prospect', value: 'Prospect' }, { label: 'Partner', value: 'Partner' }, { label: 'Reseller', value: 'Reseller' }, { label: 'Other', value: 'Other' }] },
-  { fieldName: 'email', label: 'Email *', fieldType: 'email', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3, validations: { maxLength: 100 } },
+  { fieldName: 'email', label: 'Email', fieldType: 'email', section: 'Basic Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 3, validations: { maxLength: 100 } },
   { fieldName: 'phone', label: 'Phone (Optional)', fieldType: 'phone', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 4 },
   { fieldName: 'gstin', label: 'GSTIN (Optional)', fieldType: 'text', section: 'Basic Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 5, validations: { maxLength: 15, pattern: /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/ }, placeholder: '29ABCDE1234F1Z5' },
-  { fieldName: 'currentDesignation', label: 'Current Designation *', fieldType: 'dropdown', section: 'Professional Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'Software Engineer', value: 'Software Engineer' }, { label: 'Senior Software Engineer', value: 'Senior Software Engineer' }, { label: 'Lead Engineer', value: 'Lead Engineer' }, { label: 'Principal Engineer', value: 'Principal Engineer' }, { label: 'Engineering Manager', value: 'Engineering Manager' }, { label: 'Frontend Developer', value: 'Frontend Developer' }, { label: 'Backend Developer', value: 'Backend Developer' }, { label: 'Full Stack Developer', value: 'Full Stack Developer' }, { label: 'DevOps Engineer', value: 'DevOps Engineer' }, { label: 'Data Scientist', value: 'Data Scientist' }, { label: 'Data Analyst', value: 'Data Analyst' }, { label: 'Business Analyst', value: 'Business Analyst' }, { label: 'Product Manager', value: 'Product Manager' }, { label: 'Project Manager', value: 'Project Manager' }, { label: 'Scrum Master', value: 'Scrum Master' }, { label: 'QA Engineer', value: 'QA Engineer' }, { label: 'UI/UX Designer', value: 'UI/UX Designer' }, { label: 'Sales Executive', value: 'Sales Executive' }, { label: 'Sales Manager', value: 'Sales Manager' }, { label: 'Marketing Executive', value: 'Marketing Executive' }, { label: 'HR Executive', value: 'HR Executive' }, { label: 'HR Manager', value: 'HR Manager' }, { label: 'Recruiter', value: 'Recruiter' }, { label: 'Finance Analyst', value: 'Finance Analyst' }, { label: 'Accountant', value: 'Accountant' }, { label: 'Operations Executive', value: 'Operations Executive' }, { label: 'Team Lead', value: 'Team Lead' }, { label: 'Director', value: 'Director' }, { label: 'VP', value: 'VP' }, { label: 'CTO', value: 'CTO' }, { label: 'CEO', value: 'CEO' }, { label: 'Other', value: 'Other' }] },
+  { fieldName: 'currentDesignation', label: 'Current Designation', fieldType: 'dropdown', section: 'Professional Information', isRequired: true, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 10, options: [{ label: 'Software Engineer', value: 'Software Engineer' }, { label: 'Senior Software Engineer', value: 'Senior Software Engineer' }, { label: 'Lead Engineer', value: 'Lead Engineer' }, { label: 'Principal Engineer', value: 'Principal Engineer' }, { label: 'Engineering Manager', value: 'Engineering Manager' }, { label: 'Frontend Developer', value: 'Frontend Developer' }, { label: 'Backend Developer', value: 'Backend Developer' }, { label: 'Full Stack Developer', value: 'Full Stack Developer' }, { label: 'DevOps Engineer', value: 'DevOps Engineer' }, { label: 'Data Scientist', value: 'Data Scientist' }, { label: 'Data Analyst', value: 'Data Analyst' }, { label: 'Business Analyst', value: 'Business Analyst' }, { label: 'Product Manager', value: 'Product Manager' }, { label: 'Project Manager', value: 'Project Manager' }, { label: 'Scrum Master', value: 'Scrum Master' }, { label: 'QA Engineer', value: 'QA Engineer' }, { label: 'UI/UX Designer', value: 'UI/UX Designer' }, { label: 'Sales Executive', value: 'Sales Executive' }, { label: 'Sales Manager', value: 'Sales Manager' }, { label: 'Marketing Executive', value: 'Marketing Executive' }, { label: 'HR Executive', value: 'HR Executive' }, { label: 'HR Manager', value: 'HR Manager' }, { label: 'Recruiter', value: 'Recruiter' }, { label: 'Finance Analyst', value: 'Finance Analyst' }, { label: 'Accountant', value: 'Accountant' }, { label: 'Operations Executive', value: 'Operations Executive' }, { label: 'Team Lead', value: 'Team Lead' }, { label: 'Director', value: 'Director' }, { label: 'VP', value: 'VP' }, { label: 'CTO', value: 'CTO' }, { label: 'CEO', value: 'CEO' }, { label: 'Other', value: 'Other' }] },
   { fieldName: 'currentCompany', label: 'Current Company (Optional)', fieldType: 'text', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 11 },
   { fieldName: 'totalExperience', label: 'Total Experience (yrs) (Optional)', fieldType: 'number', section: 'Professional Information', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 12 },
   { fieldName: 'skills', label: 'Skills', fieldType: 'text', section: 'Skills & Experience', isRequired: false, isStandardField: true, showInCreate: true, showInEdit: true, showInDetail: true, displayOrder: 20 },
@@ -239,6 +239,8 @@ const DataCenter = () => {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [showDetailMoveForm, setShowDetailMoveForm] = useState(false);
   const [detailMoveForm, setDetailMoveForm] = useState({ leadStatus: 'New', leadSource: 'Customer', rating: 'Warm' });
+  const [showDetailEditForm, setShowDetailEditForm] = useState(false);
+  const [detailEditData, setDetailEditData] = useState({});
 
   const [showBulkEmailModal, setShowBulkEmailModal] = useState(false);
   const [showBulkWhatsAppModal, setShowBulkWhatsAppModal] = useState(false);
@@ -778,6 +780,68 @@ const DataCenter = () => {
     }
   };
 
+  const openDetailEditForm = () => {
+    if (!selectedCandidateData) return;
+
+    // Populate all fields from fieldDefinitions
+    const editData = {};
+    fieldDefinitions.forEach(field => {
+      const value = selectedCandidateData[field.fieldName] || selectedCandidateData.customFields?.[field.fieldName] || '';
+      editData[field.fieldName] = value;
+    });
+
+    setDetailEditData(editData);
+    setShowDetailEditForm(true);
+    setShowDetailMoveForm(false);
+  };
+
+  const handleDetailUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      // Separate standard and custom fields
+      const standardFields = {};
+      const customFields = {};
+
+      fieldDefinitions.forEach(field => {
+        const value = detailEditData[field.fieldName];
+        if (value !== undefined && value !== null && value !== '') {
+          if (field.isStandardField) {
+            standardFields[field.fieldName] = value;
+          } else {
+            customFields[field.fieldName] = value;
+          }
+        }
+      });
+
+      const updateData = {
+        ...standardFields,
+        customFields: Object.keys(customFields).length > 0 ? customFields : undefined
+      };
+
+      console.log('=== UPDATE DEBUG ===');
+      console.log('Selected ID:', selectedCandidateId);
+      console.log('Update Data:', updateData);
+      console.log('Field Definitions:', fieldDefinitions);
+      console.log('Detail Edit Data:', detailEditData);
+
+      const updateResponse = await dataCenterService.updateCandidate(selectedCandidateId, updateData);
+      console.log('Update Response:', updateResponse.data);
+
+      alert('Customer updated successfully!');
+      setShowDetailEditForm(false);
+
+      // Reload detail
+      const response = await dataCenterService.getCandidate(selectedCandidateId);
+      console.log('Reloaded Data:', response.data);
+      setSelectedCandidateData(response.data);
+      loadCandidates();
+    } catch (error) {
+      if (error?.isPermissionDenied) return;
+      console.error('Error updating customer:', error);
+      alert('Failed to update customer');
+    }
+  };
+
   // Helper functions for detail panel
   const hasValue = (value) => {
     if (value === null || value === undefined || value === '') return false;
@@ -1177,6 +1241,13 @@ const DataCenter = () => {
                     )}
                     {/* Action Buttons */}
                     <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+                      <button
+                        className="crm-btn crm-btn-primary crm-btn-sm"
+                        style={{ fontSize: '11px', padding: '6px 12px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        onClick={openDetailEditForm}
+                      >
+                        ✏️ Edit
+                      </button>
                       <button className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '11px', padding: '6px 12px' }} onClick={() => setShowDetailMoveForm(true)} disabled={selectedCandidateData.status === 'Moved to Leads'}>Move to Leads</button>
                     </div>
                   </div>
@@ -1214,6 +1285,40 @@ const DataCenter = () => {
                         <button className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '4px 8px' }} onClick={() => setShowDetailMoveForm(false)}>Cancel</button>
                         <button className="crm-btn crm-btn-success crm-btn-sm" style={{ fontSize: '10px', padding: '4px 8px' }} onClick={handleDetailMoveToLead}>Confirm</button>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Edit Form */}
+                  {showDetailEditForm && (
+                    <div style={{ margin: '12px', padding: '12px', background: '#F0F9FF', borderRadius: '8px', border: '1px solid #93C5FD' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                        <h5 style={{ margin: 0, fontSize: '13px', fontWeight: '600', color: '#1E40AF' }}>Edit Customer</h5>
+                        <button onClick={() => setShowDetailEditForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
+                      </div>
+                      <form onSubmit={handleDetailUpdate}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '10px', maxHeight: '400px', overflowY: 'auto' }}>
+                          {fieldDefinitions
+                            .filter(f => f.isActive && f.showInEdit)
+                            .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                            .map(field => (
+                              <div key={field.fieldName} style={field.fieldType === 'textarea' ? { gridColumn: '1 / -1' } : {}}>
+                                <label style={{ fontSize: '10px', fontWeight: '600', color: '#374151', display: 'block', marginBottom: '4px' }}>
+                                  {field.label} {field.isRequired && <span style={{ color: '#ef4444' }}>*</span>}
+                                </label>
+                                <DynamicField
+                                  fieldDefinition={field}
+                                  value={detailEditData[field.fieldName] || ''}
+                                  onChange={(fieldName, value) => setDetailEditData({ ...detailEditData, [fieldName]: value })}
+                                  formData={detailEditData}
+                                />
+                              </div>
+                            ))}
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '6px', borderTop: '1px solid #dbeafe', paddingTop: '10px' }}>
+                          <button type="button" className="crm-btn crm-btn-secondary crm-btn-sm" style={{ fontSize: '10px', padding: '4px 8px' }} onClick={() => setShowDetailEditForm(false)}>Cancel</button>
+                          <button type="submit" className="crm-btn crm-btn-primary crm-btn-sm" style={{ fontSize: '10px', padding: '4px 8px' }}>Save Changes</button>
+                        </div>
+                      </form>
                     </div>
                   )}
 

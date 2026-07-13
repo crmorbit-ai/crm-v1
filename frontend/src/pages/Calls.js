@@ -118,6 +118,27 @@ const Calls = () => {
       }
     }
 
+    if (name === 'callDuration') {
+      // Validate duration: must be positive integer, max 1440 (24 hours)
+      if (value && value.trim().length > 0) {
+        // Check if value contains only digits (and optional whitespace)
+        if (!/^\s*\d+\s*$/.test(value)) {
+          errors.callDuration = 'Duration must be a valid number (only digits allowed)';
+        } else {
+          const duration = parseInt(value.trim(), 10);
+          if (duration < 0) {
+            errors.callDuration = 'Duration cannot be negative';
+          } else if (duration > 1440) {
+            errors.callDuration = 'Duration cannot exceed 1440 minutes (24 hours)';
+          } else {
+            delete errors.callDuration;
+          }
+        }
+      } else {
+        delete errors.callDuration;
+      }
+    }
+
     if (name === 'description') {
       // If filled, must contain at least one letter
       if (value && value.trim().length > 0) {
@@ -142,9 +163,10 @@ const Calls = () => {
 
     // Validate all fields
     const subjectValid = validateField('subject', formData.subject);
+    const durationValid = validateField('callDuration', formData.callDuration);
     const descValid = validateField('description', formData.description);
 
-    if (!subjectValid || !descValid) {
+    if (!subjectValid || !durationValid || !descValid) {
       setError('Please fix validation errors');
       setTimeout(() => setError(''), 3000);
       return;
@@ -329,7 +351,24 @@ const Calls = () => {
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Duration (min)</label>
-                  <input type="number" className="crm-form-input" value={formData.callDuration} onChange={(e) => setFormData({ ...formData, callDuration: e.target.value })} min="0" style={{ padding: '8px 10px', fontSize: '13px' }} />
+                  <input
+                    type="text"
+                    className="crm-form-input"
+                    value={formData.callDuration}
+                    onChange={(e) => {
+                      const newValue = e.target.value;
+                      console.log('Duration input changed:', newValue);
+                      setFormData({ ...formData, callDuration: newValue });
+                      validateField('callDuration', newValue);
+                    }}
+                    placeholder="e.g., 30"
+                    style={{ padding: '8px 10px', fontSize: '13px', borderColor: validationErrors.callDuration ? '#dc2626' : undefined }}
+                  />
+                  {validationErrors.callDuration && (
+                    <div style={{ color: '#dc2626', fontSize: '11px', marginTop: '4px' }}>
+                      {validationErrors.callDuration}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Call Type</label>

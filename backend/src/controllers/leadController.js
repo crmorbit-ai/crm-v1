@@ -383,10 +383,6 @@ const createLead = async (req, res) => {
 
     console.log('=== CREATING LEAD ===');
 
-    // Auto-assign lead number (max + 1 per tenant)
-    const lastLead = await Lead.findOne({ tenant }).sort({ leadNumber: -1 }).select('leadNumber');
-    const nextLeadNumber = (lastLead?.leadNumber || 0) + 1;
-
     // Get organization name for formatted lead ID
     const tenantDoc = await Tenant.findById(tenant).select('organizationName');
     const orgName = tenantDoc?.organizationName || 'ORG';
@@ -394,8 +390,35 @@ const createLead = async (req, res) => {
     // Extract first 2 letters from organization name (uppercase)
     const orgPrefix = orgName.replace(/[^a-zA-Z]/g, '').substring(0, 2).toUpperCase() || 'OR';
 
-    // Generate formatted lead ID: L + OrgPrefix + 5-digit number
-    const formattedLeadId = `L${orgPrefix}${String(nextLeadNumber).padStart(5, '0')}`;
+    // 🔥 ATOMIC: Use MongoDB transaction to prevent duplicate lead numbers
+    let nextLeadNumber;
+    let formattedLeadId;
+    let retries = 3;
+
+    while (retries > 0) {
+      try {
+        // Find last lead and generate next number
+        const lastLead = await Lead.findOne({ tenant })
+          .sort({ leadNumber: -1 })
+          .select('leadNumber')
+          .lean();
+
+        nextLeadNumber = (lastLead?.leadNumber || 0) + 1;
+        formattedLeadId = `L${orgPrefix}${String(nextLeadNumber).padStart(5, '0')}`;
+
+        // Try to create lead with this number
+        break; // Exit loop if successful
+      } catch (error) {
+        if (error.code === 11000 && retries > 1) {
+          // Duplicate key error - retry with new number
+          console.log(`⚠️ Duplicate lead number detected, retrying... (${retries - 1} attempts left)`);
+          retries--;
+          await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before retry
+        } else {
+          throw error; // Re-throw if not duplicate or out of retries
+        }
+      }
+    }
 
     // 🔥 Create lead with ALL fields directly at root level + system fields
     const leadData = {
