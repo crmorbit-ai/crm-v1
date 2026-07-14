@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { API_URL } from '../config/api.config';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const NAME_MAX=30, NAME_MIN=2, PASS_MIN=8, PASS_MAX=12;
 const FEATURES=['Lead Management','Contacts & Accounts','Opportunities','B2B Sales Workflow','Email Inbox','Support Tickets','Product Catalog','Tasks & Meetings','Feedback Management','Reports & Analytics'];
@@ -349,7 +350,14 @@ export default function PartnersPage() {
   ];
 
   return (
-    <div className="pp-wrap">
+    <>
+      <SEO
+        title="Partners - Unified CRM"
+        description="Join the Unified CRM partner program. Become a reseller, implementation partner, or technology integration partner."
+        url="https://unifiedcrm.texora.ai/partners"
+        keywords="CRM partners, reseller program, partnership, implementation partners"
+      />
+      <div className="pp-wrap">
       <style>{CSS}</style>
       <SharedHeader/>
 
@@ -477,5 +485,6 @@ export default function PartnersPage() {
 
       <SharedFooter/>
     </div>
+    </>
   );
 }

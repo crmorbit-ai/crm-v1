@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
@@ -26,84 +27,85 @@ import ContactDetail from './pages/ContactDetail';
 import Accounts from './pages/Accounts';
 import AccountDetail from './pages/AccountDetail';
 import Opportunities from './pages/Opportunities';
-import DataCenter from './pages/DataCenter';
-import DataCenterDetail from './pages/DataCenterDetail';
-import MasterInventory from './pages/MasterInventory';
-import ProductInventory from './pages/ProductInventory';
-import ServiceInventory from './pages/ServiceInventory';
-import LeadInventory from './pages/LeadInventory';
-import Tasks from './pages/Tasks';
-import Meetings from './pages/Meetings';
-import MeetingDetail from './pages/MeetingDetail';
-import Calls from './pages/Calls';
-import EmailInbox from './pages/EmailInbox';
-import Notifications from './pages/Notifications';
-import ActivityLogs from './pages/ActivityLogs';
-import AuditLogs from './pages/AuditLogs';
-import TeamManagement from './pages/TeamManagement';
-import OrgChart from './pages/OrgChart';
-import OrgHierarchy from './pages/OrgHierarchy';
-import RoleTemplateBuilder from './pages/RoleTemplateBuilder';
-import TemplateManagement from './pages/TemplateManagement';
-import NotificationSettings from './pages/NotificationSettings';
-import DocumentTemplates from './pages/DocumentTemplates';
-import SocialMedia from './pages/SocialMedia';
-import Proposals from './pages/Proposals';
-import ProposalForm from './pages/ProposalForm';
-import ProposalDetail from './pages/ProposalDetail';
-import Quotations from './pages/Quotations';
-import QuotationForm from './pages/QuotationForm';
-import QuotationDetail from './pages/QuotationDetail';
-import Invoices from './pages/Invoices';
-import InvoiceForm from './pages/InvoiceForm';
-import InvoiceDetail from './pages/InvoiceDetail';
-import Inventory from './pages/Inventory';
-import RFIs from './pages/RFIs';
-import RFIForm from './pages/RFIForm';
-import RFIDetail from './pages/RFIDetail';
-import PurchaseOrders from './pages/PurchaseOrders';
-import PurchaseOrderForm from './pages/PurchaseOrderForm';
-import PurchaseOrderDetail from './pages/PurchaseOrderDetail';
-import Products from './pages/Products';
-import ProductMarketplace from './pages/ProductMarketplace';
-import ProductCategories from './pages/ProductCategories';
-import Subscription from './pages/Subscription';
-import Monetization from './pages/Monetization';
-import TenantMonetization from './pages/TenantMonetization';
-import Billings from './pages/Billings';
-import CouponManagement from './pages/CouponManagement';
-import Support from './pages/Support';
-import SupportAdmin from './pages/SupportAdmin';
-import Feedback from './pages/Feedback';
-import SaasSubscriptions from './pages/SaasSubscriptions';
-import SaasPlans from './pages/SaasPlans';
-import SaasRefunds from './pages/SaasRefunds';
-import SaasAdmins from './pages/SaasAdmins';
-import SaasNotifications from './pages/SaasNotifications';
-import SaasContactInquiries from './pages/SaasContactInquiries';
-import Tenants from './pages/Tenants';
-import SaasTenantUsers from './pages/SaasTenantUsers';
-import TenantActivity from './pages/TenantActivity';
-import SaasActivityMonitor from './pages/SaasActivityMonitor';
-import ResellerManagement from './pages/ResellerManagement';
-import ResellerRegister from './pages/ResellerRegister';
-import ResellerLogin from './pages/ResellerLogin';
-import ResellerDashboard from './pages/ResellerDashboard';
-import AboutUs from './pages/AboutUs';
-import AllProductsPage from './pages/AllProductsPage';
-import PlatformPage from './pages/PlatformPage';
-import FeatureDetailPage from './pages/FeatureDetailPage';
-import ContactUs from './pages/ContactUs';
-import Security from './pages/Security';
-import Integrations from './pages/Integrations';
-import PartnerResources from './pages/PartnerResources';
-import IndustriesPage from './pages/IndustriesPage';
-import HelpCenter from './pages/HelpCenter';
-import DemoPage from './pages/DemoPage';
-import DemoLibraryPage from './pages/DemoLibraryPage';
-import DataCenterPage from './pages/DataCenterPage';
-import PartnersPage from './pages/PartnersPage';
-import AIChatWidget from './components/ai/AIChatWidget';
+// Lazy loaded pages (code splitting for better performance)
+const DataCenter = lazy(() => import('./pages/DataCenter'));
+const DataCenterDetail = lazy(() => import('./pages/DataCenterDetail'));
+const MasterInventory = lazy(() => import('./pages/MasterInventory'));
+const ProductInventory = lazy(() => import('./pages/ProductInventory'));
+const ServiceInventory = lazy(() => import('./pages/ServiceInventory'));
+const LeadInventory = lazy(() => import('./pages/LeadInventory'));
+const Tasks = lazy(() => import('./pages/Tasks'));
+const Meetings = lazy(() => import('./pages/Meetings'));
+const MeetingDetail = lazy(() => import('./pages/MeetingDetail'));
+const Calls = lazy(() => import('./pages/Calls'));
+const EmailInbox = lazy(() => import('./pages/EmailInbox'));
+const Notifications = lazy(() => import('./pages/Notifications'));
+const ActivityLogs = lazy(() => import('./pages/ActivityLogs'));
+const AuditLogs = lazy(() => import('./pages/AuditLogs'));
+const TeamManagement = lazy(() => import('./pages/TeamManagement'));
+const OrgChart = lazy(() => import('./pages/OrgChart'));
+const OrgHierarchy = lazy(() => import('./pages/OrgHierarchy'));
+const RoleTemplateBuilder = lazy(() => import('./pages/RoleTemplateBuilder'));
+const TemplateManagement = lazy(() => import('./pages/TemplateManagement'));
+const NotificationSettings = lazy(() => import('./pages/NotificationSettings'));
+const DocumentTemplates = lazy(() => import('./pages/DocumentTemplates'));
+const SocialMedia = lazy(() => import('./pages/SocialMedia'));
+const Proposals = lazy(() => import('./pages/Proposals'));
+const ProposalForm = lazy(() => import('./pages/ProposalForm'));
+const ProposalDetail = lazy(() => import('./pages/ProposalDetail'));
+const Quotations = lazy(() => import('./pages/Quotations'));
+const QuotationForm = lazy(() => import('./pages/QuotationForm'));
+const QuotationDetail = lazy(() => import('./pages/QuotationDetail'));
+const Invoices = lazy(() => import('./pages/Invoices'));
+const InvoiceForm = lazy(() => import('./pages/InvoiceForm'));
+const InvoiceDetail = lazy(() => import('./pages/InvoiceDetail'));
+const Inventory = lazy(() => import('./pages/Inventory'));
+const RFIs = lazy(() => import('./pages/RFIs'));
+const RFIForm = lazy(() => import('./pages/RFIForm'));
+const RFIDetail = lazy(() => import('./pages/RFIDetail'));
+const PurchaseOrders = lazy(() => import('./pages/PurchaseOrders'));
+const PurchaseOrderForm = lazy(() => import('./pages/PurchaseOrderForm'));
+const PurchaseOrderDetail = lazy(() => import('./pages/PurchaseOrderDetail'));
+const Products = lazy(() => import('./pages/Products'));
+const ProductMarketplace = lazy(() => import('./pages/ProductMarketplace'));
+const ProductCategories = lazy(() => import('./pages/ProductCategories'));
+const Subscription = lazy(() => import('./pages/Subscription'));
+const Monetization = lazy(() => import('./pages/Monetization'));
+const TenantMonetization = lazy(() => import('./pages/TenantMonetization'));
+const Billings = lazy(() => import('./pages/Billings'));
+const CouponManagement = lazy(() => import('./pages/CouponManagement'));
+const Support = lazy(() => import('./pages/Support'));
+const SupportAdmin = lazy(() => import('./pages/SupportAdmin'));
+const Feedback = lazy(() => import('./pages/Feedback'));
+const SaasSubscriptions = lazy(() => import('./pages/SaasSubscriptions'));
+const SaasPlans = lazy(() => import('./pages/SaasPlans'));
+const SaasRefunds = lazy(() => import('./pages/SaasRefunds'));
+const SaasAdmins = lazy(() => import('./pages/SaasAdmins'));
+const SaasNotifications = lazy(() => import('./pages/SaasNotifications'));
+const SaasContactInquiries = lazy(() => import('./pages/SaasContactInquiries'));
+const Tenants = lazy(() => import('./pages/Tenants'));
+const SaasTenantUsers = lazy(() => import('./pages/SaasTenantUsers'));
+const TenantActivity = lazy(() => import('./pages/TenantActivity'));
+const SaasActivityMonitor = lazy(() => import('./pages/SaasActivityMonitor'));
+const ResellerManagement = lazy(() => import('./pages/ResellerManagement'));
+const ResellerRegister = lazy(() => import('./pages/ResellerRegister'));
+const ResellerLogin = lazy(() => import('./pages/ResellerLogin'));
+const ResellerDashboard = lazy(() => import('./pages/ResellerDashboard'));
+const AboutUs = lazy(() => import('./pages/AboutUs'));
+const AllProductsPage = lazy(() => import('./pages/AllProductsPage'));
+const PlatformPage = lazy(() => import('./pages/PlatformPage'));
+const FeatureDetailPage = lazy(() => import('./pages/FeatureDetailPage'));
+const ContactUs = lazy(() => import('./pages/ContactUs'));
+const Security = lazy(() => import('./pages/Security'));
+const Integrations = lazy(() => import('./pages/Integrations'));
+const PartnerResources = lazy(() => import('./pages/PartnerResources'));
+const IndustriesPage = lazy(() => import('./pages/IndustriesPage'));
+const HelpCenter = lazy(() => import('./pages/HelpCenter'));
+const DemoPage = lazy(() => import('./pages/DemoPage'));
+const DemoLibraryPage = lazy(() => import('./pages/DemoLibraryPage'));
+const DataCenterPage = lazy(() => import('./pages/DataCenterPage'));
+const PartnersPage = lazy(() => import('./pages/PartnersPage'));
+const AIChatWidget = lazy(() => import('./components/ai/AIChatWidget'));
 
 // ── Only lazy-load the truly heavy page (react-email-editor ~1.5MB) ──
 const EmailTemplates = lazy(() => import('./pages/EmailTemplates'));
@@ -308,18 +310,20 @@ const AIChat = () => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <NotificationProvider>
-          <ThemeProvider>
-            <div className="App">
-              <AppRoutes />
-              {/* <AIChat /> */}
-            </div>
-          </ThemeProvider>
-        </NotificationProvider>
-      </AuthProvider>
-    </Router>
+    <HelmetProvider>
+      <Router>
+        <AuthProvider>
+          <NotificationProvider>
+            <ThemeProvider>
+              <div className="App">
+                <AppRoutes />
+                {/* <AIChat /> */}
+              </div>
+            </ThemeProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </Router>
+    </HelmetProvider>
   );
 }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 /* ── Animated counter hook ── */
 const useCounter = (target, duration = 2000, start = false) => {
@@ -1513,13 +1514,20 @@ const LandingPage = () => {
   }, []);
 
   return (
-    <div className="lp" style={{
-      background: `linear-gradient(170deg,
-        hsl(${210 + scrollProgress * 30}, ${40 + scrollProgress * 20}%, ${8 + scrollProgress * 4}%) 0%,
-        hsl(${215 + scrollProgress * 25}, ${45 + scrollProgress * 15}%, ${10 + scrollProgress * 5}%) 50%,
-        hsl(${160 - scrollProgress * 20}, ${50 + scrollProgress * 10}%, ${8 + scrollProgress * 6}%) 100%)`
-    }}>
-      {/* Scroll progress bar */}
+    <>
+      <SEO
+        title="Unified CRM - Complete B2B Customer Relationship Management Solution"
+        description="Complete CRM solution with lead management, contact management, deal tracking, email integration, team collaboration, and advanced analytics for B2B businesses."
+        url="https://unifiedcrm.texora.ai/"
+        noindex={false}
+      />
+      <div className="lp" style={{
+        background: `linear-gradient(170deg,
+          hsl(${210 + scrollProgress * 30}, ${40 + scrollProgress * 20}%, ${8 + scrollProgress * 4}%) 0%,
+          hsl(${215 + scrollProgress * 25}, ${45 + scrollProgress * 15}%, ${10 + scrollProgress * 5}%) 50%,
+          hsl(${160 - scrollProgress * 20}, ${50 + scrollProgress * 10}%, ${8 + scrollProgress * 6}%) 100%)`
+      }}>
+        {/* Scroll progress bar */}
       <div className="lp-scroll-bar" style={{ width: `${scrollProgress * 100}%` }} />
 
 
@@ -2275,6 +2283,7 @@ const LandingPage = () => {
       {/* ── FOOTER ── */}
       <SharedFooter />
     </div>
+    </>
   );
 };
 

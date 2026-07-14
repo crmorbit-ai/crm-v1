@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -120,7 +121,14 @@ export default function DataCenterPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="dc-wrap">
+    <>
+      <SEO
+        title="Data Center - Unified CRM"
+        description="Centralized customer data management. Import, organize, and manage all your customer data in one secure location."
+        url="https://unifiedcrm.texora.ai/data-center-feature"
+        keywords="data center, customer database, data management, bulk import, data organization"
+      />
+      <div className="dc-wrap">
       <style>{CSS}</style>
       <SharedHeader/>
 
@@ -279,5 +287,6 @@ export default function DataCenterPage() {
 
       <SharedFooter/>
     </div>
+    </>
   );
 }

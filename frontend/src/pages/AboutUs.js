@@ -2,6 +2,7 @@ import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import SEO from '../components/SEO';
 
 const AboutUs = () => {
   const navigate = useNavigate();
@@ -71,10 +72,17 @@ const AboutUs = () => {
   `;
 
   return (
-    <div className="about-page">
-      <style>{css}</style>
+    <>
+      <SEO
+        title="About Us - Unified CRM"
+        description="Learn about Unified CRM - Complete B2B customer relationship management solution with lead management, contact tracking, and sales automation."
+        url="https://unifiedcrm.texora.ai/about"
+        keywords="About Unified CRM, CRM company, B2B CRM solution, customer relationship management"
+      />
+      <div className="about-page">
+        <style>{css}</style>
 
-      <SharedHeader />
+        <SharedHeader />
 
       <div className="about-content">
 
@@ -272,6 +280,7 @@ const AboutUs = () => {
 
       <SharedFooter />
     </div>
+    </>
   );
 };
 

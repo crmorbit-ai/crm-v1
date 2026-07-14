@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
 import { API_URL } from '../config/api.config';
+import SEO from '../components/SEO';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -121,7 +122,14 @@ export default function HelpCenter() {
   };
 
   return (
-    <div className="hc">
+    <>
+      <SEO
+        title="Help Center - Unified CRM"
+        description="Get help with Unified CRM. Documentation, guides, FAQs, video tutorials, and support resources to maximize your CRM usage."
+        url="https://unifiedcrm.texora.ai/help"
+        keywords="CRM help, user guide, documentation, support, how-to, tutorials"
+      />
+      <div className="hc">
       <style>{CSS}</style>
       <SharedHeader />
 
@@ -235,5 +243,6 @@ export default function HelpCenter() {
 
       <SharedFooter />
     </div>
+    </>
   );
 }

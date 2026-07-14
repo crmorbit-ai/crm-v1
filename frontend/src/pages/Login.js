@@ -6,6 +6,7 @@ import { leadService } from '../services/leadService';
 import { accountService } from '../services/accountService';
 import { contactService } from '../services/contactService';
 import { opportunityService } from '../services/opportunityService';
+import SEO from '../components/SEO';
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -14,10 +15,16 @@ body{margin:0;}
 
 .ln-page {
   min-height:100vh;
-  background: url('/image_30a5b89a.png') center center / cover no-repeat;
+  background: url('/image_30a5b89a.webp') center center / cover no-repeat;
   display:flex; align-items:center; justify-content:flex-start;
   padding:16px 48px; position:relative; overflow-x:hidden; overflow-y:auto;
   font-family:'Inter',-apple-system,sans-serif;
+}
+/* Fallback for browsers without WebP support */
+@supports not (background: url('test.webp')) {
+  .ln-page {
+    background: url('/image_30a5b89a.png') center center / cover no-repeat;
+  }
 }
 .ln-page::before {
   content:''; position:absolute; inset:0;
@@ -127,8 +134,15 @@ const Login = () => {
   };
 
   return (
-    <div className="ln-page">
-      <style>{CSS}</style>
+    <>
+      <SEO
+        title="Login - Unified CRM"
+        description="Login to your Unified CRM account. Access leads, contacts, deals, and manage your business relationships."
+        url="https://unifiedcrm.texora.ai/login"
+        noindex={false}
+      />
+      <div className="ln-page">
+        <style>{CSS}</style>
 
       <div className="ln-card">
         {/* Logo + heading tight block */}
@@ -210,6 +224,7 @@ const Login = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

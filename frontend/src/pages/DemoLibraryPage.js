@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -209,7 +210,14 @@ export default function DemoLibraryPage() {
   const allActive = [...selectedProducts, ...selectedIndustries];
 
   return (
-    <div className="dl">
+    <>
+      <SEO
+        title="Demo Library - Unified CRM"
+        description="Watch video demos and tutorials. Learn how to use Unified CRM features with step-by-step guides and walkthroughs."
+        url="https://unifiedcrm.texora.ai/demo/library"
+        keywords="CRM demos, video tutorials, how-to videos, product walkthroughs, training videos"
+      />
+      <div className="dl">
       <style>{CSS}</style>
       <SharedHeader />
 
@@ -352,5 +360,6 @@ export default function DemoLibraryPage() {
 
       <SharedFooter />
     </div>
+    </>
   );
 }

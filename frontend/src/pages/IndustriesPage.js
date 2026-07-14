@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -346,7 +347,14 @@ const IndustriesPage = () => {
   }, []);
 
   return (
-    <div className="ind">
+    <>
+      <SEO
+        title="Industries - Unified CRM"
+        description="CRM solutions for various industries. Technology, manufacturing, real estate, healthcare, retail, and professional services."
+        url="https://unifiedcrm.texora.ai/industries"
+        keywords="industry CRM, vertical CRM, sector-specific CRM, industry solutions"
+      />
+      <div className="ind">
       <style>{CSS}</style>
       <SharedHeader />
 
@@ -509,6 +517,7 @@ const IndustriesPage = () => {
 
       <SharedFooter />
     </div>
+    </>
   );
 };
 

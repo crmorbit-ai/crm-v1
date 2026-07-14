@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
 import { API_URL } from '../config/api.config';
+import SEO from '../components/SEO';
 
 const SUBJECTS = ['General Inquiry', 'Sales', 'Technical Support', 'Partnership', 'Billing', 'Other'];
 
@@ -202,10 +203,17 @@ export default function ContactUs() {
   const CONTACT_ITEMS = null; // replaced below
 
   return (
-    <div className="cu">
-      <style>{CSS}</style>
+    <>
+      <SEO
+        title="Contact Us - Unified CRM"
+        description="Get in touch with Unified CRM. Contact our sales, support, or partnership team. We're here to help with your CRM needs."
+        url="https://unifiedcrm.texora.ai/contact"
+        keywords="Contact Unified CRM, CRM support, sales inquiry, technical support, partnership"
+      />
+      <div className="cu">
+        <style>{CSS}</style>
 
-      {/* Glow orbs */}
+        {/* Glow orbs */}
       <div style={{ position:'fixed', width:600, height:600, top:-200, left:'50%', transform:'translateX(-50%)', background:'radial-gradient(ellipse,rgba(30,185,128,0.08) 0%,transparent 70%)', borderRadius:'50%', pointerEvents:'none', zIndex:0 }} />
       <div style={{ position:'fixed', width:400, height:400, bottom:0, right:'-10%', background:'radial-gradient(ellipse,rgba(30,185,128,0.06) 0%,transparent 70%)', borderRadius:'50%', pointerEvents:'none', zIndex:0 }} />
 
@@ -439,5 +447,6 @@ export default function ContactUs() {
       <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
       <SharedFooter />
     </div>
+    </>
   );
 }

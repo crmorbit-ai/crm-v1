@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -380,7 +381,14 @@ export default function AllProductsPage() {
   const tabProducts = activeTab === 'products' ? PRODUCTS.featured : activeTab === 'solutions' ? PRODUCTS.solutions : PRODUCTS.platform;
 
   return (
-    <div className="ap">
+    <>
+      <SEO
+        title="All Features - Unified CRM"
+        description="Discover all Unified CRM features. Lead management, contact tracking, deal pipeline, quotations, invoices, reports, and more."
+        url="https://unifiedcrm.texora.ai/all-features"
+        keywords="CRM features, lead management, contact management, sales features, CRM capabilities"
+      />
+      <div className="ap">
       <style>{CSS}</style>
 
       {/* Top Nav */}
@@ -517,5 +525,6 @@ export default function AllProductsPage() {
 
       <SharedFooter />
     </div>
+    </>
   );
 }

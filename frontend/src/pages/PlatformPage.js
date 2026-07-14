@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -356,7 +357,14 @@ export default function PlatformPage() {
   const subContent = SUB_CONTENT[activeSubTab] || null;
 
   return (
-    <div className="plat">
+    <>
+      <SEO
+        title="Platform Overview - Unified CRM"
+        description="Explore the Unified CRM platform. Complete B2B solution with lead management, sales automation, analytics, and team collaboration."
+        url="https://unifiedcrm.texora.ai/platform"
+        keywords="CRM platform, B2B CRM, sales platform, lead management platform, business automation"
+      />
+      <div className="plat">
       <style>{CSS}</style>
       <SharedHeader />
 
@@ -619,5 +627,6 @@ export default function PlatformPage() {
 
       <SharedFooter />
     </div>
+    </>
   );
 }

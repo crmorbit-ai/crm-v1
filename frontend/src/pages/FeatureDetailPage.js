@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const GROUPS = {
   'lead-management': {
@@ -689,7 +690,14 @@ export default function FeatureDetailPage() {
   }
 
   return (
-    <div className="fdp">
+    <>
+      <SEO
+        title="Feature Details - Unified CRM"
+        description="Explore detailed CRM features. Learn about lead management, contact tracking, sales automation, and more capabilities."
+        url="https://unifiedcrm.texora.ai/feature"
+        keywords="CRM feature details, feature guide, capability overview, feature documentation"
+      />
+      <div className="fdp">
       <style>{CSS}</style>
 
       <SharedHeader />
@@ -830,5 +838,6 @@ export default function FeatureDetailPage() {
 
       <SharedFooter />
     </div>
+    </>
   );
 }

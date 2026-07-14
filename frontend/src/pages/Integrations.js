@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
+import SEO from '../components/SEO';
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -96,7 +97,14 @@ const CATEGORIES = [
 const Integrations = () => {
   const navigate = useNavigate();
   return (
-    <div className="int-wrap">
+    <>
+      <SEO
+        title="Integrations - Unified CRM"
+        description="Connect Unified CRM with your favorite tools. Email, calendar, payment gateways, marketing automation, and 100+ integrations."
+        url="https://unifiedcrm.texora.ai/integrations"
+        keywords="CRM integrations, API integration, email integration, third-party apps, automation"
+      />
+      <div className="int-wrap">
       <style>{CSS}</style>
       <SharedHeader/>
 
@@ -169,6 +177,7 @@ const Integrations = () => {
 
       <SharedFooter/>
     </div>
+    </>
   );
 };
 

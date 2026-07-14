@@ -1,0 +1,82 @@
+# robots.txt for Unified CRM
+User-agent: *
+
+# Allow public pages
+Allow: /
+Allow: /login
+Allow: /register
+Allow: /forgot-password
+Allow: /reset-password
+Allow: /verify-email
+
+# Reseller pages
+Allow: /reseller/register
+Allow: /reseller/login
+
+# Company pages
+Allow: /about
+Allow: /contact
+Allow: /security
+Allow: /partners
+Allow: /partner-resources
+
+# Features & Product pages
+Allow: /all-features
+Allow: /platform
+Allow: /feature/*
+Allow: /data-center-feature
+Allow: /integrations
+Allow: /industries
+
+# Resources
+Allow: /demo
+Allow: /demo/library
+Allow: /help
+
+# Disallow private/authenticated pages
+Disallow: /dashboard
+Disallow: /reseller/dashboard
+Disallow: /saas/
+Disallow: /leads
+Disallow: /contacts
+Disallow: /accounts
+Disallow: /opportunities
+Disallow: /data-center
+Disallow: /inventory
+Disallow: /tasks
+Disallow: /meetings
+Disallow: /calls
+Disallow: /emails
+Disallow: /notifications
+Disallow: /activity-logs
+Disallow: /audit-logs
+Disallow: /rfi
+Disallow: /proposals
+Disallow: /quotations
+Disallow: /purchase-orders
+Disallow: /invoices
+Disallow: /products
+Disallow: /products-management
+Disallow: /product-categories
+Disallow: /subscription
+Disallow: /monetization
+Disallow: /support
+Disallow: /support-admin
+Disallow: /feedback
+Disallow: /users
+Disallow: /org-chart
+Disallow: /org-hierarchy
+Disallow: /role-template
+Disallow: /templates
+Disallow: /notification-settings
+Disallow: /document-templates
+Disallow: /email-templates
+Disallow: /social-media
+Disallow: /change-password
+Disallow: /profile
+Disallow: /api/
+Disallow: /complete-profile
+Disallow: /auth/callback
+
+# Sitemap location
+Sitemap: https://unifiedcrm.texora.ai/sitemap.xml

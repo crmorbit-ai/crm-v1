@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authService } from '../services/authService';
 import { API_URL } from '../config/api.config';
+import SEO from '../components/SEO';
 
 const NAME_MAX=30, NAME_MIN=2, PASS_MIN=6, PASS_MAX=16;
 const pwChecks = (pw) => ({ length:pw.length>=PASS_MIN, upper:/[A-Z]/.test(pw), lower:/[a-z]/.test(pw), number:/[0-9]/.test(pw), symbol:/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pw) });
@@ -138,8 +139,15 @@ const Register = () => {
   };
 
   return (
-    <div className="rg-page">
-      <style>{CSS}</style>
+    <>
+      <SEO
+        title="Sign Up - Unified CRM"
+        description="Create your Unified CRM account and start managing leads, contacts, and deals efficiently. Free trial available."
+        url="https://unifiedcrm.texora.ai/signup"
+        noindex={false}
+      />
+      <div className="rg-page">
+        <style>{CSS}</style>
       <div className="rg-card">
         <div style={{textAlign:'center', marginBottom:12}}>
           <Link to="/" style={{display:'inline-block', marginBottom:6}}>
@@ -240,6 +248,7 @@ const Register = () => {
         </div>
       </div>
     </div>
+    </>
   );
 };
 

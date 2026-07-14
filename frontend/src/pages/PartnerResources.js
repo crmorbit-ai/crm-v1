@@ -2,6 +2,7 @@ import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import SEO from '../components/SEO';
 
 const PartnerResources = () => {
   const navigate = useNavigate();
@@ -79,7 +80,14 @@ const PartnerResources = () => {
   `;
 
   return (
-    <div className="min-h-screen bg-[#0f172a] pr-page">
+    <>
+      <SEO
+        title="Partner Resources - Unified CRM"
+        description="Resources for Unified CRM partners. Marketing materials, technical documentation, training guides, and support."
+        url="https://unifiedcrm.texora.ai/partner-resources"
+        keywords="partner resources, reseller materials, partner portal, training resources"
+      />
+      <div className="min-h-screen bg-[#0f172a] pr-page">
       <style>{css}</style>
       {/* Navigation */}
       <SharedHeader />
@@ -204,6 +212,7 @@ const PartnerResources = () => {
       {/* Footer */}
       <SharedFooter />
     </div>
+    </>
   );
 };
 

@@ -2,6 +2,7 @@ import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import SEO from '../components/SEO';
 
 const Security = () => {
   const navigate = useNavigate();
@@ -79,7 +80,14 @@ const Security = () => {
   `;
 
   return (
-    <div className="sec-page">
+    <>
+      <SEO
+        title="Security & Compliance - Unified CRM"
+        description="Enterprise-grade security features. Data encryption, role-based access control, audit logs, and compliance certifications for your CRM data."
+        url="https://unifiedcrm.texora.ai/security"
+        keywords="CRM security, data encryption, GDPR compliance, secure CRM, enterprise security"
+      />
+      <div className="sec-page">
       <style>{css}</style>
       <SharedHeader />
 
@@ -199,6 +207,7 @@ const Security = () => {
 
       <SharedFooter />
     </div>
+    </>
   );
 };
 

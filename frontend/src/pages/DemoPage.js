@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
 import { API_URL } from '../config/api.config';
+import SEO from '../components/SEO';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -134,7 +135,14 @@ export default function DemoPage() {
   };
 
   return (
-    <div className="demo-page">
+    <>
+      <SEO
+        title="Request Demo - Unified CRM"
+        description="Schedule a personalized demo of Unified CRM. See how our CRM solution can transform your sales and customer management process."
+        url="https://unifiedcrm.texora.ai/demo"
+        keywords="CRM demo, schedule demo, product demo, CRM trial, see CRM in action"
+      />
+      <div className="demo-page">
       <style>{CSS}</style>
       <SharedHeader />
 
@@ -261,5 +269,6 @@ export default function DemoPage() {
 
       <SharedFooter />
     </div>
+    </>
   );
 }
