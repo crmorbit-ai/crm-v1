@@ -151,6 +151,7 @@ function AppRoutes() {
   return (
     <>
       <ScrollToTop />
+      <Suspense fallback={<Loading />}>
       <Routes>
         {/* Public auth */}
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
@@ -298,6 +299,7 @@ function AppRoutes() {
         } />
         <Route path="*" element={<div style={{ padding: '40px', textAlign: 'center' }}><h2>404 - Page Not Found</h2></div>} />
       </Routes>
+      </Suspense>
     </>
   );
 }
