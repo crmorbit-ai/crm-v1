@@ -1,11 +1,22 @@
 // Complete world location data using country-state-city package
-import { Country, State, City } from 'country-state-city';
+// Dynamic import to reduce initial bundle size
+let Country, State, City;
+
+const loadLocationData = async () => {
+  if (!Country) {
+    const module = await import('country-state-city');
+    Country = module.Country;
+    State = module.State;
+    City = module.City;
+  }
+};
 
 /**
  * Get all countries in the world (250+ countries)
  * Returns array of objects with { name, isoCode, phonecode, flag, etc. }
  */
-export const getCountries = () => {
+export const getCountries = async () => {
+  await loadLocationData();
   const countries = Country.getAllCountries();
 
   // Sort alphabetically by name
@@ -27,9 +38,10 @@ export const getCountries = () => {
  * @param {string} countryIsoCode - ISO code of country (e.g., 'IN', 'US', 'GB')
  * Returns array of state objects
  */
-export const getStates = (countryIsoCode) => {
+export const getStates = async (countryIsoCode) => {
   if (!countryIsoCode) return [];
 
+  await loadLocationData();
   const states = State.getStatesOfCountry(countryIsoCode);
 
   // If no states found, return empty array (some small countries don't have states)
@@ -53,9 +65,10 @@ export const getStates = (countryIsoCode) => {
  * @param {string} stateIsoCode - ISO code of state (e.g., 'BR' for Bihar, 'CA' for California)
  * Returns array of city objects
  */
-export const getCities = (countryIsoCode, stateIsoCode) => {
+export const getCities = async (countryIsoCode, stateIsoCode) => {
   if (!countryIsoCode) return [];
 
+  await loadLocationData();
   // If no state provided or state not available, get all cities of country
   if (!stateIsoCode) {
     const cities = City.getCitiesOfCountry(countryIsoCode);
@@ -94,9 +107,10 @@ export const getCities = (countryIsoCode, stateIsoCode) => {
  * @param {string} countryName - Name of country
  * Returns country object with isoCode
  */
-export const getCountryByName = (countryName) => {
+export const getCountryByName = async (countryName) => {
   if (!countryName) return null;
 
+  await loadLocationData();
   const countries = Country.getAllCountries();
   return countries.find(country =>
     country.name.toLowerCase() === countryName.toLowerCase()
@@ -109,14 +123,12 @@ export const getCountryByName = (countryName) => {
  * @param {string} stateName - Name of state
  * Returns state object with isoCode
  */
-export const getStateByName = (countryIsoCode, stateName) => {
+export const getStateByName = async (countryIsoCode, stateName) => {
   if (!countryIsoCode || !stateName) return null;
 
+  await loadLocationData();
   const states = State.getStatesOfCountry(countryIsoCode);
   return states.find(state =>
     state.name.toLowerCase() === stateName.toLowerCase()
   );
 };
-
-// Export for direct usage if needed
-export { Country, State, City };
