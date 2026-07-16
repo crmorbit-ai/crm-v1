@@ -107,8 +107,11 @@ const CSS = `
     background: none; border: none; cursor: pointer;
     font-family: inherit; padding: 0; text-decoration: none;
     transition: color 0.15s;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
   }
-  .sf-legal-link:hover { color: #1EB980; }
+  .sf-legal-link:hover { color: #1EB980; text-decoration: underline; }
   .sf-legal-dot { color: #d1d5db; font-size: 12px; }
   .sf-copy { font-size: 12px; color: #9ca3af; }
   .sf-status { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #1EB980; font-weight: 600; margin-left: auto; }

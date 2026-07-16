@@ -190,6 +190,7 @@ export default function DemoLibraryPage() {
   const [prodOpen, setProdOpen] = useState(true);
   const [indOpen, setIndOpen] = useState(true);
   const [page, setPage] = useState(1);
+  const [sortBy, setSortBy] = useState('relevance');
 
   const toggleFilter = (val, list, setList) => {
     setList(prev => prev.includes(val) ? prev.filter(x=>x!==val) : [...prev, val]);
@@ -197,13 +198,24 @@ export default function DemoLibraryPage() {
   };
 
   const filtered = useMemo(() => {
-    return DEMOS.filter(d => {
+    let result = DEMOS.filter(d => {
       const matchSearch = !search || d.title.toLowerCase().includes(search.toLowerCase()) || d.desc.toLowerCase().includes(search.toLowerCase());
       const matchProduct = selectedProducts.length === 0 || d.products.some(p => selectedProducts.includes(p));
       const matchIndustry = selectedIndustries.length === 0 || d.industries.some(i => selectedIndustries.includes(i));
       return matchSearch && matchProduct && matchIndustry;
     });
-  }, [search, selectedProducts, selectedIndustries]);
+
+    // Sort the results
+    if (sortBy === 'newest') {
+      result = [...result].reverse(); // Assuming DEMOS is already in order
+    } else if (sortBy === 'popular') {
+      // Sort by view count if available, otherwise keep original order
+      result = [...result].sort((a, b) => (b.views || 0) - (a.views || 0));
+    }
+    // 'relevance' keeps the original order
+
+    return result;
+  }, [search, selectedProducts, selectedIndustries, sortBy]);
 
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
   const paginated = filtered.slice((page-1)*PER_PAGE, page*PER_PAGE);
@@ -303,11 +315,11 @@ export default function DemoLibraryPage() {
               )}
             </div>
             <div className="dl-sort">
-              Relevance
-              <select onChange={()=>{}} defaultValue="relevance">
+              Sort by:
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
                 <option value="relevance">Relevance</option>
                 <option value="newest">Newest</option>
-                <option value="shortest">Shortest</option>
+                <option value="popular">Most Popular</option>
               </select>
             </div>
           </div>
@@ -322,11 +334,20 @@ export default function DemoLibraryPage() {
             <div className="dl-grid">
               {paginated.map(d=>(
                 <div key={d.id} className="dl-card" onClick={()=>navigate(`/feature/${d.products[0]==='Lead Management'?'lead-management':d.products[0]==='B2B Workflow'?'sales-finance':d.products[0]==='AI Assistant'?'automation':d.products[0]==='Support Tickets'?'support':d.products[0]==='Multi-Tenant SaaS'?'monetization':'access-management'}`)}>
-                  <div className="dl-card-thumb" style={{background:d.bg}}>
-                    <div className="dl-play">
+                  <div className="dl-card-thumb" style={{
+                    background: d.thumbnail ? `url(${d.thumbnail}) center/cover no-repeat, ${d.bg}` : d.bg,
+                    position: 'relative'
+                  }}>
+                    {/* Overlay gradient for better play button visibility */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: 'linear-gradient(to bottom, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%)'
+                    }} />
+                    <div className="dl-play" style={{ position: 'relative', zIndex: 2 }}>
                       <span className="dl-play-icon">▶</span>
                     </div>
-                    <div className="dl-thumb-duration">⏱ {d.duration}</div>
+                    <div className="dl-thumb-duration" style={{ zIndex: 2 }}>⏱ {d.duration}</div>
                   </div>
                   <div className="dl-card-body">
                     <div className="dl-card-tags">

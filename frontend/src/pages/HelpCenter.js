@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
@@ -22,6 +22,15 @@ const CSS = `
   .hc-search::placeholder { color:rgba(255,255,255,0.4); }
   .hc-search-icon { position:absolute; right:18px; top:50%; transform:translateY(-50%); color:rgba(255,255,255,0.5); }
 
+  .hc-search-results { max-width:480px; margin:16px auto 0; background:rgba(255,255,255,0.08); border:1.5px solid rgba(255,255,255,0.15); border-radius:16px; padding:12px 0; max-height:400px; overflow-y:auto; backdrop-filter:blur(10px); }
+  .hc-search-result-item { padding:12px 20px; border-bottom:1px solid rgba(255,255,255,0.08); cursor:pointer; transition:all 0.2s; }
+  .hc-search-result-item:last-child { border-bottom:none; }
+  .hc-search-result-item:hover { background:rgba(30,185,128,0.15); }
+  .hc-search-result-q { font-size:14px; font-weight:600; color:#fff; margin-bottom:4px; }
+  .hc-search-result-a { font-size:12px; color:rgba(255,255,255,0.6); line-height:1.5; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .hc-search-empty { padding:24px 20px; text-align:center; color:rgba(255,255,255,0.5); font-size:13px; }
+  .hc-search-count { padding:8px 20px; font-size:11px; font-weight:600; color:#1EB980; text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.08); }
+
   /* Quick links */
   .hc-quick { max-width:1200px; margin:0 auto; padding:48px 40px; display:grid; grid-template-columns:repeat(4,1fr); gap:16px; }
   @media(max-width:900px){ .hc-quick { grid-template-columns:repeat(2,1fr); } }
@@ -42,7 +51,7 @@ const CSS = `
   .hc-faq-item { border-bottom:1px solid rgba(255,255,255,0.08); }
   .hc-faq-q { width:100%; text-align:left; background:none; border:none; cursor:pointer; font-family:inherit; padding:20px 0; display:flex; align-items:center; justify-content:space-between; gap:16px; }
   .hc-faq-q-text { font-size:16px; font-weight:600; color:#fff; }
-  .hc-faq-arrow { font-size:14px; color:rgba(255,255,255,0.4); transition:transform 0.2s; flex-shrink:0; }
+  .hc-faq-arrow { font-size:20px; color:rgba(255,255,255,0.6); transition:transform 0.2s; flex-shrink:0; font-weight:700; }
   .hc-faq-arrow.open { transform:rotate(180deg); }
   .hc-faq-a { font-size:14px; color:rgba(255,255,255,0.62); line-height:1.75; padding:0 0 20px; }
 
@@ -75,7 +84,8 @@ const CSS = `
   .hc-input { width:100%; padding:12px 14px; font-size:14px; background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; color:#fff; outline:none; font-family:inherit; transition:border-color 0.2s; }
   .hc-input:focus { border-color:#1EB980; background:rgba(255,255,255,0.08); }
   .hc-input::placeholder { color:rgba(255,255,255,0.3); }
-  .hc-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:36px; }
+  .hc-select { appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 14px center; padding-right:42px; }
+  .hc-select option { background:#1a3654; color:#fff; padding:8px; }
   .hc-textarea { width:100%; min-height:120px; padding:12px 14px; font-size:14px; background:rgba(255,255,255,0.06); border:1.5px solid rgba(255,255,255,0.1); border-radius:10px; color:#fff; outline:none; font-family:inherit; resize:vertical; transition:border-color 0.2s; }
   .hc-textarea:focus { border-color:#1EB980; }
   .hc-textarea::placeholder { color:rgba(255,255,255,0.3); }
@@ -87,23 +97,55 @@ const CSS = `
 `;
 
 const FAQS = [
-  { q: 'How do I reset my password?', a: 'Go to the login page and click "Forgot Password". Enter your registered email address and you will receive an OTP to reset your password within a few minutes.' },
-  { q: 'Can I import my existing leads from Excel/CSV?', a: 'Yes. Go to Leads → Import, upload your CSV file, map the columns to CRM fields, and submit. Duplicates are auto-detected. You can import thousands of leads at once.' },
-  { q: 'How does the B2B workflow (RFI → Invoice) work?', a: 'Create an RFI, convert it to a Quotation with line items and PDF export, get internal approval, convert to Purchase Order, and finally generate an Invoice — all linked in one chain.' },
-  { q: 'Can I connect my Gmail or Outlook to the CRM?', a: 'Yes. Go to Integrations → Email Inbox, enter your IMAP credentials (Gmail/Outlook/any email), and your inbox will sync in real time with open and click tracking.' },
-  { q: 'How do I add team members and set their permissions?', a: 'Go to Settings → Team Management, invite a user by email, assign them a role (Admin/Manager/Sales/Support), and configure module-level permissions.' },
-  { q: 'Is my data secure and isolated from other tenants?', a: 'Yes. Every tenant has 100% data isolation. No cross-tenant data access is possible. All data is encrypted at rest (AES-256) and in transit (TLS 1.3).' },
-  { q: 'How does the AI lead scoring work?', a: 'Gemini AI analyzes lead behavior, profile completeness, source, and engagement to assign a score from 0-100%. High-scoring leads are surfaced to your sales team automatically.' },
-  { q: 'Can I export my CRM data?', a: 'Yes. All entities (leads, contacts, accounts, opportunities, etc.) can be exported to CSV or Excel from their respective list views using the Export button.' },
+  { q: 'How do I reset my password?', a: 'Go to the login page and click "Forgot Password". Enter your registered email address and you will receive an OTP to reset your password within a few minutes.', tags: 'password reset login forgot change credentials access account' },
+  { q: 'Can I import my existing leads from Excel/CSV?', a: 'Yes. Go to Leads → Import, upload your CSV file, map the columns to CRM fields, and submit. Duplicates are auto-detected. You can import thousands of leads at once.', tags: 'import leads excel csv upload bulk data migration transfer' },
+  { q: 'How does the B2B workflow (RFI → Invoice) work?', a: 'Create an RFI, convert it to a Quotation with line items and PDF export, get internal approval, convert to Purchase Order, and finally generate an Invoice — all linked in one chain.', tags: 'b2b workflow rfi quotation invoice purchase order quote proposal sales process' },
+  { q: 'Can I connect my Gmail or Outlook to the CRM?', a: 'Yes. Go to Integrations → Email Inbox, enter your IMAP credentials (Gmail/Outlook/any email), and your inbox will sync in real time with open and click tracking.', tags: 'email gmail outlook imap sync integration connect mail inbox messages' },
+  { q: 'How do I add team members and set their permissions?', a: 'Go to Settings → Team Management, invite a user by email, assign them a role (Admin/Manager/Sales/Support), and configure module-level permissions.', tags: 'team members users invite add permissions roles access control manage staff employees' },
+  { q: 'Is my data secure and isolated from other tenants?', a: 'Yes. Every tenant has 100% data isolation. No cross-tenant data access is possible. All data is encrypted at rest (AES-256) and in transit (TLS 1.3).', tags: 'security data safe secure privacy encryption isolation tenant protection' },
+  { q: 'How does the AI lead scoring work?', a: 'Gemini AI analyzes lead behavior, profile completeness, source, and engagement to assign a score from 0-100%. High-scoring leads are surfaced to your sales team automatically.', tags: 'ai lead scoring artificial intelligence gemini smart automatic priority ranking' },
+  { q: 'Can I export my CRM data?', a: 'Yes. All entities (leads, contacts, accounts, opportunities, etc.) can be exported to CSV or Excel from their respective list views using the Export button.', tags: 'export data download csv excel backup save reports extract' },
 ];
 
 export default function HelpCenter() {
   const navigate = useNavigate();
   const [openFaq, setOpenFaq] = useState(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const [form, setForm] = useState({ name:'', email:'', category:'General', message:'' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const faqSectionRef = useRef(null);
+
+  // Show/hide search results dropdown
+  useEffect(() => {
+    setShowSearchResults(searchQuery.trim().length > 0);
+  }, [searchQuery]);
+
+  // Smart search - split query into keywords and match any
+  const filteredFAQs = searchQuery.trim()
+    ? (() => {
+        const query = searchQuery.toLowerCase().trim();
+        const keywords = query.split(/\s+/); // Split by spaces
+
+        return FAQS.filter(faq => {
+          // Search in question + answer + tags (synonyms)
+          const searchText = `${faq.q} ${faq.a} ${faq.tags || ''}`.toLowerCase();
+
+          // Match if ANY keyword is found (OR logic, not AND)
+          return keywords.some(keyword => {
+            // Match whole word or partial (min 3 chars)
+            if (keyword.length >= 3) {
+              return searchText.includes(keyword);
+            }
+            // For short keywords, match whole word only
+            const regex = new RegExp(`\\b${keyword}\\b`, 'i');
+            return regex.test(searchText);
+          });
+        });
+      })()
+    : FAQS;
 
   const submit = async (e) => {
     e.preventDefault();
@@ -139,11 +181,61 @@ export default function HelpCenter() {
           <div className="hc-hero-label">Help Center</div>
           <h1 className="hc-hero-title">How can we help you?</h1>
           <p className="hc-hero-desc">Find answers, submit a support ticket, or get in touch with our team.</p>
-          <div className="hc-search-wrap">
-            <input className="hc-search" placeholder="Search for help topics..." />
-            <span className="hc-search-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
-            </span>
+          <div>
+            <div className="hc-search-wrap">
+              <input
+                className="hc-search"
+                placeholder="Search for help topics..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              <span className="hc-search-icon">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg>
+              </span>
+            </div>
+
+            {/* Search Results Dropdown */}
+            {showSearchResults && (
+              <div className="hc-search-results">
+                {filteredFAQs.length > 0 ? (
+                  <>
+                    <div className="hc-search-count">{filteredFAQs.length} Result{filteredFAQs.length !== 1 ? 's' : ''} Found</div>
+                    {filteredFAQs.slice(0, 5).map((faq, i) => (
+                      <div
+                        key={i}
+                        className="hc-search-result-item"
+                        onClick={() => {
+                          setOpenFaq(FAQS.indexOf(faq));
+                          setShowSearchResults(false);
+                          setTimeout(() => {
+                            faqSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                          }, 100);
+                        }}
+                      >
+                        <div className="hc-search-result-q">{faq.q}</div>
+                        <div className="hc-search-result-a">{faq.a}</div>
+                      </div>
+                    ))}
+                    {filteredFAQs.length > 5 && (
+                      <div style={{padding:'8px 20px',fontSize:11,color:'rgba(255,255,255,0.4)',textAlign:'center'}}>
+                        + {filteredFAQs.length - 5} more results below
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="hc-search-empty">
+                    No FAQs found matching "{searchQuery}".
+                    <br/>
+                    <button
+                      onClick={() => {setSearchQuery(''); setShowSearchResults(false);}}
+                      style={{color:'#1EB980',background:'none',border:'none',cursor:'pointer',textDecoration:'underline',fontFamily:'inherit',fontSize:'inherit',marginTop:8}}
+                    >
+                      Clear search
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -165,21 +257,28 @@ export default function HelpCenter() {
       </div>
 
       {/* FAQ */}
-      <div className="hc-faq">
+      <div className="hc-faq" ref={faqSectionRef}>
         <div className="hc-faq-inner">
           <div className="hc-faq-head">
             <h2 className="hc-faq-title">Frequently Asked Questions</h2>
-            <p className="hc-faq-sub">Quick answers to the most common questions.</p>
+            <p className="hc-faq-sub">Quick answers to the most common questions.{searchQuery && ` (${filteredFAQs.length} results)`}</p>
           </div>
-          {FAQS.map((f,i) => (
-            <div key={i} className="hc-faq-item">
-              <button className="hc-faq-q" onClick={() => setOpenFaq(openFaq===i ? null : i)}>
-                <span className="hc-faq-q-text">{f.q}</span>
-                <span className={`hc-faq-arrow${openFaq===i?' open':''}`}>▾</span>
-              </button>
-              {openFaq===i && <div className="hc-faq-a">{f.a}</div>}
+          {filteredFAQs.length > 0 ? (
+            filteredFAQs.map((f,i) => (
+              <div key={i} className="hc-faq-item">
+                <button className="hc-faq-q" onClick={() => setOpenFaq(openFaq===i ? null : i)}>
+                  <span className="hc-faq-q-text">{f.q}</span>
+                  <span className={`hc-faq-arrow${openFaq===i?' open':''}`}>▾</span>
+                </button>
+                {openFaq===i && <div className="hc-faq-a">{f.a}</div>}
+              </div>
+            ))
+          ) : (
+            <div style={{textAlign:'center',padding:'40px 20px',color:'rgba(255,255,255,0.5)'}}>
+              No FAQs found matching "{searchQuery}". Try different keywords or{' '}
+              <button onClick={() => setSearchQuery('')} style={{color:'#1EB980',background:'none',border:'none',cursor:'pointer',textDecoration:'underline',fontFamily:'inherit',fontSize:'inherit'}}>clear search</button>.
             </div>
-          ))}
+          )}
         </div>
       </div>
 

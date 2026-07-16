@@ -1,41 +1,66 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedFooter from '../components/SharedFooter';
 import SEO from '../components/SEO';
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
   * { box-sizing: border-box; }
-  .ap { font-family: 'Inter', -apple-system, sans-serif; background: #fff; color: #111111; overflow-x: hidden; }
+
+  /* Custom Scrollbar */
+  .ap ::-webkit-scrollbar { width: 12px; height: 12px; }
+  .ap ::-webkit-scrollbar-track { background: rgba(15,30,46,0.5); border-radius: 10px; }
+  .ap ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #1EB980 0%, #17a46f 100%);
+    border-radius: 10px;
+    border: 2px solid rgba(15,30,46,0.5);
+  }
+  .ap ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #22c55e 0%, #1EB980 100%);
+    border-color: rgba(15,30,46,0.3);
+  }
+
+  .ap {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: linear-gradient(180deg, #0f1e2e 0%, #162e48 50%, #0f1e2e 100%);
+    color: #fff;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
 
   /* Sticky top nav */
   .ap-nav {
     position: sticky; top: 0; z-index: 100;
-    background: rgba(255,255,255,0.96); backdrop-filter: blur(12px);
-    border-bottom: 1px solid #e5e7eb;
+    background: rgba(15,30,46,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
     display: flex; align-items: center; padding: 0 48px; height: 64px;
     justify-content: space-between;
   }
   .ap-nav-logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
-  .ap-nav-back { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: #5f6b7a; cursor: pointer; background: none; border: none; font-family: inherit; transition: color 0.15s; }
+  .ap-nav-back { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 500; color: rgba(255,255,255,0.7); cursor: pointer; background: none; border: none; font-family: inherit; transition: color 0.15s; }
   .ap-nav-back:hover { color: #1EB980; }
   .ap-nav-right { display: flex; align-items: center; gap: 10px; }
-  .ap-btn-outline { padding: 9px 20px; font-size: 14px; font-weight: 600; border: 1.5px solid #d1d5db; border-radius: 999px; background: #fff; color: #111111; cursor: pointer; font-family: inherit; transition: all 0.2s; }
-  .ap-btn-outline:hover { border-color: #1EB980; color: #1EB980; }
-  .ap-btn-green { padding: 9px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 999px; background: #1EB980; color: #fff; cursor: pointer; font-family: inherit; transition: all 0.2s; }
-  .ap-btn-green:hover { background: #17a46f; transform: translateY(-1px); }
+  .ap-btn-outline { padding: 9px 20px; font-size: 14px; font-weight: 600; border: 1.5px solid rgba(255,255,255,0.2); border-radius: 999px; background: transparent; color: rgba(255,255,255,0.85); cursor: pointer; font-family: inherit; transition: all 0.2s; }
+  .ap-btn-outline:hover { border-color: #1EB980; color: #1EB980; background: rgba(30,185,128,0.1); }
+  .ap-btn-green { padding: 9px 20px; font-size: 14px; font-weight: 600; border: none; border-radius: 999px; background: #1EB980; color: #fff; cursor: pointer; font-family: inherit; transition: all 0.2s; box-shadow: 0 2px 12px rgba(30,185,128,0.3); }
+  .ap-btn-green:hover { background: #17a46f; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(30,185,128,0.4); }
 
   /* Hero */
   .ap-hero {
     max-width: 1280px; margin: 0 auto; padding: 72px 48px 56px;
     display: grid; grid-template-columns: 1fr 420px; gap: 48px; align-items: center;
+    position: relative;
   }
-  .ap-hero-title { font-size: clamp(36px, 5vw, 60px); font-weight: 800; color: #111111; line-height: 1.1; letter-spacing: -1.5px; margin: 0 0 20px; }
-  .ap-hero-desc { font-size: 18px; color: #5f6b7a; line-height: 1.7; margin: 0 0 32px; max-width: 520px; }
+  .ap-hero-title {
+    font-size: clamp(36px, 5vw, 60px); font-weight: 800;
+    color: #fff;
+    line-height: 1.1; letter-spacing: -1.5px; margin: 0 0 20px;
+  }
+  .ap-hero-desc { font-size: 18px; color: rgba(255,255,255,0.7); line-height: 1.7; margin: 0 0 32px; max-width: 520px; }
   .ap-hero-ctas { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
   .ap-hero-cta-main { padding: 14px 28px; font-size: 16px; font-weight: 600; background: #1EB980; color: #fff; border: none; border-radius: 999px; cursor: pointer; font-family: inherit; transition: all 0.2s; }
   .ap-hero-cta-main:hover { background: #17a46f; transform: translateY(-1px); }
-  .ap-hero-cta-ghost { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; color: #111111; background: none; border: none; cursor: pointer; font-family: inherit; transition: color 0.2s; }
+  .ap-hero-cta-ghost { display: flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 600; color: rgba(255,255,255,0.85); background: none; border: none; cursor: pointer; font-family: inherit; transition: color 0.2s; }
   .ap-hero-cta-ghost:hover { color: #1EB980; }
   .ap-hero-visual {
     background: linear-gradient(145deg, #0f1e2e 0%, #162e48 40%, #1a3654 70%, #1d6b50 100%);
@@ -51,11 +76,11 @@ const CSS = `
   .ap-mock-badge { margin-left: auto; font-size: 10px; font-weight: 700; padding: 3px 9px; border-radius: 20px; background: rgba(30,185,128,0.2); color: #1EB980; }
 
   /* Tab bar */
-  .ap-tabs { border-bottom: 1px solid #e5e7eb; background: #fff; position: sticky; top: 64px; z-index: 90; }
+  .ap-tabs { border-bottom: 1px solid rgba(255,255,255,0.1); background: #162e48; position: sticky; top: 64px; z-index: 90; }
   .ap-tabs-inner { max-width: 1280px; margin: 0 auto; padding: 0 48px; display: flex; gap: 0; }
-  .ap-tab { padding: 18px 32px; font-size: 16px; font-weight: 500; color: #5f6b7a; background: none; border: none; cursor: pointer; font-family: inherit; border-bottom: 3px solid transparent; transition: all 0.2s; }
-  .ap-tab:hover { color: #111111; }
-  .ap-tab.active { color: #111111; font-weight: 600; border-bottom-color: #111111; }
+  .ap-tab { padding: 18px 32px; font-size: 16px; font-weight: 500; color: rgba(255,255,255,0.6); background: none; border: none; cursor: pointer; font-family: inherit; border-bottom: 3px solid transparent; transition: all 0.2s; }
+  .ap-tab:hover { color: rgba(255,255,255,0.9); }
+  .ap-tab.active { color: #fff; font-weight: 600; border-bottom-color: #1EB980; }
 
   /* Floating buttons */
   .ap-float { position: fixed; right: 24px; bottom: 100px; display: flex; flex-direction: column; gap: 10px; z-index: 200; }
@@ -65,41 +90,108 @@ const CSS = `
   /* Section */
   .ap-section { max-width: 1280px; margin: 0 auto; padding: 64px 48px; }
   .ap-section-head { margin-bottom: 40px; }
-  .ap-section-title { font-size: 36px; font-weight: 800; color: #111111; margin: 0 0 14px; letter-spacing: -0.8px; }
-  .ap-section-desc { font-size: 16px; color: #5f6b7a; line-height: 1.65; margin: 0 0 20px; max-width: 600px; }
-  .ap-view-az { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; font-size: 14px; font-weight: 600; color: #111111; border: 1.5px solid #d1d5db; border-radius: 999px; background: #fff; cursor: pointer; font-family: inherit; transition: all 0.2s; }
-  .ap-view-az:hover { border-color: #1EB980; color: #1EB980; }
+  .ap-section-title { font-size: 36px; font-weight: 800; color: #fff; margin: 0 0 14px; letter-spacing: -0.8px; }
+  .ap-section-desc { font-size: 16px; color: rgba(255,255,255,0.65); line-height: 1.65; margin: 0 0 20px; max-width: 600px; }
+  .ap-view-az { display: inline-flex; align-items: center; gap: 6px; padding: 10px 22px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); border: 1.5px solid rgba(255,255,255,0.2); border-radius: 999px; background: rgba(255,255,255,0.05); cursor: pointer; font-family: inherit; transition: all 0.2s; }
+  .ap-view-az:hover { border-color: #1EB980; color: #1EB980; background: rgba(30,185,128,0.1); }
 
   /* Product cards */
   .ap-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
-  .ap-card { border: 2px solid #e5e7eb; border-radius: 20px; overflow: hidden; cursor: pointer; transition: all 0.25s; background: #fff; }
-  .ap-card:hover { transform: translateY(-5px); box-shadow: 0 12px 40px rgba(0,0,0,0.12); border-color: rgba(30,185,128,0.5); }
-  .ap-card-img { height: 220px; background: linear-gradient(145deg, #0f1e2e, #162e48); display: flex; align-items: stretch; overflow: hidden; border-bottom: 2px solid #e5e7eb; }
+  .ap-card { border: 2px solid rgba(255,255,255,0.1); border-radius: 20px; overflow: hidden; cursor: pointer; transition: all 0.25s; background: rgba(26,54,84,0.4); }
+  .ap-card:hover { transform: translateY(-5px); box-shadow: 0 12px 40px rgba(30,185,128,0.2); border-color: rgba(30,185,128,0.5); }
+  .ap-card-img { height: 220px; background: linear-gradient(145deg, #0f1e2e, #162e48); display: flex; align-items: stretch; overflow: hidden; border-bottom: 2px solid rgba(255,255,255,0.1); }
   .ap-card-body { padding: 24px; }
-  .ap-card-title { font-size: 22px; font-weight: 700; color: #111111; margin: 0 0 10px; }
-  .ap-card-desc { font-size: 14px; color: #5f6b7a; line-height: 1.65; margin: 0 0 20px; }
-  .ap-card-link { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: #111111; background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; transition: color 0.15s; }
+  .ap-card-title { font-size: 22px; font-weight: 700; color: #fff; margin: 0 0 10px; }
+  .ap-card-desc { font-size: 14px; color: rgba(255,255,255,0.65); line-height: 1.65; margin: 0 0 20px; }
+  .ap-card-link { display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: rgba(255,255,255,0.85); background: none; border: none; cursor: pointer; font-family: inherit; padding: 0; transition: color 0.15s; }
   .ap-card-link:hover { color: #1EB980; }
 
   /* A-Z section */
-  .ap-az-section { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 64px 0; }
-  .ap-az-inner { max-width: 1280px; margin: 0 auto; padding: 0 48px; }
-  .ap-az-alpha { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 40px; }
-  .ap-az-letter { width: 36px; height: 36px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #374151; background: #fff; border: 1px solid #e5e7eb; cursor: pointer; transition: all 0.15s; }
-  .ap-az-letter:hover { background: #1EB980; color: #fff; border-color: #1EB980; }
-  .ap-az-letter.inactive { color: #d1d5db; cursor: default; }
-  .ap-az-letter.inactive:hover { background: #fff; color: #d1d5db; border-color: #e5e7eb; }
-  .ap-az-title { font-size: 28px; font-weight: 800; color: #111111; margin: 0 0 32px; }
-  .ap-az-group { margin-bottom: 36px; }
-  .ap-az-group-letter { font-size: 20px; font-weight: 800; color: #1EB980; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #d1fae5; }
-  .ap-az-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
-  .ap-az-item { padding: 8px 0; font-size: 14px; color: #374151; cursor: pointer; background: none; border: none; font-family: inherit; text-align: left; transition: color 0.15s; }
-  .ap-az-item:hover { color: #1EB980; }
+  .ap-az-section {
+    background: linear-gradient(180deg, #162e48 0%, #0f1e2e 50%, #162e48 100%);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    padding: 72px 0;
+    position: relative;
+  }
+  .ap-az-section::before {
+    content: ''; position: absolute; inset: 0;
+    background-image: radial-gradient(circle at 20% 30%, rgba(30,185,128,0.08) 0%, transparent 50%),
+                      radial-gradient(circle at 80% 70%, rgba(30,185,128,0.06) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .ap-az-inner { max-width: 1280px; margin: 0 auto; padding: 0 48px; position: relative; z-index: 1; }
+  .ap-az-alpha {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 48px;
+    padding: 24px;
+    background: rgba(26,54,84,0.5);
+    border-radius: 20px;
+    border: 2px solid rgba(30,185,128,0.2);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .ap-az-letter {
+    width: 40px; height: 40px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px; font-weight: 700; color: rgba(255,255,255,0.85);
+    background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.1);
+    cursor: pointer; transition: all 0.2s;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  }
+  .ap-az-letter:hover {
+    background: #1EB980; color: #fff; border-color: #1EB980;
+    transform: translateY(-2px); box-shadow: 0 4px 12px rgba(30,185,128,0.5);
+  }
+  .ap-az-letter.inactive { color: rgba(255,255,255,0.2); cursor: default; box-shadow: none; }
+  .ap-az-letter.inactive:hover { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.1); transform: none; box-shadow: none; }
+  .ap-az-title {
+    font-size: 32px; font-weight: 800;
+    background: linear-gradient(135deg, #ffffff 0%, #1EB980 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin: 0 0 40px; letter-spacing: -0.8px;
+    position: relative; padding-bottom: 16px;
+  }
+  .ap-az-title::after {
+    content: ''; position: absolute; bottom: 0; left: 0;
+    width: 120px; height: 5px;
+    background: linear-gradient(90deg, #1EB980, #22c55e, transparent);
+    border-radius: 3px;
+    box-shadow: 0 2px 8px rgba(30,185,128,0.3);
+  }
+  .ap-az-group {
+    margin-bottom: 48px;
+    background: rgba(26,54,84,0.4);
+    padding: 28px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+  }
+  .ap-az-group-letter {
+    font-size: 28px; font-weight: 800;
+    background: linear-gradient(135deg, #1EB980, #22c55e);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 3px solid rgba(30,185,128,0.3);
+    display: inline-block;
+  }
+  .ap-az-list { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .ap-az-item {
+    padding: 12px 16px; font-size: 15px; color: rgba(255,255,255,0.75);
+    cursor: pointer; background: none; border: none;
+    font-family: inherit; text-align: left;
+    transition: all 0.2s; border-radius: 8px;
+    font-weight: 500;
+  }
+  .ap-az-item:hover {
+    color: #1EB980; background: rgba(30,185,128,0.15);
+    transform: translateX(4px);
+  }
 
   /* Expert CTA */
-  .ap-expert { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 64px 48px; text-align: center; }
-  .ap-expert-title { font-size: 28px; font-weight: 700; color: #111111; margin: 0 0 16px; }
-  .ap-expert-desc { font-size: 16px; color: #5f6b7a; margin: 0 0 28px; }
+  .ap-expert { background: rgba(26,54,84,0.3); border-top: 1px solid rgba(255,255,255,0.08); padding: 64px 48px; text-align: center; }
+  .ap-expert-title { font-size: 28px; font-weight: 700; color: #fff; margin: 0 0 16px; }
+  .ap-expert-desc { font-size: 16px; color: rgba(255,255,255,0.65); margin: 0 0 28px; }
 
   @media(max-width:1024px){
     .ap-hero { grid-template-columns: 1fr; padding: 48px 24px 40px; }
@@ -299,11 +391,11 @@ const PRODUCTS = {
   ],
   platform: [
     { Mock: CardMockSaaS,     title: 'Access Management',    desc: 'Granular RBAC with custom roles, group permissions, field-level visibility, and audit trail.',     slug: 'access-management',color: '#1EB980' },
-    { Mock: CardMockLeads,    title: 'Field Customization',  desc: 'No-code custom field builder for any entity — 8+ field types with drag-and-drop reordering.',     slug: 'access-management',color: '#38bdf8' },
+    { Mock: CardMockLeads,    title: 'Field Customization',  desc: 'No-code custom field builder for any entity — 8+ field types with drag-and-drop reordering.',     slug: 'document-templates',color: '#38bdf8' },
     { Mock: CardMockWorkflow, title: 'Email Inbox',           desc: 'Built-in email with IMAP sync, real-time open/click tracking, and automatic CRM entity linking.', slug: 'email-inbox',        color: '#f59e0b' },
     { Mock: CardMockData,     title: 'Social Media',          desc: 'Schedule and publish posts across platforms with content calendar and engagement analytics.',      slug: 'automation',         color: '#a78bfa' },
     { Mock: CardMockAI,       title: 'Document Templates',    desc: 'Dynamic templates with variable substitution, rich text editor, and one-click PDF generation.',   slug: 'document-templates', color: '#ec4899' },
-    { Mock: CardMockSupport,  title: 'Notifications',         desc: 'Real-time in-app alerts for tasks, deals, tickets, and team activity with preference controls.',  slug: 'access-management',color: '#14b8a6' },
+    { Mock: CardMockSupport,  title: 'Notifications',         desc: 'Real-time in-app alerts for tasks, deals, tickets, and team activity with preference controls.',  slug: 'support', color: '#14b8a6' },
   ],
 };
 
@@ -376,7 +468,21 @@ const AZ_SLUG_MAP = {
 
 export default function AllProductsPage() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('products');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get('tab') || 'products');
+
+  // Update URL when tab changes
+  useEffect(() => {
+    setSearchParams({ tab: activeTab }, { replace: true });
+  }, [activeTab, setSearchParams]);
+
+  // Restore tab from URL on mount
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    if (tabFromUrl && ['products', 'solutions', 'platform'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+  }, []);
 
   const tabProducts = activeTab === 'products' ? PRODUCTS.featured : activeTab === 'solutions' ? PRODUCTS.solutions : PRODUCTS.platform;
 
@@ -408,7 +514,7 @@ export default function AllProductsPage() {
       </nav>
 
       {/* Hero */}
-      <div style={{ borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="ap-hero">
           <div>
             <h1 className="ap-hero-title">All products and solutions</h1>

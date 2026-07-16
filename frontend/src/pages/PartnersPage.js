@@ -76,7 +76,7 @@ body{margin:0;background:#0f1e2e;}
 .pp-tier-name{font-size:12px; font-weight:700; color:rgba(255,255,255,0.5); letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;}
 .pp-tier-pct{font-size:40px; font-weight:900; color:#1EB980; letter-spacing:-2px; margin-bottom:6px;}
 .pp-tier-label{font-size:13px; color:rgba(255,255,255,0.45); margin-bottom:16px;}
-.pp-tier-feat{font-size:12px; color:rgba(255,255,255,0.6); margin:4px 0; display:flex; align-items:center; gap:6px; justify-content:center;}
+.pp-tier-feat{font-size:12px; color:rgba(255,255,255,0.6); margin:4px 0; display:flex; align-items:center; gap:8px; justify-content:flex-start;}
 
 /* Main form section */
 .pp-main{
@@ -283,7 +283,10 @@ function RegisterForm() {
 
 
       <div>
-        <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}><label className="pp-lbl" style={{margin:0}}>Requirement <span style={{fontWeight:400,color:'#9ca3af'}}>(optional)</span></label><span style={{fontSize:9,color:'#9ca3af'}}>{f.requirement.length}/200</span></div>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+          <label className="pp-lbl" style={{margin:0}}>Requirement <span style={{fontWeight:400,color:'#9ca3af'}}>(optional)</span></label>
+          <span style={{fontSize:10,color:'#9ca3af',fontWeight:500}}>{f.requirement.length}/200</span>
+        </div>
         <textarea name="requirement" value={f.requirement} onChange={upd} rows={2} maxLength={200} placeholder="Brief description of your business goals…" className="pp-inp" style={{resize:'none',lineHeight:1.4}}/>
       </div>
 

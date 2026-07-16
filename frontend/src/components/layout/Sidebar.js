@@ -256,7 +256,9 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
           <img
             src="/logo.png"
             alt="CRM"
-            className="h-10 w-auto object-contain"
+            className="h-10 w-auto object-contain cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => window.location.href = '/'}
+            style={{ cursor: 'pointer' }}
           />
           {isMobile && (
             <Button variant="ghost" size="icon" onClick={onClose} className="text-gray-700">

@@ -1,8 +1,28 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import SharedHeader from '../components/SharedHeader';
 import SharedFooter from '../components/SharedFooter';
 import SEO from '../components/SEO';
+
+// Map link names to feature slugs
+const LINK_SLUG_MAP = {
+  'Lead Management': 'lead-management',
+  'Email Inbox with IMAP': 'email-inbox',
+  'Data Center & Prospects': 'lead-management',
+  'Social Media Hub': 'automation',
+  'AI Lead Scoring': 'lead-management',
+  'Smart Auto-Assignment': 'lead-management',
+  'Email Draft Generator': 'automation',
+  'Sentiment Analysis': 'support',
+  'B2B Sales Workflow': 'sales-finance',
+  'Support Ticket Resolution': 'support',
+  'Invoice & Payment Tracking': 'sales-finance',
+  'Document Templates': 'document-templates',
+  'Role-Based Access Control': 'access-management',
+  'Complete Audit Logs': 'access-management',
+  'Multi-Tenant Isolation': 'monetization',
+  'Field-Level Permissions': 'access-management',
+};
 
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
@@ -350,8 +370,23 @@ const PRODUCTS = [
 
 export default function PlatformPage() {
   const navigate = useNavigate();
-  const [activeSubTab, setActiveSubTab] = useState('Platform Overview');
-  const [activeCapability, setActiveCapability] = useState('Capture');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeSubTab, setActiveSubTab] = useState(searchParams.get('tab') || 'Platform Overview');
+  const [activeCapability, setActiveCapability] = useState(searchParams.get('capability') || 'Capture');
+
+  // Update URL when tab changes
+  useEffect(() => {
+    setSearchParams({ tab: activeSubTab, capability: activeCapability }, { replace: true });
+  }, [activeSubTab, activeCapability, setSearchParams]);
+
+  // Restore state from URL on mount
+  useEffect(() => {
+    const tabFromUrl = searchParams.get('tab');
+    const capFromUrl = searchParams.get('capability');
+    if (tabFromUrl) setActiveSubTab(tabFromUrl);
+    if (capFromUrl) setActiveCapability(capFromUrl);
+  }, []);
+
   const cap = CAPTURE_DECIDE_EXECUTE[activeCapability];
   const hero = SUB_HERO[activeSubTab] || SUB_HERO['Platform Overview'];
   const subContent = SUB_CONTENT[activeSubTab] || null;
@@ -530,7 +565,7 @@ export default function PlatformPage() {
               <button className="tab-btn" onClick={()=>navigate('/all-features')}>Explore Features</button>
               <div className="tab-links-title">Related capabilities</div>
               {cap.links.map((l,i)=>(
-                <button key={i} className="tab-link" onClick={()=>navigate('/feature/lead-management')}>
+                <button key={i} className="tab-link" onClick={()=>navigate(`/feature/${LINK_SLUG_MAP[l] || 'lead-management'}`)}>
                   {l} <span>→</span>
                 </button>
               ))}

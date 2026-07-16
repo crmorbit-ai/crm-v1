@@ -102,8 +102,8 @@ const CSS = `
   .cu-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
   @media(max-width:560px){ .cu-row{grid-template-columns:1fr;} }
   .cu-select { appearance: none; -webkit-appearance: none; cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='11' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.3)' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 14px center; padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.6)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center; padding-right: 42px;
     color: inherit;
   }
   .cu-select option { background: #1e293b; color: #fff; }
@@ -247,7 +247,12 @@ export default function ContactUs() {
 
           {/* Email Us */}
           <div className="cu-contact-item">
-            <div className="cu-ci-icon" style={{ background:'rgba(30,185,128,0.15)', border:'1px solid rgba(30,185,128,0.3)' }}>✉️</div>
+            <div className="cu-ci-icon" style={{ background:'rgba(30,185,128,0.15)', border:'1px solid rgba(30,185,128,0.3)', color:'#1EB980', fontSize:'22px' }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                <polyline points="22,6 12,13 2,6"></polyline>
+              </svg>
+            </div>
             <div>
               <div className="cu-ci-label" style={{ color:'#1EB980' }}>Email Us</div>
               <div style={{ marginTop:4 }}>

@@ -640,14 +640,11 @@ const CSS = `
   .fdp-cta h2 { font-size: 28px; font-weight: 800; margin: 0 0 10px; }
   .fdp-cta p { font-size: 15px; color: rgba(255,255,255,0.45); margin: 0 0 28px; }
   .fdp-cta-btns { display: flex; gap: 12px; justify-content: center; }
-
-  .fdp-related-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: start; }
   .fdp-cta-btns-row { display: flex; gap: 12px; flex-wrap: wrap; }
 
   @media(max-width:900px){
     .fdp-hero-inner { padding: 0 20px; grid-template-columns: 1fr; }
     .fdp-body { padding: 20px 20px 60px; }
-    .fdp-related-grid { grid-template-columns: 1fr; gap: 32px; padding: 0 20px; }
     .fdp-subnav-inner { padding: 0 16px; }
     .fdp-hero { padding: 48px 0 56px; }
   }
@@ -768,7 +765,7 @@ export default function FeatureDetailPage() {
         {group.modules.map((m, i) => {
           const isOpen = openIdx === i;
           return (
-            <div key={i} className="fdp-module" style={{ borderColor: isOpen ? `${m.color}30` : 'rgba(255,255,255,0.07)' }}>
+            <div key={i} id={`module-${i}`} className="fdp-module" style={{ borderColor: isOpen ? `${m.color}30` : 'rgba(255,255,255,0.07)', scrollMarginTop: '80px' }}>
               <button className="fdp-module-header" onClick={() => setOpenIdx(isOpen ? null : i)}>
                 <div className="fdp-module-icon" style={{ background: `${m.color}15` }}>{m.icon}</div>
                 <div className="fdp-module-info">
@@ -801,37 +798,27 @@ export default function FeatureDetailPage() {
         })}
       </div>
 
-      {/* Related links + CTA — like ServiceNow Image #36 */}
-      <div style={{ background: '#162e48', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '60px 0' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto', padding: '0 40px' }} className="fdp-related-grid">
-          {/* Related links */}
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' }}>Related links</div>
-            {group.modules.map((m, i) => (
-              <button key={i} onClick={() => navigate(`/feature/${Object.keys(GROUPS).find(k=>GROUPS[k].title===group.title)||'lead-management'}`)}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 0', width: '100%', background: 'none', border: 'none', borderBottom: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer', fontFamily: 'inherit', color: '#1EB980', fontSize: 14, fontWeight: 500, transition: 'gap 0.15s' }}
-                onMouseEnter={e=>e.currentTarget.style.gap='12px'} onMouseLeave={e=>e.currentTarget.style.gap='8px'}>
-                {m.icon} {m.name} <span style={{ marginLeft: 'auto', fontSize: 16 }}>→</span>
-              </button>
-            ))}
-          </div>
-          {/* CTA */}
-          <div>
-            <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' }}>Get Started</div>
-            <h3 style={{ fontSize: 28, fontWeight: 800, color: '#fff', margin: '0 0 14px', letterSpacing: '-0.5px' }}>
-              Ready to use <span style={{ color: '#1EB980' }}>{group.title}</span>?
-            </h3>
-            <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, margin: '0 0 28px' }}>
-              Start your free trial today. No credit card required. Set up in minutes.
-            </p>
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-              <button onClick={() => navigate('/register')} style={{ padding: '12px 28px', fontSize: 15, fontWeight: 600, color: '#fff', background: '#1EB980', border: 'none', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Start Free Trial →
-              </button>
-              <button onClick={() => navigate('/contact')} style={{ padding: '12px 24px', fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.8)', background: 'transparent', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit' }}>
-                Contact Us
-              </button>
-            </div>
+      {/* CTA Section */}
+      <div style={{ background: '#162e48', borderTop: '1px solid rgba(255,255,255,0.06)', padding: '80px 0', textAlign: 'center' }}>
+        <div style={{ maxWidth: 800, margin: '0 auto', padding: '0 40px' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.4)', letterSpacing: 1, marginBottom: 16, textTransform: 'uppercase' }}>Get Started</div>
+          <h3 style={{ fontSize: 36, fontWeight: 800, color: '#fff', margin: '0 0 20px', letterSpacing: '-0.8px' }}>
+            Ready to use <span style={{ color: '#1EB980' }}>{group.title}</span>?
+          </h3>
+          <p style={{ fontSize: 17, color: 'rgba(255,255,255,0.6)', lineHeight: 1.75, margin: '0 0 36px', maxWidth: 600, marginLeft: 'auto', marginRight: 'auto' }}>
+            Start your free trial today. No credit card required. Set up in minutes.
+          </p>
+          <div style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <button onClick={() => navigate('/register')} style={{ padding: '14px 32px', fontSize: 16, fontWeight: 600, color: '#fff', background: '#1EB980', border: 'none', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 16px rgba(30,185,128,0.3)', transition: 'all 0.2s' }}
+              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+              Start Free Trial →
+            </button>
+            <button onClick={() => navigate('/contact')} style={{ padding: '14px 28px', fontSize: 16, fontWeight: 600, color: 'rgba(255,255,255,0.85)', background: 'transparent', border: '1.5px solid rgba(255,255,255,0.25)', borderRadius: 999, cursor: 'pointer', fontFamily: 'inherit', transition: 'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.4)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; }}>
+              Contact Us
+            </button>
           </div>
         </div>
       </div>

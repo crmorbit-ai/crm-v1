@@ -105,7 +105,7 @@ const Login = () => {
 
     // Validate loginName (no email validation needed now)
     if (!formData.loginName || !formData.loginName.trim()) {
-      setError('Please enter your login name');
+      setError('Please enter your email address');
       setTimeout(() => setError(''), 6000); return;
     }
 
@@ -127,7 +127,7 @@ const Login = () => {
     } catch (err) {
       const code    = err?.errors?.code || err?.response?.data?.errors?.code || null;
       const meta    = err?.errors || err?.response?.data?.errors || null;
-      const message = err?.message || err?.response?.data?.message || 'Invalid login name or password';
+      const message = err?.message || err?.response?.data?.message || 'Invalid email or password';
       setError(message); setErrorCode(code); setErrorMeta(meta); setLoading(false);
       setTimeout(() => { setError(''); setErrorCode(null); setErrorMeta(null); }, 6000);
     }
@@ -195,8 +195,8 @@ const Login = () => {
 
         <form onSubmit={handleSubmit}>
           <div style={{marginBottom:11}}>
-            <label className="ln-lbl">Login Name <span style={{color:'#ef4444'}}>*</span></label>
-            <input className="ln-inp" type="text" name="loginName" value={formData.loginName} onChange={handleChange} required placeholder="Enter your login name" autoComplete="username"/>
+            <label className="ln-lbl">Email Address <span style={{color:'#ef4444'}}>*</span></label>
+            <input className="ln-inp" type="text" name="loginName" value={formData.loginName} onChange={handleChange} required placeholder="Enter your email address" autoComplete="username"/>
           </div>
 
           <div style={{marginBottom:16}}>
@@ -220,7 +220,7 @@ const Login = () => {
 
         <div className="ln-sep"/>
         <div style={{textAlign:'center'}}>
-          <Link to="/" style={{fontSize:12, color:'rgba(255,255,255,0.3)', textDecoration:'none'}}>← Back to home</Link>
+          <Link to="/" style={{fontSize:12, color:'rgba(255,255,255,0.65)', textDecoration:'none', fontWeight:500, transition:'color 0.2s'}}>← Back to home</Link>
         </div>
       </div>
     </div>
