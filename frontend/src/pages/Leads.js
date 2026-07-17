@@ -1710,13 +1710,38 @@ const Leads = () => {
     try {
       const lead = selectedLeadData;
 
+      // 🔥 If creating Opportunity, Account is REQUIRED (force createAccount = true)
+      const forceCreateAccount = detailConversionData.createOpportunity || detailConversionData.createAccount;
+
+      // 🔥 Map Lead customerType to Account accountType (enum compatible)
+      const mapCustomerType = (type) => {
+        const typeMap = {
+          'Enterprise': 'Customer',
+          'Mid-Market': 'Customer',
+          'SMB': 'Customer',
+          'Small Business': 'Customer',
+          'Startup': 'Prospect'
+        };
+        return typeMap[type] || 'Prospect';
+      };
+
+      // 🔥 Smart Account Name fallback: Company → Customer Name → First+Last Name
+      const getAccountName = (lead) => {
+        if (lead.company) return lead.company;
+        if (lead.currentCompany) return lead.currentCompany;
+        if (lead.customerName) return lead.customerName;
+        // Fallback: Combine First Name + Last Name
+        const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
+        return fullName || 'Unnamed Account';
+      };
+
       const payload = {
-        createAccount: detailConversionData.createAccount,
+        createAccount: forceCreateAccount,
         createContact: detailConversionData.createContact,
         createOpportunity: detailConversionData.createOpportunity,
-        accountData: detailConversionData.createAccount ? {
-          accountName: lead.company || lead.currentCompany || lead.customerName || '',
-          accountType: lead.customerType || 'Customer',
+        accountData: forceCreateAccount ? {
+          accountName: getAccountName(lead),
+          accountType: mapCustomerType(lead.customerType),
           industry: lead.industry || '',
           website: lead.website || lead.sourceWebsite || '',
           phone: lead.company ? (lead.phone || '') : '',
@@ -1740,7 +1765,7 @@ const Leads = () => {
           description: lead.description || ''
         } : {},
         opportunityData: detailConversionData.createOpportunity ? {
-          opportunityName: `${lead.customerName || lead.company || ''} - Opportunity`,
+          opportunityName: `${lead.customerName || lead.company || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Lead'} - Opportunity`,
           amount: lead.estimatedDealValue || 0,
           currency: lead.dealCurrency || 'INR',
           closeDate: detailConversionData.closeDate || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })(),
@@ -1798,13 +1823,38 @@ const Leads = () => {
             continue;
           }
 
+          // 🔥 If creating Opportunity, Account is REQUIRED (force createAccount = true)
+          const forceCreateAccount = bulkConversionData.createOpportunity || bulkConversionData.createAccount;
+
+          // 🔥 Map Lead customerType to Account accountType (enum compatible)
+          const mapCustomerType = (type) => {
+            const typeMap = {
+              'Enterprise': 'Customer',
+              'Mid-Market': 'Customer',
+              'SMB': 'Customer',
+              'Small Business': 'Customer',
+              'Startup': 'Prospect'
+            };
+            return typeMap[type] || 'Prospect';
+          };
+
+          // 🔥 Smart Account Name fallback: Company → Customer Name → First+Last Name
+          const getAccountName = (lead) => {
+            if (lead.company) return lead.company;
+            if (lead.currentCompany) return lead.currentCompany;
+            if (lead.customerName) return lead.customerName;
+            // Fallback: Combine First Name + Last Name
+            const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
+            return fullName || 'Unnamed Account';
+          };
+
           const payload = {
-            createAccount: bulkConversionData.createAccount,
+            createAccount: forceCreateAccount,
             createContact: bulkConversionData.createContact,
             createOpportunity: bulkConversionData.createOpportunity,
-            accountData: bulkConversionData.createAccount ? {
-              accountName: lead.company || lead.currentCompany || lead.customerName || '',
-              accountType: lead.customerType || 'Customer',
+            accountData: forceCreateAccount ? {
+              accountName: getAccountName(lead),
+              accountType: mapCustomerType(lead.customerType),
               industry: lead.industry || '',
               phone: lead.phone || '',
               email: lead.email || ''
@@ -1817,7 +1867,7 @@ const Leads = () => {
               title: lead.jobTitle || lead.currentDesignation || ''
             } : {},
             opportunityData: bulkConversionData.createOpportunity ? {
-              opportunityName: `${lead.customerName || lead.company || ''} - Opportunity`,
+              opportunityName: `${lead.customerName || lead.company || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Lead'} - Opportunity`,
               amount: lead.estimatedDealValue || 0,
               closeDate: bulkConversionData.closeDate || (() => { const d = new Date(); d.setDate(d.getDate() + 30); return d.toISOString().split('T')[0]; })(),
               stage: 'Qualification',
@@ -2551,12 +2601,6 @@ const Leads = () => {
                         <button onClick={() => setShowDetailConvertForm(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '16px', color: '#64748b' }}>✕</button>
                       </div>
                       <form onSubmit={handleDetailConvertLead}>
-                        {/* Preview what will be created */}
-                        <div style={{ background: '#f0fdf4', borderRadius: '6px', padding: '8px 10px', marginBottom: '10px', fontSize: '11px', color: '#166534' }}>
-                          <strong>Customer:</strong> {selectedLeadData.customerName || selectedLeadData.company || '—'} &nbsp;|&nbsp;
-                          <strong>Phone:</strong> {selectedLeadData.phone || '—'} &nbsp;|&nbsp;
-                          <strong>Email:</strong> {selectedLeadData.email || '—'}
-                        </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '12px' }}>
                           <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', padding: '8px', background: detailConversionData.createAccount ? '#dbeafe' : '#f9fafb', borderRadius: '6px', border: '1px solid #e5e7eb', cursor: 'pointer' }}>
                             <input type="checkbox" name="createAccount" checked={detailConversionData.createAccount} onChange={handleDetailConversionChange} />
@@ -2574,6 +2618,138 @@ const Leads = () => {
                             </div></div>
                           </label>
                         </div>
+
+                        {/* 🔥 DETAILED Field Mapping Table */}
+                        {(detailConversionData.createAccount || detailConversionData.createContact || detailConversionData.createOpportunity) && (() => {
+                          // Check for missing required fields
+                          const warnings = [];
+                          if (detailConversionData.createAccount) {
+                            const hasAccountName = selectedLeadData.company || selectedLeadData.customerName || selectedLeadData.firstName || selectedLeadData.lastName;
+                            if (!hasAccountName) warnings.push('⚠️ Account Name MISSING - Need Company, Customer Name, OR First+Last Name');
+                          }
+                          if (detailConversionData.createContact) {
+                            if (!selectedLeadData.firstName && !selectedLeadData.customerName && !selectedLeadData.email) warnings.push('⚠️ Contact needs at least Name OR Email');
+                          }
+                          if (detailConversionData.createOpportunity) {
+                            if (!selectedLeadData.customerName && !selectedLeadData.company) warnings.push('⚠️ Opportunity Name will be empty (Customer Name or Company required)');
+                          }
+
+                          return (
+                          <div style={{ background: '#f0f9ff', border: '1.5px solid #3b82f6', borderRadius: '8px', padding: '12px', marginBottom: '12px', maxHeight: '400px', overflowY: 'auto' }}>
+                            <div style={{ fontSize: '12px', fontWeight: '700', color: '#1e40af', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', position: 'sticky', top: 0, background: '#f0f9ff', paddingBottom: '8px', borderBottom: '2px solid #3b82f6' }}>
+                              <span>🔄</span> Field Mapping Details - What Goes Where
+                            </div>
+
+                            {/* ⚠️ Validation Warnings */}
+                            {warnings.length > 0 && (
+                              <div style={{ background: '#fef2f2', border: '2px solid #ef4444', borderRadius: '6px', padding: '10px', marginBottom: '12px' }}>
+                                <div style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', marginBottom: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  🚨 Missing Required Fields
+                                </div>
+                                {warnings.map((w, i) => (
+                                  <div key={i} style={{ fontSize: '10px', color: '#991b1b', marginBottom: '4px', paddingLeft: '18px' }}>• {w}</div>
+                                ))}
+                                <div style={{ fontSize: '10px', color: '#7f1d1d', marginTop: '6px', fontWeight: '600', background: '#fee2e2', padding: '6px 8px', borderRadius: '4px' }}>
+                                  ❌ Conversion may FAIL or create incomplete records. Please fill these fields first!
+                                </div>
+                              </div>
+                            )}
+
+                            {detailConversionData.createAccount && (
+                              <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #bfdbfe' }}>
+                                <div style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', marginBottom: '8px', background: '#dbeafe', padding: '4px 8px', borderRadius: '4px' }}>📊 ACCOUNT (Company/Organization)</div>
+                                {(() => {
+                                  const accountName = selectedLeadData.company || selectedLeadData.currentCompany || selectedLeadData.customerName || `${selectedLeadData.firstName || ''} ${selectedLeadData.lastName || ''}`.trim() || 'Unnamed Account';
+                                  const isCompany = !!(selectedLeadData.company || selectedLeadData.currentCompany);
+                                  const isPersonName = !isCompany && (selectedLeadData.customerName || selectedLeadData.firstName || selectedLeadData.lastName);
+
+                                  return (
+                                    <>
+                                      {!isCompany && isPersonName && (
+                                        <div style={{ background: '#fef3c7', border: '1px solid #fbbf24', borderRadius: '4px', padding: '6px 8px', marginBottom: '8px', fontSize: '10px', color: '#92400e' }}>
+                                          ⚠️ <strong>Note:</strong> No Company name found. Using person name "{accountName}" as Account Name (required for Deal/Opportunity).
+                                        </div>
+                                      )}
+                                      <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
+                                        <thead>
+                                          <tr style={{ background: '#e0f2fe', fontWeight: '600', color: '#0c4a6e' }}>
+                                            <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Lead Field</th>
+                                            <th style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #bae6fd' }}>→</th>
+                                            <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Account Field</th>
+                                            <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Value</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody style={{ color: '#334155' }}>
+                                          <tr style={!isCompany && isPersonName ? {background: '#fef3c7'} : {}}><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>{isCompany ? 'Company' : 'Customer/Person Name'}</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Account Name{!isCompany && isPersonName ? ' ⚠️' : ''}</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: isCompany ? '#059669' : '#d97706' }}>{accountName}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Customer Type</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Account Type</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.customerType || 'Prospect'} → Customer</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Industry</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Industry</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.industry || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Phone</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Phone</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.phone || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Email</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Email</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.email || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Website</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Website</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.website || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Annual Revenue</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Annual Revenue</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.annualRevenue || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>No. of Employees</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>No. of Employees</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.numberOfEmployees || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>City, State, Country</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Billing Address</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{[selectedLeadData.city, selectedLeadData.state, selectedLeadData.country].filter(Boolean).join(', ') || '—'}</td></tr>
+                                        </tbody>
+                                      </table>
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                            )}
+
+                            {detailConversionData.createContact && (
+                              <div style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid #bfdbfe' }}>
+                                <div style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', marginBottom: '8px', background: '#dbeafe', padding: '4px 8px', borderRadius: '4px' }}>👤 CONTACT (Person)</div>
+                                <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
+                                  <thead>
+                                    <tr style={{ background: '#e0f2fe', fontWeight: '600', color: '#0c4a6e' }}>
+                                      <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Lead Field</th>
+                                      <th style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #bae6fd' }}>→</th>
+                                      <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Contact Field</th>
+                                      <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Value</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody style={{ color: '#334155' }}>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>First Name</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>First Name</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.firstName || selectedLeadData.customerName || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Last Name</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Last Name</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.lastName || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Email</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Email</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.email || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Phone</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Phone</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.phone || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Alternate Phone</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Mobile</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.alternatePhone || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Job Title</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Title</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.jobTitle || selectedLeadData.currentDesignation || '—'}</td></tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+
+                            {detailConversionData.createOpportunity && (
+                              <div>
+                                <div style={{ fontSize: '11px', fontWeight: '700', color: '#1e3a8a', marginBottom: '8px', background: '#dbeafe', padding: '4px 8px', borderRadius: '4px' }}>💰 OPPORTUNITY (Deal)</div>
+                                <table style={{ width: '100%', fontSize: '10px', borderCollapse: 'collapse' }}>
+                                  <thead>
+                                    <tr style={{ background: '#e0f2fe', fontWeight: '600', color: '#0c4a6e' }}>
+                                      <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Lead Field</th>
+                                      <th style={{ padding: '4px 6px', textAlign: 'center', border: '1px solid #bae6fd' }}>→</th>
+                                      <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Opportunity Field</th>
+                                      <th style={{ padding: '4px 6px', textAlign: 'left', border: '1px solid #bae6fd' }}>Value</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody style={{ color: '#334155' }}>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Customer Name + Company</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Opportunity Name</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.customerName || selectedLeadData.company || '—'} - Opportunity</td></tr>
+                                    <tr style={{ background: '#fef3c7' }}><td style={{ padding: '3px 6px', border: '1px solid #fde68a', fontWeight: '600' }}>Estimated Deal Value</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #fde68a' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #fde68a', fontWeight: '700', color: '#b45309' }}>Amount</td><td style={{ padding: '3px 6px', border: '1px solid #fde68a', fontStyle: 'italic', color: '#b45309', fontWeight: '600' }}>{selectedLeadData.dealCurrency === 'USD' ? '$' : selectedLeadData.dealCurrency === 'EUR' ? '€' : selectedLeadData.dealCurrency === 'GBP' ? '£' : '₹'}{selectedLeadData.estimatedDealValue || '0'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Deal Currency</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Currency</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.dealCurrency || 'INR'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>Lead Source</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Lead Source</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>{selectedLeadData.leadSource || selectedLeadData.source || '—'}</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>—</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Stage</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>Qualification (Default)</td></tr>
+                                    <tr><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe' }}>—</td><td style={{ padding: '3px 6px', textAlign: 'center', border: '1px solid #e0f2fe' }}>→</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontWeight: '600' }}>Probability</td><td style={{ padding: '3px 6px', border: '1px solid #e0f2fe', fontStyle: 'italic', color: '#059669' }}>50% (Default)</td></tr>
+                                  </tbody>
+                                </table>
+                                <div style={{ marginTop: '8px', padding: '6px 8px', background: '#fef2f2', borderRadius: '4px', fontSize: '10px', color: '#dc2626', border: '1px solid #fca5a5' }}>
+                                  <strong>⚠️ Important:</strong> Opportunity MUST have an Account. If Account is not selected, it will be auto-created.
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          );
+                        })()}
                         {detailConversionData.createOpportunity && (
                           <div style={{ marginBottom: '10px' }}>
                             <label style={{ display: 'block', fontSize: '11px', fontWeight: '700', color: '#475569', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.4px' }}>Close Date</label>
@@ -3304,6 +3480,7 @@ const Leads = () => {
                   <input type="date" value={bulkConversionData.closeDate} onChange={(e) => setBulkConversionData({ ...bulkConversionData, closeDate: e.target.value })} className="crm-form-input" style={{ width: '100%' }} />
                 </div>
               )}
+
             </div>
 
             <div style={{ display: 'flex', gap: '8px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>

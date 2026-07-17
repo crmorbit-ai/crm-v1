@@ -1013,12 +1013,45 @@ const convertLead = async (req, res) => {
       'other': 'Other',
     };
 
+    // 🔥 AccountType mapping - Lead customerType → Account accountType (flexible conversion)
+    const accountTypeMap = {
+      'enterprise': 'Customer',
+      'mid-market': 'Customer',
+      'midmarket': 'Customer',
+      'mid market': 'Customer',
+      'smb': 'Customer',
+      'small business': 'Customer',
+      'small': 'Customer',
+      'startup': 'Prospect',
+      'customer': 'Customer',
+      'prospect': 'Prospect',
+      'partner': 'Partner',
+      'vendor': 'Vendor',
+      'supplier': 'Supplier',
+      'reseller': 'Reseller',
+      'distributor': 'Distributor',
+      'integrator': 'Integrator',
+      'competitor': 'Competitor',
+      'analyst': 'Analyst',
+      'investor': 'Investor',
+      'press': 'Press',
+      'other': 'Other'
+    };
+
     // Create Account
     if (createAccount && accountData) {
       // Map industry case-insensitively; clear any value not in Account enum
       if (accountData.industry) {
         const mapped = industryMap[accountData.industry.toLowerCase()];
         accountData.industry = mapped || '';
+      }
+
+      // 🔥 Map accountType case-insensitively - accept ANY format, convert to valid enum
+      if (accountData.accountType) {
+        const normalizedType = accountData.accountType.toLowerCase().trim();
+        accountData.accountType = accountTypeMap[normalizedType] || 'Prospect'; // Default to Prospect if unknown
+      } else {
+        accountData.accountType = 'Prospect'; // Default if not provided
       }
 
       account = await Account.create({
@@ -1046,6 +1079,11 @@ const convertLead = async (req, res) => {
 
     // Create Opportunity with explicit unique dealId generation
     if (createOpportunity && opportunityData) {
+      // 🔥 VALIDATE: Opportunity requires an Account
+      if (!account && !opportunityData.account) {
+        throw new Error('Cannot create Opportunity without an Account. Please enable "Create Account" option.');
+      }
+
       const defaultCloseDate = new Date();
       defaultCloseDate.setDate(defaultCloseDate.getDate() + 30); // 30 days from now
 
@@ -1087,7 +1125,7 @@ const convertLead = async (req, res) => {
             ...opportunityData,
             dealId: dealIdToUse, // Explicitly pass dealId
             closeDate: opportunityData.closeDate || defaultCloseDate,
-            account: account ? account._id : (opportunityData.account || null),
+            account: account ? account._id : opportunityData.account, // 🔥 No null fallback - validation above ensures this exists
             contact: contact ? contact._id : null,
             lead: lead._id,
             owner: req.user._id,

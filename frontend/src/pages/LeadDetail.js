@@ -421,13 +421,38 @@ const LeadDetail = () => {
     setSuccess('');
 
     try {
+      // 🔥 If creating Opportunity, Account is REQUIRED (force createAccount = true)
+      const forceCreateAccount = conversionData.createOpportunity || conversionData.createAccount;
+
+      // 🔥 Map Lead customerType to Account accountType (enum compatible)
+      const mapCustomerType = (type) => {
+        const typeMap = {
+          'Enterprise': 'Customer',
+          'Mid-Market': 'Customer',
+          'SMB': 'Customer',
+          'Small Business': 'Customer',
+          'Startup': 'Prospect'
+        };
+        return typeMap[type] || 'Prospect';
+      };
+
+      // 🔥 Smart Account Name fallback: Company → Customer Name → First+Last Name
+      const getAccountName = (lead) => {
+        if (conversionData.accountName) return conversionData.accountName;
+        if (lead.company) return lead.company;
+        if (lead.customerName) return lead.customerName;
+        // Fallback: Combine First Name + Last Name
+        const fullName = `${lead.firstName || ''} ${lead.lastName || ''}`.trim();
+        return fullName || 'Unnamed Account';
+      };
+
       const payload = {
-        createAccount: conversionData.createAccount,
+        createAccount: forceCreateAccount,
         createContact: conversionData.createContact,
         createOpportunity: conversionData.createOpportunity,
-        accountData: conversionData.createAccount ? {
-          accountName: conversionData.accountName || lead.company,
-          accountType: 'Customer',
+        accountData: forceCreateAccount ? {
+          accountName: getAccountName(lead),
+          accountType: mapCustomerType(lead.customerType),
           industry: lead.industry,
           website: lead.website,
           phone: lead.company ? lead.phone : '',
@@ -446,8 +471,8 @@ const LeadDetail = () => {
           jobTitle: lead.jobTitle
         } : {},
         opportunityData: conversionData.createOpportunity ? {
-          opportunityName: conversionData.opportunityName,
-          amount: parseFloat(conversionData.opportunityAmount),
+          opportunityName: conversionData.opportunityName || `${lead.customerName || lead.company || `${lead.firstName || ''} ${lead.lastName || ''}`.trim() || 'Lead'} - Opportunity`,
+          amount: parseFloat(conversionData.opportunityAmount) || 0,
           closeDate: conversionData.closeDate,
           stage: 'Qualification',
           probability: 50,
