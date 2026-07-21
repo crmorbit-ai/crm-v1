@@ -14,6 +14,7 @@ const emailSyncJob = require('./jobs/emailSyncJob');
 const { startDeletionCleanupJob } = require('./jobs/deletionCleanup');
 const { startScheduledPostsJob } = require('./jobs/scheduledPostsJob');
 const { startPasswordExpiryChecker } = require('./jobs/passwordExpiryChecker');
+const { publishScheduledCaseStudies } = require('./utils/caseStudyScheduler');
 const emailWorker = require('./jobs/emailWorker');
 
 // Initialize Express
@@ -133,6 +134,7 @@ app.use('/api/role-templates',    require('./routes/roleTemplates'));
 app.use('/api/monetization',      require('./routes/monetization'));
 app.use('/api/feedback',          require('./routes/feedback'));
 app.use('/api',                   require('./routes/gstVerification'));
+app.use('/api/case-studies',      require('./routes/caseStudy'));
 
 
 app.use((req, res) => {
@@ -217,6 +219,15 @@ const startServer = async () => {
       startScheduledPostsJob();
       startPasswordExpiryChecker();
       emailWorker.poll();
+
+      // Case Study Auto-Publish Scheduler (runs every 5 minutes)
+      console.log('⏰ Case study scheduler started (5-minute interval)');
+      setInterval(async () => {
+        await publishScheduledCaseStudies();
+      }, 5 * 60 * 1000); // Every 5 minutes
+
+      // Run once on startup
+      publishScheduledCaseStudies();
       // console.log('✅ SQS Email Worker started');
 
       try {

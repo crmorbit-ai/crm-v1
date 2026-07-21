@@ -88,6 +88,9 @@ const SaasTenantUsers = lazy(() => import('./pages/SaasTenantUsers'));
 const TenantActivity = lazy(() => import('./pages/TenantActivity'));
 const SaasActivityMonitor = lazy(() => import('./pages/SaasActivityMonitor'));
 const ResellerManagement = lazy(() => import('./pages/ResellerManagement'));
+const SaasCaseStudies = lazy(() => import('./pages/SaasCaseStudies'));
+const PublicCaseStudies = lazy(() => import('./pages/PublicCaseStudies'));
+const CaseStudyDetail = lazy(() => import('./pages/CaseStudyDetail'));
 const ResellerRegister = lazy(() => import('./pages/ResellerRegister'));
 const ResellerLogin = lazy(() => import('./pages/ResellerLogin'));
 const ResellerDashboard = lazy(() => import('./pages/ResellerDashboard'));
@@ -162,6 +165,10 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+
+        {/* Public Case Studies */}
+        <Route path="/case-studies" element={<PublicCaseStudies />} />
+        <Route path="/case-study/:slug" element={<CaseStudyDetail />} />
 
         {/* Reseller */}
         <Route path="/reseller/register" element={<ResellerRegister />} />
@@ -271,6 +278,7 @@ function AppRoutes() {
         <Route path="/saas/admins" element={<ProtectedRoute requireSaas><SaasAdmins /></ProtectedRoute>} />
         <Route path="/saas/notifications" element={<ProtectedRoute requireSaas><SaasNotifications /></ProtectedRoute>} />
         <Route path="/saas/contact-inquiries" element={<ProtectedRoute requireSaas><SaasContactInquiries /></ProtectedRoute>} />
+        <Route path="/saas/case-studies" element={<ProtectedRoute requireSaas><SaasCaseStudies /></ProtectedRoute>} />
 
         {/* Public info pages */}
         <Route path="/about" element={<AboutUs />} />

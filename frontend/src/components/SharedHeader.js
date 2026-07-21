@@ -227,6 +227,7 @@ export default function SharedHeader({ backTo, backLabel }) {
             <button className="sh-link" onClick={() => go('/contact')}>Contact Us</button>
             <div className="sh-sep" />
             <button className="sh-link" onClick={() => go('/help')}>Support</button>
+            <button className="sh-link" onClick={() => go('/case-studies')}>Case Studies</button>
           </div>
 
           {/* Right actions */}
@@ -257,6 +258,7 @@ export default function SharedHeader({ backTo, backLabel }) {
         <button className="sh-drawer-link" onClick={() => go('/contact')}>📞 Contact Us</button>
         <button className="sh-drawer-link" onClick={() => go('/demo')}>▶ Watch Demo</button>
         <button className="sh-drawer-link" onClick={() => go('/help')}>🛠️ Support</button>
+        <button className="sh-drawer-link" onClick={() => go('/case-studies')}>📊 Case Studies</button>
         <div className="sh-drawer-actions">
           <button className="sh-drawer-signin" onClick={() => go('/login')}>Sign In</button>
           <button className="sh-drawer-cta" onClick={() => go('/register')}>Get Started Free →</button>
