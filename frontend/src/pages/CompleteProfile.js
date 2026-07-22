@@ -18,6 +18,9 @@ const CompleteProfile = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [allCountries, setAllCountries] = useState([]);
+  const [allStates, setAllStates] = useState([]);
+  const [allCities, setAllCities] = useState([]);
 
   useEffect(() => {
     const isSaasOwner = user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN';
@@ -25,6 +28,41 @@ const CompleteProfile = () => {
       navigate('/dashboard', { replace: true });
     }
   }, [user, navigate]);
+
+  // Load countries on mount
+  useEffect(() => {
+    const loadCountries = async () => {
+      const countries = await getCountries();
+      setAllCountries(countries);
+    };
+    loadCountries();
+  }, []);
+
+  // Load states when country changes
+  useEffect(() => {
+    const loadStates = async () => {
+      if (formData.country) {
+        const states = await getStates(formData.country);
+        setAllStates(states);
+      } else {
+        setAllStates([]);
+      }
+    };
+    loadStates();
+  }, [formData.country]);
+
+  // Load cities when state changes
+  useEffect(() => {
+    const loadCities = async () => {
+      if (formData.country && formData.state) {
+        const cities = await getCities(formData.country, formData.state);
+        setAllCities(cities);
+      } else {
+        setAllCities([]);
+      }
+    };
+    loadCities();
+  }, [formData.country, formData.state]);
 
   const isSaasOwner = user?.userType === 'SAAS_OWNER' || user?.userType === 'SAAS_ADMIN';
   if (isSaasOwner || user?.isProfileComplete) return null;
@@ -35,11 +73,6 @@ const CompleteProfile = () => {
     'Food & Beverage', 'Hospitality', 'Automotive', 'Telecommunications', 'Energy & Utilities',
     'Legal Services', 'Media & Entertainment', 'Construction', 'Agriculture', 'Other'
   ];
-
-  // Get dynamic location data
-  const allCountries = getCountries();
-  const allStates = getStates(formData.country);
-  const allCities = getCities(formData.country, formData.state);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
