@@ -17,12 +17,20 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
     }
 
+    console.log('🔍 Token received:', token ? 'YES' : 'NO');
+    console.log('📍 Route:', req.path);
+    console.log('🔑 Token length:', token?.length);
+    console.log('🔑 Token preview:', token?.substring(0, 20) + '...');
+
     if (!token) {
+      console.log('❌ No token found in header');
       return errorResponse(res, 401, 'Not authorized to access this route');
     }
 
     // Verify token
+    console.log('🔐 Verifying token...');
     const decoded = verifyToken(token);
+    console.log('✅ Token decoded:', decoded);
 
     // ============================================
     // 🔐 TOKEN BLACKLIST CHECK - NEW

@@ -135,6 +135,7 @@ app.use('/api/monetization',      require('./routes/monetization'));
 app.use('/api/feedback',          require('./routes/feedback'));
 app.use('/api',                   require('./routes/gstVerification'));
 app.use('/api/case-studies',      require('./routes/caseStudy'));
+app.use('/api/case-study-tasks',  require('./routes/caseStudyTask'));
 
 
 app.use((req, res) => {

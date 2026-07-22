@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import axios from 'axios';
 
-const CaseStudyFormModal = ({ show, onClose, onSubmit, initialData = null, isEdit = false }) => {
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:4000';
+
+const CaseStudyFormModal = ({ show, onClose, onSubmit, initialData = null, isEdit = false, taskId = null }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [myTasks, setMyTasks] = useState([]);
+  const [selectedTaskId, setSelectedTaskId] = useState(taskId || '');
   const [formData, setFormData] = useState({
     // Basic Info
     title: initialData?.title || '',
@@ -142,6 +147,25 @@ const CaseStudyFormModal = ({ show, onClose, onSubmit, initialData = null, isEdi
     }));
   };
 
+  useEffect(() => {
+    if (show) {
+      fetchMyTasks();
+    }
+  }, [show]);
+
+  const fetchMyTasks = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const { data } = await axios.get(`${API_URL}/api/case-study-tasks/my-tasks`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { status: 'in_progress' }
+      });
+      setMyTasks(data.data);
+    } catch (err) {
+      console.error('Error fetching tasks:', err);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -167,7 +191,22 @@ const CaseStudyFormModal = ({ show, onClose, onSubmit, initialData = null, isEdi
       }
     });
 
-    await onSubmit(formDataToSend);
+    const result = await onSubmit(formDataToSend);
+
+    // Link case study to task if selected
+    if (selectedTaskId && result?.data?._id) {
+      try {
+        const token = localStorage.getItem('token');
+        await axios.post(`${API_URL}/api/case-study-tasks/link-case-study`, {
+          taskId: selectedTaskId,
+          caseStudyId: result.data._id
+        }, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch (err) {
+        console.error('Error linking case study to task:', err);
+      }
+    }
   };
 
   const nextStep = () => {
@@ -386,6 +425,36 @@ const CaseStudyFormModal = ({ show, onClose, onSubmit, initialData = null, isEdi
                   />
                 </div>
               </div>
+
+              {/* Task Linking */}
+              {myTasks.length > 0 && (
+                <div style={{
+                  marginBottom: '24px',
+                  padding: '16px',
+                  background: '#eff6ff',
+                  border: '2px solid #3b82f6',
+                  borderRadius: '12px'
+                }}>
+                  <label style={{ ...labelStyle, color: '#1e40af' }}>
+                    📋 Link to Assigned Task (Optional)
+                  </label>
+                  <select
+                    value={selectedTaskId}
+                    onChange={(e) => setSelectedTaskId(e.target.value)}
+                    style={{ ...inputStyle, borderColor: '#3b82f6' }}
+                  >
+                    <option value="">No Task (Independent Case Study)</option>
+                    {myTasks.map(task => (
+                      <option key={task._id} value={task._id}>
+                        {task.topic} - {task.title}
+                      </option>
+                    ))}
+                  </select>
+                  <p style={{ fontSize: '12px', color: '#1e40af', marginTop: '8px' }}>
+                    💡 Linking this case study to a task will track your work time automatically
+                  </p>
+                </div>
+              )}
 
               <div style={{ marginBottom: '24px' }}>
                 <label style={labelStyle}>Featured Image</label>

@@ -60,6 +60,28 @@ router.post('/reset-password', resetPassword);       // Step 3: Reset password w
 // User Profile
 router.get('/me', protect, getMe);
 
+// Get all SAAS admins (for Primary Admin)
+router.get('/saas-admins', protect, async (req, res) => {
+  try {
+    const User = require('../models/User');
+
+    // Only SAAS_OWNER can access this
+    if (req.user.userType !== 'SAAS_OWNER') {
+      return res.status(403).json({ success: false, message: 'Access denied' });
+    }
+
+    // Get all SAAS_ADMIN and SAAS_OWNER users
+    const admins = await User.find({
+      userType: { $in: ['SAAS_ADMIN', 'SAAS_OWNER'] }
+    }).select('email firstName lastName userType isActive createdAt').sort({ createdAt: -1 });
+
+    res.json({ success: true, data: admins });
+  } catch (error) {
+    console.error('Error fetching SAAS admins:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
 // 🆕 Profile Completion (with file upload for logo)
 router.post('/complete-profile', protect, upload.single('logo'), completeProfile);
 

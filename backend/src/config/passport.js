@@ -1,5 +1,7 @@
 const passport = require('passport');
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const JwtStrategy = require('passport-jwt').Strategy;
+const ExtractJwt = require('passport-jwt').ExtractJwt;
 const User = require('../models/User');
 
 passport.use(new GoogleStrategy({
@@ -68,5 +70,27 @@ passport.deserializeUser(async (id, done) => {
     done(error, null);
   }
 });
+
+// JWT Strategy
+const jwtOptions = {
+  jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+  secretOrKey: process.env.JWT_SECRET || 'your-secret-key'
+};
+
+passport.use(new JwtStrategy(jwtOptions, async (payload, done) => {
+  try {
+    console.log('🔍 JWT Payload:', payload);
+    const user = await User.findById(payload.id);
+    if (user) {
+      console.log('✅ User found:', user.email);
+      return done(null, user);
+    }
+    console.log('❌ User not found for ID:', payload.id);
+    return done(null, false);
+  } catch (error) {
+    console.log('❌ JWT Strategy Error:', error);
+    return done(error, false);
+  }
+}));
 
 module.exports = passport;

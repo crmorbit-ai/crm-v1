@@ -106,6 +106,7 @@ const SaasLayout = ({ children, title }) => {
     { path: '/saas/feedback',  label: 'Feedback' },
     { path: '/saas/contact-inquiries', label: 'Contact Inquiries' },
     { path: '/saas/case-studies', label: 'Case Studies' },
+    { path: '/saas/my-tasks', label: 'Tasks' },
   ];
 
   // Managers can only see Dashboard and Tenants

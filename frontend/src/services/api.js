@@ -14,7 +14,8 @@ const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = sessionStorage.getItem('token') || localStorage.getItem('token'); // Support both (migration)
-    if (token) {
+    // Only add token if it's a valid string (not "null" or "undefined")
+    if (token && token !== 'null' && token !== 'undefined') {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
