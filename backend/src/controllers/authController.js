@@ -48,11 +48,17 @@ const login = async (req, res) => {
     }
 
     // Try to find user by loginName first, then by email
-    let user = await User.findOne({ loginName: identifier.toLowerCase() }).populate('roles').populate('tenant');
+    let user = await User.findOne({ loginName: identifier.toLowerCase() })
+      .select('+password')
+      .populate('roles')
+      .populate('tenant');
 
     if (!user) {
       // Try email (for SAAS Admin backward compatibility)
-      user = await User.findOne({ email: identifier.toLowerCase() }).populate('roles').populate('tenant');
+      user = await User.findOne({ email: identifier.toLowerCase() })
+        .select('+password')
+        .populate('roles')
+        .populate('tenant');
     }
 
     if (!user) {
@@ -62,6 +68,7 @@ const login = async (req, res) => {
 
     console.log(`🔍 Login attempt for user: ${user.loginName || user.email}`);
     console.log(`🔐 Password exists in DB: ${!!user.password}`);
+    console.log(`🔐 Password hash: ${user.password?.substring(0, 20)}...`);
 
     // Check password
     const isPasswordValid = await user.comparePassword(password);
