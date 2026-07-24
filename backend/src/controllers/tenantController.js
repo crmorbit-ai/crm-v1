@@ -621,11 +621,17 @@ const rejectDeletion = async (req, res) => {
  */
 const recoverTenant = async (req, res) => {
   try {
+    console.log('🔄 RECOVERY API CALLED for tenant:', req.params.id);
     const tenant = await Tenant.findById(req.params.id);
 
     if (!tenant) {
+      console.log('❌ RECOVERY: Tenant not found');
       return errorResponse(res, 404, 'Tenant not found');
     }
+
+    console.log('📊 RECOVERY: Tenant found -', tenant.organizationName);
+    console.log('   deletionRequest.status:', tenant.deletionRequest?.status);
+    console.log('   subscription.status:', tenant.subscription?.status);
 
     if (!tenant.deletionRequest || tenant.deletionRequest.status !== 'approved') {
       return errorResponse(res, 400, 'This organization does not have an approved deletion request.');
@@ -641,20 +647,29 @@ const recoverTenant = async (req, res) => {
     tenant.isSuspended = false; // Also unsuspend if suspended
 
     // Fix subscription if expired/cancelled during deletion period
+    console.log('🔧 RECOVERY: Checking subscription status:', tenant.subscription?.status);
+
     if (tenant.subscription && ['expired', 'cancelled'].includes(tenant.subscription.status)) {
+      console.log('🔧 RECOVERY: Subscription is', tenant.subscription.status, '→ Fixing to active');
       tenant.subscription.status = 'active';
+
       // Extend trial/subscription by 30 days as recovery benefit
       const extendDate = new Date();
       extendDate.setDate(extendDate.getDate() + 30);
 
       if (tenant.subscription.isTrialActive) {
         tenant.subscription.trialEndDate = extendDate;
+        console.log('🔧 RECOVERY: Trial extended to', extendDate.toISOString());
       } else {
         tenant.subscription.endDate = extendDate;
+        console.log('🔧 RECOVERY: Subscription extended to', extendDate.toISOString());
       }
+    } else {
+      console.log('🔧 RECOVERY: Subscription status OK, no fix needed');
     }
 
     await tenant.save();
+    console.log('✅ RECOVERY: Tenant saved successfully');
 
     // Reactivate all tenant users and ensure they're not suspended
     await User.updateMany(
