@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -68,11 +69,17 @@ app.use(cors(corsConfig));
 app.options('*', cors(corsConfig));
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(morgan('dev'));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(passport.initialize());
 app.use(autoTrackFeature);
-app.use('/uploads', express.static('uploads'));
+// Serve uploads folder publicly with CORS
+app.use('/uploads', cors(), express.static(path.join(__dirname, '../uploads'), {
+  setHeaders: (res, filePath) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+  }
+}));
 
 // Health Check
 app.get('/health', (req, res) => {
@@ -92,6 +99,7 @@ app.use('/api/coupons', require('./routes/coupons'));
 app.use('/api/billings', require('./routes/billings'));
 app.use('/api/activity-logs', require('./routes/activityLogs'));
 app.use('/api/resellers', require('./routes/resellers'));
+app.use('/api/landing-page', require('./routes/landingPage'));
 
 // Routes - CRM Core
 app.use('/api/leads', require('./routes/leads'));

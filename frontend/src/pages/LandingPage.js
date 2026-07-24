@@ -311,10 +311,13 @@ const CSS = `
 
   /* Hero */
   .hero-section {
-    position: relative; padding: 140px 0 100px; min-height: 100vh;
-    background:
-      linear-gradient(to right, rgba(5,10,20,0.92) 0%, rgba(5,10,20,0.88) 45%, rgba(5,10,20,0.35) 100%),
-      url('/crmimagee copy.png') center center / cover no-repeat;
+    position: relative;
+    padding: 0 !important;
+    margin: 0 !important;
+    min-height: auto !important;
+    background: none !important;
+    display: flex;
+    align-items: center;
   }
 
   /* ── GLOWING RING ── */
@@ -935,7 +938,7 @@ const CSS = `
     .mock-wrap { overflow: hidden; }
   }
   @media (max-width: 900px) {
-    .hero-section { padding: 120px 0 60px; }
+    .hero-section { padding-top: 80px !important; padding-bottom: 40px; }
     .hero-h1 { font-size: 42px !important; letter-spacing: -1.5px !important; }
     .hero-main-grid { grid-template-columns: 1fr !important; gap: 40px !important; }
     .hero-cards { grid-template-columns: 1fr 1fr; }
@@ -984,7 +987,7 @@ const CSS = `
     .trusted-sep { display: none; }
     .hero-h1 { font-size: 32px !important; letter-spacing: -1px !important; }
     .hero-inner { padding: 0 20px !important; }
-    .hero-section { padding: 100px 0 40px !important; }
+    .hero-section { padding-top: 90px !important; padding-bottom: 30px !important; }
     .hero-ctas { flex-direction: column !important; align-items: flex-start !important; }
     .section-inner { padding: 0 20px !important; }
     .spotlight-inner { padding: 0 20px !important; }
@@ -1466,6 +1469,59 @@ const LandingPage = () => {
   const [scrollProgress, setScrollProgress] = useState(0);
   const mouseRef = useRef({ x: -999, y: -999 });
 
+  // Dynamic content from customizer
+  const [pageContent, setPageContent] = useState({
+    homePage: {
+      topBanner: { image: null, heading: '', subheading: '' },
+      statsSection: { images: [], interval: 2000 },
+      connectSection: { type: 'video', url: '', heading: '', content: '' },
+      section1: { image: null, heading: '', content: '' },
+      section2: { image: null, heading: '', content: '' },
+      section3: { image: null, heading: '', content: '' }
+    }
+  });
+
+  // Carousel state for stats section
+  const [statsCarouselIndex, setStatsCarouselIndex] = useState(0);
+
+  useEffect(() => {
+    // Load dynamic content from API - PUBLIC endpoint (no auth needed)
+    const loadContent = async () => {
+      try {
+        const response = await fetch('http://localhost:4000/api/landing-page/public-settings');
+        if (response.ok) {
+          const data = await response.json();
+          console.log('🎨 Landing Page Content Loaded:', data);
+
+          // Backend returns data directly, not nested
+          const apiData = data.data || data;
+
+          if (apiData && apiData.homePage) {
+            console.log('✅ Setting page content:', apiData);
+            console.log('🖼️ Hero Image:', apiData.homePage?.topBanner?.image);
+            setPageContent(prev => ({ ...prev, ...apiData }));
+          }
+        }
+      } catch (err) {
+        console.log('Using default content:', err);
+      }
+    };
+    loadContent();
+  }, []);
+
+  // Stats carousel auto-rotate
+  useEffect(() => {
+    const images = pageContent.homePage?.statsSection?.images || [];
+    if (images.length <= 1) return;
+
+    const interval = pageContent.homePage?.statsSection?.interval || 2000;
+    const timer = setInterval(() => {
+      setStatsCarouselIndex(prev => (prev + 1) % images.length);
+    }, interval);
+
+    return () => clearInterval(timer);
+  }, [pageContent.homePage?.statsSection?.images, pageContent.homePage?.statsSection?.interval]);
+
   useEffect(() => {
     document.body.style.overflow = mobileMenu ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
@@ -1899,23 +1955,125 @@ const LandingPage = () => {
       )}
 
       {/* ── HERO ── */}
-      <section className="hero-section" style={{ position: 'relative' }}>
-        <div className="hero-inner" style={{ display:'block', margin:0 }}>
+      <section className="hero-section" style={{
+        position: 'relative',
+        width: '100%',
+        display: 'block',
+        padding: '0',
+        margin: '0',
+        overflow: 'hidden',
+        background: pageContent.homePage?.topBanner?.image ? '#000' : 'linear-gradient(135deg, #0f1e2e 0%, #1a3a52 100%)'
+      }}>
+        {/* Background Image - Full exact image without any cropping */}
+        {pageContent.homePage?.topBanner?.image && (
+          <div style={{
+            position: 'relative',
+            width: '100%',
+            height: 'auto'
+          }}>
+            <img
+              src={`http://localhost:4000${pageContent.homePage.topBanner.image}`}
+              alt="Hero background"
+              style={{
+                width: '100%',
+                height: 'auto',
+                display: 'block',
+                maxWidth: '100%',
+                filter: 'brightness(0.85)'
+              }}
+            />
+          </div>
+        )}
+
+        {/* Text overlay - only show when there's an uploaded image */}
+        {pageContent.homePage?.topBanner?.image && (
+          <div style={{
+            position: 'absolute',
+            top: '120px',
+            left: '40px',
+            zIndex: 10,
+            width: 'auto',
+            maxWidth: '650px',
+            padding: '0'
+          }}>
+            <div className="hero-inner" style={{
+              display:'block',
+              margin:0,
+              textShadow: '0 2px 20px rgba(0,0,0,0.9), 0 4px 40px rgba(0,0,0,0.7)',
+              position: 'relative',
+              zIndex: 1
+            }}>
+              <div style={{ maxWidth:620 }}>
+
+                <h1 className="hero-h1" style={{ textAlign:'left', overflow:'visible' }}>
+                  {pageContent.homePage?.topBanner?.heading || (
+                    <>
+                      The CRM Platform<br />
+                      <span className="hero-rotate-wrap">
+                        <span className="hero-rotate-track">
+                          {['Your Business Deserves','Built for Sales Teams','For B2B Operations','For Enterprise Teams','For Support & CX','That Grows With You'].map((w,i)=>(
+                            <span key={i} className="hero-rotate-word">{w}</span>
+                          ))}
+                        </span>
+                      </span>
+                    </>
+                  )}
+                </h1>
+
+                <p className="hero-sub" style={{ textAlign:'left', maxWidth:560, margin:'0 0 36px' }}>
+                  {pageContent.homePage?.topBanner?.subheading || 'All-in-one CRM with 25+ modules, complete B2B workflow, AI assistant, and multi-tenant architecture — built for teams that mean business.'}
+                </p>
+
+                <div className="hero-ctas" style={{ justifyContent:'flex-start' }}>
+                  <button className="hero-cta-main" onClick={() => navigate('/register')}>
+                    Start Free Trial →
+                  </button>
+                  <button className="hero-cta-ghost" onClick={() => navigate('/login')}>
+                    Sign In
+                  </button>
+                </div>
+
+                <div className="hero-badges" style={{ justifyContent:'flex-start' }}>
+                  <div className="hero-badge"><div className="hero-badge-dot"/> Multi-Tenant SaaS</div>
+                  <div className="hero-badge"><div className="hero-badge-dot"/> AI Powered</div>
+                  <div className="hero-badge"><div className="hero-badge-dot"/> 25+ Modules</div>
+                  <div className="hero-badge"><div className="hero-badge-dot"/> No-Code Fields</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Default text content - when no image uploaded */}
+        {!pageContent.homePage?.topBanner?.image && (
+          <div className="hero-inner" style={{
+            display:'block',
+            margin:0,
+            padding: '90px 0 50px',
+            textShadow: '0 2px 20px rgba(0,0,0,0.8), 0 4px 40px rgba(0,0,0,0.6)',
+            position: 'relative',
+            zIndex: 1
+          }}>
           <div style={{ maxWidth:620 }}>
 
             <h1 className="hero-h1" style={{ textAlign:'left', overflow:'visible' }}>
-              The CRM Platform<br />
-              <span className="hero-rotate-wrap">
-                <span className="hero-rotate-track">
-                  {['Your Business Deserves','Built for Sales Teams','For B2B Operations','For Enterprise Teams','For Support & CX','That Grows With You'].map((w,i)=>(
-                    <span key={i} className="hero-rotate-word">{w}</span>
-                  ))}
-                </span>
-              </span>
+              {pageContent.homePage?.topBanner?.heading || (
+                <>
+                  The CRM Platform<br />
+                  <span className="hero-rotate-wrap">
+                    <span className="hero-rotate-track">
+                      {['Your Business Deserves','Built for Sales Teams','For B2B Operations','For Enterprise Teams','For Support & CX','That Grows With You'].map((w,i)=>(
+                        <span key={i} className="hero-rotate-word">{w}</span>
+                      ))}
+                    </span>
+                  </span>
+                </>
+              )}
             </h1>
 
             <p className="hero-sub" style={{ textAlign:'left', maxWidth:560, margin:'0 0 36px' }}>
-              All-in-one CRM with <span>25+ modules</span>, complete B2B workflow, AI assistant, and multi-tenant architecture — built for teams that mean business.
+              {pageContent.homePage?.topBanner?.subheading || 'All-in-one CRM with 25+ modules, complete B2B workflow, AI assistant, and multi-tenant architecture — built for teams that mean business.'}
             </p>
 
             <div className="hero-ctas" style={{ justifyContent:'flex-start' }}>
@@ -1936,26 +2094,230 @@ const LandingPage = () => {
 
           </div>
         </div>
+        )}
       </section>
 
-      {/* ── STATS ── */}
-      <section className="stats-section" ref={statsRef}>
-        <div className="stats-inner">
-          <div className="stats-grid">
-            {[
-              { num: `${c1}+`, label: 'Feature Modules', color: '#4ade80' },
-              { num: `${c2}+`, label: 'Businesses Onboarded', color: '#86efac' },
-              { num: `${c3}.9%`, label: 'Uptime Guaranteed', color: '#34d399' },
-              { num: `${c4}+`, label: 'Integrations & APIs', color: '#fbbf24' },
-            ].map((s, i) => (
-              <div key={i} className={`stat-card reveal reveal-d${i+1}`}>
-                <div className="stat-num" style={{ color: s.color }}>{s.num}</div>
-                <div className="stat-lbl">{s.label}</div>
+      {/* ── FULL BANNER CAROUSEL (Replaces Stats) ── */}
+      {pageContent.homePage?.statsSection?.images && pageContent.homePage.statsSection.images.length > 0 && (
+        <>
+          {/* Featured Banner Divider */}
+          <div style={{
+            background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)',
+            padding: '12px 0',
+            position: 'relative',
+            overflow: 'hidden',
+            borderTop: '1px solid rgba(255,255,255,0.1)',
+            borderBottom: '1px solid rgba(255,255,255,0.1)'
+          }}>
+            {/* Animated rainbow gradient line */}
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: '-100%',
+              width: '100%',
+              height: '2px',
+              background: 'linear-gradient(90deg, #ff6b6b, #ee5a6f, #f06595, #cc5de8, #845ef7, #5c7cfa, #339af0, #22b8cf, #20c997, #51cf66, #94d82d, #fcc419, #ff922b)',
+              animation: 'rainbowSlide 4s linear infinite'
+            }} />
+
+            {/* Bottom animated line */}
+            <div style={{
+              position: 'absolute',
+              bottom: 0,
+              right: '-100%',
+              width: '100%',
+              height: '2px',
+              background: 'linear-gradient(90deg, #fcc419, #ff922b, #ff6b6b, #f06595, #cc5de8, #845ef7, #5c7cfa, #339af0, #22b8cf, #20c997, #51cf66, #94d82d)',
+              animation: 'rainbowSlideReverse 4s linear infinite'
+            }} />
+
+            <style>{`
+              @keyframes rainbowSlide {
+                0% { left: -100%; }
+                100% { left: 100%; }
+              }
+              @keyframes rainbowSlideReverse {
+                0% { right: -100%; }
+                100% { right: 100%; }
+              }
+              @keyframes rainbowPulse {
+                0%, 100% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+              }
+            `}</style>
+
+            {/* Content */}
+            <div style={{
+              maxWidth: '1200px',
+              margin: '0 auto',
+              padding: '0 40px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '20px'
+            }}>
+              {/* Left decorative line */}
+              <div style={{
+                flex: 1,
+                height: '2px',
+                background: 'linear-gradient(90deg, transparent, #ff6b6b, #f06595, #cc5de8, #845ef7)'
+              }} />
+
+              {/* Center Badge */}
+              <div style={{
+                position: 'relative',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '8px 24px',
+                background: 'linear-gradient(135deg, rgba(255,107,107,0.1), rgba(204,93,232,0.1), rgba(92,124,250,0.1))',
+                border: '2px solid transparent',
+                backgroundImage: 'linear-gradient(135deg, #1a1a2e, #16213e), linear-gradient(135deg, #ff6b6b, #f06595, #cc5de8, #845ef7, #5c7cfa, #339af0, #22b8cf, #20c997)',
+                backgroundOrigin: 'border-box',
+                backgroundClip: 'padding-box, border-box',
+                borderRadius: '24px',
+                boxShadow: '0 0 30px rgba(204,93,232,0.3), 0 0 60px rgba(92,124,250,0.2), inset 0 1px 0 rgba(255,255,255,0.15)'
+              }}>
+                {/* Glowing dots - multicolor */}
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #ff6b6b, #f06595)',
+                  boxShadow: '0 0 12px #ff6b6b, 0 0 24px rgba(255,107,107,0.5)'
+                }} />
+
+                <span style={{
+                  fontSize: '11px',
+                  fontWeight: 800,
+                  letterSpacing: '2.5px',
+                  textTransform: 'uppercase',
+                  background: 'linear-gradient(135deg, #ff6b6b, #f06595, #cc5de8, #845ef7, #5c7cfa, #339af0, #22b8cf, #20c997, #51cf66, #fcc419)',
+                  backgroundSize: '200% 200%',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                  animation: 'rainbowPulse 3s ease infinite'
+                }}>
+                  ✦ Featured Banner ✦
+                </span>
+
+                <div style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #339af0, #22b8cf)',
+                  boxShadow: '0 0 12px #339af0, 0 0 24px rgba(51,154,240,0.5)'
+                }} />
               </div>
-            ))}
+
+              {/* Right decorative line */}
+              <div style={{
+                flex: 1,
+                height: '2px',
+                background: 'linear-gradient(90deg, #5c7cfa, #339af0, #22b8cf, #20c997, transparent)'
+              }} />
+            </div>
           </div>
-        </div>
-      </section>
+
+          <section style={{
+            position: 'relative',
+            width: '100%',
+            height: '48vh',
+            overflow: 'hidden',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: '#0f1e2e'
+          }}>
+          {/* Carousel Background - Best fit all images */}
+          {pageContent.homePage.statsSection.images.map((url, i) => {
+            const isVideo = url.match(/\.(mp4|webm)$/i);
+            return isVideo ? (
+              <video
+                key={i}
+                src={`http://localhost:4000${url}`}
+                autoPlay
+                loop
+                muted
+                playsInline
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'fill',
+                  opacity: i === statsCarouselIndex ? 1 : 0,
+                  transition: 'opacity 1s ease-in-out',
+                  filter: 'brightness(0.85)'
+                }}
+              />
+            ) : (
+              <img
+                key={i}
+                src={`http://localhost:4000${url}`}
+                alt={`Banner ${i + 1}`}
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'fill',
+                  opacity: i === statsCarouselIndex ? 1 : 0,
+                  transition: 'opacity 1s ease-in-out',
+                  filter: 'brightness(0.85)',
+                  imageRendering: 'high-quality',
+                  WebkitFontSmoothing: 'antialiased'
+                }}
+              />
+            );
+          })}
+
+          {/* Carousel dots indicator */}
+          {pageContent.homePage.statsSection.images.length > 1 && (
+            <div style={{
+              position: 'absolute',
+              bottom: '40px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              display: 'flex',
+              gap: '12px',
+              zIndex: 10
+            }}>
+              {pageContent.homePage.statsSection.images.map((_, i) => (
+                <button
+                  key={i}
+                  onClick={() => setStatsCarouselIndex(i)}
+                  style={{
+                    width: i === statsCarouselIndex ? '32px' : '10px',
+                    height: '10px',
+                    borderRadius: '5px',
+                    background: i === statsCarouselIndex ? '#1EB980' : 'rgba(255,255,255,0.4)',
+                    border: 'none',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    padding: 0,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                  }}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* Optional overlay text */}
+          <div style={{
+            position: 'relative',
+            zIndex: 5,
+            textAlign: 'center',
+            color: '#fff',
+            maxWidth: '900px',
+            padding: '0 20px'
+          }}>
+            {/* You can add custom text here if needed */}
+          </div>
+        </section>
+        </>
+      )}
 
       {/* ── MARQUEE ── */}
       <div className="marquee-wrap">
@@ -2228,10 +2590,10 @@ const LandingPage = () => {
             <div>
               <div style={{ fontSize:11, fontWeight:800, color:'#1EB980', letterSpacing:3, textTransform:'uppercase', marginBottom:16 }}>Enterprise Ready</div>
               <h2 style={{ fontSize:'clamp(44px,6vw,80px)', fontWeight:900, color:'#fff', margin:'0 0 20px', letterSpacing:'-1.5px', lineHeight:1.08 }}>
-                We connect.
+                {pageContent.homePage?.connectSection?.heading || 'We connect.'}
               </h2>
               <p style={{ fontSize:17, color:'rgba(255,255,255,0.55)', lineHeight:1.75, margin:'0 0 36px' }}>
-                Sales, support, finance, and operations — all talking to each other. No silos, no missed handoffs, no lost data.
+                {pageContent.homePage?.connectSection?.content || 'Sales, support, finance, and operations — all talking to each other. No silos, no missed handoffs, no lost data.'}
               </p>
               <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
                 {[
@@ -2250,15 +2612,41 @@ const LandingPage = () => {
               {/* Decorative corner accents */}
               <div style={{ position:'absolute', top:-14, right:-14, width:60, height:60, borderTop:'2px solid rgba(30,185,128,0.5)', borderRight:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 12px 0 0', zIndex:10, pointerEvents:'none' }} />
               <div style={{ position:'absolute', bottom:-14, left:-14, width:60, height:60, borderBottom:'2px solid rgba(30,185,128,0.5)', borderLeft:'2px solid rgba(30,185,128,0.5)', borderRadius:'0 0 0 12px', zIndex:10, pointerEvents:'none' }} />
-              <video
-                src="/crmvideo.mp4"
-                autoPlay loop muted playsInline
-                style={{
-                  width:'100%', display:'block', borderRadius:14,
-                  border:'1.5px solid rgba(30,185,128,0.3)',
-                  boxShadow:'0 0 0 4px rgba(30,185,128,0.07), 0 24px 60px rgba(0,0,0,0.6), 0 0 60px rgba(30,185,128,0.15)',
-                }}
-              />
+
+              {/* Dynamic Video/Image from Customizer */}
+              {pageContent.homePage?.connectSection?.url ? (
+                pageContent.homePage.connectSection.type === 'video' ? (
+                  <video
+                    src={`http://localhost:4000${pageContent.homePage.connectSection.url}`}
+                    autoPlay loop muted playsInline
+                    style={{
+                      width:'100%', display:'block', borderRadius:14,
+                      border:'1.5px solid rgba(30,185,128,0.3)',
+                      boxShadow:'0 0 0 4px rgba(30,185,128,0.07), 0 24px 60px rgba(0,0,0,0.6), 0 0 60px rgba(30,185,128,0.15)',
+                    }}
+                  />
+                ) : (
+                  <img
+                    src={`http://localhost:4000${pageContent.homePage.connectSection.url}`}
+                    alt="We Connect"
+                    style={{
+                      width:'100%', display:'block', borderRadius:14,
+                      border:'1.5px solid rgba(30,185,128,0.3)',
+                      boxShadow:'0 0 0 4px rgba(30,185,128,0.07), 0 24px 60px rgba(0,0,0,0.6), 0 0 60px rgba(30,185,128,0.15)',
+                    }}
+                  />
+                )
+              ) : (
+                <video
+                  src="/crmvideo.mp4"
+                  autoPlay loop muted playsInline
+                  style={{
+                    width:'100%', display:'block', borderRadius:14,
+                    border:'1.5px solid rgba(30,185,128,0.3)',
+                    boxShadow:'0 0 0 4px rgba(30,185,128,0.07), 0 24px 60px rgba(0,0,0,0.6), 0 0 60px rgba(30,185,128,0.15)',
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>

@@ -36,8 +36,8 @@ export const AuthProvider = ({ children }) => {
   };
 
   const [user, setUser] = useState(getCachedUser());
-  const [loading, setLoading] = useState(!getCachedUser() && !!sessionStorage.getItem('token'));
-  const [token, setToken] = useState(sessionStorage.getItem('token'));
+  const [loading, setLoading] = useState(!getCachedUser() && !!(sessionStorage.getItem('token') || localStorage.getItem('token')));
+  const [token, setToken] = useState(sessionStorage.getItem('token') || localStorage.getItem('token'));
 
   // Cache user data
   const cacheUser = (userData) => {
@@ -65,14 +65,17 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     if (token) {
-      // Check inactivity on load
+      // ALWAYS update activity on page load/refresh
+      updateActivity();
+
+      // Check inactivity ONLY if there was previous activity
       const lastActivity = sessionStorage.getItem(LAST_ACTIVITY_KEY);
       if (lastActivity && Date.now() - parseInt(lastActivity) > INACTIVITY_TIMEOUT) {
+        console.log('Session expired due to inactivity');
         logout();
         return;
       }
-      // Set initial activity
-      updateActivity();
+
       loadUser();
     } else {
       setLoading(false);
@@ -128,7 +131,9 @@ export const AuthProvider = ({ children }) => {
     const { token, user } = response.data;
     setToken(token);
     setUser(user);
+    // Store in BOTH sessionStorage AND localStorage
     sessionStorage.setItem('token', token);
+    localStorage.setItem('token', token);
     sessionStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     cacheUser(user); // Cache user for instant load
     return response.data;

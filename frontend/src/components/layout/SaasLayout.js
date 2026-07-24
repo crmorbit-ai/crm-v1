@@ -107,6 +107,7 @@ const SaasLayout = ({ children, title }) => {
     { path: '/saas/contact-inquiries', label: 'Contact Inquiries' },
     { path: '/saas/case-studies', label: 'Case Studies' },
     { path: '/saas/my-tasks', label: 'Tasks' },
+    { path: '/saas/landing-customizer', label: 'Landing Page' },
   ];
 
   // Managers can only see Dashboard and Tenants
@@ -120,6 +121,7 @@ const SaasLayout = ({ children, title }) => {
     <div style={{ minHeight: '100vh', background: '#f1f5f9' }}>
       {/* Global Styles */}
       <style>{`
+
         /* Webkit scrollbar styling */
         nav::-webkit-scrollbar {
           height: 6px;

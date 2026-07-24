@@ -295,6 +295,11 @@ const Sidebar = ({ isOpen, onClose, isMobile, isDesktopOpen }) => {
                   <NavItem to="/support-admin" label="Support Dashboard" />
                 </NavSection>
 
+                {/* Landing Page */}
+                <NavSection title="Website" section="website">
+                  <NavItem to="/saas/landing-customizer" label="Landing Page Customizer" />
+                </NavSection>
+
                 {/* Data Center */}
                 <NavSection title="Data Center" section="dataCenter">
                   <NavItem to="/data-center" label="Global Data" />

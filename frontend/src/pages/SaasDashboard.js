@@ -207,6 +207,7 @@ const SaasDashboard = () => {
     {l:'Billing',     ico:'💳', g:'linear-gradient(135deg,#f59e0b,#f97316)', to:'/saas/billings',      sub:fmtM(mrr)+'/mo'},
     {l:'Case Studies',ico:'📚', g:'linear-gradient(135deg,#8b5cf6,#6366f1)', to:'/saas/case-studies',  sub:'Success stories'},
     {l:'Tasks',       ico:'✅', g:'linear-gradient(135deg,#0ea5e9,#06b6d4)', to:'/saas/my-tasks',      sub:'Work tracking'},
+    {l:'Landing Page',ico:'🎨', g:'linear-gradient(135deg,#f59e0b,#ec4899)', to:'/saas/landing-customizer', sub:'Website builder'},
     {l:'Resellers',   ico:'🤝', g:'linear-gradient(135deg,#0ea5e9,#6366f1)', to:'/saas/resellers',     sub:'Partner network'},
     {l:'Support',     ico:'🎧', g:'linear-gradient(135deg,#ec4899,#8b5cf6)', to:'/support-admin',       sub:'Tickets & issues'},
     {l:'Admins',      ico:'🛡', g:'linear-gradient(135deg,#14b8a6,#0ea5e9)', to:'/saas/admins',        sub:'Access control'},

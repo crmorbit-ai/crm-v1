@@ -636,13 +636,34 @@ const recoverTenant = async (req, res) => {
     }
 
     // Reset deletion request and reactivate
-    tenant.deletionRequest = { status: 'none' };
+    tenant.deletionRequest = undefined; // Completely remove deletion request
     tenant.isActive = true;
+    tenant.isSuspended = false; // Also unsuspend if suspended
+
+    // Fix subscription if expired/cancelled during deletion period
+    if (tenant.subscription && ['expired', 'cancelled'].includes(tenant.subscription.status)) {
+      tenant.subscription.status = 'active';
+      // Extend trial/subscription by 30 days as recovery benefit
+      const extendDate = new Date();
+      extendDate.setDate(extendDate.getDate() + 30);
+
+      if (tenant.subscription.isTrialActive) {
+        tenant.subscription.trialEndDate = extendDate;
+      } else {
+        tenant.subscription.endDate = extendDate;
+      }
+    }
 
     await tenant.save();
 
-    // Reactivate all tenant users
-    await User.updateMany({ tenant: tenant._id }, { isActive: true });
+    // Reactivate all tenant users and ensure they're not suspended
+    await User.updateMany(
+      { tenant: tenant._id },
+      {
+        isActive: true,
+        $unset: { suspendedAt: 1, suspendedBy: 1, suspensionReason: 1 }
+      }
+    );
 
     // Get tenant admin email
     const tenantAdmin = await User.findOne({ tenant: tenant._id, userType: 'TENANT_ADMIN' }).select('email firstName');
